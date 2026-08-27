@@ -8,6 +8,7 @@ import {
 import { n2T5CollectorCloseTime } from "../src/research-replay/n2T5CollectorCloseTime";
 import { resolveN2T5CollectorEfficiencyInputs } from "../src/research-replay/n2T5CollectorEfficiencyInputs";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
+import { n2CanonicalT10CollectorTimingSql } from "../src/research-replay/n2T10CollectorTimingSql";
 import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
@@ -41,6 +42,7 @@ type RaceRow = {
 };
 
 const canonicalSelectionSql = n2CanonicalT5SelectionSql("o.selection");
+const canonicalT10TimingSql = n2CanonicalT10CollectorTimingSql("o.minutes_before_close");
 const canonicalT5TimingSql = n2CanonicalT5CoverageTimingSql("o.minutes_before_close");
 const rows = validateT5MarketCoverageProgramRows(db.prepare(`
   WITH p AS (
@@ -56,6 +58,7 @@ const rows = validateT5MarketCoverageProgramRows(db.prepare(`
       COUNT(*) AS rows,
       COUNT(DISTINCT o.selection) AS selections,
       COUNT(DISTINCT CASE WHEN ${canonicalSelectionSql} THEN o.selection END) AS canonical_selections,
+      SUM(CASE WHEN ${canonicalT10TimingSql} THEN 1 ELSE 0 END) AS canonical_t10_timing_rows,
       SUM(CASE WHEN ${canonicalT5TimingSql} THEN 1 ELSE 0 END) AS canonical_timing_rows,
       COUNT(DISTINCT o.minutes_before_close) AS timing_values
     FROM p
@@ -64,7 +67,7 @@ const rows = validateT5MarketCoverageProgramRows(db.prepare(`
   ), market AS (
     SELECT
       race_id,
-      MAX(CASE WHEN checkpoint_label = 'T-10' AND selections = canonical_selections THEN canonical_selections ELSE 0 END) AS t10,
+      MAX(CASE WHEN checkpoint_label = 'T-10' AND selections = canonical_selections AND rows = canonical_t10_timing_rows AND timing_values = 1 THEN canonical_selections ELSE 0 END) AS t10,
       MAX(CASE WHEN checkpoint_label = 'T-5' AND selections = canonical_selections AND rows = canonical_timing_rows AND timing_values = 1 THEN canonical_selections ELSE 0 END) AS t5,
       MAX(CASE WHEN checkpoint_label = 'T-5' AND captured_at >= ? AND selections = canonical_selections AND rows = canonical_timing_rows AND timing_values = 1 THEN canonical_selections ELSE 0 END) AS network_t5,
       MAX(CASE WHEN checkpoint_label = 'T-5' THEN rows ELSE 0 END) AS t5_rows
