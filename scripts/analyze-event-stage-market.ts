@@ -3,6 +3,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import { eventDayIndex, parseEventStartDate } from "../src/domain/eventStage";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+  historicalExactaCompleteMarketPredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type OddsRow={race_id:string;date:string;venue:string;race_type:string|null;combination:string;odds:number;winner:string|null;payout_yen:number|null};
 type EvalRow=OddsRow&{period:"discovery"|"forward";implied:number;hit:boolean;flags:string[]};
@@ -20,10 +25,10 @@ try{
   const semifinalDays=new Set((db.prepare("SELECT DISTINCT venue||'/'||date AS key FROM race_conditions WHERE date BETWEEN '2024-01-01' AND '2025-12-31' AND race_type LIKE '%準優勝戦%'").all() as Array<{key:string}>).map(r=>r.key));
   const odds=db.prepare(`SELECT h.race_id,h.race_date AS date,h.venue,c.race_type,h.combination,h.odds,p.combination AS winner,p.payout_yen
     FROM historical_alternative_odds h LEFT JOIN race_conditions c ON c.race_id=h.race_id LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
-    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND h.combination IN('1-2','1-3','1-4','1-5','1-6')
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND h.combination IN('1-2','1-3','1-4','1-5','1-6')
       AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
-      AND (SELECT COUNT(*) FROM historical_alternative_odds a WHERE a.race_id=h.race_id AND a.bet_type='exacta')=30`).all() as OddsRow[];
-  const overround=new Map((db.prepare("SELECT race_id,SUM(1.0/odds) AS value FROM historical_alternative_odds WHERE bet_type='exacta' AND race_date BETWEEN '2024-01-01' AND '2025-12-31' GROUP BY race_id HAVING COUNT(*)=30").all() as Array<{race_id:string;value:number}>).map(r=>[r.race_id,r.value]));
+      AND ${historicalExactaCompleteMarketPredicate("h.race_id")}`).all() as OddsRow[];
+  const overround=new Map((db.prepare(`SELECT race_id,SUM(1.0/odds) AS value FROM historical_alternative_odds WHERE bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate()} AND race_date BETWEEN '2024-01-01' AND '2025-12-31' GROUP BY race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}`).all() as Array<{race_id:string;value:number}>).map(r=>[r.race_id,r.value]));
   const flagsByRace=new Map<string,string[]>();let stageCoverage=0;
   for(const row of odds){if(flagsByRace.has(row.race_id))continue;const start=readStartDate(row.race_id,row.date),day=eventDayIndex(row.date,start),flags:string[]=[];if(day!=null)stageCoverage+=1;if(day===1)flags.push("day1");if(day===2)flags.push("day2");if(day!=null&&day>=3&&day<=4)flags.push("day3_4");if(day!=null&&day>=5)flags.push("day5_plus");const key=`${row.venue}/${row.date}`;if(semifinalDays.has(key))flags.push("semifinal_day");if(finalDays.has(key))flags.push("final_day");const type=row.race_type??"";if(/ドリーム/.test(type))flags.push("dream_race");if(/準優勝戦/.test(type))flags.push("semifinal_race");if(/優勝戦/.test(type)&&!/準優勝戦/.test(type))flags.push("final_race");if(/進入固定/.test(type))flags.push("fixed_entry");flagsByRace.set(row.race_id,flags);}
   const rows:EvalRow[]=odds.map(r=>({...r,period:r.date<="2024-12-31"?"discovery":"forward",implied:(1/r.odds)/(overround.get(r.race_id)??1),hit:r.winner===r.combination,flags:flagsByRace.get(r.race_id)??[]}));
