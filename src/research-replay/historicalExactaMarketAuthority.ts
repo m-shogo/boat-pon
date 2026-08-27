@@ -7,8 +7,10 @@ export const HISTORICAL_EXACTA_COMBINATIONS = Array.from({ length: 6 }, (_, firs
 
 const combinationSql = HISTORICAL_EXACTA_COMBINATIONS.map((value) => `'${value}'`).join(",");
 
-export const HISTORICAL_EXACTA_CANONICAL_SOURCE_PREDICATE =
-  `source_type = '${HISTORICAL_EXACTA_SOURCE_TYPE}' AND source_quality = '${HISTORICAL_EXACTA_SOURCE_QUALITY}'`;
+export function historicalExactaCanonicalSourcePredicate(alias?: string): string {
+  const prefix = alias ? `${alias}.` : "";
+  return `${prefix}source_type = '${HISTORICAL_EXACTA_SOURCE_TYPE}' AND ${prefix}source_quality = '${HISTORICAL_EXACTA_SOURCE_QUALITY}'`;
+}
 
 export const HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING = [
   "COUNT(*) = 30",
@@ -17,7 +19,7 @@ export const HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING = [
 ].join(" AND ");
 
 export function historicalExactaCompleteMarketPredicate(raceIdExpression: string): string {
-  const source = `a.source_type = '${HISTORICAL_EXACTA_SOURCE_TYPE}' AND a.source_quality = '${HISTORICAL_EXACTA_SOURCE_QUALITY}'`;
+  const source = historicalExactaCanonicalSourcePredicate("a");
   const scope = `a.race_id = ${raceIdExpression} AND a.bet_type = 'exacta' AND ${source}`;
   return [
     `(SELECT COUNT(*) FROM historical_alternative_odds a WHERE ${scope}) = 30`,
