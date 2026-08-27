@@ -7,6 +7,10 @@ import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
 import { EVENT_CONTEXT_CATEGORIES, eventContextFlags } from "../src/domain/eventContext";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type Row = {
   race_id: string;
@@ -39,9 +43,9 @@ try {
     LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
     LEFT JOIN race_weather w ON w.race_id=h.race_id
     LEFT JOIN race_conditions c ON c.race_id=h.race_id
-    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
       AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
-    GROUP BY h.race_id HAVING COUNT(*)=30 AND odds14 IS NOT NULL
+    GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL
   `).all() as Row[];
 
   let titleAvailable = 0;
