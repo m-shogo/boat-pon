@@ -7,9 +7,9 @@ export type T5MarketCoverageProgramRow = {
   race_no: number;
 };
 
-export function validateT5MarketCoverageProgramRows(
-  rows: readonly T5MarketCoverageProgramRow[],
-): T5MarketCoverageProgramRow[] {
+export function validateT5MarketCoverageProgramRows<T extends T5MarketCoverageProgramRow>(
+  rows: readonly T[],
+): T[] {
   return rows.map((row) => {
     if (!isCanonicalCalendarDate(row.date)) {
       throw new Error(`N2_T5_MARKET_COVERAGE_PROGRAM_DATE_INVALID:${row.race_id}`);

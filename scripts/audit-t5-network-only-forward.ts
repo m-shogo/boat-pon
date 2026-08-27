@@ -16,6 +16,8 @@ import {
   type ResidualRace,
 } from "../src/domain/t5ResidualModel";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
+import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
+import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const TRAIN_FROM = process.env.BOAT_PON_TRAIN_FROM ?? "2026-06-01";
@@ -51,12 +53,12 @@ const trainRaces = buildRaces(trainOdds, trainResults);
 
 const formalFromDate = jstDate(NETWORK_ONLY_FROM);
 const formalToDate = jstDate(NOW);
-const formalPrograms = db.prepare(`
+const formalPrograms = validateT5MarketCoverageProgramRows(db.prepare(`
   SELECT race_id, date, venue, race_no, close_at
   FROM official_programs
   WHERE date >= ? AND date <= ?
   ORDER BY date, close_at, race_id
-`).all(formalFromDate, formalToDate) as ProgramRow[];
+`).all(formalFromDate, formalToDate) as ProgramRow[]);
 const maturePrograms = formalPrograms.filter((row) => {
   const close = raceClose(row.date, row.close_at);
   return close >= NETWORK_ONLY_FROM && close <= NOW;
@@ -65,7 +67,7 @@ const matureRaceIds = new Set(maturePrograms.map((row) => row.race_id));
 const formalOdds = loadLatestCompleteCaptures(formalFromDate, formalToDate, NETWORK_ONLY_FROM.toISOString())
   .filter((row) => matureRaceIds.has(row.race_id));
 const completeRaceIds = new Set(formalOdds.map((row) => row.race_id));
-const formalResults = loadResults(formalFromDate, formalToDate);
+const formalResults = validateT5MarketBaselineResultIdentityRows(loadResults(formalFromDate, formalToDate));
 const resultByRace = new Map(formalResults.map((row) => [row.race_id, row]));
 const formalRaces = buildRaces(formalOdds, formalResults);
 db.close();
