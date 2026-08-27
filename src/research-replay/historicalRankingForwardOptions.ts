@@ -21,7 +21,7 @@ export function validateHistoricalRankingForwardCohorts(counts: HistoricalRankin
       throw new Error(`HISTORICAL_RANKING_COHORT_EMPTY:${name}`);
     }
   }
-  for (const name of ["validation", "test"] as const) {
+  for (const name of ["train", "validation", "test"] as const) {
     if (counts[name] <= 2) {
       throw new Error(`HISTORICAL_RANKING_COHORT_TOO_SMALL:${name}`);
     }
