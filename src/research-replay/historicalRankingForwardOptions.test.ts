@@ -28,15 +28,29 @@ test("historical ranking epochs reject values that can skip, round, or never fin
 });
 
 test("historical ranking forward requires non-empty train, validation, and test cohorts", () => {
-  assert.doesNotThrow(() => validateHistoricalRankingForwardCohorts({ train: 10, validation: 4, test: 2 }));
+  assert.doesNotThrow(() => validateHistoricalRankingForwardCohorts({ train: 10, validation: 4, test: 3 }));
   for (const [name, counts] of [
-    ["train", { train: 0, validation: 4, test: 2 }],
-    ["validation", { train: 10, validation: 0, test: 2 }],
+    ["train", { train: 0, validation: 4, test: 3 }],
+    ["validation", { train: 10, validation: 0, test: 3 }],
     ["test", { train: 10, validation: 4, test: 0 }],
   ] as const) {
     assert.throws(
       () => validateHistoricalRankingForwardCohorts(counts),
       (error: unknown) => error instanceof Error && error.message === `HISTORICAL_RANKING_COHORT_EMPTY:${name}`,
+    );
+  }
+});
+
+test("historical ranking forward requires enough validation and test rows for top-two-hit exclusion metrics", () => {
+  for (const [name, counts] of [
+    ["validation", { train: 10, validation: 1, test: 3 }],
+    ["validation", { train: 10, validation: 2, test: 3 }],
+    ["test", { train: 10, validation: 3, test: 1 }],
+    ["test", { train: 10, validation: 3, test: 2 }],
+  ] as const) {
+    assert.throws(
+      () => validateHistoricalRankingForwardCohorts(counts),
+      (error: unknown) => error instanceof Error && error.message === `HISTORICAL_RANKING_COHORT_TOO_SMALL:${name}`,
     );
   }
 });
