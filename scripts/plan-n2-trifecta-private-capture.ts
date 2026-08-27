@@ -7,7 +7,9 @@ import {
 import { dirname, resolve } from "node:path";
 
 import { readN2TrifectaPrivateCapturePlan } from "../src/research-replay/n2TrifectaPrivateCapturePlanReader";
+import { assertN2TrifectaPrivateCapturePlanOutputSafe } from "../src/research-replay/n2TrifectaPrivateCapturePlanOutput";
 
+const repoRoot = resolve(process.cwd());
 const primaryDbPath = resolve(requiredArgument("db"));
 const date = requiredArgument("date");
 const venueCode = requiredArgument("venue");
@@ -35,6 +37,10 @@ function writeExclusive(path: string, content: string): void {
   } finally {
     closeSync(fd);
   }
+}
+
+if (outputPath) {
+  assertN2TrifectaPrivateCapturePlanOutputSafe({ repoRoot, primaryDbPath, outputPath });
 }
 
 const result = readN2TrifectaPrivateCapturePlan({
