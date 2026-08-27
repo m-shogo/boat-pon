@@ -1,6 +1,11 @@
 /** 同会場・同日の直前までの結果から「今日の水面傾向」を再構成し、exacta買い目残差を調べるread-only研究。 */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+  historicalExactaCompleteMarketPredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type OddsRow={race_id:string;date:string;venue:string;combination:string;odds:number;winner:string|null;payout_yen:number|null};
 type ProgramRow={race_id:string;date:string;venue:string;race_no:number;trifecta:string|null;trifecta_payout:number|null};
@@ -21,11 +26,11 @@ const db=new DatabaseSync(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite",{read
 try{
   const odds=db.prepare(`SELECT h.race_id,h.race_date AS date,h.venue,h.combination,h.odds,p.combination AS winner,p.payout_yen FROM historical_alternative_odds h
     LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
-    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND h.combination IN('1-2','1-3','1-4','1-5','1-6')
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND h.combination IN('1-2','1-3','1-4','1-5','1-6')
       AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
-      AND (SELECT COUNT(*) FROM historical_alternative_odds a WHERE a.race_id=h.race_id AND a.bet_type='exacta')=30`).all() as OddsRow[];
+      AND ${historicalExactaCompleteMarketPredicate("h.race_id")}`).all() as OddsRow[];
   const oddsByRace=new Map<string,OddsRow[]>();for(const row of odds)oddsByRace.set(row.race_id,[...(oddsByRace.get(row.race_id)??[]),row]);
-  const overround=new Map((db.prepare("SELECT race_id,SUM(1.0/odds) AS value FROM historical_alternative_odds WHERE bet_type='exacta' AND race_date BETWEEN '2024-01-01' AND '2025-12-31' GROUP BY race_id HAVING COUNT(*)=30").all() as Array<{race_id:string;value:number}>).map(r=>[r.race_id,r.value]));
+  const overround=new Map((db.prepare(`SELECT race_id,SUM(1.0/odds) AS value FROM historical_alternative_odds WHERE bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate()} AND race_date BETWEEN '2024-01-01' AND '2025-12-31' GROUP BY race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}`).all() as Array<{race_id:string;value:number}>).map(r=>[r.race_id,r.value]));
   const programs=db.prepare(`SELECT op.race_id,op.date,op.venue,op.race_no,rr.trifecta,rr.payout_yen AS trifecta_payout FROM official_programs op LEFT JOIN race_results rr ON rr.race_id=op.race_id
     WHERE op.date BETWEEN '2024-01-01' AND '2025-12-31' AND EXISTS(SELECT 1 FROM historical_alternative_odds h WHERE h.race_date=op.date AND h.bet_type='exacta') ORDER BY op.date,op.venue,op.race_no`).all() as ProgramRow[];
   const entries=db.prepare(`SELECT re.race_id,re.boat,re.finish_pos,re.entry_course,re.st,re.st_flying FROM race_entries re WHERE re.date BETWEEN '2024-01-01' AND '2025-12-31'
