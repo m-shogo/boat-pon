@@ -4,6 +4,7 @@ import { validateHistoricalRankingSettlementRows } from "./historicalRankingSett
 
 const base = {
   race_id: "20260827-桐生-01",
+  trifecta: "1-2-3",
   payout_yen: 1230,
   payout_source: "race_payouts",
   payout_returned: 0,
@@ -15,6 +16,15 @@ test("historical ranking accepts producer-consistent settlement evidence", () =>
     validateHistoricalRankingSettlementRows([{ ...base, payout_source: "race_results" }]),
     [{ ...base, payout_source: "race_results" }],
   );
+});
+
+test("historical ranking rejects producer-impossible result selection", () => {
+  for (const trifecta of ["01-2-3", "1-1-2", "7-1-2", "1-2"]) {
+    assert.throws(
+      () => validateHistoricalRankingSettlementRows([{ ...base, trifecta }]),
+      /HISTORICAL_RANKING_SELECTION_INVALID/u,
+    );
+  }
 });
 
 test("historical ranking rejects payout values that can distort ROI gates", () => {
