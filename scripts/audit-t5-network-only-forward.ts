@@ -15,6 +15,7 @@ import {
   type ProbabilityModel,
   type ResidualRace,
 } from "../src/domain/t5ResidualModel";
+import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
 import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
@@ -196,6 +197,7 @@ console.log(`[t5-network-only-forward] wrote ${OUT_MD} / ${OUT_JSON}`);
 function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: string | null) {
   const fromId = from.replaceAll("-", "");
   const toExclusive = addDays(to, 1).replaceAll("-", "");
+  const canonicalSelectionHavingSql = n2CanonicalT5CompleteCaptureSelectionHavingSql("selection");
   const canonicalTimingHavingSql = capturedFrom == null
     ? "1 = 1"
     : n2CanonicalT5ForwardCaptureTimingHavingSql("minutes_before_close");
@@ -207,7 +209,7 @@ function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: stri
         AND checkpoint_label = 'T-5'
         AND (? IS NULL OR captured_at >= ?)
       GROUP BY race_id, captured_at
-      HAVING COUNT(DISTINCT selection) = 120
+      HAVING ${canonicalSelectionHavingSql}
         AND ${canonicalTimingHavingSql}
     ), latest_capture AS (
       SELECT race_id, MAX(max_id) AS max_id
