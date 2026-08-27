@@ -20,11 +20,10 @@ try {
     WHERE date >= ? AND date <= ?
     ORDER BY date, race_id
   `).all(from, to) as Array<{ race_id: string; date: string }>;
-  const settled = new Set((db.prepare(`
-    SELECT race_id, trifecta, returned FROM race_results WHERE date >= ? AND date <= ?
-  `).all(from, to) as Array<{ race_id: string; trifecta: string | null; returned: number }>)
-    .filter(isCanonicalT5MarketCoverageSettlement)
-    .map(row => row.race_id));
+  const resultsByRace = new Map((db.prepare(`
+    SELECT race_id, date, trifecta, returned FROM race_results WHERE date >= ? AND date <= ?
+  `).all(from, to) as Array<{ race_id: string; date: string; trifecta: string | null; returned: number }>)
+    .map(row => [row.race_id, row] as const));
   // checkpoint_label単独の索引走査を避け、race_id先頭の既存複合索引をレースごとに使う。
   const canonicalSelectionSql = n2CanonicalT5SelectionSql("selection");
   const countT5 = db.prepare(`
@@ -37,11 +36,14 @@ try {
       GROUP BY captured_at
     )
   `);
-  const rows = programsInWindow.map(program => ({
-    ...program,
-    selections: Number((countT5.get(program.race_id) as { n: number }).n),
-    settled: settled.has(program.race_id) ? 1 : 0,
-  }));
+  const rows = programsInWindow.map(program => {
+    const result = resultsByRace.get(program.race_id);
+    return {
+      ...program,
+      selections: Number((countT5.get(program.race_id) as { n: number }).n),
+      settled: result !== undefined && isCanonicalT5MarketCoverageSettlement(result, program.date) ? 1 : 0,
+    };
+  });
 
   const programs = rows.length;
   const racesWithT5 = rows.filter(row => row.selections > 0).length;
