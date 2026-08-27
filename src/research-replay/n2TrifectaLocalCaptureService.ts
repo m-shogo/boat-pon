@@ -470,6 +470,7 @@ export function buildN2TrifectaSingleEntryPlan(input: {
     lineConnectionAuthorized: core.lineConnectionAuthorized,
     publicPublishAuthorized: core.publicPublishAuthorized,
     entries: core.entries,
+    parentManifestDigest: core.parentManifestDigest,
     manifestDigest: canonicalHash(core),
   };
 }
