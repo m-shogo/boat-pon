@@ -123,7 +123,7 @@ test("exacta completeness requires canonical successful backfill evidence with b
     insert(db, NOT_BACKFILL, selections, "official_archive", "historical_closing_odds", undefined, 0, "success");
     insert(
       db,
-      { ...VALID, raceId: "20240109-桐生-01", raceDate: "2024-01-09" },
+      { ...VALID, raceId: "20240109-桐生-02", raceDate: "2024-01-09" },
       selections,
       "official_archive",
       "historical_closing_odds",
