@@ -62,6 +62,7 @@ export type N2TrifectaOddsCheckpointPlan = {
   lineConnectionAuthorized: false;
   publicPublishAuthorized: false;
   entries: N2TrifectaOddsCheckpointEntry[];
+  parentManifestDigest?: string;
   manifestDigest: string;
 };
 
@@ -294,6 +295,9 @@ function currentPlanManifestDigest(plan: N2TrifectaOddsCheckpointPlan): string {
     lineConnectionAuthorized: plan.lineConnectionAuthorized,
     publicPublishAuthorized: plan.publicPublishAuthorized,
     entries: plan.entries,
+    ...(plan.parentManifestDigest === undefined
+      ? {}
+      : { parentManifestDigest: plan.parentManifestDigest }),
   });
 }
 
