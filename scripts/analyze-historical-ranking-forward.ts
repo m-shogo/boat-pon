@@ -5,6 +5,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { validateHistoricalRankingPayoutIdentityRows } from "../src/research-replay/historicalRankingPayoutIdentity";
 import { validateHistoricalRankingResultIdentityRows } from "../src/research-replay/historicalRankingResultIdentity";
 import { validateHistoricalRankingSettlementRows } from "../src/research-replay/historicalRankingSettlementIntegrity";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
@@ -35,6 +36,9 @@ type SourceRow = {
   result_date: string;
   result_venue: string;
   result_race_no: number;
+  payout_date: string | null;
+  payout_venue: string | null;
+  payout_race_no: number | null;
   raw_json: string;
   trifecta: string;
   payout_yen: number;
@@ -56,7 +60,7 @@ type RankingModel = { featureSet: FeatureSet; weights: number[][] };
 
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
-const sourceRows = validateHistoricalRankingSettlementRows(validateHistoricalRankingResultIdentityRows(validateT5MarketCoverageProgramRows(db.prepare(`
+const sourceRows = validateHistoricalRankingSettlementRows(validateHistoricalRankingPayoutIdentityRows(validateHistoricalRankingResultIdentityRows(validateT5MarketCoverageProgramRows(db.prepare(`
   SELECT
     programs.race_id,
     programs.date,
@@ -65,6 +69,9 @@ const sourceRows = validateHistoricalRankingSettlementRows(validateHistoricalRan
     results.date AS result_date,
     results.venue AS result_venue,
     results.race_no AS result_race_no,
+    payouts.date AS payout_date,
+    payouts.venue AS payout_venue,
+    payouts.race_no AS payout_race_no,
     programs.raw_json,
     results.trifecta,
     COALESCE(payouts.payout_yen, results.payout_yen) AS payout_yen,
@@ -82,7 +89,7 @@ const sourceRows = validateHistoricalRankingSettlementRows(validateHistoricalRan
     AND results.trifecta IS NOT NULL
     AND COALESCE(payouts.payout_yen, results.payout_yen) IS NOT NULL
   ORDER BY programs.date, programs.race_id
-`).all() as SourceRow[])));
+`).all() as SourceRow[]))));
 const exhibitionRows = validateT5MarketCoverageProgramRows(db.prepare(`
   SELECT race_id, date, venue, race_no, boat, exhibition_time
   FROM race_entries
