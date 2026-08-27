@@ -1,0 +1,35 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { validateT5MarketBaselineResultIdentityRows } from "./t5MarketBaselineResultIdentity";
+
+test("T-5 market baseline accepts producer-consistent result identity", () => {
+  const row = {
+    race_id: "20260827-桐生-01",
+    date: "2026-08-27",
+    venue: "桐生",
+    race_no: 1,
+    trifecta: "1-2-3",
+  };
+  assert.deepEqual(validateT5MarketBaselineResultIdentityRows([row]), [row]);
+});
+
+test("T-5 market baseline rejects result date, venue, or race-number lineage drift", () => {
+  assert.throws(
+    () => validateT5MarketBaselineResultIdentityRows([
+      { race_id: "20260827-桐生-01", date: "2026-08-28", venue: "桐生", race_no: 1 },
+    ]),
+    /N2_T5_MARKET_BASELINE_RESULT_IDENTITY_MISMATCH/u,
+  );
+  assert.throws(
+    () => validateT5MarketBaselineResultIdentityRows([
+      { race_id: "20260827-桐生-01", date: "2026-08-27", venue: "戸田", race_no: 1 },
+    ]),
+    /N2_T5_MARKET_BASELINE_RESULT_IDENTITY_MISMATCH/u,
+  );
+  assert.throws(
+    () => validateT5MarketBaselineResultIdentityRows([
+      { race_id: "20260827-桐生-01", date: "2026-08-27", venue: "桐生", race_no: 2 },
+    ]),
+    /N2_T5_MARKET_BASELINE_RESULT_IDENTITY_MISMATCH/u,
+  );
+});
