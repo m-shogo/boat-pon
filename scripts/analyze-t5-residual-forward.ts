@@ -6,12 +6,16 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { evaluateProbabilityModel, fitSelectionResidual, fitTemperature, marketModel, selectionResidualModel, temperatureModel, type ResidualRace } from "../src/domain/t5ResidualModel";
+import { isCanonicalT5TrifectaResult } from "../src/research-replay/t5MarketBaselineResult";
+import { assertT5MarketBaselineWindow } from "../src/research-replay/t5MarketBaselineWindow";
+import { isCanonicalT5CompleteMarketSelections } from "../src/research-replay/t5ResidualForwardMarket";
 
 const DB_PATH=process.env.BOAT_PON_DB_PATH??"data/boat.sqlite";
 const FROM=process.env.BOAT_PON_FROM??"2026-06-01";
 const TO=process.env.BOAT_PON_TO??todayJst();
 const BOUNDARY=process.env.BOAT_PON_BOUNDARY??"2026-07-01";
 const OUT_MD="reports/t5-residual-forward.md",OUT_JSON="reports/t5-residual-forward.json";
+assertT5MarketBaselineWindow({from:FROM,to:TO,boundary:BOUNDARY});
 if(!existsSync(DB_PATH))throw new Error(`DB not found: ${DB_PATH}`);
 const db=new DatabaseSync(DB_PATH,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 type O={id:number;race_id:string;selection:string;odds:number}; type R={race_id:string;date:string;venue:string;race_no:number;trifecta:string|null;payout_yen:number|null;returned:number};
@@ -19,7 +23,7 @@ const fromId=FROM.replaceAll("-","");const toId=addDays(TO,1).replaceAll("-","")
 const odds=db.prepare(`WITH complete_capture AS(SELECT race_id,captured_at,MAX(id)max_id FROM odds_timeseries_snapshots WHERE race_id>=? AND race_id<? AND checkpoint_label='T-5' GROUP BY race_id,captured_at HAVING COUNT(DISTINCT selection)=120),latest_capture AS(SELECT race_id,MAX(max_id)max_id FROM complete_capture GROUP BY race_id),chosen AS(SELECT c.race_id,c.captured_at FROM complete_capture c JOIN latest_capture l ON l.race_id=c.race_id AND l.max_id=c.max_id) SELECT id,race_id,selection,odds FROM odds_timeseries_snapshots WHERE id IN(SELECT MAX(o.id) FROM odds_timeseries_snapshots o JOIN chosen c ON c.race_id=o.race_id AND c.captured_at=o.captured_at GROUP BY o.race_id,o.selection)`).all(fromId,toId)as O[];
 const results=db.prepare(`SELECT race_id,date,venue,race_no,trifecta,payout_yen,returned FROM race_results WHERE date>=? AND date<=?`).all(FROM,TO)as R[];db.close();
 const byRace=new Map<string,O[]>();for(const o of odds)byRace.set(o.race_id,[...(byRace.get(o.race_id)??[]),o]);const resultMap=new Map(results.map(r=>[r.race_id,r]));const races:ResidualRace[]=[];
-for(const [raceId,source] of byRace){const unique=new Map(source.map(x=>[x.selection,x]));const result=resultMap.get(raceId);if(unique.size!==120||!result?.trifecta||result.returned||result.payout_yen==null)continue;const rows=[...unique.values()];if(rows.some(x=>x.odds<=1||!Number.isFinite(x.odds)))continue;const overround=rows.reduce((s,x)=>s+1/x.odds,0);if(!(overround>0)||!unique.has(result.trifecta))continue;races.push({raceId,date:result.date,venue:result.venue,raceNo:result.race_no,winner:result.trifecta,payoutYen:result.payout_yen,outcomes:rows.map(x=>({selection:x.selection,odds:x.odds,marketProbability:(1/x.odds)/overround}))});}
+for(const [raceId,source] of byRace){const unique=new Map(source.map(x=>[x.selection,x]));const result=resultMap.get(raceId);if(!isCanonicalT5CompleteMarketSelections(unique.keys())||!result?.trifecta||!isCanonicalT5TrifectaResult(result.trifecta)||result.returned||result.payout_yen==null)continue;const rows=[...unique.values()];if(rows.some(x=>x.odds<=1||!Number.isFinite(x.odds)))continue;const overround=rows.reduce((s,x)=>s+1/x.odds,0);if(!(overround>0)||!unique.has(result.trifecta))continue;races.push({raceId,date:result.date,venue:result.venue,raceNo:result.race_no,winner:result.trifecta,payoutYen:result.payout_yen,outcomes:rows.map(x=>({selection:x.selection,odds:x.odds,marketProbability:(1/x.odds)/overround}))});}
 races.sort((a,b)=>a.date.localeCompare(b.date)||a.raceId.localeCompare(b.raceId));const train=races.filter(r=>r.date<BOUNDARY),forward=races.filter(r=>r.date>=BOUNDARY);
 const fittedTemperature=fitTemperature(train);const fittedResidual=fitSelectionResidual(train);const temperature=temperatureModel(fittedTemperature.temperature);const residual=selectionResidualModel(fittedResidual.factors,fittedResidual.temperature);
 const variants=[{id:"market",label:"T-5市場",model:marketModel},{id:"temperature",label:`市場temperature T=${fittedTemperature.temperature}`,model:temperature},{id:"selection-residual",label:`買い目残差 T=${fittedResidual.temperature} prior=${fittedResidual.priorStrength}`,model:residual}];
