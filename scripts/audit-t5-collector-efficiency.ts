@@ -2,6 +2,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { resolveN2T5CollectorEfficiencyInputs } from "../src/research-replay/n2T5CollectorEfficiencyInputs";
+import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const inputs = resolveN2T5CollectorEfficiencyInputs({
@@ -30,6 +31,7 @@ type RaceRow = {
   all_unique: number;
 };
 
+const canonicalSelectionSql = n2CanonicalT5SelectionSql("o.selection");
 const rows = db.prepare(`
   WITH p AS (
     SELECT date, race_id, close_at
@@ -42,16 +44,17 @@ const rows = db.prepare(`
       o.checkpoint_label,
       o.captured_at,
       COUNT(*) AS rows,
-      COUNT(DISTINCT o.selection) AS selections
+      COUNT(DISTINCT o.selection) AS selections,
+      COUNT(DISTINCT CASE WHEN ${canonicalSelectionSql} THEN o.selection END) AS canonical_selections
     FROM p
     JOIN odds_timeseries_snapshots o ON o.race_id = p.race_id
     GROUP BY p.date, o.race_id, o.checkpoint_label, o.captured_at
   ), market AS (
     SELECT
       race_id,
-      MAX(CASE WHEN checkpoint_label = 'T-10' THEN selections ELSE 0 END) AS t10,
-      MAX(CASE WHEN checkpoint_label = 'T-5' THEN selections ELSE 0 END) AS t5,
-      MAX(CASE WHEN checkpoint_label = 'T-5' AND captured_at >= ? THEN selections ELSE 0 END) AS network_t5,
+      MAX(CASE WHEN checkpoint_label = 'T-10' AND selections = canonical_selections THEN canonical_selections ELSE 0 END) AS t10,
+      MAX(CASE WHEN checkpoint_label = 'T-5' AND selections = canonical_selections THEN canonical_selections ELSE 0 END) AS t5,
+      MAX(CASE WHEN checkpoint_label = 'T-5' AND captured_at >= ? AND selections = canonical_selections THEN canonical_selections ELSE 0 END) AS network_t5,
       MAX(CASE WHEN checkpoint_label = 'T-5' THEN rows ELSE 0 END) AS t5_rows
     FROM capture
     GROUP BY race_id
