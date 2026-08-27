@@ -37,7 +37,14 @@ type SourceRow = {
   payout_source: string;
   payout_returned: number;
 };
-type ExhibitionRow = { race_id: string; boat: number; exhibition_time: number };
+type ExhibitionRow = {
+  race_id: string;
+  date: string;
+  venue: string;
+  race_no: number;
+  boat: number;
+  exhibition_time: number;
+};
 type Boat = ProgramBoat & { exhibitionScore: number };
 type Race = { raceId: string; date: string; order: number[]; payoutYen: number; payoutSource: string; boats: Boat[] };
 type FeatureSet = { id: string; label: string; dimensions: number; vector: (boat: Boat) => number[] };
@@ -69,13 +76,13 @@ const sourceRows = validateHistoricalRankingSettlementRows(validateT5MarketCover
     AND COALESCE(payouts.payout_yen, results.payout_yen) IS NOT NULL
   ORDER BY programs.date, programs.race_id
 `).all() as SourceRow[]));
-const exhibitionRows = db.prepare(`
-  SELECT race_id, boat, exhibition_time
+const exhibitionRows = validateT5MarketCoverageProgramRows(db.prepare(`
+  SELECT race_id, date, venue, race_no, boat, exhibition_time
   FROM race_entries
   WHERE date >= '2023-01-01' AND date <= '2026-12-31'
     AND exhibition_time IS NOT NULL
   ORDER BY race_id, boat
-`).all() as ExhibitionRow[];
+`).all() as ExhibitionRow[]);
 db.close();
 
 const exhibitionByRace = new Map<string, Map<number, number>>();
