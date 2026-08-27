@@ -51,6 +51,12 @@ test("T-5 market baseline rejects producer-impossible result identity components
   );
   assert.throws(
     () => validateT5MarketBaselineResultIdentityRows([
+      { race_id: "20260827- 桐生 -01", date: "2026-08-27", venue: " 桐生 ", race_no: 1 },
+    ]),
+    /N2_T5_MARKET_BASELINE_RESULT_VENUE_INVALID/u,
+  );
+  assert.throws(
+    () => validateT5MarketBaselineResultIdentityRows([
       { race_id: "20260827-桐生-13", date: "2026-08-27", venue: "桐生", race_no: 13 },
     ]),
     /N2_T5_MARKET_BASELINE_RESULT_RACE_NO_INVALID/u,
