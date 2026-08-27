@@ -5,6 +5,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
 import { isCanonicalT5TrifectaResult } from "../src/research-replay/t5MarketBaselineResult";
 import { assertT5MarketBaselineWindow } from "../src/research-replay/t5MarketBaselineWindow";
 
@@ -24,6 +25,7 @@ type RaceEval = ResultRow & { overround:number; favorite:string; favoriteOdds:nu
 const db = new DatabaseSync(DB_PATH,{readOnly:true});
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 const fromId=FROM.replaceAll("-",""); const toExclusive=addDays(TO,1).replaceAll("-","");
+const canonicalTimingHavingSql = n2CanonicalT5ForwardCaptureTimingHavingSql("minutes_before_close");
 const odds=db.prepare(`
   WITH complete_capture AS (
     SELECT race_id, captured_at, MAX(id) AS max_id
@@ -31,6 +33,7 @@ const odds=db.prepare(`
     WHERE race_id>=? AND race_id<? AND checkpoint_label='T-5'
     GROUP BY race_id, captured_at
     HAVING COUNT(DISTINCT selection)=120
+      AND ${canonicalTimingHavingSql}
   ), latest_capture AS (
     SELECT race_id, MAX(max_id) AS max_id
     FROM complete_capture
