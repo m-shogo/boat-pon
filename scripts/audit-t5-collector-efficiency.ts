@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { resolveN2T5CollectorEfficiencyInputs } from "../src/research-replay/n2T5CollectorEfficiencyInputs";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
+import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const inputs = resolveN2T5CollectorEfficiencyInputs({
@@ -32,6 +33,7 @@ type RaceRow = {
 };
 
 const canonicalSelectionSql = n2CanonicalT5SelectionSql("o.selection");
+const canonicalT5TimingSql = n2CanonicalT5CoverageTimingSql("o.minutes_before_close");
 const rows = db.prepare(`
   WITH p AS (
     SELECT date, race_id, close_at
@@ -45,7 +47,9 @@ const rows = db.prepare(`
       o.captured_at,
       COUNT(*) AS rows,
       COUNT(DISTINCT o.selection) AS selections,
-      COUNT(DISTINCT CASE WHEN ${canonicalSelectionSql} THEN o.selection END) AS canonical_selections
+      COUNT(DISTINCT CASE WHEN ${canonicalSelectionSql} THEN o.selection END) AS canonical_selections,
+      SUM(CASE WHEN ${canonicalT5TimingSql} THEN 1 ELSE 0 END) AS canonical_timing_rows,
+      COUNT(DISTINCT o.minutes_before_close) AS timing_values
     FROM p
     JOIN odds_timeseries_snapshots o ON o.race_id = p.race_id
     GROUP BY p.date, o.race_id, o.checkpoint_label, o.captured_at
@@ -53,8 +57,8 @@ const rows = db.prepare(`
     SELECT
       race_id,
       MAX(CASE WHEN checkpoint_label = 'T-10' AND selections = canonical_selections THEN canonical_selections ELSE 0 END) AS t10,
-      MAX(CASE WHEN checkpoint_label = 'T-5' AND selections = canonical_selections THEN canonical_selections ELSE 0 END) AS t5,
-      MAX(CASE WHEN checkpoint_label = 'T-5' AND captured_at >= ? AND selections = canonical_selections THEN canonical_selections ELSE 0 END) AS network_t5,
+      MAX(CASE WHEN checkpoint_label = 'T-5' AND selections = canonical_selections AND rows = canonical_timing_rows AND timing_values = 1 THEN canonical_selections ELSE 0 END) AS t5,
+      MAX(CASE WHEN checkpoint_label = 'T-5' AND captured_at >= ? AND selections = canonical_selections AND rows = canonical_timing_rows AND timing_values = 1 THEN canonical_selections ELSE 0 END) AS network_t5,
       MAX(CASE WHEN checkpoint_label = 'T-5' THEN rows ELSE 0 END) AS t5_rows
     FROM capture
     GROUP BY race_id
