@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
 import { isCanonicalT5TrifectaResult } from "../src/research-replay/t5MarketBaselineResult";
+import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
 import { assertT5MarketBaselineWindow } from "../src/research-replay/t5MarketBaselineWindow";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -52,7 +53,7 @@ const odds=db.prepare(`
     GROUP BY o.race_id,o.selection
   )
 `).all(fromId,toExclusive) as OddsRow[];
-const results=db.prepare(`SELECT race_id,date,venue,race_no,trifecta,payout_yen,returned FROM race_results WHERE date>=? AND date<=?`).all(FROM,TO) as ResultRow[];
+const results=validateT5MarketBaselineResultIdentityRows(db.prepare(`SELECT race_id,date,venue,race_no,trifecta,payout_yen,returned FROM race_results WHERE date>=? AND date<=?`).all(FROM,TO) as ResultRow[]);
 const resultByRace=new Map(results.map(r=>[r.race_id,r]));
 const byRace=new Map<string,OddsRow[]>(); for(const row of odds) byRace.set(row.race_id,[...(byRace.get(row.race_id)??[]),row]);
 
