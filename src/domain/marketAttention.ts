@@ -7,9 +7,13 @@ export function parseCloseMinute(closeAt: string): number | null {
   return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 ? hour * 60 + minute : null;
 }
 
-/** parserの会場切替誤認を避けるため、1〜12Rと時刻単調増加を要求する。 */
+/** parserの会場切替誤認を避けるため、1〜12R・一意race identity・時刻単調増加を要求する。 */
 export function isCompleteVenueDay(rows: ScheduledRace[]): boolean {
-  if (rows.length !== 12 || new Set(rows.map((row) => row.raceNo)).size !== 12) return false;
+  if (
+    rows.length !== 12 ||
+    new Set(rows.map((row) => row.raceNo)).size !== 12 ||
+    new Set(rows.map((row) => row.raceId)).size !== 12
+  ) return false;
   const sorted = [...rows].sort((a, b) => a.raceNo - b.raceNo);
   if (sorted.some((row, index) => row.raceNo !== index + 1)) return false;
   const minutes = sorted.map((row) => parseCloseMinute(row.closeAt));
