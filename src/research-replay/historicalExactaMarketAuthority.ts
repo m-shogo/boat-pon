@@ -9,7 +9,12 @@ const combinationSql = HISTORICAL_EXACTA_COMBINATIONS.map((value) => `'${value}'
 
 export function historicalExactaCanonicalSourcePredicate(alias?: string): string {
   const prefix = alias ? `${alias}.` : "";
-  return `${prefix}source_type = '${HISTORICAL_EXACTA_SOURCE_TYPE}' AND ${prefix}source_quality = '${HISTORICAL_EXACTA_SOURCE_QUALITY}'`;
+  return [
+    `${prefix}source_type = '${HISTORICAL_EXACTA_SOURCE_TYPE}'`,
+    `${prefix}source_quality = '${HISTORICAL_EXACTA_SOURCE_QUALITY}'`,
+    `${prefix}is_backfill = 1`,
+    `${prefix}fetch_status = 'success'`,
+  ].join(" AND ");
 }
 
 export const HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING = [
