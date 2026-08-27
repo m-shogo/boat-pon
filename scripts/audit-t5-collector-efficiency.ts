@@ -1,6 +1,10 @@
 /** T-5収集の欠測と重複保存を日別に監査する。読み取り専用。 */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import {
+  type N2T5CollectorCaptureTimingRow,
+  validateN2T5CollectorCaptureChronology,
+} from "../src/research-replay/n2T5CollectorCaptureChronology";
 import { n2T5CollectorCloseTime } from "../src/research-replay/n2T5CollectorCloseTime";
 import { resolveN2T5CollectorEfficiencyInputs } from "../src/research-replay/n2T5CollectorEfficiencyInputs";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
@@ -92,6 +96,20 @@ const rows = validateT5MarketCoverageProgramRows(db.prepare(`
   LEFT JOIN storage s ON s.race_id = p.race_id
   ORDER BY p.date, p.close_at, p.race_id
 `).all(inputs.from, inputs.to, inputs.networkOnlyEffectiveAt) as RaceRow[]);
+const networkOnlyTimingRows = db.prepare(`
+  SELECT
+    p.race_id,
+    p.date,
+    p.close_at,
+    o.captured_at,
+    o.minutes_before_close
+  FROM official_programs p
+  JOIN odds_timeseries_snapshots o ON o.race_id = p.race_id
+  WHERE p.date >= ? AND p.date <= ?
+    AND o.checkpoint_label = 'T-5'
+    AND o.captured_at >= ?
+`).all(inputs.from, inputs.to, inputs.networkOnlyEffectiveAt) as N2T5CollectorCaptureTimingRow[];
+validateN2T5CollectorCaptureChronology(networkOnlyTimingRows);
 db.close();
 
 const dates = [...new Set(rows.map((row) => row.date))];
