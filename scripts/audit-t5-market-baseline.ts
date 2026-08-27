@@ -19,8 +19,8 @@ assertT5MarketBaselineWindow({ from: FROM, to: TO, boundary: BOUNDARY });
 if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
 
 type OddsRow = { id:number; race_id:string; selection:string; odds:number };
-type ResultRow = { race_id:string; date:string; venue:string; race_no:number; trifecta:string|null;payout_yen:number|null;returned:number };
-type RaceEval = ResultRow & { overround:number;favorite:string;favoriteOdds:number;favoriteProbability:number;hit:boolean;logLoss:number;brier:number };
+type ResultRow = { race_id:string; date:string; venue:string; race_no:number; trifecta:string|null; payout_yen:number|null; returned:number };
+type RaceEval = ResultRow & { overround:number; favorite:string; favoriteOdds:number; favoriteProbability:number; hit:boolean; logLoss:number; brier:number };
 
 const db = new DatabaseSync(DB_PATH,{readOnly:true});
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
