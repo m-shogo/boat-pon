@@ -10,8 +10,9 @@ const base = {
   payout_returned: 0,
 };
 
-function programRaw(overrides: Record<string, unknown> = {}) {
+function programRaw(overrides: Record<string, unknown> = {}, identity: Record<string, unknown> = {}) {
   return JSON.stringify({
+    ...identity,
     boats: Array.from({ length: 6 }, (_, index) => ({
       course: index + 1,
       className: "A1",
@@ -34,6 +35,14 @@ test("historical ranking accepts producer-consistent settlement evidence", () =>
   );
   const withProgram = { ...base, raw_json: programRaw() };
   assert.deepEqual(validateHistoricalRankingSettlementRows([withProgram]), [withProgram]);
+  const withProgramIdentity = {
+    ...base,
+    date: "2026-08-27",
+    venue: "桐生",
+    race_no: 1,
+    raw_json: programRaw({}, { date: "2026-08-27", venue: "桐生", raceNo: 1 }),
+  };
+  assert.deepEqual(validateHistoricalRankingSettlementRows([withProgramIdentity]), [withProgramIdentity]);
 });
 
 test("historical ranking rejects producer-impossible result selection", () => {
@@ -86,6 +95,21 @@ test("historical ranking rejects producer-impossible program feature values", ()
     () => validateHistoricalRankingSettlementRows([{ ...base, raw_json: programRaw({ className: "C1" }) }]),
     /HISTORICAL_RANKING_PROGRAM_CLASS_INVALID/u,
   );
+});
+
+test("historical ranking rejects raw program identity drift", () => {
+  const row = { ...base, date: "2026-08-27", venue: "桐生", race_no: 1 };
+  for (const identity of [
+    { date: "2026-08-28", venue: "桐生", raceNo: 1 },
+    { date: "2026-08-27", venue: "戸田", raceNo: 1 },
+    { date: "2026-08-27", venue: "桐生", raceNo: 2 },
+    { date: "2026-08-27" },
+  ]) {
+    assert.throws(
+      () => validateHistoricalRankingSettlementRows([{ ...row, raw_json: programRaw({}, identity) }]),
+      /HISTORICAL_RANKING_PROGRAM_IDENTITY_MISMATCH/u,
+    );
+  }
 });
 
 test("historical ranking preserves the existing malformed-program exclusion path", () => {
