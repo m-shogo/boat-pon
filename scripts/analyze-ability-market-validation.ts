@@ -10,6 +10,10 @@ import {
   type RivalStrategy,
 } from "../src/domain/dynamicSecondSelector";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type Period = "discovery" | "validation" | "test";
 type RaceRow = {
@@ -66,18 +70,21 @@ JOIN official_programs op ON op.race_id = h.race_id
 LEFT JOIN race_payouts p ON p.race_id = h.race_id AND p.bet_type = 'exacta'
 LEFT JOIN race_weather rw ON rw.race_id = h.race_id
 WHERE h.bet_type = 'exacta'
+  AND ${historicalExactaCanonicalSourcePredicate("h")}
   AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
   AND NOT EXISTS (
     SELECT 1 FROM race_entries re WHERE re.race_id = h.race_id AND re.status_code = 'F'
   )
 GROUP BY h.race_id
-HAVING COUNT(*) = 30
+HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
 ORDER BY h.race_date, h.race_id
 `).all() as RaceRow[];
   const oddsRows = db.prepare(`
-SELECT race_id, combination, odds
-FROM historical_alternative_odds
-WHERE bet_type = 'exacta' AND race_date BETWEEN '2024-01-01' AND '2025-12-31'
+SELECT h.race_id, h.combination, h.odds
+FROM historical_alternative_odds h
+WHERE h.bet_type = 'exacta'
+  AND ${historicalExactaCanonicalSourcePredicate("h")}
+  AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
 `).all() as OddsRow[];
   const exhRows = db.prepare(`
 SELECT race_id, course, exhibition_time
