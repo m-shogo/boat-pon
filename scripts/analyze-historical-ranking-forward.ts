@@ -5,6 +5,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { validateHistoricalRankingResultIdentityRows } from "../src/research-replay/historicalRankingResultIdentity";
 import { validateHistoricalRankingSettlementRows } from "../src/research-replay/historicalRankingSettlementIntegrity";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
@@ -31,6 +32,9 @@ type SourceRow = {
   date: string;
   venue: string;
   race_no: number;
+  result_date: string;
+  result_venue: string;
+  result_race_no: number;
   raw_json: string;
   trifecta: string;
   payout_yen: number;
@@ -52,12 +56,15 @@ type RankingModel = { featureSet: FeatureSet; weights: number[][] };
 
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
-const sourceRows = validateHistoricalRankingSettlementRows(validateT5MarketCoverageProgramRows(db.prepare(`
+const sourceRows = validateHistoricalRankingSettlementRows(validateHistoricalRankingResultIdentityRows(validateT5MarketCoverageProgramRows(db.prepare(`
   SELECT
     programs.race_id,
     programs.date,
     programs.venue,
     programs.race_no,
+    results.date AS result_date,
+    results.venue AS result_venue,
+    results.race_no AS result_race_no,
     programs.raw_json,
     results.trifecta,
     COALESCE(payouts.payout_yen, results.payout_yen) AS payout_yen,
@@ -75,7 +82,7 @@ const sourceRows = validateHistoricalRankingSettlementRows(validateT5MarketCover
     AND results.trifecta IS NOT NULL
     AND COALESCE(payouts.payout_yen, results.payout_yen) IS NOT NULL
   ORDER BY programs.date, programs.race_id
-`).all() as SourceRow[]));
+`).all() as SourceRow[])));
 const exhibitionRows = validateT5MarketCoverageProgramRows(db.prepare(`
   SELECT race_id, date, venue, race_no, boat, exhibition_time
   FROM race_entries
