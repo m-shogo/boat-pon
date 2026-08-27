@@ -16,6 +16,7 @@ export const HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING = [
   "COUNT(*) = 30",
   "COUNT(DISTINCT combination) = 30",
   `SUM(CASE WHEN combination IN (${combinationSql}) THEN 1 ELSE 0 END) = 30`,
+  "SUM(CASE WHEN odds > 1.0 AND odds < 1e308 THEN 1 ELSE 0 END) = 30",
 ].join(" AND ");
 
 export function historicalExactaCompleteMarketPredicate(raceIdExpression: string): string {
@@ -25,5 +26,6 @@ export function historicalExactaCompleteMarketPredicate(raceIdExpression: string
     `(SELECT COUNT(*) FROM historical_alternative_odds a WHERE ${scope}) = 30`,
     `(SELECT COUNT(DISTINCT a.combination) FROM historical_alternative_odds a WHERE ${scope}) = 30`,
     `(SELECT SUM(CASE WHEN a.combination IN (${combinationSql}) THEN 1 ELSE 0 END) FROM historical_alternative_odds a WHERE ${scope}) = 30`,
+    `(SELECT SUM(CASE WHEN a.odds > 1.0 AND a.odds < 1e308 THEN 1 ELSE 0 END) FROM historical_alternative_odds a WHERE ${scope}) = 30`,
   ].join(" AND ");
 }
