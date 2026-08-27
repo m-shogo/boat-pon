@@ -62,6 +62,7 @@ export type N2TrifectaOddsCheckpointPlan = {
   lineConnectionAuthorized: false;
   publicPublishAuthorized: false;
   entries: N2TrifectaOddsCheckpointEntry[];
+  parentManifestDigest?: string;
   manifestDigest: string;
 };
 
@@ -275,6 +276,31 @@ export function buildN2TrifectaOddsCheckpointPlan(input: {
   };
 }
 
+function currentPlanManifestDigest(plan: N2TrifectaOddsCheckpointPlan): string {
+  return canonicalHash({
+    planVersion: plan.planVersion,
+    stage: plan.stage,
+    raceCount: plan.raceCount,
+    venueDayCount: plan.venueDayCount,
+    checkpointCountPerRace: plan.checkpointCountPerRace,
+    requestBudget: plan.requestBudget,
+    concurrency: plan.concurrency,
+    minInterRequestMs: plan.minInterRequestMs,
+    immediateRetryAuthorized: plan.immediateRetryAuthorized,
+    blindFiveMinutePollingAuthorized: plan.blindFiveMinutePollingAuthorized,
+    allSelectionsPerRequest: plan.allSelectionsPerRequest,
+    rawRetention: plan.rawRetention,
+    databaseWriteAuthorized: plan.databaseWriteAuthorized,
+    currentBuyConnectionAuthorized: plan.currentBuyConnectionAuthorized,
+    lineConnectionAuthorized: plan.lineConnectionAuthorized,
+    publicPublishAuthorized: plan.publicPublishAuthorized,
+    entries: plan.entries,
+    ...(plan.parentManifestDigest === undefined
+      ? {}
+      : { parentManifestDigest: plan.parentManifestDigest }),
+  });
+}
+
 export function buildN2TrifectaRawRelativePath(input: {
   entry: N2TrifectaOddsCheckpointEntry;
   fetchedAt: string;
@@ -307,6 +333,10 @@ export function auditN2TrifectaOddsCaptureApproval(input: {
   if (now == null) blockers.push("INVALID_AUDIT_TIME");
   if (input.plan.status !== "READY_FOR_PRIVATE_REVIEW") {
     blockers.push("PLAN_NOT_REVIEW_READY");
+  }
+  if (!SHA256_RE.test(input.plan.manifestDigest)
+    || currentPlanManifestDigest(input.plan) !== input.plan.manifestDigest) {
+    blockers.push("PLAN_MANIFEST_DIGEST_MISMATCH");
   }
 
   const approval = input.approval;
