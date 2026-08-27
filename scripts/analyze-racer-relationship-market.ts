@@ -5,6 +5,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type ExactaRow = { race_id: string; date: string; venue: string; overround: number; odds14: number; winner: string | null; payout_yen: number | null; wind_speed_mps: number | null; wind_dir: string | null };
 type ProgramRow = { race_id: string; date: string; venue: string; raw_json: string; trifecta: string };
@@ -27,9 +31,9 @@ try {
     LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
     LEFT JOIN race_weather w ON w.race_id=h.race_id
     LEFT JOIN race_conditions c ON c.race_id=h.race_id
-    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
       AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
-    GROUP BY h.race_id HAVING COUNT(*)=30 AND odds14 IS NOT NULL
+    GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL
   `).all() as ExactaRow[];
   const exactaMap = new Map(exacta.map(row => [row.race_id, row]));
   const programs = db.prepare(`
