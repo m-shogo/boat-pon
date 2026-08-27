@@ -41,8 +41,10 @@ test("historical ranking forward requires non-empty train, validation, and test 
   }
 });
 
-test("historical ranking forward requires enough validation and test rows for top-two-hit exclusion metrics", () => {
+test("historical ranking forward requires enough rows for top-two-hit exclusion metrics", () => {
   for (const [name, counts] of [
+    ["train", { train: 1, validation: 3, test: 3 }],
+    ["train", { train: 2, validation: 3, test: 3 }],
     ["validation", { train: 10, validation: 1, test: 3 }],
     ["validation", { train: 10, validation: 2, test: 3 }],
     ["test", { train: 10, validation: 3, test: 1 }],
