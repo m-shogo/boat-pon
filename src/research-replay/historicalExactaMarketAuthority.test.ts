@@ -26,7 +26,9 @@ function setup(): DatabaseSync {
       odds REAL NOT NULL,
       bet_type TEXT NOT NULL,
       source_type TEXT NOT NULL,
-      source_quality TEXT NOT NULL
+      source_quality TEXT NOT NULL,
+      is_backfill INTEGER NOT NULL,
+      fetch_status TEXT NOT NULL
     );
   `);
   return db;
@@ -39,13 +41,24 @@ function insert(
   sourceType: string,
   sourceQuality: string,
   oddsForCombination: (combination: string, index: number) => number = (_combination, index) => 2 + index,
+  isBackfill = 1,
+  fetchStatus = "success",
 ): void {
   const statement = db.prepare(`
-    INSERT INTO historical_alternative_odds(race_id, combination, odds, bet_type, source_type, source_quality)
-    VALUES (?, ?, ?, 'exacta', ?, ?)
+    INSERT INTO historical_alternative_odds(
+      race_id, combination, odds, bet_type, source_type, source_quality, is_backfill, fetch_status
+    ) VALUES (?, ?, ?, 'exacta', ?, ?, ?, ?)
   `);
   combinations.forEach((combination, index) => {
-    statement.run(raceId, combination, oddsForCombination(combination, index), sourceType, sourceQuality);
+    statement.run(
+      raceId,
+      combination,
+      oddsForCombination(combination, index),
+      sourceType,
+      sourceQuality,
+      isBackfill,
+      fetchStatus,
+    );
   });
 }
 
@@ -60,7 +73,7 @@ function qualifyingRaceIds(db: DatabaseSync): string[] {
   `).all() as Array<{ race_id: string }>).map((row) => row.race_id);
 }
 
-test("exacta completeness requires the canonical 30-combination official closing market", () => {
+test("exacta completeness requires canonical successful backfill evidence", () => {
   const db = setup();
   try {
     const selections = exactaSelections();
@@ -80,6 +93,8 @@ test("exacta completeness requires the canonical 30-combination official closing
       "historical_closing_odds",
       (_combination, index) => index === 0 ? 1.0 : 2 + index,
     );
+    insert(db, "failed-fetch", selections, "official_archive", "historical_closing_odds", undefined, 1, "failed");
+    insert(db, "not-backfill", selections, "official_archive", "historical_closing_odds", undefined, 0, "success");
 
     assert.deepEqual(qualifyingRaceIds(db), ["valid"]);
   } finally {
@@ -87,7 +102,7 @@ test("exacta completeness requires the canonical 30-combination official closing
   }
 });
 
-test("overround grouping ignores noncanonical sources and validates the official market", () => {
+test("overround grouping ignores noncanonical or unsuccessful source rows", () => {
   const db = setup();
   try {
     const selections = exactaSelections();
@@ -103,6 +118,7 @@ test("overround grouping ignores noncanonical sources and validates the official
       "historical_closing_odds",
       (_combination, index) => index === 29 ? 0.5 : 2 + index,
     );
+    insert(db, "failed-fetch", selections, "official_archive", "historical_closing_odds", undefined, 1, "failed");
 
     const rows = db.prepare(`
       SELECT race_id
