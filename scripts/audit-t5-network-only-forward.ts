@@ -194,7 +194,9 @@ console.log(`[t5-network-only-forward] wrote ${OUT_MD} / ${OUT_JSON}`);
 function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: string | null) {
   const fromId = from.replaceAll("-", "");
   const toExclusive = addDays(to, 1).replaceAll("-", "");
-  const canonicalTimingHavingSql = n2CanonicalT5ForwardCaptureTimingHavingSql("minutes_before_close");
+  const canonicalTimingHavingSql = capturedFrom == null
+    ? "1 = 1"
+    : n2CanonicalT5ForwardCaptureTimingHavingSql("minutes_before_close");
   return db.prepare(`
     WITH complete_capture AS (
       SELECT race_id, captured_at, MAX(id) AS max_id
