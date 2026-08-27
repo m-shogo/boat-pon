@@ -4,15 +4,15 @@ import test from "node:test";
 import { n2CanonicalT5SelectionSql } from "./n2T5CollectorSelectionSql";
 import { n2CanonicalT5CoverageTimingSql } from "./n2T5MarketCoverageTimingSql";
 
-test("T-5 market coverage timing SQL accepts only persisted T-5 minute values", () => {
+test("T-5 market coverage timing SQL accepts only producer-valid persisted minute values", () => {
   const db = new DatabaseSync(":memory:");
   db.exec("CREATE TABLE samples(value)");
   const insert = db.prepare("INSERT INTO samples(value) VALUES (?)");
-  for (const value of [0, 5, 10, -1, 11, 5.5, "5", null]) insert.run(value);
+  for (const value of [3, 4, 5, 6, 7, 5.5, "5", null]) insert.run(value);
   const predicate = n2CanonicalT5CoverageTimingSql("value");
   const rows = db.prepare(`SELECT value FROM samples WHERE ${predicate} ORDER BY value`).all() as Array<{ value: number }>;
   db.close();
-  assert.deepEqual(rows.map((row) => row.value), [0, 5, 10]);
+  assert.deepEqual(rows.map((row) => row.value), [4, 5, 6]);
 });
 
 test("T-5 full-market counting rejects mixed or mislabeled timing evidence", () => {
