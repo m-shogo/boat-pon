@@ -23,6 +23,12 @@ export function isCompleteVenueDay(rows: ScheduledRace[]): boolean {
 export function attentionContext(target: ScheduledRace, validDayRows: ScheduledRace[]) {
   const minute = parseCloseMinute(target.closeAt);
   if (minute == null) return null;
+  if (!validDayRows.some((row) =>
+    row.raceId === target.raceId &&
+    row.venue === target.venue &&
+    row.raceNo === target.raceNo &&
+    row.closeAt === target.closeAt
+  )) return null;
   const others = validDayRows.filter((row) => row.raceId !== target.raceId).map((row) => ({ row, minute: parseCloseMinute(row.closeAt) })).filter((x): x is {row:ScheduledRace;minute:number} => x.minute != null);
   const gaps = others.map((x) => Math.abs(x.minute - minute));
   return {
