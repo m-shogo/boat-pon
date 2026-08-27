@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { evaluateT5MarketCoverage } from "../src/domain/t5MarketCoverage";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
 import { parseT5MarketCoverageAuditOptions } from "../src/research-replay/t5MarketCoverageAuditOptions";
+import { isCanonicalT5MarketCoverageSettlement } from "../src/research-replay/t5MarketCoverageSettlement";
 
 const argv = process.argv.slice(2);
 const options = parseT5MarketCoverageAuditOptions(argv, {
@@ -20,8 +21,10 @@ try {
     ORDER BY date, race_id
   `).all(from, to) as Array<{ race_id: string; date: string }>;
   const settled = new Set((db.prepare(`
-    SELECT race_id FROM race_results WHERE date >= ? AND date <= ? AND returned = 0
-  `).all(from, to) as Array<{ race_id: string }>).map(row => row.race_id));
+    SELECT race_id, trifecta, returned FROM race_results WHERE date >= ? AND date <= ?
+  `).all(from, to) as Array<{ race_id: string; trifecta: string | null; returned: number }>)
+    .filter(isCanonicalT5MarketCoverageSettlement)
+    .map(row => row.race_id));
   // checkpoint_label単独の索引走査を避け、race_id先頭の既存複合索引をレースごとに使う。
   const canonicalSelectionSql = n2CanonicalT5SelectionSql("selection");
   const countT5 = db.prepare(`
