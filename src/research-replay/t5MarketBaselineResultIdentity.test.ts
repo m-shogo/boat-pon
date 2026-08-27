@@ -9,6 +9,8 @@ test("T-5 market baseline accepts producer-consistent result identity", () => {
     venue: "桐生",
     race_no: 1,
     trifecta: "1-2-3",
+    payout_yen: 1230,
+    returned: 0,
   };
   assert.deepEqual(validateT5MarketBaselineResultIdentityRows([row]), [row]);
 });
@@ -52,5 +54,32 @@ test("T-5 market baseline rejects producer-impossible result identity components
       { race_id: "20260827-桐生-13", date: "2026-08-27", venue: "桐生", race_no: 13 },
     ]),
     /N2_T5_MARKET_BASELINE_RESULT_RACE_NO_INVALID/u,
+  );
+});
+
+test("T-5 market baseline rejects producer-impossible persisted settlement values", () => {
+  const base = {
+    race_id: "20260827-桐生-01",
+    date: "2026-08-27",
+    venue: "桐生",
+    race_no: 1,
+    trifecta: "1-2-3",
+  };
+
+  assert.throws(
+    () => validateT5MarketBaselineResultIdentityRows([{ ...base, payout_yen: 1230.5, returned: 0 }]),
+    /N2_T5_MARKET_BASELINE_RESULT_PAYOUT_INVALID/u,
+  );
+  assert.throws(
+    () => validateT5MarketBaselineResultIdentityRows([{ ...base, payout_yen: -100, returned: 0 }]),
+    /N2_T5_MARKET_BASELINE_RESULT_PAYOUT_INVALID/u,
+  );
+  assert.throws(
+    () => validateT5MarketBaselineResultIdentityRows([{ ...base, payout_yen: 1230, returned: 2 }]),
+    /N2_T5_MARKET_BASELINE_RESULT_RETURNED_INVALID/u,
+  );
+  assert.deepEqual(
+    validateT5MarketBaselineResultIdentityRows([{ ...base, payout_yen: null, returned: 0 }]),
+    [{ ...base, payout_yen: null, returned: 0 }],
   );
 });
