@@ -3,6 +3,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import { EVENT_CONTEXT_CATEGORIES, eventContextFlags } from "../src/domain/eventContext";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+  historicalExactaCompleteMarketPredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type OddsRow = { race_id: string; date: string; combination: string; odds: number; winner: string | null; payout_yen: number | null };
 type EvalRow = OddsRow & { period: "discovery" | "forward"; implied: number; hit: boolean; flags: string[] };
@@ -16,15 +21,15 @@ try {
     SELECT h.race_id, h.race_date AS date, h.combination, h.odds, p.combination AS winner, p.payout_yen
     FROM historical_alternative_odds h
     LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
-    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
       AND h.combination IN ('1-2','1-3','1-4','1-5','1-6')
       AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
-      AND (SELECT COUNT(*) FROM historical_alternative_odds all_odds WHERE all_odds.race_id=h.race_id AND all_odds.bet_type='exacta')=30
+      AND ${historicalExactaCompleteMarketPredicate("h.race_id")}
   `).all() as OddsRow[];
   const raceIds = [...new Set(odds.map(row => row.race_id))];
   const overround = new Map((db.prepare(`
     SELECT race_id, SUM(1.0/odds) AS value FROM historical_alternative_odds
-    WHERE bet_type='exacta' AND race_date BETWEEN '2024-01-01' AND '2025-12-31' GROUP BY race_id HAVING COUNT(*)=30
+    WHERE bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate()} AND race_date BETWEEN '2024-01-01' AND '2025-12-31' GROUP BY race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
   `).all() as Array<{ race_id: string; value: number }>).map(row => [row.race_id, row.value]));
   const flagsByRace = new Map(raceIds.map(raceId => {
     const date = `${raceId.slice(0, 4)}-${raceId.slice(4, 6)}-${raceId.slice(6, 8)}`;
