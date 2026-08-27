@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
+import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const MODEL_PATH = process.env.BOAT_PON_HISTORICAL_MODEL_PATH ?? "reports/historical-ranking-model.json";
@@ -292,6 +293,9 @@ function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: stri
   const fromId = from.replaceAll("-", "");
   const toExclusive = addDays(to, 1).replaceAll("-", "");
   const canonicalSelectionHavingSql = n2CanonicalT5CompleteCaptureSelectionHavingSql("selection");
+  const canonicalTimingHavingSql = capturedFrom == null
+    ? "1 = 1"
+    : n2CanonicalT5ForwardCaptureTimingHavingSql("minutes_before_close");
   return db.prepare(`
     WITH complete_capture AS (
       SELECT race_id, captured_at, MAX(id) AS max_id
@@ -300,7 +304,7 @@ function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: stri
         AND checkpoint_label = 'T-5'
         AND (? IS NULL OR captured_at >= ?)
       GROUP BY race_id, captured_at
-      HAVING ${canonicalSelectionHavingSql}
+      HAVING ${canonicalSelectionHavingSql} AND ${canonicalTimingHavingSql}
     ), latest_capture AS (
       SELECT race_id, MAX(max_id) AS max_id
       FROM complete_capture
