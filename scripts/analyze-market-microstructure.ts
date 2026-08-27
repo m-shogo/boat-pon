@@ -2,6 +2,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { adjacentSecondRatio, buildExactaMarketShape } from "../src/domain/exactaMarketShape";
+import {
+  historicalExactaCanonicalSourcePredicate,
+  historicalExactaCompleteMarketPredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type DbRow={race_id:string;date:string;combination:string;odds:number;winner:string|null;payout_yen:number|null};
 type Metric={n:number;hits:number;edgePp:number;roi:number;max2HitExclRoi:number};
@@ -26,9 +30,9 @@ db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
   const rows=db.prepare(`SELECT h.race_id,h.race_date AS date,h.combination,h.odds,p.combination AS winner,p.payout_yen
     FROM historical_alternative_odds h LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
-    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
       AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
-      AND (SELECT COUNT(*) FROM historical_alternative_odds a WHERE a.race_id=h.race_id AND a.bet_type='exacta')=30
+      AND ${historicalExactaCompleteMarketPredicate("h.race_id")}
     ORDER BY h.race_id,h.combination`).all() as DbRow[];
   const byRace=new Map<string,DbRow[]>();for(const row of rows){const race=byRace.get(row.race_id)??[];race.push(row);byRace.set(row.race_id,race);}
   const evalRows:EvalRow[]=[];const distributions:{oneMass:number;effective:number}[]=[];let evaluatedRaces=0;
