@@ -46,4 +46,16 @@ test("T-5 market coverage rejects impossible or mismatched program identity", ()
     ]),
     /N2_T5_MARKET_COVERAGE_PROGRAM_VENUE_INVALID/u,
   );
+  assert.throws(
+    () => validateT5MarketCoverageProgramRows([
+      { race_id: "20260827-架空場-01", date: "2026-08-27", venue: "架空場", race_no: 1 },
+    ]),
+    /N2_T5_MARKET_COVERAGE_PROGRAM_VENUE_INVALID/u,
+  );
+  assert.throws(
+    () => validateT5MarketCoverageProgramRows([
+      { race_id: "20260827-01-01", date: "2026-08-27", venue: "01", race_no: 1 },
+    ]),
+    /N2_T5_MARKET_COVERAGE_PROGRAM_VENUE_INVALID/u,
+  );
 });
