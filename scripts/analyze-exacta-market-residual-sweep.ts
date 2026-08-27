@@ -28,6 +28,10 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/exacta-market-residual-sweep.md";
@@ -108,16 +112,16 @@ const raceRows = db.prepare(`
   LEFT JOIN (
     SELECT race_id, ranking FROM exhibition_data WHERE course=1
   ) ed1 ON ed1.race_id = hao.race_id
-  WHERE hao.bet_type='exacta'
+  WHERE hao.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("hao")}
   GROUP BY hao.race_id
-  HAVING COUNT(*) = 30 AND COALESCE(is_f, 0) = 0
+  HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND COALESCE(is_f, 0) = 0
 `).all() as RaceBase[];
 
 // 各組番の odds
 const comboRows = db.prepare(`
   SELECT hao.race_id, hao.combination as combo, hao.odds
   FROM historical_alternative_odds hao
-  WHERE hao.bet_type='exacta'
+  WHERE hao.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("hao")}
 `).all() as ComboOdds[];
 
 // race_id → 組番→odds のマップ
@@ -146,7 +150,7 @@ type SweepResult = {
   avg_normalized_implied: number;
   edge_pp: number;       // actual_rate - avg_normalized_implied (正 = 市場過小評価)
   realized_roi: number;  // (当選払戻合計) / (n * 100)
-  max1hit_excl_roi: number; // 最大払戻1件除外
+  max1hit_excl_roi: number; // 最大払戻1件除外後の realized_roi
   avg_odds: number;
   period: string;
 };
