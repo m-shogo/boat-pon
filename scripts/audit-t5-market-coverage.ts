@@ -1,6 +1,7 @@
 /** T-5全120通りの収集率を公式番組母数で測るread-only監査。 */
 import { DatabaseSync } from "node:sqlite";
 import { evaluateT5MarketCoverage } from "../src/domain/t5MarketCoverage";
+import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
 import { parseT5MarketCoverageAuditOptions } from "../src/research-replay/t5MarketCoverageAuditOptions";
 
 const argv = process.argv.slice(2);
@@ -22,9 +23,12 @@ try {
     SELECT race_id FROM race_results WHERE date >= ? AND date <= ? AND returned = 0
   `).all(from, to) as Array<{ race_id: string }>).map(row => row.race_id));
   // checkpoint_label単独の索引走査を避け、race_id先頭の既存複合索引をレースごとに使う。
+  const canonicalSelectionSql = n2CanonicalT5SelectionSql("selection");
   const countT5 = db.prepare(`
-    SELECT COALESCE(MAX(n), 0) AS n FROM (
-      SELECT COUNT(DISTINCT selection) AS n
+    SELECT COALESCE(MAX(CASE WHEN selections = canonical_selections THEN canonical_selections ELSE 0 END), 0) AS n FROM (
+      SELECT
+        COUNT(DISTINCT selection) AS selections,
+        COUNT(DISTINCT CASE WHEN ${canonicalSelectionSql} THEN selection END) AS canonical_selections
       FROM odds_timeseries_snapshots
       WHERE race_id = ? AND checkpoint_label = 'T-5'
       GROUP BY captured_at
