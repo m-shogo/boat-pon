@@ -29,6 +29,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { historicalExactaCanonicalSourcePredicate } from "../src/research-replay/historicalExactaMarketAuthority";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/h011-implied-vs-frequency.md";
@@ -104,6 +105,7 @@ const raceData = db.prepare(`
     AND dh.date >= '${HELDOUT_START}'
   LEFT JOIN race_payouts rp ON rp.race_id = hao_base.race_id AND rp.bet_type = 'exacta'
   WHERE hao_base.bet_type = 'exacta'
+    AND ${historicalExactaCanonicalSourcePredicate("hao_base")}
   GROUP BY hao_base.race_id
   HAVING COUNT(*) >= 20
 `).all() as RaceRow[];
