@@ -68,7 +68,7 @@ const matureRaceIds = new Set(maturePrograms.map((row) => row.race_id));
 const formalOdds = loadLatestCompleteCaptures(formalFromDate, formalToDate, NETWORK_ONLY_FROM.toISOString())
   .filter((row) => matureRaceIds.has(row.race_id));
 const completeRaceIds = new Set(formalOdds.map((row) => row.race_id));
-const formalResults = validateT5MarketBaselineResultIdentityRows(loadResults(formalFromDate, formalToDate));
+const formalResults = loadResults(formalFromDate, formalToDate);
 const resultByRace = new Map(formalResults.map((row) => [row.race_id, row]));
 const formalRaces = buildRaces(formalOdds, formalResults);
 db.close();
@@ -234,11 +234,11 @@ function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: stri
 }
 
 function loadResults(from: string, to: string) {
-  return db.prepare(`
+  return validateT5MarketBaselineResultIdentityRows(db.prepare(`
     SELECT race_id, date, venue, race_no, trifecta, payout_yen, returned
     FROM race_results
     WHERE date >= ? AND date <= ?
-  `).all(from, to) as ResultRow[];
+  `).all(from, to) as ResultRow[]);
 }
 
 function buildRaces(odds: OddsRow[], results: ResultRow[]) {
