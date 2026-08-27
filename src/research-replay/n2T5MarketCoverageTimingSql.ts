@@ -4,5 +4,5 @@ export function n2CanonicalT5CoverageTimingSql(columnSql: string): string {
   if (!SAFE_COLUMN_SQL.test(columnSql)) {
     throw new Error(`N2_T5_MARKET_COVERAGE_TIMING_COLUMN_INVALID:${columnSql}`);
   }
-  return `(typeof(${columnSql}) = 'integer' AND ${columnSql} BETWEEN 2 AND 10)`;
+  return `(typeof(${columnSql}) = 'integer' AND ${columnSql} BETWEEN 0 AND 10)`;
 }
