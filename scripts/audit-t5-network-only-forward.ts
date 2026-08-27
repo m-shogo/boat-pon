@@ -227,6 +227,7 @@ function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: stri
       SELECT MAX(source.id)
       FROM odds_timeseries_snapshots source
       JOIN chosen ON chosen.race_id = source.race_id AND chosen.captured_at = source.captured_at
+      WHERE source.checkpoint_label = 'T-5'
       GROUP BY source.race_id, source.selection
     )
   `).all(fromId, toExclusive, capturedFrom, capturedFrom) as OddsRow[];
