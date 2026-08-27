@@ -16,6 +16,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
+  historicalExactaCanonicalSourcePredicate,
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+} from "../src/research-replay/historicalExactaMarketAuthority";
+import {
   requireExactaForwardMonitorLockedAt,
   requireExactaForwardMonitorRaceIdentities,
 } from "../src/research-replay/exactaForwardMonitorSafety";
@@ -189,12 +193,14 @@ function loadBaseRaces(file: CandidateFile): RaceRow[] {
   ];
   return db.prepare(`
 WITH exacta_overround AS (
-  SELECT race_id,
+  SELECT a.race_id,
          COUNT(*) AS combo_count,
-         SUM(CASE WHEN odds > 0 THEN 1.0 / odds ELSE 0 END) AS overround
-  FROM historical_alternative_odds
-  WHERE bet_type='exacta'
-  GROUP BY race_id
+         SUM(CASE WHEN a.odds > 0 THEN 1.0 / a.odds ELSE 0 END) AS overround
+  FROM historical_alternative_odds a
+  WHERE a.bet_type='exacta'
+    AND ${historicalExactaCanonicalSourcePredicate("a")}
+  GROUP BY a.race_id
+  HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
 )
 SELECT DISTINCT
   dh.race_id,
@@ -230,10 +236,11 @@ function loadOddsByRace(raceIds: string[]) {
   for (const ids of chunks(raceIds, 500)) {
     if (!ids.length) continue;
     const rows = db.prepare(`
-SELECT race_id, combination, odds
-FROM historical_alternative_odds
-WHERE bet_type='exacta'
-  AND race_id IN (${ids.map(() => "?").join(",")})
+SELECT a.race_id, a.combination, a.odds
+FROM historical_alternative_odds a
+WHERE a.bet_type='exacta'
+  AND ${historicalExactaCanonicalSourcePredicate("a")}
+  AND a.race_id IN (${ids.map(() => "?").join(",")})
 `).all(...ids) as ComboOddsRow[];
     for (const row of rows) {
       const byCombo = map.get(row.race_id) ?? new Map<string, number>();
