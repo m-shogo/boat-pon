@@ -15,6 +15,7 @@ import {
   type ProbabilityModel,
   type ResidualRace,
 } from "../src/domain/t5ResidualModel";
+import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const TRAIN_FROM = process.env.BOAT_PON_TRAIN_FROM ?? "2026-06-01";
@@ -193,6 +194,9 @@ console.log(`[t5-network-only-forward] wrote ${OUT_MD} / ${OUT_JSON}`);
 function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: string | null) {
   const fromId = from.replaceAll("-", "");
   const toExclusive = addDays(to, 1).replaceAll("-", "");
+  const canonicalTimingHavingSql = capturedFrom == null
+    ? "1 = 1"
+    : n2CanonicalT5ForwardCaptureTimingHavingSql("minutes_before_close");
   return db.prepare(`
     WITH complete_capture AS (
       SELECT race_id, captured_at, MAX(id) AS max_id
@@ -202,6 +206,7 @@ function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: stri
         AND (? IS NULL OR captured_at >= ?)
       GROUP BY race_id, captured_at
       HAVING COUNT(DISTINCT selection) = 120
+        AND ${canonicalTimingHavingSql}
     ), latest_capture AS (
       SELECT race_id, MAX(max_id) AS max_id
       FROM complete_capture
