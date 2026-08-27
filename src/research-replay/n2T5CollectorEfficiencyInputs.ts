@@ -41,10 +41,10 @@ export function resolveN2T5CollectorEfficiencyInputs(input: {
   const from = canonicalDate(input.from, "FROM");
   const to = canonicalDate(input.to, "TO");
   if (from > to) throw new Error(`N2_T5_COLLECTOR_WINDOW_REVERSED:${from}:${to}`);
-  return {
-    from,
-    to,
-    fixEffectiveAt: canonicalInstant(input.fixEffectiveAt, "FIX_EFFECTIVE_AT"),
-    networkOnlyEffectiveAt: canonicalInstant(input.networkOnlyEffectiveAt, "NETWORK_ONLY_EFFECTIVE_AT"),
-  };
+  const fixEffectiveAt = canonicalInstant(input.fixEffectiveAt, "FIX_EFFECTIVE_AT");
+  const networkOnlyEffectiveAt = canonicalInstant(input.networkOnlyEffectiveAt, "NETWORK_ONLY_EFFECTIVE_AT");
+  if (networkOnlyEffectiveAt < fixEffectiveAt) {
+    throw new Error(`N2_T5_COLLECTOR_EFFECTIVE_ORDER_INVALID:${fixEffectiveAt}:${networkOnlyEffectiveAt}`);
+  }
+  return { from, to, fixEffectiveAt, networkOnlyEffectiveAt };
 }
