@@ -8,3 +8,17 @@ export function parseHistoricalRankingEpochs(raw: string | undefined): number {
   }
   return value;
 }
+
+export type HistoricalRankingForwardCohortCounts = {
+  train: number;
+  validation: number;
+  test: number;
+};
+
+export function validateHistoricalRankingForwardCohorts(counts: HistoricalRankingForwardCohortCounts): void {
+  for (const [name, count] of Object.entries(counts)) {
+    if (!Number.isSafeInteger(count) || count <= 0) {
+      throw new Error(`HISTORICAL_RANKING_COHORT_EMPTY:${name}`);
+    }
+  }
+}
