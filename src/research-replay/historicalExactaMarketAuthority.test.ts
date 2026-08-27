@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import {
+  HISTORICAL_EXACTA_CANONICAL_SOURCE_PREDICATE,
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCompleteMarketPredicate,
 } from "./historicalExactaMarketAuthority";
@@ -43,20 +44,24 @@ function qualifyingRaceIds(db: DatabaseSync): string[] {
     SELECT DISTINCT h.race_id
     FROM historical_alternative_odds h
     WHERE h.bet_type = 'exacta'
+      AND h.${HISTORICAL_EXACTA_CANONICAL_SOURCE_PREDICATE}
       AND ${historicalExactaCompleteMarketPredicate("h.race_id")}
     ORDER BY h.race_id
   `).all() as Array<{ race_id: string }>).map((row) => row.race_id);
 }
 
-test("exacta completeness requires all 30 distinct combinations from one source lineage", () => {
+test("exacta completeness requires the canonical 30-combination official closing market", () => {
   const db = setup();
   try {
     const selections = exactaSelections();
     insert(db, "valid", selections, "official_archive", "historical_closing_odds");
+    insert(db, "valid", selections.slice(0, 15), "secondary_archive", "historical_closing_odds");
     insert(db, "duplicate-source", selections.slice(0, 15), "official_archive", "historical_closing_odds");
     insert(db, "duplicate-source", selections.slice(0, 15), "secondary_archive", "historical_closing_odds");
     insert(db, "mixed-source", selections.slice(0, 15), "official_archive", "historical_closing_odds");
     insert(db, "mixed-source", selections.slice(15), "secondary_archive", "historical_closing_odds");
+    insert(db, "secondary-only", selections, "secondary_archive", "historical_closing_odds");
+    insert(db, "malformed", [...selections.slice(0, 29), "7-1"], "official_archive", "historical_closing_odds");
 
     assert.deepEqual(qualifyingRaceIds(db), ["valid"]);
   } finally {
@@ -64,11 +69,12 @@ test("exacta completeness requires all 30 distinct combinations from one source 
   }
 });
 
-test("overround grouping uses the same exacta completeness authority", () => {
+test("overround grouping uses the same canonical exacta authority", () => {
   const db = setup();
   try {
     const selections = exactaSelections();
     insert(db, "valid", selections, "official_archive", "historical_closing_odds");
+    insert(db, "valid", selections.slice(0, 15), "secondary_archive", "historical_closing_odds");
     insert(db, "duplicate-source", selections.slice(0, 15), "official_archive", "historical_closing_odds");
     insert(db, "duplicate-source", selections.slice(0, 15), "secondary_archive", "historical_closing_odds");
 
@@ -76,6 +82,7 @@ test("overround grouping uses the same exacta completeness authority", () => {
       SELECT race_id
       FROM historical_alternative_odds
       WHERE bet_type = 'exacta'
+        AND ${HISTORICAL_EXACTA_CANONICAL_SOURCE_PREDICATE}
       GROUP BY race_id
       HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
       ORDER BY race_id
