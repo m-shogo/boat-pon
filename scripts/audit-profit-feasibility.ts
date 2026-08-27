@@ -5,6 +5,10 @@
  * 実運用可能な T-5 odds として扱わない。
  */
 import { DatabaseSync } from "node:sqlite";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 30000;");
@@ -25,9 +29,9 @@ try {
     WITH complete AS (
       SELECT race_id
       FROM historical_alternative_odds
-      WHERE bet_type = 'exacta'
+      WHERE bet_type = 'exacta' AND ${historicalExactaCanonicalSourcePredicate()}
       GROUP BY race_id
-      HAVING COUNT(*) = 30
+      HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
     )
     SELECT h.race_id, h.race_date, h.combination, h.odds,
            p.combination AS winner, p.payout_yen
@@ -35,7 +39,7 @@ try {
     JOIN complete c ON c.race_id = h.race_id
     JOIN race_payouts p ON p.race_id = h.race_id
       AND p.bet_type = 'exacta' AND p.returned = 0
-    WHERE h.bet_type = 'exacta'
+    WHERE h.bet_type = 'exacta' AND ${historicalExactaCanonicalSourcePredicate("h")}
     ORDER BY h.race_id, h.combination
   `).all() as Row[];
 
