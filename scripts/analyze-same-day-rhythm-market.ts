@@ -4,6 +4,10 @@ import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import { eventContextFlags } from "../src/domain/eventContext";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type MarketRow={race_id:string;date:string;overround:number;odds14:number;winner:string|null;payout_yen:number|null;wind_speed_mps:number|null;wind_dir:string|null};
 type ProgramRow={race_id:string;date:string;venue:string;race_no:number;raw_json:string};
@@ -25,8 +29,8 @@ const db=new DatabaseSync(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite",{read
 try{
   const market=db.prepare(`SELECT h.race_id,h.race_date AS date,SUM(1.0/h.odds) AS overround,MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,p.combination AS winner,p.payout_yen,w.wind_speed_mps,c.wind_dir
     FROM historical_alternative_odds h LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta' LEFT JOIN race_weather w ON w.race_id=h.race_id LEFT JOIN race_conditions c ON c.race_id=h.race_id
-    WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
-    GROUP BY h.race_id HAVING COUNT(*)=30 AND odds14 IS NOT NULL`).all() as MarketRow[];
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+    GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL`).all() as MarketRow[];
   const marketMap=new Map(market.map(r=>[r.race_id,r]));
   const programs=db.prepare(`SELECT op.race_id,op.date,op.venue,op.race_no,op.raw_json FROM official_programs op WHERE op.date BETWEEN '2024-01-01' AND '2025-12-31'
     AND EXISTS(SELECT 1 FROM historical_alternative_odds h WHERE h.race_date=op.date AND h.bet_type='exacta') ORDER BY op.date,op.venue,op.race_no`).all() as ProgramRow[];
@@ -42,7 +46,7 @@ try{
   const scopes=[{id:"all",label:"exacta 1-4全体",test:(_r:EvalRow)=>true},{id:"rookie",label:"ルーキー・若手開催",test:(r:EvalRow)=>r.flags.includes("rookie")},{id:"target",label:"風2〜3m・南西風・4号艇最強",test:(r:EvalRow)=>r.flags.includes("southwest")&&r.flags.includes("top_rival_4")}];
   const results=scopes.map(s=>({id:s.id,label:s.label,base:byPeriod(evaluations.filter(s.test)),mechanisms:mechanisms.map(([id,label])=>{const inside=evaluations.filter(r=>s.test(r)&&r.flags.includes(id)),outside=evaluations.filter(r=>s.test(r)&&!r.flags.includes(id));return{id,label,inside:byPeriod(inside),outside:byPeriod(outside)};})}));
   const rhythmByRace=new Map(evaluations.map(r=>[r.race_id,r]));const selections=["1-2","1-3","1-4","1-5","1-6"];
-  const selectionOdds=db.prepare(`SELECT race_id,race_date AS date,combination,odds FROM historical_alternative_odds WHERE bet_type='exacta' AND race_date BETWEEN '2024-01-01' AND '2025-12-31' AND combination IN('1-2','1-3','1-4','1-5','1-6')`).all() as Array<{race_id:string;date:string;combination:string;odds:number}>;
+  const selectionOdds=db.prepare(`SELECT h.race_id,h.race_date AS date,h.combination,h.odds FROM historical_alternative_odds h WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND h.combination IN('1-2','1-3','1-4','1-5','1-6')`).all() as Array<{race_id:string;date:string;combination:string;odds:number}>;
   const selectionEvaluations:SelectionEval[]=selectionOdds.flatMap(o=>{const base=rhythmByRace.get(o.race_id);return base?[{...base,selection:o.combination,odds14:o.odds,hit:base.winner===o.combination,implied:(1/o.odds)/base.overround}]:[];});
   const matrixCells=mechanisms.flatMap(([id,label])=>selections.map(selection=>{const inside=selectionEvaluations.filter(r=>r.selection===selection&&r.flags.includes(id));return{id,label,selection,metrics:byPeriod(inside)};}));
   const eligibleMatrix=matrixCells.filter(c=>c.metrics.discovery.n>=30&&c.metrics.forward.n>=30);const stableMatrix=eligibleMatrix.filter(c=>c.metrics.discovery.edgePp>0&&c.metrics.forward.edgePp>0).sort((a,b)=>Math.min(b.metrics.discovery.edgePp,b.metrics.forward.edgePp)-Math.min(a.metrics.discovery.edgePp,a.metrics.forward.edgePp));const robustMatrix=stableMatrix.filter(c=>c.metrics.discovery.max2HitExclRoi>=1&&c.metrics.forward.max2HitExclRoi>=1);
