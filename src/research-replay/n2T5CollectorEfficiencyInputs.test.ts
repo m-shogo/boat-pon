@@ -39,3 +39,12 @@ test("T-5 collector audit inputs reject invalid or zone-less effective timestamp
     networkOnlyEffectiveAt: "2026-02-30T15:15:00+09:00",
   }), /N2_T5_COLLECTOR_NETWORK_ONLY_EFFECTIVE_AT_INVALID/u);
 });
+
+test("T-5 collector audit inputs reject network-only cohort before the collector fix", () => {
+  assert.throws(() => resolveN2T5CollectorEfficiencyInputs({
+    from: "2026-07-20",
+    to: "2026-07-21",
+    fixEffectiveAt: "2026-07-21T15:15:00+09:00",
+    networkOnlyEffectiveAt: "2026-07-21T13:40:00+09:00",
+  }), /N2_T5_COLLECTOR_EFFECTIVE_ORDER_INVALID/u);
+});
