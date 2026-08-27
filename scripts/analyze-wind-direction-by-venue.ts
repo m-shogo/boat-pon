@@ -4,6 +4,10 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/wind-direction-venue-screen.md";
@@ -24,11 +28,11 @@ const raws = db.prepare(`
   JOIN official_programs op ON op.race_id=h.race_id
   LEFT JOIN race_conditions c ON c.race_id=h.race_id
   LEFT JOIN race_weather w ON w.race_id=h.race_id
-  WHERE h.bet_type='exacta' AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+  WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
     AND json_type(op.raw_json,'$.boats')='array'
     AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
   GROUP BY h.race_id
-  HAVING COUNT(*)=30 AND odds14 IS NOT NULL
+  HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL
   ORDER BY h.race_date, h.race_id
 `).all() as Raw[];
 
