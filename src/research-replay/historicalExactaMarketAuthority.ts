@@ -7,6 +7,20 @@ export const HISTORICAL_EXACTA_COMBINATIONS = Array.from({ length: 6 }, (_, firs
 
 const combinationSql = HISTORICAL_EXACTA_COMBINATIONS.map((value) => `'${value}'`).join(",");
 
+export function historicalExactaRaceIdentityPredicate(alias?: string): string {
+  const prefix = alias ? `${alias}.` : "";
+  return [
+    `length(${prefix}race_date) = 10`,
+    `strftime('%Y-%m-%d', ${prefix}race_date) = ${prefix}race_date`,
+    `${prefix}race_no BETWEEN 1 AND 12`,
+    `length(${prefix}venue_code) = 2`,
+    `${prefix}venue_code GLOB '[0-9][0-9]'`,
+    `CAST(${prefix}venue_code AS INTEGER) BETWEEN 1 AND 24`,
+    `printf('%02d', CAST(${prefix}venue_code AS INTEGER)) = ${prefix}venue_code`,
+    `${prefix}race_id = replace(${prefix}race_date, '-', '') || '-' || ${prefix}venue || '-' || printf('%02d', ${prefix}race_no)`,
+  ].join(" AND ");
+}
+
 export function historicalExactaCanonicalSourcePredicate(alias?: string): string {
   const prefix = alias ? `${alias}.` : "";
   return [
@@ -14,6 +28,7 @@ export function historicalExactaCanonicalSourcePredicate(alias?: string): string
     `${prefix}source_quality = '${HISTORICAL_EXACTA_SOURCE_QUALITY}'`,
     `${prefix}is_backfill = 1`,
     `${prefix}fetch_status = 'success'`,
+    historicalExactaRaceIdentityPredicate(alias),
   ].join(" AND ");
 }
 
