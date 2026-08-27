@@ -5,6 +5,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { validateHistoricalRankingSettlementRows } from "../src/research-replay/historicalRankingSettlementIntegrity";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -34,6 +35,7 @@ type SourceRow = {
   trifecta: string;
   payout_yen: number;
   payout_source: string;
+  payout_returned: number;
 };
 type ExhibitionRow = { race_id: string; boat: number; exhibition_time: number };
 type Boat = ProgramBoat & { exhibitionScore: number };
@@ -43,7 +45,7 @@ type RankingModel = { featureSet: FeatureSet; weights: number[][] };
 
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
-const sourceRows = validateT5MarketCoverageProgramRows(db.prepare(`
+const sourceRows = validateHistoricalRankingSettlementRows(validateT5MarketCoverageProgramRows(db.prepare(`
   SELECT
     programs.race_id,
     programs.date,
@@ -52,7 +54,8 @@ const sourceRows = validateT5MarketCoverageProgramRows(db.prepare(`
     programs.raw_json,
     results.trifecta,
     COALESCE(payouts.payout_yen, results.payout_yen) AS payout_yen,
-    CASE WHEN payouts.payout_yen IS NOT NULL THEN 'race_payouts' ELSE 'race_results' END AS payout_source
+    CASE WHEN payouts.payout_yen IS NOT NULL THEN 'race_payouts' ELSE 'race_results' END AS payout_source,
+    CASE WHEN payouts.payout_yen IS NOT NULL THEN payouts.returned ELSE results.returned END AS payout_returned
   FROM official_programs programs
   JOIN race_results results ON results.race_id = programs.race_id
   LEFT JOIN race_payouts payouts
@@ -65,7 +68,7 @@ const sourceRows = validateT5MarketCoverageProgramRows(db.prepare(`
     AND results.trifecta IS NOT NULL
     AND COALESCE(payouts.payout_yen, results.payout_yen) IS NOT NULL
   ORDER BY programs.date, programs.race_id
-`).all() as SourceRow[]);
+`).all() as SourceRow[]));
 const exhibitionRows = db.prepare(`
   SELECT race_id, boat, exhibition_time
   FROM race_entries
