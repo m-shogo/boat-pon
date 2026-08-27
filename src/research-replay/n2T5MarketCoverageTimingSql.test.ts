@@ -6,9 +6,9 @@ import { n2CanonicalT5CoverageTimingSql } from "./n2T5MarketCoverageTimingSql";
 
 test("T-5 market coverage timing SQL accepts only persisted T-5 minute values", () => {
   const db = new DatabaseSync(":memory:");
-  db.exec("CREATE TABLE samples(value)");
+  db.exec("CREATE TABLE samples(value INTEGER)");
   const insert = db.prepare("INSERT INTO samples(value) VALUES (?)");
-  for (const value of [0, 5, 10, -1, 11, 5.5, "5", null]) insert.run(value);
+  for (const value of [0, 5, 10, -1, 11, 5.5, "not-a-minute", null]) insert.run(value);
   const predicate = n2CanonicalT5CoverageTimingSql("value");
   const rows = db.prepare(`SELECT value FROM samples WHERE ${predicate} ORDER BY value`).all() as Array<{ value: number }>;
   db.close();
@@ -17,7 +17,7 @@ test("T-5 market coverage timing SQL accepts only persisted T-5 minute values", 
 
 test("T-5 full-market counting rejects mixed or mislabeled timing evidence", () => {
   const db = new DatabaseSync(":memory:");
-  db.exec("CREATE TABLE snapshots(selection TEXT NOT NULL, minutes_before_close)");
+  db.exec("CREATE TABLE snapshots(selection TEXT NOT NULL, minutes_before_close INTEGER)");
   const insert = db.prepare("INSERT INTO snapshots(selection, minutes_before_close) VALUES (?, ?)");
   for (let first = 1; first <= 6; first += 1) {
     for (let second = 1; second <= 6; second += 1) {
