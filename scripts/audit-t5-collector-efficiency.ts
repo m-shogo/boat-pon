@@ -1,13 +1,18 @@
 /** T-5収集の欠測と重複保存を日別に監査する。読み取り専用。 */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { resolveN2T5CollectorEfficiencyInputs } from "../src/research-replay/n2T5CollectorEfficiencyInputs";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const FROM = process.env.BOAT_PON_FROM ?? "2026-07-20";
-const TO = process.env.BOAT_PON_TO ?? todayJst();
+const inputs = resolveN2T5CollectorEfficiencyInputs({
+  from: process.env.BOAT_PON_FROM ?? "2026-07-20",
+  to: process.env.BOAT_PON_TO ?? todayJst(),
+  fixEffectiveAt: process.env.BOAT_PON_T5_FIX_FROM ?? "2026-07-21T13:40:00+09:00",
+  networkOnlyEffectiveAt: process.env.BOAT_PON_T5_NETWORK_ONLY_FROM ?? "2026-07-21T15:15:00+09:00",
+});
 const NOW = new Date();
-const FIX_EFFECTIVE_AT = new Date(process.env.BOAT_PON_T5_FIX_FROM ?? "2026-07-21T13:40:00+09:00");
-const NETWORK_ONLY_EFFECTIVE_AT = new Date(process.env.BOAT_PON_T5_NETWORK_ONLY_FROM ?? "2026-07-21T15:15:00+09:00");
+const FIX_EFFECTIVE_AT = new Date(inputs.fixEffectiveAt);
+const NETWORK_ONLY_EFFECTIVE_AT = new Date(inputs.networkOnlyEffectiveAt);
 
 if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
@@ -73,7 +78,7 @@ const rows = db.prepare(`
   LEFT JOIN market m ON m.race_id = p.race_id
   LEFT JOIN storage s ON s.race_id = p.race_id
   ORDER BY p.date, p.close_at, p.race_id
-`).all(FROM, TO, NETWORK_ONLY_EFFECTIVE_AT.toISOString()) as RaceRow[];
+`).all(inputs.from, inputs.to, inputs.networkOnlyEffectiveAt) as RaceRow[];
 db.close();
 
 const dates = [...new Set(rows.map((row) => row.date))];
@@ -114,18 +119,18 @@ const networkOnlyRaces = rows.filter((row) => {
 const networkOnlyT5Full = networkOnlyRaces.filter((row) => row.network_t5 >= 120).length;
 const report = {
   generatedAt: NOW.toISOString(),
-  window: { from: FROM, to: TO },
+  window: { from: inputs.from, to: inputs.to },
   safety: { readOnly: true, dbWrites: false },
   denominator: "当日は締切済み、過去日は全番組",
   postFixCohort: {
-    effectiveAt: FIX_EFFECTIVE_AT.toISOString(),
+    effectiveAt: inputs.fixEffectiveAt,
     maturePrograms: postFixRaces.length,
     t5Full: postFixT5Full,
     coverage: postFixRaces.length > 0 ? postFixT5Full / postFixRaces.length : null,
     t10WithoutT5: postFixRaces.filter((row) => row.t10 >= 120 && row.t5 < 120).length,
   },
   networkOnlyCohort: {
-    effectiveAt: NETWORK_ONLY_EFFECTIVE_AT.toISOString(),
+    effectiveAt: inputs.networkOnlyEffectiveAt,
     maturePrograms: networkOnlyRaces.length,
     t5Full: networkOnlyT5Full,
     coverage: networkOnlyRaces.length > 0 ? networkOnlyT5Full / networkOnlyRaces.length : null,
