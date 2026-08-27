@@ -167,6 +167,10 @@ export function readN2TrifectaPrivateCapturePlan(input: {
   const raceNumbers = new Set<number>();
   const races: N2TrifectaOddsRaceInput[] = [];
   for (const row of selected) {
+    if (row.venue !== row.venue.trim()) {
+      blockers.push("INVALID_VENUE");
+      continue;
+    }
     if (!Number.isInteger(row.raceNo) || row.raceNo < 1 || row.raceNo > 12) {
       blockers.push("INVALID_RACE_NO");
       continue;
@@ -182,7 +186,7 @@ export function readN2TrifectaPrivateCapturePlan(input: {
     const suffix = String(row.raceNo).padStart(2, "0");
     const acceptedIds = new Set([
       `${compactDate}-${input.venueCode}-${suffix}`,
-      `${compactDate}-${row.venue.trim()}-${suffix}`,
+      `${compactDate}-${row.venue}-${suffix}`,
     ]);
     if (!acceptedIds.has(row.raceId)) {
       blockers.push("RACE_IDENTITY_MISMATCH");
