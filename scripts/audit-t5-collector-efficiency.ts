@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { resolveN2T5CollectorEfficiencyInputs } from "../src/research-replay/n2T5CollectorEfficiencyInputs";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
 import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
+import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const inputs = resolveN2T5CollectorEfficiencyInputs({
@@ -23,6 +24,8 @@ db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 type RaceRow = {
   date: string;
   race_id: string;
+  venue: string;
+  race_no: number;
   close_at: string;
   t10: number;
   t5: number;
@@ -34,9 +37,9 @@ type RaceRow = {
 
 const canonicalSelectionSql = n2CanonicalT5SelectionSql("o.selection");
 const canonicalT5TimingSql = n2CanonicalT5CoverageTimingSql("o.minutes_before_close");
-const rows = db.prepare(`
+const rows = validateT5MarketCoverageProgramRows(db.prepare(`
   WITH p AS (
-    SELECT date, race_id, close_at
+    SELECT date, race_id, venue, race_no, close_at
     FROM official_programs
     WHERE date >= ? AND date <= ?
   ), capture AS (
@@ -74,6 +77,8 @@ const rows = db.prepare(`
   SELECT
     p.date,
     p.race_id,
+    p.venue,
+    p.race_no,
     p.close_at,
     COALESCE(m.t10, 0) AS t10,
     COALESCE(m.t5, 0) AS t5,
@@ -85,7 +90,7 @@ const rows = db.prepare(`
   LEFT JOIN market m ON m.race_id = p.race_id
   LEFT JOIN storage s ON s.race_id = p.race_id
   ORDER BY p.date, p.close_at, p.race_id
-`).all(inputs.from, inputs.to, inputs.networkOnlyEffectiveAt) as RaceRow[];
+`).all(inputs.from, inputs.to, inputs.networkOnlyEffectiveAt) as RaceRow[]);
 db.close();
 
 const dates = [...new Set(rows.map((row) => row.date))];
