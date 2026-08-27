@@ -5,6 +5,8 @@ export type T5MarketBaselineResultIdentityRow = {
   date: string;
   venue: string;
   race_no: number;
+  payout_yen?: number | null;
+  returned?: number;
 };
 
 export function validateT5MarketBaselineResultIdentityRows<T extends T5MarketBaselineResultIdentityRow>(
@@ -23,6 +25,16 @@ export function validateT5MarketBaselineResultIdentityRows<T extends T5MarketBas
     const expectedRaceId = `${row.date.replaceAll("-", "")}-${row.venue}-${String(row.race_no).padStart(2, "0")}`;
     if (row.race_id !== expectedRaceId) {
       throw new Error(`N2_T5_MARKET_BASELINE_RESULT_IDENTITY_MISMATCH:${row.race_id}`);
+    }
+    if ("returned" in row && row.returned !== undefined && row.returned !== 0 && row.returned !== 1) {
+      throw new Error(`N2_T5_MARKET_BASELINE_RESULT_RETURNED_INVALID:${row.race_id}`);
+    }
+    if (
+      "payout_yen" in row
+      && row.payout_yen != null
+      && (!Number.isSafeInteger(row.payout_yen) || row.payout_yen <= 0)
+    ) {
+      throw new Error(`N2_T5_MARKET_BASELINE_RESULT_PAYOUT_INVALID:${row.race_id}`);
     }
     return row;
   });
