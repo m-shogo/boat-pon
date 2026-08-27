@@ -8,7 +8,10 @@ import { DatabaseSync } from "node:sqlite";
 import { validateHistoricalRankingPayoutIdentityRows } from "../src/research-replay/historicalRankingPayoutIdentity";
 import { validateHistoricalRankingResultIdentityRows } from "../src/research-replay/historicalRankingResultIdentity";
 import { validateHistoricalRankingSettlementRows } from "../src/research-replay/historicalRankingSettlementIntegrity";
-import { parseHistoricalRankingEpochs } from "../src/research-replay/historicalRankingForwardOptions";
+import {
+  parseHistoricalRankingEpochs,
+  validateHistoricalRankingForwardCohorts,
+} from "../src/research-replay/historicalRankingForwardOptions";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -142,6 +145,11 @@ for (const row of sourceRows) {
 const train = races.filter((race) => race.date < "2025-01-01");
 const validation = races.filter((race) => race.date >= "2025-01-01" && race.date < "2026-01-01");
 const test = races.filter((race) => race.date >= "2026-01-01");
+validateHistoricalRankingForwardCohorts({
+  train: train.length,
+  validation: validation.length,
+  test: test.length,
+});
 const courseOnly: FeatureSet = {
   id: "course-only",
   label: "コースのみ",

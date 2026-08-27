@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   DEFAULT_HISTORICAL_RANKING_EPOCHS,
   parseHistoricalRankingEpochs,
+  validateHistoricalRankingForwardCohorts,
 } from "./historicalRankingForwardOptions";
 
 test("historical ranking epochs default to the frozen research value", () => {
@@ -22,6 +23,20 @@ test("historical ranking epochs reject values that can skip, round, or never fin
       () => parseHistoricalRankingEpochs(raw),
       (error: unknown) => error instanceof Error && error.message === "HISTORICAL_RANKING_EPOCHS_INVALID",
       raw,
+    );
+  }
+});
+
+test("historical ranking forward requires non-empty train, validation, and test cohorts", () => {
+  assert.doesNotThrow(() => validateHistoricalRankingForwardCohorts({ train: 10, validation: 4, test: 2 }));
+  for (const [name, counts] of [
+    ["train", { train: 0, validation: 4, test: 2 }],
+    ["validation", { train: 10, validation: 0, test: 2 }],
+    ["test", { train: 10, validation: 4, test: 0 }],
+  ] as const) {
+    assert.throws(
+      () => validateHistoricalRankingForwardCohorts(counts),
+      (error: unknown) => error instanceof Error && error.message === `HISTORICAL_RANKING_COHORT_EMPTY:${name}`,
     );
   }
 });
