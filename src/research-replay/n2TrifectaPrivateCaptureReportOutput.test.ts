@@ -81,3 +81,36 @@ test("private capture report rejects symlinked parents inside validation output"
     );
   });
 });
+
+test("private capture report rejects aliases into repository authority", () => {
+  withRoots((repoRoot, captureRoot, scratchRoot) => {
+    mkdirSync(join(repoRoot, "config"), { recursive: true });
+    symlinkSync(join(repoRoot, "config"), join(scratchRoot, "repo-alias"), "dir");
+
+    assert.throws(
+      () => assertN2TrifectaPrivateCaptureReportOutputSafe({
+        repoRoot,
+        captureRoot,
+        reportPath: join(scratchRoot, "repo-alias/private-capture.json"),
+      }),
+      /N2_PRIVATE_CAPTURE_REPORT_PATH_ALIAS/u,
+    );
+  });
+});
+
+test("private capture report rejects canonical data through a symlinked capture root", () => {
+  withRoots((repoRoot, captureRoot, scratchRoot) => {
+    mkdirSync(join(captureRoot, "data"), { recursive: true });
+    const captureAlias = join(scratchRoot, "capture-alias");
+    symlinkSync(captureRoot, captureAlias, "dir");
+
+    assert.throws(
+      () => assertN2TrifectaPrivateCaptureReportOutputSafe({
+        repoRoot,
+        captureRoot: captureAlias,
+        reportPath: join(captureRoot, "data/private-capture.json"),
+      }),
+      /N2_PRIVATE_CAPTURE_REPORT_DATA_PATH_FORBIDDEN/u,
+    );
+  });
+});

@@ -6,23 +6,15 @@ function isWithin(parent: string, child: string): boolean {
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
-function assertCanonicalParent(root: string, target: string): void {
-  const lexicalRoot = resolve(root);
-  const canonicalRoot = realpathSync.native(lexicalRoot);
-  let probe = dirname(resolve(target));
-
-  while (isWithin(lexicalRoot, probe)) {
-    if (existsSync(probe)) {
-      const rel = relative(lexicalRoot, probe);
-      if (realpathSync.native(probe) !== resolve(canonicalRoot, rel)) {
-        throw new Error(`N2_PRIVATE_CAPTURE_REPORT_PATH_ALIAS:${target}`);
-      }
-      return;
-    }
+function canonicalTarget(target: string): string {
+  const resolvedTarget = resolve(target);
+  let probe = dirname(resolvedTarget);
+  while (!existsSync(probe)) {
     const parent = dirname(probe);
-    if (parent === probe) break;
+    if (parent === probe) return resolvedTarget;
     probe = parent;
   }
+  return resolve(realpathSync.native(probe), relative(probe, resolvedTarget));
 }
 
 export function assertN2TrifectaPrivateCaptureReportOutputSafe(input: {
@@ -32,16 +24,28 @@ export function assertN2TrifectaPrivateCaptureReportOutputSafe(input: {
 }): void {
   const repoRoot = resolve(input.repoRoot);
   const validationDir = resolve(repoRoot, "reports/automation/validation");
-  const captureDataDir = resolve(input.captureRoot, "data");
+  const captureRoot = resolve(input.captureRoot);
+  const captureDataDir = resolve(captureRoot, "data");
   const reportPath = resolve(input.reportPath);
+  const canonicalOutput = canonicalTarget(reportPath);
+  const canonicalRepo = realpathSync.native(repoRoot);
+  const canonicalValidationDir = resolve(canonicalRepo, "reports/automation/validation");
+  const canonicalCaptureRoot = existsSync(captureRoot)
+    ? realpathSync.native(captureRoot)
+    : captureRoot;
+  const canonicalCaptureDataDir = resolve(canonicalCaptureRoot, "data");
 
-  if (isWithin(captureDataDir, reportPath)) {
+  if (isWithin(captureDataDir, reportPath) || isWithin(canonicalCaptureDataDir, canonicalOutput)) {
     throw new Error(`N2_PRIVATE_CAPTURE_REPORT_DATA_PATH_FORBIDDEN:${reportPath}`);
   }
   if (isWithin(repoRoot, reportPath)) {
-    assertCanonicalParent(repoRoot, reportPath);
     if (!isWithin(validationDir, reportPath)) {
       throw new Error(`N2_PRIVATE_CAPTURE_REPORT_REPO_PATH_FORBIDDEN:${reportPath}`);
     }
+    if (!isWithin(canonicalValidationDir, canonicalOutput)) {
+      throw new Error(`N2_PRIVATE_CAPTURE_REPORT_PATH_ALIAS:${reportPath}`);
+    }
+  } else if (isWithin(canonicalRepo, canonicalOutput)) {
+    throw new Error(`N2_PRIVATE_CAPTURE_REPORT_PATH_ALIAS:${reportPath}`);
   }
 }
