@@ -4,6 +4,7 @@ import { evaluateT5MarketCoverage } from "../src/domain/t5MarketCoverage";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
 import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
 import { parseT5MarketCoverageAuditOptions } from "../src/research-replay/t5MarketCoverageAuditOptions";
+import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 import { isCanonicalT5MarketCoverageSettlement } from "../src/research-replay/t5MarketCoverageSettlement";
 
 const argv = process.argv.slice(2);
@@ -16,11 +17,11 @@ const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 30000;");
 
 try {
-  const programsInWindow = db.prepare(`
-    SELECT race_id, date FROM official_programs
+  const programsInWindow = validateT5MarketCoverageProgramRows(db.prepare(`
+    SELECT race_id, date, venue, race_no FROM official_programs
     WHERE date >= ? AND date <= ?
     ORDER BY date, race_id
-  `).all(from, to) as Array<{ race_id: string; date: string }>;
+  `).all(from, to) as Array<{ race_id: string; date: string; venue: string; race_no: number }>);
   const resultsByRace = new Map((db.prepare(`
     SELECT race_id, date, trifecta, returned FROM race_results WHERE date >= ? AND date <= ?
   `).all(from, to) as Array<{ race_id: string; date: string; trifecta: string | null; returned: number }>)
