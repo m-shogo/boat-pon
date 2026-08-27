@@ -1,10 +1,12 @@
 /** odds時系列DBの肥大化を日別に監査する。読み取り専用。 */
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { resolveN2OddsTimeseriesStorageWindow } from "../src/research-replay/n2OddsTimeseriesStorageWindow";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = process.env.BOAT_PON_FROM ?? "2026-06-01";
 const TO = process.env.BOAT_PON_TO ?? todayJst();
+const window = resolveN2OddsTimeseriesStorageWindow(FROM, TO);
 if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
 
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
@@ -18,7 +20,7 @@ const query = db.prepare(`
   WHERE race_id >= ? AND race_id < ?
 `);
 
-const days = dateRange(FROM, TO).map((date) => {
+const days = window.dates.map((date) => {
   const fromId = date.replaceAll("-", "");
   const toId = addDays(date, 1).replaceAll("-", "");
   const row = query.get(fromId, toId) as { rows: number; races: number; unique_keys: number };
@@ -42,7 +44,7 @@ const topRedundancy = [...days]
   .slice(0, 15);
 const report = {
   generatedAt: new Date().toISOString(),
-  window: { from: FROM, to: TO },
+  window: { from: window.from, to: window.to },
   safety: { readOnly: true, dbWrites: false, compactionPerformed: false },
   databaseBytes: statSync(DB_PATH).size,
   totals: {
@@ -91,12 +93,6 @@ mkdirSync("reports", { recursive: true });
 writeFileSync("reports/odds-timeseries-storage.json", `${JSON.stringify(report, null, 2)}\n`);
 writeFileSync("reports/odds-timeseries-storage.md", `${lines.join("\n")}\n`);
 console.log("[odds-timeseries-storage] wrote reports/odds-timeseries-storage.md / .json");
-
-function dateRange(from: string, to: string) {
-  const dates: string[] = [];
-  for (let date = from; date <= to; date = addDays(date, 1)) dates.push(date);
-  return dates;
-}
 
 function addDays(date: string, delta: number) {
   const value = new Date(`${date}T00:00:00+09:00`);
