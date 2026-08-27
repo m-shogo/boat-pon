@@ -5,6 +5,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import type { UnconventionalBoat, UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
+import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
+  historicalExactaCanonicalSourcePredicate,
+} from "../src/research-replay/historicalExactaMarketAuthority";
 
 type RawRace = {
   race_id: string; date: string; venue: string; race_no: number; overround: number;
@@ -33,11 +37,12 @@ try {
     LEFT JOIN race_weather w ON w.race_id=h.race_id
     LEFT JOIN race_conditions c ON c.race_id=h.race_id
     WHERE h.bet_type='exacta'
+      AND ${historicalExactaCanonicalSourcePredicate("h")}
       AND h.race_date >= '2024-01-01' AND h.race_date <= '2025-12-31'
       AND json_type(op.raw_json, '$.boats')='array'
       AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
     GROUP BY h.race_id
-    HAVING COUNT(*)=30 AND odds12 IS NOT NULL AND odds13 IS NOT NULL AND odds14 IS NOT NULL
+    HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds12 IS NOT NULL AND odds13 IS NOT NULL AND odds14 IS NOT NULL
     ORDER BY h.race_date, h.race_id
   `).all() as RawRace[];
   const exhibition = new Map<string, Map<number, number>>();
