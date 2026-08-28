@@ -11,6 +11,7 @@ import {
 } from "./n2FeatureLineage";
 import { adaptLiveOddsRows, type OddsTimeseriesSourceRow } from "./n2FeatureSourceAdapter";
 import { enumerateBetSelections } from "./n2DatasetContract";
+import { canonicalUtcTimestamp } from "./canonical";
 import {
   PAYLOAD_SCHEMA_VERSION,
   freezeCheckpoint,
@@ -35,6 +36,18 @@ type MarketEvidenceMetadataRow = N2FeatureLineageEvidenceRow & {
 
 type MarketEvidenceRow = MarketEvidenceMetadataRow & {
   payloadJson: string;
+};
+
+type ScheduleReferenceRow = {
+  canonicalRaceKey: string;
+  observationType: string;
+  observationPayloadType: string;
+  observationPayloadSchemaVersion: string;
+  observationPayloadHash: string;
+  typedPayloadType: string;
+  typedPayloadSchemaVersion: string;
+  typedPayloadHash: string;
+  typedPayloadJson: string;
 };
 
 type VerifiedMarketEvidence = {
@@ -78,6 +91,22 @@ const MARKET_PAYLOAD_SQL = `
 SELECT payload_json AS payloadJson
 FROM typed_observation_payloads
 WHERE observation_id = ?
+`;
+
+const SCHEDULE_REFERENCE_SQL = `
+SELECT
+  o.canonical_race_key AS canonicalRaceKey,
+  o.observation_type AS observationType,
+  o.payload_type AS observationPayloadType,
+  o.payload_schema_version AS observationPayloadSchemaVersion,
+  o.semantic_payload_hash AS observationPayloadHash,
+  t.payload_type AS typedPayloadType,
+  t.payload_schema_version AS typedPayloadSchemaVersion,
+  t.payload_hash AS typedPayloadHash,
+  t.payload_json AS typedPayloadJson
+FROM domain_observations o
+JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
+WHERE o.observation_id = ?
 `;
 
 function key(checkpoint: N2LiveCheckpoint, selection: string): string {
@@ -139,6 +168,39 @@ function hasValidCheckpointSemantics(payload: TrifectaMarketPayload): boolean {
   }
 }
 
+function marketScheduleReferenceValid(
+  payload: TrifectaMarketPayload,
+  expectedCanonicalRaceKey: string,
+  loadScheduleReference: (observationId: string) => ScheduleReferenceRow | null,
+): boolean {
+  if (!payload.scheduledCloseObservationId) return false;
+  const row = loadScheduleReference(payload.scheduledCloseObservationId);
+  if (row === null
+    || row.canonicalRaceKey !== expectedCanonicalRaceKey
+    || row.observationType !== "race_schedule"
+    || row.observationPayloadType !== "race_schedule"
+    || row.typedPayloadType !== "race_schedule"
+    || row.observationPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || row.typedPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || row.observationPayloadHash !== row.typedPayloadHash) {
+    return false;
+  }
+  try {
+    const schedule = validateTypedPayload(
+      "race_schedule",
+      JSON.parse(row.typedPayloadJson) as unknown,
+    ) as Record<string, unknown>;
+    const semanticHash = semanticPayloadHash("race_schedule", schedule);
+    return semanticHash === row.observationPayloadHash
+      && semanticHash === row.typedPayloadHash
+      && schedule.canonicalRaceKey === expectedCanonicalRaceKey
+      && canonicalUtcTimestamp(String(schedule.scheduledCloseAt))
+        === canonicalUtcTimestamp(payload.scheduledCloseAtSeen);
+  } catch {
+    return false;
+  }
+}
+
 function parsePayload(row: MarketEvidenceRow): TrifectaMarketPayload | null {
   if (!hasValidMarketPayloadMetadata(row)) return null;
   let payload: TrifectaMarketPayload;
@@ -161,6 +223,7 @@ function eventsForRace(input: {
   evidenceRows: MarketEvidenceMetadataRow[];
   checkpoint: N2LiveCheckpoint;
   loadPayloadJson: (observationId: string) => string | null;
+  loadScheduleReference: (observationId: string) => ScheduleReferenceRow | null;
 }): N2FeatureCoverageEvent[] {
   const canonicalRaceKey = canonicalN2CoverageRaceKey(input.row);
   const verified: VerifiedMarketEvidence[] = [];
@@ -182,7 +245,11 @@ function eventsForRace(input: {
       continue;
     }
     const payloadJson = input.loadPayloadJson(evidence.observationId);
-    const payload = payloadJson === null ? null : parsePayload({ ...evidence, payloadJson });
+    let payload = payloadJson === null ? null : parsePayload({ ...evidence, payloadJson });
+    if (payload !== null
+      && !marketScheduleReferenceValid(payload, canonicalRaceKey, input.loadScheduleReference)) {
+      payload = null;
+    }
     verified.push({ evidence, lineage: verification.lineage, payload });
   }
 
@@ -275,6 +342,7 @@ export function readTrifectaMarketCoverageEvents(input: {
     `).all(input.dateFrom, input.dateTo) as unknown as OddsCoverageRaceRow[];
     const metadataStatement = sidecar.prepare(MARKET_EVIDENCE_METADATA_SQL);
     const payloadStatement = sidecar.prepare(MARKET_PAYLOAD_SQL);
+    const scheduleStatement = sidecar.prepare(SCHEDULE_REFERENCE_SQL);
     const events: N2FeatureCoverageEvent[] = [];
     for (const row of rows) {
       const canonicalRaceKey = canonicalN2CoverageRaceKey(row);
@@ -286,6 +354,10 @@ export function readTrifectaMarketCoverageEvents(input: {
         loadPayloadJson: (observationId) => {
           const payloadRow = payloadStatement.get(observationId) as { payloadJson: string } | undefined;
           return payloadRow?.payloadJson ?? null;
+        },
+        loadScheduleReference: (observationId) => {
+          const scheduleRow = scheduleStatement.get(observationId) as ScheduleReferenceRow | undefined;
+          return scheduleRow ?? null;
         },
       }));
     }
