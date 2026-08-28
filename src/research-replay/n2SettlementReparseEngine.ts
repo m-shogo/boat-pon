@@ -5,6 +5,7 @@
 // CLI（scripts/reparse-settlement-v2.ts）と integration test の両方から使う。
 import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import { SettlementRepository, type ResultKind, type SettlementBetType, type SettlementStatus } from "./settlement";
 import {
@@ -106,7 +107,9 @@ export function loadActiveState(db: DatabaseSync, sourceDup: Set<string>): Activ
       && row.rawIntegrityStatus === "verified"
       && row.rawSecurityScanStatus === "passed"
       && row.rawParserReplayEligible === 1;
-    if (!lineageValid) throw new Error(`REPARSE_ACTIVE_LINEAGE_INVALID:${row.c}`);
+    if (!lineageValid || !settlementCandidateSemanticHashValid(db, row.c)) {
+      throw new Error(`REPARSE_ACTIVE_LINEAGE_INVALID:${row.c}`);
+    }
     const key = candidateKey(row.k, row.b as SettlementBetType);
     if (active.has(key)) { ambiguousKeys.add(key); continue; }
     active.set(key, { candidateId: row.c, status: row.s as SettlementStatus, resultKind: row.r as ResultKind });
