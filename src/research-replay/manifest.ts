@@ -238,10 +238,11 @@ function marketScheduleReferenceValid(
   market: TrifectaMarketPayload,
   canonicalRaceKey: string,
   asOfAt: string,
+  policy: ResolutionPolicy,
 ): boolean {
   if (!market.scheduledCloseObservationId) return false;
   const asOfSchedule = repository.db.prepare(`
-    SELECT 1
+    SELECT schedule.source_quality
     FROM domain_observations schedule
     WHERE schedule.observation_id = ?
       AND schedule.canonical_race_key = ?
@@ -253,8 +254,8 @@ function marketScheduleReferenceValid(
         WHERE successor.supersedes_id = schedule.observation_id
           AND successor.recorded_at <= ?
       )
-  `).get(market.scheduledCloseObservationId, canonicalRaceKey, asOfAt, asOfAt);
-  if (!asOfSchedule) return false;
+  `).get(market.scheduledCloseObservationId, canonicalRaceKey, asOfAt, asOfAt) as { source_quality: ObservationRow["source_quality"] } | undefined;
+  if (!asOfSchedule || !policy.sourcePriority.includes(asOfSchedule.source_quality)) return false;
   try {
     const schedule = repository.loadTypedPayload(market.scheduledCloseObservationId);
     if (schedule.type !== "race_schedule") return false;
@@ -337,7 +338,7 @@ export function strictPitGuard(input: {
     if (typed.type === "trifecta_market") {
       const market = typed.payload as TrifectaMarketPayload;
       if (!market.scheduledCloseObservationId) codes.push("SCHEDULE_VERSION_MISSING");
-      else if (!marketScheduleReferenceValid(repository, market, canonicalRaceKey, asOfAt)) codes.push("SCHEDULE_VERSION_INVALID");
+      else if (!marketScheduleReferenceValid(repository, market, canonicalRaceKey, asOfAt, policy)) codes.push("SCHEDULE_VERSION_INVALID");
     } else if (typed.type === "historical_closing_odds") {
       const market = typed.payload as TrifectaMarketPayload;
       if (!market.scheduledCloseObservationId) codes.push("SCHEDULE_VERSION_MISSING");

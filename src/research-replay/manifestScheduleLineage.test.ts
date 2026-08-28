@@ -34,7 +34,7 @@ function repository(schedule: { canonicalRaceKey: string; scheduledCloseAt: stri
   return {
     db: {
       prepare() {
-        return { get: () => ({ eligible: 1 }) };
+        return { get: () => ({ eligible: 1, source_quality: "official_public" }) };
       },
     },
     loadTypedPayload(observationId: string) {
