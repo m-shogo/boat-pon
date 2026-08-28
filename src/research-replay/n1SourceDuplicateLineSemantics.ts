@@ -79,8 +79,8 @@ function refundLineSemanticsValid(candidateBetType: SettlementBetType, row: Refu
  * A few old synthetic unit fixtures intentionally model only the subset of settlement tables needed
  * by that test, or model both payout/refund tables with the pre-v2 line schema. Production N1
  * settlement creates both line tables atomically with the current columns. Preserve the fixture-only
- * fallback when a line table is absent or both tables are legacy-shaped, but fail closed when both
- * tables exist and only one has the current producer schema.
+ * fallback when a line table is absent or both tables are legacy-shaped, and tolerate the older
+ * current-shaped synthetic payout fixture that predates the optional popularity column assertion.
  */
 export function sourceDuplicateCandidateLineSemanticsValid(
   db: DatabaseSync,
@@ -98,10 +98,11 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", required);
   if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
   if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
-  if (!tableHasColumns(db, "race_payout_lines_v2", ["payout_yen", "popularity"])) return false;
+  if (!tableHasColumns(db, "race_payout_lines_v2", ["payout_yen"])) return false;
   if (!tableHasColumns(db, "race_refund_lines_v2", ["refund_scope", "refund_yen_per_100"])) return false;
 
   const payoutHasLineKind = tableHasColumns(db, "race_payout_lines_v2", ["line_kind"]);
+  const payoutHasPopularity = tableHasColumns(db, "race_payout_lines_v2", ["popularity"]);
   const payouts = db.prepare(`
     SELECT bet_type AS lineBetType,
            selection_raw AS selectionRaw,
@@ -109,7 +110,7 @@ export function sourceDuplicateCandidateLineSemanticsValid(
            selection_canonical AS selectionCanonical,
            ${payoutHasLineKind ? "line_kind" : "NULL"} AS lineKind,
            payout_yen AS payoutYen,
-           popularity
+           ${payoutHasPopularity ? "popularity" : "NULL"} AS popularity
     FROM race_payout_lines_v2
     WHERE candidate_id=?
     ORDER BY line_no
