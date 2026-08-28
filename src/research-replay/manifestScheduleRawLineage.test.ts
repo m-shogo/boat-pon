@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { PAYLOAD_SCHEMA_VERSION } from "./domain";
 import { RESOLUTION_POLICIES, strictPitGuard } from "./manifest";
 import type { ResearchReplayRepository } from "./repository";
 
@@ -13,7 +14,7 @@ function marketObservation() {
     observation_id: "market-1",
     canonical_race_key: RACE_KEY,
     observation_type: "trifecta_market",
-    payload_schema_version: "research-replay-payload-v1",
+    payload_schema_version: PAYLOAD_SCHEMA_VERSION,
     parse_run_id: "parse-market",
     raw_document_id: "raw-market",
     parse_raw_document_id: "raw-market",
