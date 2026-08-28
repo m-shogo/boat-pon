@@ -114,6 +114,8 @@ function preflightActiveSettlementLineage(
         AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
+            AND newer.canonical_race_key=c.canonical_race_key
+            AND newer.bet_type=c.bet_type
         )
       ORDER BY c.canonical_race_key,c.bet_type,c.candidate_id
     `).all(...(bounds ? [bounds.fromRaceKey, bounds.toRaceKeyExclusive] : [])) as unknown as CandidateLineageRow[];
