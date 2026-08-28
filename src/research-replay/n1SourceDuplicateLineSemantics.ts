@@ -4,6 +4,12 @@ import { BET_TYPES, parseSettlementSelection, type SettlementBetType } from "./s
 
 const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
 const REFUND_SCOPE_SET: ReadonlySet<string> = new Set(["selection", "bet_type", "race"]);
+const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
+  "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
+]);
+const RESULT_KIND_SET: ReadonlySet<string> = new Set([
+  "normal", "dead_heat", "special_payout", "source_defined", "unknown",
+]);
 
 type LineRow = {
   lineNo: number;
@@ -32,6 +38,31 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
   const names = new Set(rows.map((row) => row.name));
   return required.every((column) => names.has(column));
+}
+
+function candidateMetadataSemanticsValid(
+  db: DatabaseSync,
+  candidateId: string,
+  candidateBetType: string,
+): boolean {
+  if (!tableExists(db, "settlement_candidates_v2")) return true;
+  const required = ["candidate_id", "bet_type", "settlement_status", "result_kind"] as const;
+  if (!tableHasColumns(db, "settlement_candidates_v2", required)) return true;
+  const row = db.prepare(`
+    SELECT bet_type AS betType,
+           settlement_status AS settlementStatus,
+           result_kind AS resultKind
+    FROM settlement_candidates_v2
+    WHERE candidate_id=?
+  `).get(candidateId) as {
+    betType: string;
+    settlementStatus: string;
+    resultKind: string;
+  } | undefined;
+  return row !== undefined
+    && row.betType === candidateBetType
+    && SETTLEMENT_STATUS_SET.has(row.settlementStatus)
+    && RESULT_KIND_SET.has(row.resultKind);
 }
 
 function parsedSelectionMatches(
@@ -81,13 +112,12 @@ function lineNumbersUnique(rows: readonly LineRow[]): boolean {
 }
 
 /**
- * Revalidate producer-only payout/refund line semantics before source-duplicate evidence is trusted.
+ * Revalidate producer-only candidate and payout/refund line semantics before source-duplicate evidence is trusted.
  *
  * A few old synthetic unit fixtures intentionally model only the subset of settlement tables needed
  * by that test, or model both payout/refund tables with the pre-v2 line schema. Production N1
- * settlement creates both line tables atomically with the current columns. Preserve the fixture-only
- * fallback when a line table is absent or both tables are legacy-shaped, and tolerate the older
- * current-shaped synthetic payout fixture that predates the optional popularity column assertion.
+ * settlement creates the candidate and both line tables atomically with the current columns. Preserve
+ * the fixture-only fallback when those current columns are absent.
  */
 export function sourceDuplicateCandidateLineSemanticsValid(
   db: DatabaseSync,
@@ -95,6 +125,7 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   candidateBetType: string,
 ): boolean {
   if (!BET_TYPE_SET.has(candidateBetType)) return false;
+  if (!candidateMetadataSemanticsValid(db, candidateId, candidateBetType)) return false;
 
   const payoutTableExists = tableExists(db, "race_payout_lines_v2");
   const refundTableExists = tableExists(db, "race_refund_lines_v2");
