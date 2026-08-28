@@ -13,6 +13,12 @@ const RESULT_KIND_SET: ReadonlySet<string> = new Set([
 const CURRENT_LINE_IDENTITY_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
 ] as const;
+const CURRENT_PAYOUT_SEMANTIC_COLUMNS = [
+  ...CURRENT_LINE_IDENTITY_COLUMNS, "line_no", "payout_yen", "popularity", "line_kind",
+] as const;
+const CURRENT_REFUND_SEMANTIC_COLUMNS = [
+  ...CURRENT_LINE_IDENTITY_COLUMNS, "line_no", "refund_scope", "refund_yen_per_100", "reason_code",
+] as const;
 
 type LineRow = {
   lineNo: number;
@@ -43,11 +49,11 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
   return required.every((column) => names.has(column));
 }
 
-function currentLineSchemasPresent(db: DatabaseSync): boolean {
+function currentSemanticAuthorityPresent(db: DatabaseSync): boolean {
   return tableExists(db, "race_payout_lines_v2")
     && tableExists(db, "race_refund_lines_v2")
-    && tableHasColumns(db, "race_payout_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS)
-    && tableHasColumns(db, "race_refund_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS);
+    && tableHasColumns(db, "race_payout_lines_v2", CURRENT_PAYOUT_SEMANTIC_COLUMNS)
+    && tableHasColumns(db, "race_refund_lines_v2", CURRENT_REFUND_SEMANTIC_COLUMNS);
 }
 
 function candidateMetadataSemanticsValid(
@@ -77,10 +83,10 @@ function candidateMetadataSemanticsValid(
     || !SETTLEMENT_STATUS_SET.has(row.settlementStatus)
     || !RESULT_KIND_SET.has(row.resultKind)) return false;
 
-  // Current N1 candidate + line schemas never persist placeholder hashes. Keep legacy synthetic
-  // fixtures (missing current line identity or semantic_hash) compatible, but fail closed once the
-  // fixture/data has the complete current-shaped authority surface.
-  if (hasSemanticHash && currentLineSchemasPresent(db)) {
+  // Current N1 candidate + semantic line authority never persist placeholder hashes. Keep legacy
+  // synthetic fixtures (missing semantic_hash or the full persisted hash-input columns) compatible,
+  // but fail closed once the fixture/data has the complete current-shaped authority surface.
+  if (hasSemanticHash && currentSemanticAuthorityPresent(db)) {
     return typeof row.semanticHash === "string" && /^[0-9a-f]{64}$/.test(row.semanticHash);
   }
   return true;
