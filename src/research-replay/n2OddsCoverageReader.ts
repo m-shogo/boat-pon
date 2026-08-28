@@ -105,6 +105,13 @@ SELECT
   t.payload_hash AS typedPayloadHash,
   t.payload_json AS typedPayloadJson
 FROM domain_observations o
+JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
+  AND p.raw_document_id = o.raw_document_id
+  AND p.status IN ('success', 'warning')
+JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
+  AND r.integrity_status = 'verified'
+  AND r.security_scan_status = 'passed'
+  AND r.parser_replay_eligible = 1
 JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
 WHERE o.observation_id = ?
 `;
