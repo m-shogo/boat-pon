@@ -12,8 +12,9 @@ const RESULT_KIND_SET: ReadonlySet<string> = new Set([
 ]);
 const CURRENT_CANDIDATE_AUTHORITY_COLUMNS = [
   "candidate_id", "canonical_race_key", "bet_type", "settlement_status", "result_kind",
-  "revision_kind", "observation_id", "parse_run_id", "raw_document_id", "semantic_hash",
-  "supersedes_candidate_id", "correction_reason",
+  "revision_kind", "resolution_status", "source_kind", "source_schema_version", "observation_id",
+  "parse_run_id", "raw_document_id", "semantic_hash", "supersedes_candidate_id", "correction_reason",
+  "observed_at", "created_at",
 ] as const;
 const CURRENT_LINE_IDENTITY_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
@@ -91,8 +92,8 @@ function candidateMetadataSemanticsValid(
     || !RESULT_KIND_SET.has(row.resultKind)) return false;
 
   // Current N1 candidate + semantic line authority never persist placeholder hashes. Keep narrow
-  // synthetic fixtures compatible, but fail closed once the complete production candidate lineage
-  // and persisted hash-input columns are present together.
+  // synthetic fixtures compatible, but fail closed once the full production candidate schema and
+  // persisted semantic hash-input columns are present together.
   if (hasSemanticHash && currentSemanticAuthorityPresent(db)) {
     return typeof row.semanticHash === "string" && /^[0-9a-f]{64}$/.test(row.semanticHash);
   }
