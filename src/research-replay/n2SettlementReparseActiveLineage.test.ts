@@ -53,8 +53,8 @@ function setup(integrityStatus: "verified" | "quarantined") {
   repo.appendCandidate({
     canonicalRaceKey: RACE_KEY,
     betType: "win",
-    settlementStatus: "refunded",
-    resultKind: "refund_only",
+    settlementStatus: "settled",
+    resultKind: "special_payout",
     revisionKind: "initial",
     resolutionStatus: "resolved",
     sourceKind: "official_archive",
@@ -65,8 +65,8 @@ function setup(integrityStatus: "verified" | "quarantined") {
     observedAt: NOW,
     supersedesCandidateId: null,
     correctionReason: null,
-    payouts: [],
-    refunds: [{ selection: "all", scope: "all", refundYenPer100: 100, reasonCode: "test" }],
+    payouts: [{ selection: "特", payoutYen: 70, popularity: null, lineKind: "special_payout" }],
+    refunds: [],
     emitEvidencePins: false,
   });
   return db;
