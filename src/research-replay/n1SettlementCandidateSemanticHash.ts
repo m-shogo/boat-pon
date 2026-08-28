@@ -1,0 +1,87 @@
+import type { DatabaseSync } from "node:sqlite";
+
+import { canonicalHash } from "./canonical";
+
+function tableExists(db: DatabaseSync, table: string): boolean {
+  return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
+}
+
+function tableHasColumns(db: DatabaseSync, table: string, required: readonly string[]): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  const names = new Set(rows.map((row) => row.name));
+  return required.every((column) => names.has(column));
+}
+
+/**
+ * Recompute the append-only settlement candidate semantic hash from its persisted payout/refund lines.
+ * Legacy synthetic fixtures that intentionally omit the current semantic-hash/line columns are left to
+ * their narrower tests; production N1 settlement always creates the current columns together.
+ */
+export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidateId: string): boolean {
+  if (!tableExists(db, "settlement_candidates_v2")
+    || !tableExists(db, "race_payout_lines_v2")
+    || !tableExists(db, "race_refund_lines_v2")) return true;
+
+  if (!tableHasColumns(db, "settlement_candidates_v2", [
+    "candidate_id", "bet_type", "settlement_status", "result_kind", "semantic_hash",
+  ])) return true;
+  if (!tableHasColumns(db, "race_payout_lines_v2", [
+    "candidate_id", "line_no", "selection_canonical", "payout_yen", "popularity", "line_kind",
+  ])) return true;
+  if (!tableHasColumns(db, "race_refund_lines_v2", [
+    "candidate_id", "line_no", "selection_canonical", "refund_scope", "refund_yen_per_100", "reason_code",
+  ])) return true;
+
+  const candidate = db.prepare(`
+    SELECT bet_type AS betType,
+           settlement_status AS settlementStatus,
+           result_kind AS resultKind,
+           semantic_hash AS semanticHash
+    FROM settlement_candidates_v2
+    WHERE candidate_id=?
+  `).get(candidateId) as {
+    betType: string;
+    settlementStatus: string;
+    resultKind: string;
+    semanticHash: string;
+  } | undefined;
+  if (!candidate) return false;
+
+  const payouts = (db.prepare(`
+    SELECT selection_canonical AS selectionCanonical,
+           payout_yen AS payoutYen,
+           popularity,
+           line_kind AS lineKind
+    FROM race_payout_lines_v2
+    WHERE candidate_id=?
+    ORDER BY line_no
+  `).all(candidateId) as unknown as Array<{
+    selectionCanonical: string | null;
+    payoutYen: number;
+    popularity: number | null;
+    lineKind: string | null;
+  }>).map((row) => [row.selectionCanonical, row.payoutYen, row.popularity, row.lineKind]);
+
+  const refunds = (db.prepare(`
+    SELECT selection_canonical AS selectionCanonical,
+           refund_scope AS refundScope,
+           refund_yen_per_100 AS refundYenPer100,
+           reason_code AS reasonCode
+    FROM race_refund_lines_v2
+    WHERE candidate_id=?
+    ORDER BY line_no
+  `).all(candidateId) as unknown as Array<{
+    selectionCanonical: string | null;
+    refundScope: string;
+    refundYenPer100: number;
+    reasonCode: string;
+  }>).map((row) => [row.selectionCanonical, row.refundScope, row.refundYenPer100, row.reasonCode]);
+
+  return canonicalHash({
+    betType: candidate.betType,
+    settlementStatus: candidate.settlementStatus,
+    resultKind: candidate.resultKind,
+    payouts,
+    refunds,
+  }) === candidate.semanticHash;
+}
