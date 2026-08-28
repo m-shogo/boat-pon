@@ -5,15 +5,20 @@ import test from "node:test";
 import { canonicalHash } from "./canonical";
 import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 
+const RACE = "2026-07-24:01:R1";
+
 function fixture(
   revisionKind: string,
   supersedesCandidateId: string | null = revisionKind === "initial" ? null : "prior-candidate",
   correctionReason: string | null = revisionKind === "initial" ? null : "research-correction",
+  supersededRaceKey = RACE,
+  supersededBetType = "trifecta",
 ): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   db.exec(`
     CREATE TABLE settlement_candidates_v2 (
       candidate_id TEXT PRIMARY KEY,
+      canonical_race_key TEXT NOT NULL,
       bet_type TEXT NOT NULL,
       settlement_status TEXT NOT NULL,
       result_kind TEXT NOT NULL,
@@ -46,9 +51,16 @@ function fixture(
     payouts: [],
     refunds: [],
   });
-  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?)")
+  if (supersedesCandidateId) {
+    db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?)")
+      .run(
+        supersedesCandidateId, supersededRaceKey, supersededBetType, "settled", "normal", "initial",
+        null, null, semanticHash,
+      );
+  }
+  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?)")
     .run(
-      "candidate", "trifecta", "settled", "normal", revisionKind,
+      "candidate", RACE, "trifecta", "settled", "normal", revisionKind,
       supersedesCandidateId, correctionReason, semanticHash,
     );
   return db;
@@ -85,6 +97,24 @@ test("revised settlement candidate requires a superseded candidate", () => {
 
 test("revised settlement candidate requires a correction reason", () => {
   const db = fixture("official_correction", "prior-candidate", null);
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("revised settlement candidate cannot supersede a different race", () => {
+  const db = fixture("parser_reparse", "prior-candidate", "research-correction", "2026-07-24:01:R2");
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("revised settlement candidate cannot supersede a different bet type", () => {
+  const db = fixture("source_revision", "prior-candidate", "research-correction", RACE, "trio");
   try {
     assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
   } finally {
