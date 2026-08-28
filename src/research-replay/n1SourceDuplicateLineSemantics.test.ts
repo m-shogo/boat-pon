@@ -14,6 +14,7 @@ function fixture(): DatabaseSync {
       selection_raw TEXT,
       selection_normalized TEXT,
       selection_canonical TEXT,
+      payout_yen INTEGER NOT NULL,
       line_kind TEXT NOT NULL
     );
     CREATE TABLE race_refund_lines_v2 (
@@ -22,11 +23,13 @@ function fixture(): DatabaseSync {
       bet_type TEXT NOT NULL,
       selection_raw TEXT,
       selection_normalized TEXT,
-      selection_canonical TEXT
+      selection_canonical TEXT,
+      refund_scope TEXT NOT NULL,
+      refund_yen_per_100 INTEGER
     );
   `);
-  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?)")
-    .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", "payout");
+  db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?,?)")
+    .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", 1000, "payout");
   return db;
 }
 
@@ -116,6 +119,59 @@ test("source duplicate line semantics reject impossible null-selection provenanc
       SET selection_canonical=NULL, selection_raw='1-2-3', selection_normalized='1-2-3'
       WHERE candidate_id='candidate'
     `).run();
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics reject negative payout amounts", () => {
+  const db = fixture();
+  try {
+    db.prepare("UPDATE race_payout_lines_v2 SET payout_yen=-1 WHERE candidate_id='candidate'").run();
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics reject fractional payout amounts", () => {
+  const db = fixture();
+  try {
+    db.prepare("UPDATE race_payout_lines_v2 SET payout_yen=1.5 WHERE candidate_id='candidate'").run();
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics reject unknown refund scopes", () => {
+  const db = fixture();
+  try {
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?)")
+      .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", "unknown", 100);
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics reject fractional refund amounts", () => {
+  const db = fixture();
+  try {
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?)")
+      .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", "selection", 1.5);
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate line semantics reject negative refund amounts", () => {
+  const db = fixture();
+  try {
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?)")
+      .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", "selection", -1);
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
   } finally {
     db.close();

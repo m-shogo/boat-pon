@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { BET_TYPES, parseSettlementSelection, type SettlementBetType } from "./settlement";
 
 const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
+const REFUND_SCOPE_SET: ReadonlySet<string> = new Set(["selection", "bet_type", "race"]);
 
 type LineRow = {
   lineBetType: string;
@@ -13,6 +14,12 @@ type LineRow = {
 
 type PayoutLineRow = LineRow & {
   lineKind: string | null;
+  payoutYen: number;
+};
+
+type RefundLineRow = LineRow & {
+  refundScope: string;
+  refundYenPer100: number | null;
 };
 
 function tableExists(db: DatabaseSync, table: string): boolean {
@@ -39,6 +46,7 @@ function parsedSelectionMatches(
 
 function payoutLineSemanticsValid(candidateBetType: SettlementBetType, row: PayoutLineRow): boolean {
   if (row.lineBetType !== candidateBetType) return false;
+  if (!Number.isSafeInteger(row.payoutYen) || row.payoutYen < 0) return false;
   if (row.lineKind === null) {
     if (row.selectionCanonical === null) return row.selectionRaw === null && row.selectionNormalized === null;
     return parsedSelectionMatches(candidateBetType, row, true);
@@ -52,8 +60,11 @@ function payoutLineSemanticsValid(candidateBetType: SettlementBetType, row: Payo
   return false;
 }
 
-function refundLineSemanticsValid(candidateBetType: SettlementBetType, row: LineRow): boolean {
+function refundLineSemanticsValid(candidateBetType: SettlementBetType, row: RefundLineRow): boolean {
   if (row.lineBetType !== candidateBetType) return false;
+  if (!REFUND_SCOPE_SET.has(row.refundScope)) return false;
+  if (row.refundYenPer100 !== null
+    && (!Number.isSafeInteger(row.refundYenPer100) || row.refundYenPer100 < 0)) return false;
   if (row.selectionCanonical === null) {
     return row.selectionRaw === null && row.selectionNormalized === null;
   }
@@ -85,6 +96,8 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", required);
   if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
   if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
+  if (!tableHasColumns(db, "race_payout_lines_v2", ["payout_yen"])) return false;
+  if (!tableHasColumns(db, "race_refund_lines_v2", ["refund_scope", "refund_yen_per_100"])) return false;
 
   const payoutHasLineKind = tableHasColumns(db, "race_payout_lines_v2", ["line_kind"]);
   const payouts = db.prepare(`
@@ -92,7 +105,8 @@ export function sourceDuplicateCandidateLineSemanticsValid(
            selection_raw AS selectionRaw,
            selection_normalized AS selectionNormalized,
            selection_canonical AS selectionCanonical,
-           ${payoutHasLineKind ? "line_kind" : "NULL"} AS lineKind
+           ${payoutHasLineKind ? "line_kind" : "NULL"} AS lineKind,
+           payout_yen AS payoutYen
     FROM race_payout_lines_v2
     WHERE candidate_id=?
     ORDER BY line_no
@@ -101,11 +115,13 @@ export function sourceDuplicateCandidateLineSemanticsValid(
     SELECT bet_type AS lineBetType,
            selection_raw AS selectionRaw,
            selection_normalized AS selectionNormalized,
-           selection_canonical AS selectionCanonical
+           selection_canonical AS selectionCanonical,
+           refund_scope AS refundScope,
+           refund_yen_per_100 AS refundYenPer100
     FROM race_refund_lines_v2
     WHERE candidate_id=?
     ORDER BY line_no
-  `).all(candidateId) as unknown as LineRow[];
+  `).all(candidateId) as unknown as RefundLineRow[];
 
   const betType = candidateBetType as SettlementBetType;
   return payouts.every((row) => payoutLineSemanticsValid(betType, row))
