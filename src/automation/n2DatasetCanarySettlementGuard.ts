@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
+import { readCurrentlyValidSourceDuplicateObservationIds } from "../research-replay/n1SourceDuplicateResolutionValidation";
 import { sourceDuplicateCandidateLineSemanticsValid } from "../research-replay/n1SourceDuplicateLineSemantics";
 import { CANARY_COHORT } from "./taskExecutorsCore";
 
@@ -68,6 +69,16 @@ function preflightActiveSettlementLineage(
           checkedCandidateCount: 0,
         };
       }
+    }
+
+    try {
+      readCurrentlyValidSourceDuplicateObservationIds(db);
+    } catch {
+      return {
+        ok: false,
+        blocks: [`${prefix}_SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID`],
+        checkedCandidateCount: 0,
+      };
     }
 
     const rangeClause = bounds
