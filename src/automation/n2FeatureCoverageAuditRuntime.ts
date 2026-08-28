@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "../research-replay/canonical";
+import { readCurrentlyValidSourceDuplicateObservationIds } from "../research-replay/n1SourceDuplicateResolutionValidation";
 import { atomicWriteJson, verifyJsonReadback } from "../research/governance/executorSdk";
 import type { Executor, ExecutorResult } from "./taskExecutorsCore";
 
@@ -33,6 +34,11 @@ export const runN2ActiveFeatureCoverageAudit: Executor = (ctx) => {
   const db = new DatabaseSync(`${pathToFileURL(ctx.sidecarPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
   try {
+    try {
+      readCurrentlyValidSourceDuplicateObservationIds(db);
+    } catch {
+      return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"]);
+    }
     const active = `
       NOT EXISTS (
         SELECT 1 FROM settlement_source_duplicate_resolutions_v2 d
