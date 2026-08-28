@@ -107,7 +107,9 @@ function auditDispositionIsSafe(input: N2EdgeKnowledgeLineageInput): boolean {
     return input.auditItem.disposition === "INSUFFICIENT_HOLDOUT";
   }
   const hasBlockingConfounder = input.auditItem.confounderFlags.some((flag) => flag.severity === "blocking");
-  return input.auditItem.disposition !== "CONFIRMED_PENDING_CONFOUNDER_REVIEW" || !hasBlockingConfounder;
+  return hasBlockingConfounder
+    ? input.auditItem.disposition === "CONFIRMED_WITH_BLOCKING_CONFOUNDER"
+    : input.auditItem.disposition === "CONFIRMED_PENDING_CONFOUNDER_REVIEW";
 }
 
 function buildExperiment(input: N2EdgeKnowledgeLineageInput): Experiment {

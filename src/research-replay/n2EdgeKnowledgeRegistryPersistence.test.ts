@@ -62,12 +62,22 @@ function plan(input: {
   disposition?: N2ConfounderAuditItem["disposition"];
   confounderDigest?: string;
   createdAt?: string;
+  blockingConfounder?: boolean;
 } = {}) {
   const verdict = input.verdict ?? "HISTORICAL_CONFIRMED";
   const disposition = input.disposition ?? "CONFIRMED_PENDING_CONFOUNDER_REVIEW";
+  const item = auditItem(disposition, verdict);
+  if (input.blockingConfounder) {
+    item.confounderFlags = [{
+      hypothesisId: item.hypothesisId,
+      flagId: "holdout-distribution-concentration-v1",
+      severity: "blocking",
+      detail: "frozen concentration policy blocked",
+    }];
+  }
   return buildN2EdgeKnowledgeLineagePlan({
     confirmation: confirmation(verdict),
-    auditItem: auditItem(disposition, verdict),
+    auditItem: item,
     scanArtifactDigest: DIGEST_A,
     historicalTestArtifactDigest: DIGEST_B,
     confounderAuditArtifactDigest: input.confounderDigest ?? DIGEST_C,
@@ -206,7 +216,7 @@ test("insufficient holdout persists only an inconclusive Experiment, never Disco
 
 test("blocking confounder persists completed Experiment but never Discovery", () => {
   withRoot((root, registryRoot) => {
-    const current = plan({ disposition: "CONFIRMED_WITH_BLOCKING_CONFOUNDER" });
+    const current = plan({ disposition: "CONFIRMED_WITH_BLOCKING_CONFOUNDER", blockingConfounder: true });
     const outcome = persistN2EdgeKnowledgeLineage({ repoRoot: root, registryRoot, plan: current, writeIntent: N2_EDGE_KNOWLEDGE_REGISTRY_WRITE_INTENT });
     assert.equal(outcome.status, "PASS");
     assert.equal(outcome.experiment.appended, true);
