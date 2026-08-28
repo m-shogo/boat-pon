@@ -3,6 +3,13 @@ import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { sourceDuplicateCandidateLineSemanticsValid } from "./n1SourceDuplicateLineSemantics";
 
+const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
+  "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
+]);
+const RESULT_KIND_SET: ReadonlySet<string> = new Set([
+  "normal", "dead_heat", "special_payout", "source_defined", "unknown",
+]);
+
 function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
 }
@@ -47,6 +54,8 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     semanticHash: string;
   } | undefined;
   if (!candidate) return false;
+  if (!SETTLEMENT_STATUS_SET.has(candidate.settlementStatus)
+    || !RESULT_KIND_SET.has(candidate.resultKind)) return false;
   if (!sourceDuplicateCandidateLineSemanticsValid(db, candidateId, candidate.betType)) return false;
 
   const payouts = (db.prepare(`
