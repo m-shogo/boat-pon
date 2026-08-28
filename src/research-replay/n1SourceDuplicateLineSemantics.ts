@@ -10,6 +10,9 @@ const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
 const RESULT_KIND_SET: ReadonlySet<string> = new Set([
   "normal", "dead_heat", "special_payout", "source_defined", "unknown",
 ]);
+const CURRENT_LINE_IDENTITY_COLUMNS = [
+  "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
+] as const;
 
 type LineRow = {
   lineNo: number;
@@ -40,6 +43,13 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
   return required.every((column) => names.has(column));
 }
 
+function currentLineSchemasPresent(db: DatabaseSync): boolean {
+  return tableExists(db, "race_payout_lines_v2")
+    && tableExists(db, "race_refund_lines_v2")
+    && tableHasColumns(db, "race_payout_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS)
+    && tableHasColumns(db, "race_refund_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS);
+}
+
 function candidateMetadataSemanticsValid(
   db: DatabaseSync,
   candidateId: string,
@@ -48,21 +58,32 @@ function candidateMetadataSemanticsValid(
   if (!tableExists(db, "settlement_candidates_v2")) return true;
   const required = ["candidate_id", "bet_type", "settlement_status", "result_kind"] as const;
   if (!tableHasColumns(db, "settlement_candidates_v2", required)) return true;
+  const hasSemanticHash = tableHasColumns(db, "settlement_candidates_v2", ["semantic_hash"]);
   const row = db.prepare(`
     SELECT bet_type AS betType,
            settlement_status AS settlementStatus,
-           result_kind AS resultKind
+           result_kind AS resultKind,
+           ${hasSemanticHash ? "semantic_hash" : "NULL"} AS semanticHash
     FROM settlement_candidates_v2
     WHERE candidate_id=?
   `).get(candidateId) as {
     betType: string;
     settlementStatus: string;
     resultKind: string;
+    semanticHash: string | null;
   } | undefined;
-  return row !== undefined
-    && row.betType === candidateBetType
-    && SETTLEMENT_STATUS_SET.has(row.settlementStatus)
-    && RESULT_KIND_SET.has(row.resultKind);
+  if (row === undefined
+    || row.betType !== candidateBetType
+    || !SETTLEMENT_STATUS_SET.has(row.settlementStatus)
+    || !RESULT_KIND_SET.has(row.resultKind)) return false;
+
+  // Current N1 candidate + line schemas never persist placeholder hashes. Keep legacy synthetic
+  // fixtures (missing current line identity or semantic_hash) compatible, but fail closed once the
+  // fixture/data has the complete current-shaped authority surface.
+  if (hasSemanticHash && currentLineSchemasPresent(db)) {
+    return typeof row.semanticHash === "string" && /^[0-9a-f]{64}$/.test(row.semanticHash);
+  }
+  return true;
 }
 
 function parsedSelectionMatches(
@@ -131,9 +152,8 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   const refundTableExists = tableExists(db, "race_refund_lines_v2");
   if (!payoutTableExists || !refundTableExists) return true;
 
-  const required = ["bet_type", "selection_raw", "selection_normalized", "selection_canonical"] as const;
-  const payoutSchemaCurrent = tableHasColumns(db, "race_payout_lines_v2", required);
-  const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", required);
+  const payoutSchemaCurrent = tableHasColumns(db, "race_payout_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS);
+  const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS);
   if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
   if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
   if (!tableHasColumns(db, "race_payout_lines_v2", ["line_no", "payout_yen"])) return false;
