@@ -6,8 +6,9 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import { preflightN2DatasetCanarySettlementLineage } from "./n2DatasetCanarySettlementGuard";
+import { resolveExecutor } from "./taskExecutors";
 
-test("canary preflight does not let an out-of-scope cross-race superseder hide in-scope evidence", () => {
+test("canary runtime blocks an out-of-scope cross-race superseder before it can hide in-scope evidence", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-canary-supersession-scope-"));
   const path = join(root, "sidecar.sqlite");
   const db = new DatabaseSync(path);
@@ -59,11 +60,29 @@ test("canary preflight does not let an out-of-scope cross-race superseder hide i
     db.close();
   }
 
+  const block = "DATASET_CANARY_SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:cross-race-newer";
   try {
     const checked = preflightN2DatasetCanarySettlementLineage(path);
-    assert.equal(checked.ok, true);
-    assert.equal(checked.checkedCandidateCount, 1);
-    assert.deepEqual(checked.blocks, []);
+    assert.equal(checked.ok, false);
+    assert.equal(checked.checkedCandidateCount, 0);
+    assert.deepEqual(checked.blocks, [block]);
+
+    const resolved = resolveExecutor("dataset-canary");
+    assert.equal(resolved.code, "OK");
+    assert.ok(resolved.executor);
+    const result = resolved.executor({
+      repoRoot: root,
+      runId: "run",
+      requestId: "request",
+      taskId: "TASK-N2-001",
+      sidecarPath: path,
+      historyDir: "history",
+      reportsDir: "reports/n2",
+      dryRun: true,
+      taskStatuses: {},
+    });
+    assert.equal(result.result, "BLOCKED");
+    assert.deepEqual(result.blocks, [block]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
