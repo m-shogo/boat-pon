@@ -62,11 +62,28 @@ function sameUncorrectedParseLineage(left: SettlementObservationLineage, right: 
 }
 
 function observationParseRawLineageValid(db: DatabaseSync, observation: SettlementObservationLineage): boolean {
-  const parse = db.prepare("SELECT raw_document_id,status FROM parse_runs WHERE parse_run_id=?")
-    .get(observation.parse_run_id) as { raw_document_id: string; status: string } | undefined;
+  const parse = db.prepare(`
+    SELECT p.raw_document_id,
+           p.status,
+           r.integrity_status,
+           r.security_scan_status,
+           r.parser_replay_eligible
+    FROM parse_runs p
+    JOIN raw_documents r ON r.raw_document_id=p.raw_document_id
+    WHERE p.parse_run_id=?
+  `).get(observation.parse_run_id) as {
+    raw_document_id: string;
+    status: string;
+    integrity_status: string;
+    security_scan_status: string;
+    parser_replay_eligible: number;
+  } | undefined;
   return parse !== undefined
     && ["success", "warning"].includes(parse.status)
-    && parse.raw_document_id === observation.raw_document_id;
+    && parse.raw_document_id === observation.raw_document_id
+    && parse.integrity_status === "verified"
+    && parse.security_scan_status === "passed"
+    && parse.parser_replay_eligible === 1;
 }
 
 function candidateSemanticHashValid(db: DatabaseSync, row: CandidateSemanticRow): boolean {
