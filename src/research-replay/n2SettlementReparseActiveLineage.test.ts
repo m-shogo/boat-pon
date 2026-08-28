@@ -46,7 +46,7 @@ function setup(integrityStatus: "verified" | "quarantined") {
      correction_kind, correction_reason, recorded_at, effective_at, created_at)
     VALUES ('obs-incumbent',?,'settlement_result','settlement_result','rr-payload-v1',
       'parse-incumbent','raw-incumbent',NULL,?,?,
-      'observed_only','historical_archive','official_archive',?,NULL,NULL,NULL,?,?,?)`)
+      'observed_only','official_public','official_archive',?,NULL,NULL,NULL,?,?,?)`)
     .run(RACE_KEY, NOW, NOW, "c".repeat(64), NOW, NOW, NOW);
 
   const repo = new SettlementRepository(db, () => "candidate-incumbent");
