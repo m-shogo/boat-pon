@@ -148,8 +148,8 @@ test("source duplicate line semantics reject fractional payout amounts", () => {
 test("source duplicate line semantics reject unknown refund scopes", () => {
   const db = fixture();
   try {
-    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?,?)")
-      .run("refund", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", "unknown", 100, null);
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?)")
+      .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", "unknown", 100);
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
   } finally {
     db.close();
