@@ -65,7 +65,7 @@ test("evaluation metrics reject producer-impossible active settlement semantic h
   db.close();
 
   try {
-    const report = readN2EvaluationMetricsSettlements({ sidecarDbPath, raceKeys: [RACE_KEY] });
+    const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: sidecarPath, raceKeys: [RACE_KEY] });
     assert.equal(report.status, "BLOCKED");
     assert.ok(report.blockers.includes(
       `${RACE_KEY}:SETTLEMENT_SEMANTIC_HASH_MISMATCH:candidate-eval-semantic-invalid`,
