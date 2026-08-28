@@ -62,6 +62,11 @@ type PayoutBetLineageRow = {
   candidateId: string;
 };
 
+type SupersessionIdentityRow = {
+  raceKey: string;
+  candidateId: string;
+};
+
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
@@ -139,6 +144,23 @@ export function readN2EvaluationMetricsSettlements(input: {
       return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"], requested.length, 1);
     }
     const placeholders = requested.map(() => "?").join(",");
+    const invalidSuperseders = db.prepare(`
+      SELECT prior.canonical_race_key AS raceKey,
+             newer.candidate_id AS candidateId
+      FROM settlement_candidates_v2 newer
+      JOIN settlement_candidates_v2 prior
+        ON prior.candidate_id=newer.supersedes_candidate_id
+      WHERE prior.canonical_race_key IN (${placeholders})
+        AND (newer.canonical_race_key<>prior.canonical_race_key OR newer.bet_type<>prior.bet_type)
+      ORDER BY prior.canonical_race_key,newer.candidate_id
+    `).all(...requested) as unknown as SupersessionIdentityRow[];
+    if (invalidSuperseders.length > 0) {
+      return blocked(
+        invalidSuperseders.map((row) => `${row.raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${row.candidateId}`),
+        requested.length,
+        1,
+      );
+    }
     const payoutBetLineageRows = db.prepare(`
       SELECT c.canonical_race_key AS raceKey,
              c.candidate_id AS candidateId
@@ -149,6 +171,8 @@ export function readN2EvaluationMetricsSettlements(input: {
         AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
+            AND newer.canonical_race_key=c.canonical_race_key
+            AND newer.bet_type=c.bet_type
         )
       ORDER BY c.canonical_race_key,c.candidate_id,p.line_no
     `).all(...requested) as unknown as PayoutBetLineageRow[];
@@ -200,6 +224,8 @@ export function readN2EvaluationMetricsSettlements(input: {
         AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
+            AND newer.canonical_race_key=c.canonical_race_key
+            AND newer.bet_type=c.bet_type
         )
         AND NOT EXISTS (
           SELECT 1 FROM race_payout_lines_v2 special
