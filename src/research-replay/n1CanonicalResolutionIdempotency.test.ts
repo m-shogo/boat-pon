@@ -35,6 +35,7 @@ function setup(): { db: DatabaseSync; replay: ResearchReplayRepository } {
 
 function addObservationWithCandidates(db: DatabaseSync, replay: ResearchReplayRepository): string {
   const raw = replay.recordRawDocument({ bytes: Buffer.from(`canon-${RACE_KEY}`), contentType: "text/plain", charset: "utf-8" });
+  db.prepare("UPDATE raw_documents SET integrity_status='verified', security_scan_status='passed', parser_replay_eligible=1 WHERE raw_document_id=?").run(raw.rawDocumentId);
   const parseRunId = `pr-${raw.rawDocumentId}`;
   db.prepare(`INSERT OR IGNORE INTO parse_runs
     (parse_run_id,raw_document_id,parser_name,parser_version,source_schema_version,canonicalization_version,
