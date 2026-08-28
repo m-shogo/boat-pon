@@ -10,6 +10,11 @@ const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
 const RESULT_KIND_SET: ReadonlySet<string> = new Set([
   "normal", "dead_heat", "special_payout", "source_defined", "unknown",
 ]);
+const CURRENT_CANDIDATE_AUTHORITY_COLUMNS = [
+  "candidate_id", "canonical_race_key", "bet_type", "settlement_status", "result_kind",
+  "revision_kind", "observation_id", "parse_run_id", "raw_document_id", "semantic_hash",
+  "supersedes_candidate_id", "correction_reason",
+] as const;
 const CURRENT_LINE_IDENTITY_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
 ] as const;
@@ -50,8 +55,10 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
 }
 
 function currentSemanticAuthorityPresent(db: DatabaseSync): boolean {
-  return tableExists(db, "race_payout_lines_v2")
+  return tableExists(db, "settlement_candidates_v2")
+    && tableExists(db, "race_payout_lines_v2")
     && tableExists(db, "race_refund_lines_v2")
+    && tableHasColumns(db, "settlement_candidates_v2", CURRENT_CANDIDATE_AUTHORITY_COLUMNS)
     && tableHasColumns(db, "race_payout_lines_v2", CURRENT_PAYOUT_SEMANTIC_COLUMNS)
     && tableHasColumns(db, "race_refund_lines_v2", CURRENT_REFUND_SEMANTIC_COLUMNS);
 }
@@ -83,9 +90,9 @@ function candidateMetadataSemanticsValid(
     || !SETTLEMENT_STATUS_SET.has(row.settlementStatus)
     || !RESULT_KIND_SET.has(row.resultKind)) return false;
 
-  // Current N1 candidate + semantic line authority never persist placeholder hashes. Keep legacy
-  // synthetic fixtures (missing semantic_hash or the full persisted hash-input columns) compatible,
-  // but fail closed once the fixture/data has the complete current-shaped authority surface.
+  // Current N1 candidate + semantic line authority never persist placeholder hashes. Keep narrow
+  // synthetic fixtures compatible, but fail closed once the complete production candidate lineage
+  // and persisted hash-input columns are present together.
   if (hasSemanticHash && currentSemanticAuthorityPresent(db)) {
     return typeof row.semanticHash === "string" && /^[0-9a-f]{64}$/.test(row.semanticHash);
   }
