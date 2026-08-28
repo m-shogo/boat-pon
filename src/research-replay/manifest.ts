@@ -35,6 +35,7 @@ export type PitRejectionCode =
   | "RAW_EVIDENCE_NOT_ELIGIBLE"
   | "PAYLOAD_SCHEMA_UNKNOWN"
   | "PAYLOAD_REFERENCE_MISSING"
+  | "SEMANTIC_PAYLOAD_HASH_MISMATCH"
   | "CANONICAL_RACE_MISMATCH"
   | "SCHEDULE_VERSION_MISSING"
   | "SCHEDULE_VERSION_INVALID"
@@ -100,6 +101,7 @@ type ObservationRow = {
   timing_quality: "source_exact" | "observed_only" | "ambiguous" | "unknown";
   source_quality: "official_public" | "derived_existing_row" | "sanitized_fixture";
   semantic_payload_hash: string;
+  typed_payload_hash?: string;
   parser_version: string;
   parse_status: string;
 };
@@ -329,6 +331,9 @@ export function strictPitGuard(input: {
     codes.push("RAW_EVIDENCE_NOT_ELIGIBLE");
   }
   if (observation.payload_schema_version !== PAYLOAD_SCHEMA_VERSION) codes.push("PAYLOAD_SCHEMA_UNKNOWN");
+  if (observation.typed_payload_hash !== undefined && observation.semantic_payload_hash !== observation.typed_payload_hash) {
+    codes.push("SEMANTIC_PAYLOAD_HASH_MISMATCH");
+  }
   if (category === "post_race") codes.push("POST_RACE_OBSERVATION", "RESULT_ONLY_SOURCE");
   if (category === "current_only") codes.push("CURRENT_PROFILE_USED_FOR_PAST_RACE");
   if (category === "historical_closing" && policy.purpose === "live_t5_strict_canary") {
@@ -408,10 +413,12 @@ export function buildRaceAsOfManifest(input: {
     SELECT o.*, p.parser_version, p.status AS parse_status, p.raw_document_id AS parse_raw_document_id,
            r.integrity_status AS raw_integrity_status,
            r.security_scan_status AS raw_security_scan_status,
-           r.parser_replay_eligible AS raw_parser_replay_eligible
+           r.parser_replay_eligible AS raw_parser_replay_eligible,
+           t.payload_hash AS typed_payload_hash
     FROM domain_observations o
     JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
     JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
+    JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
     WHERE o.canonical_race_key = ?
       AND o.recorded_at <= ?
       AND NOT EXISTS (
