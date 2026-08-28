@@ -15,6 +15,7 @@ type LineRow = {
 type PayoutLineRow = LineRow & {
   lineKind: string | null;
   payoutYen: number;
+  popularity: number | null;
 };
 
 type RefundLineRow = LineRow & {
@@ -47,6 +48,7 @@ function parsedSelectionMatches(
 function payoutLineSemanticsValid(candidateBetType: SettlementBetType, row: PayoutLineRow): boolean {
   if (row.lineBetType !== candidateBetType) return false;
   if (!Number.isSafeInteger(row.payoutYen) || row.payoutYen < 0) return false;
+  if (row.popularity !== null && (!Number.isSafeInteger(row.popularity) || row.popularity < 1)) return false;
   if (row.lineKind === null) {
     if (row.selectionCanonical === null) return row.selectionRaw === null && row.selectionNormalized === null;
     return parsedSelectionMatches(candidateBetType, row, true);
@@ -96,7 +98,7 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", required);
   if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
   if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
-  if (!tableHasColumns(db, "race_payout_lines_v2", ["payout_yen"])) return false;
+  if (!tableHasColumns(db, "race_payout_lines_v2", ["payout_yen", "popularity"])) return false;
   if (!tableHasColumns(db, "race_refund_lines_v2", ["refund_scope", "refund_yen_per_100"])) return false;
 
   const payoutHasLineKind = tableHasColumns(db, "race_payout_lines_v2", ["line_kind"]);
@@ -106,7 +108,8 @@ export function sourceDuplicateCandidateLineSemanticsValid(
            selection_normalized AS selectionNormalized,
            selection_canonical AS selectionCanonical,
            ${payoutHasLineKind ? "line_kind" : "NULL"} AS lineKind,
-           payout_yen AS payoutYen
+           payout_yen AS payoutYen,
+           popularity
     FROM race_payout_lines_v2
     WHERE candidate_id=?
     ORDER BY line_no
