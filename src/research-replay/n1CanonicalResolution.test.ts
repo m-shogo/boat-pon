@@ -40,7 +40,6 @@ function setup() {
 let obsSeq = 0;
 function addObservationWithCandidates(db: DatabaseSync, replay: ResearchReplayRepository, raceKey: string, payoutYen: number): string {
   const raw = replay.recordRawDocument({ bytes: Buffer.from(`canon-${raceKey}`), contentType: "text/plain", charset: "utf-8" });
-  db.prepare("UPDATE raw_documents SET integrity_status='verified', security_scan_status='passed', parser_replay_eligible=1 WHERE raw_document_id=?").run(raw.rawDocumentId);
   const parseRunId = `pr-${raw.rawDocumentId}`;
   db.prepare(`INSERT OR IGNORE INTO parse_runs (parse_run_id,raw_document_id,parser_name,parser_version,source_schema_version,canonicalization_version,payload_type,status,warning_codes,error_code,started_at,completed_at,semantic_payload_hash,supersedes_id,correction_kind,correction_reason,created_at) VALUES (?,?, 'p','v1','fam','rr-c14n-v1','settlement_result','success','[]',NULL,?,?,'h',NULL,NULL,NULL,?)`).run(parseRunId, raw.rawDocumentId, NOW, NOW, NOW);
   const payload = { canonicalRaceKey: raceKey, sourceKind: "official_archive" as const, parseStatus: "success" as const, candidateCount: 1, diagnosticCodes: [] as string[] };

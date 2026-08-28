@@ -22,7 +22,6 @@ function setup() {
   const replay = new ResearchReplayRepository(db, new RawStore(join(root, "raw")), undefined, () => NOW);
   const rawA = replay.recordRawDocument({ bytes: Buffer.from("archive-a"), contentType: "text/plain", charset: "utf-8" });
   const rawB = replay.recordRawDocument({ bytes: Buffer.from("archive-b"), contentType: "text/plain", charset: "utf-8" });
-  db.prepare("UPDATE raw_documents SET integrity_status='verified', security_scan_status='passed', parser_replay_eligible=1 WHERE raw_document_id IN (?,?)").run(rawA.rawDocumentId, rawB.rawDocumentId);
   return { db, rawA: rawA.rawDocumentId, rawB: rawB.rawDocumentId };
 }
 

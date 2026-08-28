@@ -26,7 +26,6 @@ function setup() {
   initializeN1CanonicalResolutionSchema(db, NOW);
   const replay = new ResearchReplayRepository(db, new RawStore(join(root, "raw")), undefined, () => NOW);
   const raw = replay.recordRawDocument({ bytes: Buffer.from("shared-settlement-source"), contentType: "text/plain", charset: "utf-8" });
-  db.prepare("UPDATE raw_documents SET integrity_status='verified', security_scan_status='passed', parser_replay_eligible=1 WHERE raw_document_id=?").run(raw.rawDocumentId);
   return { db, rawDocumentId: raw.rawDocumentId };
 }
 
