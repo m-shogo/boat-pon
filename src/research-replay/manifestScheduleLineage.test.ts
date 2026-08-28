@@ -9,6 +9,7 @@ const AS_OF = "2026-08-21T03:00:00.000Z";
 const MARKET_OBSERVATION_ID = "market-1";
 const SCHEDULE_OBSERVATION_ID = "schedule-1";
 const CLOSE_AT = "2026-08-21T03:05:00.000Z";
+const SCHEDULE_HASH = "b".repeat(64);
 
 function marketObservation() {
   return {
@@ -34,7 +35,13 @@ function repository(schedule: { canonicalRaceKey: string; scheduledCloseAt: stri
   return {
     db: {
       prepare() {
-        return { get: () => ({ eligible: 1, source_quality: "official_public" }) };
+        return {
+          get: () => ({
+            source_quality: "official_public",
+            semantic_payload_hash: SCHEDULE_HASH,
+            typed_payload_hash: SCHEDULE_HASH,
+          }),
+        };
       },
     },
     loadTypedPayload(observationId: string) {
