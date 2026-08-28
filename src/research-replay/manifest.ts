@@ -244,6 +244,13 @@ function marketScheduleReferenceValid(
   const asOfSchedule = repository.db.prepare(`
     SELECT schedule.source_quality
     FROM domain_observations schedule
+    JOIN parse_runs schedule_parse ON schedule_parse.parse_run_id = schedule.parse_run_id
+      AND schedule_parse.raw_document_id = schedule.raw_document_id
+      AND schedule_parse.status IN ('success', 'warning')
+    JOIN raw_documents schedule_raw ON schedule_raw.raw_document_id = schedule.raw_document_id
+      AND schedule_raw.integrity_status = 'verified'
+      AND schedule_raw.security_scan_status = 'passed'
+      AND schedule_raw.parser_replay_eligible = 1
     WHERE schedule.observation_id = ?
       AND schedule.canonical_race_key = ?
       AND schedule.observation_type = 'race_schedule'
