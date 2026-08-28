@@ -3,7 +3,13 @@ import { pathToFileURL } from "node:url";
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalUtcTimestamp } from "./canonical";
 import { canonicalRaceKey } from "./identity";
-import { freezeCheckpoint, PAYLOAD_SCHEMA_VERSION, semanticPayloadHash, validateTypedPayload } from "./domain";
+import {
+  freezeCheckpoint,
+  PAYLOAD_SCHEMA_VERSION,
+  semanticPayloadHash,
+  validateTypedPayload,
+  type TrifectaMarketPayload,
+} from "./domain";
 import type { N2PitAuditObservation } from "./n2PitAudit";
 
 export const N2_PIT_AUDIT_READER_VERSION = "n2-pit-audit-reader-v2";
@@ -39,6 +45,17 @@ type CanonicalN2Key = {
   compactDate: string;
   venueCode: string;
   raceNo: number;
+};
+type ScheduleReferenceRow = {
+  canonicalRaceKey: string;
+  observationType: string;
+  observationPayloadType: string;
+  observationPayloadSchemaVersion: string;
+  observationPayloadHash: string;
+  typedPayloadType: string;
+  typedPayloadSchemaVersion: string;
+  typedPayloadHash: string;
+  typedPayloadJson: string;
 };
 
 const FEATURE_OBSERVATION_SQL = `
@@ -171,7 +188,53 @@ function hasValidCheckpointSemantics(payload: Record<string, unknown>): boolean 
   }
 }
 
-function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid" {
+function marketScheduleReferenceValid(
+  db: DatabaseSync,
+  market: TrifectaMarketPayload,
+  expectedCanonicalRaceKey: string,
+): boolean {
+  if (!market.scheduledCloseObservationId) return false;
+  const row = db.prepare(`
+    SELECT
+      o.canonical_race_key AS canonicalRaceKey,
+      o.observation_type AS observationType,
+      o.payload_type AS observationPayloadType,
+      o.payload_schema_version AS observationPayloadSchemaVersion,
+      o.semantic_payload_hash AS observationPayloadHash,
+      t.payload_type AS typedPayloadType,
+      t.payload_schema_version AS typedPayloadSchemaVersion,
+      t.payload_hash AS typedPayloadHash,
+      t.payload_json AS typedPayloadJson
+    FROM domain_observations o
+    JOIN typed_observation_payloads t ON t.observation_id = o.observation_id
+    WHERE o.observation_id = ?
+  `).get(market.scheduledCloseObservationId) as ScheduleReferenceRow | undefined;
+  if (!row
+    || row.canonicalRaceKey !== expectedCanonicalRaceKey
+    || row.observationType !== "race_schedule"
+    || row.observationPayloadType !== "race_schedule"
+    || row.typedPayloadType !== "race_schedule"
+    || row.observationPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || row.typedPayloadSchemaVersion !== PAYLOAD_SCHEMA_VERSION
+    || row.observationPayloadHash !== row.typedPayloadHash) {
+    return false;
+  }
+  try {
+    const payload = validateTypedPayload(
+      "race_schedule",
+      JSON.parse(row.typedPayloadJson) as unknown,
+    ) as Record<string, unknown>;
+    const semanticHash = semanticPayloadHash("race_schedule", payload);
+    return semanticHash === row.observationPayloadHash
+      && semanticHash === row.typedPayloadHash
+      && payload.canonicalRaceKey === expectedCanonicalRaceKey
+      && canonicalInstant(payload.scheduledCloseAt) === canonicalInstant(market.scheduledCloseAtSeen);
+  } catch {
+    return false;
+  }
+}
+
+function typedPayloadIntegrity(db: DatabaseSync, row: SourceObservationRow): "verified" | "invalid" {
   if ((row.observationType !== "official_program" && row.observationType !== "trifecta_market")
     || row.observationPayloadType !== row.observationType
     || row.typedPayloadType !== row.observationType
@@ -191,7 +254,10 @@ function typedPayloadIntegrity(row: SourceObservationRow): "verified" | "invalid
     const semanticHash = semanticPayloadHash(row.observationType, payload);
     if (semanticHash !== row.observationPayloadHash || semanticHash !== row.typedPayloadHash) return "invalid";
     if (row.observationType === "official_program" && payload.canonicalRaceKey !== row.canonicalRaceKey) return "invalid";
-    if (row.observationType === "trifecta_market" && !hasValidCheckpointSemantics(payload)) return "invalid";
+    if (row.observationType === "trifecta_market") {
+      if (!hasValidCheckpointSemantics(payload)) return "invalid";
+      if (!marketScheduleReferenceValid(db, payload as TrifectaMarketPayload, row.canonicalRaceKey)) return "invalid";
+    }
     const payloadObservedAt = canonicalInstant(payload.observedAt);
     const sourceObservedAt = canonicalInstant(row.sourceObservedAt);
     if (payloadObservedAt === null || sourceObservedAt === null || payloadObservedAt !== sourceObservedAt) return "invalid";
@@ -264,7 +330,7 @@ export function readN2PitAuditObservations(input: {
       } = row;
       return {
         ...evidence,
-        typedPayloadIntegrity: typedPayloadIntegrity(row),
+        typedPayloadIntegrity: typedPayloadIntegrity(sidecar, row),
         decisionCutoff: cutoff,
       };
     });

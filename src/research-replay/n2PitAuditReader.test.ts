@@ -65,7 +65,12 @@ function payloadFor(type: "official_program" | "trifecta_market", observedAt: st
   };
 }
 
-function createSidecar(path: string, observationCount = 2, tamperPayload = false): void {
+function createSidecar(
+  path: string,
+  observationCount = 2,
+  tamperPayload = false,
+  scheduleCanonicalRaceKey = "2024-06-01:01:R1",
+): void {
   const db = new DatabaseSync(path);
   try {
     db.exec(`
@@ -107,6 +112,39 @@ function createSidecar(path: string, observationCount = 2, tamperPayload = false
     const insertParse = db.prepare(`INSERT INTO parse_runs VALUES(?,?,?)`);
     const insertObservation = db.prepare(`INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     const insertPayload = db.prepare(`INSERT INTO typed_observation_payloads VALUES(?,?,?,?,?)`);
+
+    const schedulePayload = {
+      canonicalRaceKey: scheduleCanonicalRaceKey,
+      scheduledCloseAt: "2024-06-01T01:00:00.000Z",
+      scheduledCloseOriginalOffset: "+09:00",
+      scheduleStatus: "scheduled",
+    };
+    const scheduleHash = semanticPayloadHash("race_schedule", schedulePayload);
+    insertRaw.run("raw-schedule", "verified", "passed", 1);
+    insertParse.run("parse-schedule", "raw-schedule", "success");
+    insertObservation.run(
+      "schedule-1",
+      scheduleCanonicalRaceKey,
+      "race_schedule",
+      "race_schedule",
+      PAYLOAD_SCHEMA_VERSION,
+      scheduleHash,
+      "raw-schedule",
+      "parse-schedule",
+      "2024-06-01T00:00:00.000Z",
+      "2024-06-01T00:00:00.000Z",
+      "2024-06-01T00:00:01.000Z",
+      "source_exact",
+      "official_public",
+    );
+    insertPayload.run(
+      "schedule-1",
+      "race_schedule",
+      PAYLOAD_SCHEMA_VERSION,
+      JSON.stringify(schedulePayload),
+      scheduleHash,
+    );
+
     for (let index = 0; index < observationCount; index += 1) {
       const id = index + 1;
       const raw = `raw-${id}`;
@@ -191,6 +229,25 @@ test("reader resolves the real primary venue-label identity read-only", () => {
     assert.equal(summary.status, "PASS");
     assert.equal(summary.checkedFeatureCount, 1);
     assert.equal(summary.checkedOddsCount, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("market schedule reference must bind to the same canonical race", () => {
+  const dir = mkdtempSync(join(tmpdir(), "n2-pit-reader-"));
+  try {
+    const primary = join(dir, "boat.sqlite");
+    const sidecar = join(dir, "research-replay.sqlite");
+    createPrimary(primary);
+    createSidecar(sidecar, 2, false, "2024-06-01:01:R2");
+    const result = readN2PitAuditObservations({ primaryDbPath: primary, sidecarDbPath: sidecar });
+    const market = result.observations.find((item) => item.observationType === "trifecta_market");
+    assert.equal(market?.typedPayloadIntegrity, "invalid");
+    const summary = buildN2PitAuditSummary(result.observations);
+    assert.equal(summary.status, "CONDITIONAL");
+    assert.equal(summary.verifiedSafeCount, 1);
+    assert.equal(summary.reasonCounts.excluded_lineage_typed_payload_invalid, 1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
