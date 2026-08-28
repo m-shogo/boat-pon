@@ -31,6 +31,12 @@ function candidateSemanticHash(payoutYen: number): string {
 function createFixture(): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   db.exec(`
+    CREATE TABLE raw_documents (
+      raw_document_id TEXT PRIMARY KEY,
+      integrity_status TEXT NOT NULL,
+      security_scan_status TEXT NOT NULL,
+      parser_replay_eligible INTEGER NOT NULL
+    );
     CREATE TABLE parse_runs (
       parse_run_id TEXT PRIMARY KEY,
       raw_document_id TEXT NOT NULL,
@@ -92,6 +98,7 @@ function createFixture(): DatabaseSync {
       schema_version TEXT NOT NULL
     );
   `);
+  db.prepare("INSERT INTO raw_documents VALUES (?,?,?,?)").run(RAW_ID, "verified", "passed", 1);
   db.prepare("INSERT INTO parse_runs VALUES (?,?,?)").run(PARSE_ID, RAW_ID, "success");
   const insertObservation = db.prepare(`
     INSERT INTO domain_observations VALUES (?,?,?,?,?,?,?,?,?)
@@ -150,6 +157,19 @@ test("source duplicate evidence revalidates candidate semantic hashes from persi
     db.prepare("UPDATE race_payout_lines_v2 SET payout_yen=4300 WHERE candidate_id=?")
       .run("candidate-duplicate");
 
+    assert.throws(
+      () => readCurrentlyValidSourceDuplicateObservationIds(db),
+      /SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID:obs-duplicate/,
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("source duplicate evidence rejects a resolution whose raw evidence is quarantined", () => {
+  const db = createFixture();
+  try {
+    db.prepare("UPDATE raw_documents SET integrity_status='quarantined' WHERE raw_document_id=?").run(RAW_ID);
     assert.throws(
       () => readCurrentlyValidSourceDuplicateObservationIds(db),
       /SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID:obs-duplicate/,
