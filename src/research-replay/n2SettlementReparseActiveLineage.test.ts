@@ -76,7 +76,7 @@ test("settlement reparse accepts a fully eligible active incumbent", () => {
   const db = setup("verified");
   const active = loadActiveState(db, new Set());
   assert.equal(active.active.size, 1);
-  assert.equal(active.active.get(`${RACE_KEY}:win`)?.candidateId, "candidate-incumbent");
+  assert.equal(active.active.get(`${RACE_KEY} win`)?.candidateId, "candidate-incumbent");
   db.close();
 });
 
