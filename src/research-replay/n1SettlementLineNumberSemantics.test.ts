@@ -61,7 +61,7 @@ test("settlement line semantics reject non-positive payout line numbers", () => 
 test("settlement line semantics reject fractional refund line numbers", () => {
   const db = fixture();
   try {
-    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?,?)")
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?)")
       .run("candidate", 1.5, "trifecta", "1-2-3", "1-2-3", "1-2-3", "selection", 100);
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
   } finally {
