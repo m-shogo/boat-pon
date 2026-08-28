@@ -44,11 +44,16 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
   ])) return true;
 
   const hasRevisionKind = tableHasColumns(db, "settlement_candidates_v2", ["revision_kind"]);
+  const hasRevisionLineage = tableHasColumns(db, "settlement_candidates_v2", [
+    "revision_kind", "supersedes_candidate_id", "correction_reason",
+  ]);
   const candidate = db.prepare(`
     SELECT bet_type AS betType,
            settlement_status AS settlementStatus,
            result_kind AS resultKind,
            ${hasRevisionKind ? "revision_kind" : "NULL"} AS revisionKind,
+           ${hasRevisionLineage ? "supersedes_candidate_id" : "NULL"} AS supersedesCandidateId,
+           ${hasRevisionLineage ? "correction_reason" : "NULL"} AS correctionReason,
            semantic_hash AS semanticHash
     FROM settlement_candidates_v2
     WHERE candidate_id=?
@@ -57,12 +62,19 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     settlementStatus: string;
     resultKind: string;
     revisionKind: string | null;
+    supersedesCandidateId: string | null;
+    correctionReason: string | null;
     semanticHash: string;
   } | undefined;
   if (!candidate) return false;
   if (!SETTLEMENT_STATUS_SET.has(candidate.settlementStatus)
     || !RESULT_KIND_SET.has(candidate.resultKind)
     || (hasRevisionKind && (candidate.revisionKind === null || !REVISION_KIND_SET.has(candidate.revisionKind)))) {
+    return false;
+  }
+  if (hasRevisionLineage
+    && candidate.revisionKind !== "initial"
+    && (!candidate.supersedesCandidateId || !candidate.correctionReason)) {
     return false;
   }
   if (!sourceDuplicateCandidateLineSemanticsValid(db, candidateId, candidate.betType)) return false;
