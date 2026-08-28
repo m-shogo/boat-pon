@@ -29,6 +29,12 @@ function semanticHash(): string {
 function fixture(): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   db.exec(`
+    CREATE TABLE raw_documents (
+      raw_document_id TEXT PRIMARY KEY,
+      integrity_status TEXT NOT NULL,
+      security_scan_status TEXT NOT NULL,
+      parser_replay_eligible INTEGER NOT NULL
+    );
     CREATE TABLE parse_runs (
       parse_run_id TEXT PRIMARY KEY,
       raw_document_id TEXT NOT NULL,
@@ -90,6 +96,8 @@ function fixture(): DatabaseSync {
       schema_version TEXT NOT NULL
     );
   `);
+  db.prepare("INSERT INTO raw_documents VALUES (?,?,?,?)").run(RAW_ID, "verified", "passed", 1);
+  db.prepare("INSERT INTO raw_documents VALUES (?,?,?,?)").run("raw-2", "verified", "passed", 1);
   db.prepare("INSERT INTO parse_runs VALUES (?,?,?)").run(PARSE_ID, RAW_ID, "success");
   db.prepare("INSERT INTO parse_runs VALUES (?,?,?)").run("parse-2", "raw-2", "success");
   const insertObservation = db.prepare("INSERT INTO domain_observations VALUES (?,?,?,?,?,?,?,?,?)");
