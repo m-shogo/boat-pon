@@ -244,7 +244,9 @@ function marketScheduleReferenceValid(
 ): boolean {
   if (!market.scheduledCloseObservationId) return false;
   const asOfSchedule = repository.db.prepare(`
-    SELECT schedule.source_quality
+    SELECT schedule.source_quality,
+           schedule.semantic_payload_hash,
+           schedule_typed.payload_hash AS typed_payload_hash
     FROM domain_observations schedule
     JOIN parse_runs schedule_parse ON schedule_parse.parse_run_id = schedule.parse_run_id
       AND schedule_parse.raw_document_id = schedule.raw_document_id
@@ -253,6 +255,7 @@ function marketScheduleReferenceValid(
       AND schedule_raw.integrity_status = 'verified'
       AND schedule_raw.security_scan_status = 'passed'
       AND schedule_raw.parser_replay_eligible = 1
+    JOIN typed_observation_payloads schedule_typed ON schedule_typed.observation_id = schedule.observation_id
     WHERE schedule.observation_id = ?
       AND schedule.canonical_race_key = ?
       AND schedule.observation_type = 'race_schedule'
@@ -263,8 +266,14 @@ function marketScheduleReferenceValid(
         WHERE successor.supersedes_id = schedule.observation_id
           AND successor.recorded_at <= ?
       )
-  `).get(market.scheduledCloseObservationId, canonicalRaceKey, asOfAt, asOfAt) as { source_quality: ObservationRow["source_quality"] } | undefined;
-  if (!asOfSchedule || !policy.sourcePriority.includes(asOfSchedule.source_quality)) return false;
+  `).get(market.scheduledCloseObservationId, canonicalRaceKey, asOfAt, asOfAt) as {
+    source_quality: ObservationRow["source_quality"];
+    semantic_payload_hash: string;
+    typed_payload_hash: string;
+  } | undefined;
+  if (!asOfSchedule
+    || !policy.sourcePriority.includes(asOfSchedule.source_quality)
+    || asOfSchedule.semantic_payload_hash !== asOfSchedule.typed_payload_hash) return false;
   try {
     const schedule = repository.loadTypedPayload(market.scheduledCloseObservationId);
     if (schedule.type !== "race_schedule") return false;

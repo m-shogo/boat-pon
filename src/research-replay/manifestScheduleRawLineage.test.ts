@@ -8,6 +8,7 @@ import type { ResearchReplayRepository } from "./repository";
 const RACE_KEY = "2026-08-21:01:R1";
 const AS_OF = "2026-08-21T03:00:00.000Z";
 const CLOSE_AT = "2026-08-21T03:05:00.000Z";
+const SCHEDULE_HASH = "b".repeat(64);
 
 function marketObservation() {
   return {
@@ -32,7 +33,10 @@ function marketObservation() {
   };
 }
 
-function repository(scheduleIntegrity: "verified" | "failed"): ResearchReplayRepository {
+function repository(
+  scheduleIntegrity: "verified" | "failed",
+  scheduleDomainHash: string = SCHEDULE_HASH,
+): ResearchReplayRepository {
   const db = new DatabaseSync(":memory:");
   db.exec(`
     CREATE TABLE domain_observations (
@@ -43,7 +47,8 @@ function repository(scheduleIntegrity: "verified" | "failed"): ResearchReplayRep
       supersedes_id TEXT,
       source_quality TEXT NOT NULL,
       parse_run_id TEXT NOT NULL,
-      raw_document_id TEXT NOT NULL
+      raw_document_id TEXT NOT NULL,
+      semantic_payload_hash TEXT NOT NULL
     );
     CREATE TABLE parse_runs (
       parse_run_id TEXT PRIMARY KEY,
@@ -56,6 +61,10 @@ function repository(scheduleIntegrity: "verified" | "failed"): ResearchReplayRep
       security_scan_status TEXT NOT NULL,
       parser_replay_eligible INTEGER NOT NULL
     );
+    CREATE TABLE typed_observation_payloads (
+      observation_id TEXT PRIMARY KEY,
+      payload_hash TEXT NOT NULL
+    );
   `);
   db.prepare(`INSERT INTO raw_documents VALUES(?,?,?,?)`).run(
     "raw-schedule", scheduleIntegrity, "passed", 1,
@@ -63,7 +72,7 @@ function repository(scheduleIntegrity: "verified" | "failed"): ResearchReplayRep
   db.prepare(`INSERT INTO parse_runs VALUES(?,?,?)`).run(
     "parse-schedule", "raw-schedule", "success",
   );
-  db.prepare(`INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?)`).run(
+  db.prepare(`INSERT INTO domain_observations VALUES(?,?,?,?,?,?,?,?,?)`).run(
     "schedule-1",
     RACE_KEY,
     "race_schedule",
@@ -72,7 +81,9 @@ function repository(scheduleIntegrity: "verified" | "failed"): ResearchReplayRep
     "official_public",
     "parse-schedule",
     "raw-schedule",
+    scheduleDomainHash,
   );
+  db.prepare(`INSERT INTO typed_observation_payloads VALUES(?,?)`).run("schedule-1", SCHEDULE_HASH);
   return {
     db,
     loadTypedPayload(observationId: string) {
@@ -102,8 +113,11 @@ function repository(scheduleIntegrity: "verified" | "failed"): ResearchReplayRep
   } as unknown as ResearchReplayRepository;
 }
 
-function guard(scheduleIntegrity: "verified" | "failed") {
-  const repo = repository(scheduleIntegrity);
+function guard(
+  scheduleIntegrity: "verified" | "failed",
+  scheduleDomainHash: string = SCHEDULE_HASH,
+) {
+  const repo = repository(scheduleIntegrity, scheduleDomainHash);
   try {
     return strictPitGuard({
       observation: marketObservation(),
@@ -125,6 +139,12 @@ test("manifest PIT guard accepts a market bound to an eligible schedule lineage"
 
 test("manifest PIT guard rejects a market bound to a schedule whose raw integrity failed", () => {
   const result = guard("failed");
+  assert.equal(result.disposition, "rejected");
+  assert.ok(result.codes.includes("SCHEDULE_VERSION_INVALID"));
+});
+
+test("manifest PIT guard rejects a market bound to a schedule with domain-to-typed semantic hash drift", () => {
+  const result = guard("verified", "c".repeat(64));
   assert.equal(result.disposition, "rejected");
   assert.ok(result.codes.includes("SCHEDULE_VERSION_INVALID"));
 });
