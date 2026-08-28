@@ -94,11 +94,28 @@ function canonicalObservationIdForGroup(
 }
 
 function parseLineageValid(db: DatabaseSync, row: ObservationRow): boolean {
-  const parse = db.prepare("SELECT raw_document_id AS rawDocumentId,status FROM parse_runs WHERE parse_run_id=?")
-    .get(row.parseRunId) as { rawDocumentId: string; status: string } | undefined;
+  const parse = db.prepare(`
+    SELECT p.raw_document_id AS rawDocumentId,
+           p.status,
+           r.integrity_status AS integrityStatus,
+           r.security_scan_status AS securityScanStatus,
+           r.parser_replay_eligible AS parserReplayEligible
+    FROM parse_runs p
+    JOIN raw_documents r ON r.raw_document_id=p.raw_document_id
+    WHERE p.parse_run_id=?
+  `).get(row.parseRunId) as {
+    rawDocumentId: string;
+    status: string;
+    integrityStatus: string;
+    securityScanStatus: string;
+    parserReplayEligible: number;
+  } | undefined;
   return parse !== undefined
     && (parse.status === "success" || parse.status === "warning")
-    && parse.rawDocumentId === row.rawDocumentId;
+    && parse.rawDocumentId === row.rawDocumentId
+    && parse.integrityStatus === "verified"
+    && parse.securityScanStatus === "passed"
+    && parse.parserReplayEligible === 1;
 }
 
 function candidateSemanticHashValid(db: DatabaseSync, row: CandidateRow): boolean {
