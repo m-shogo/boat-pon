@@ -59,7 +59,15 @@ function main(): void {
     scope: "resolver-only rollback + append-only reversal + backup/restore on a temp copy; no production/source write",
   };
   try {
-    readCurrentlyValidSourceDuplicateObservationIds(db);
+    const validSourceDuplicates = readCurrentlyValidSourceDuplicateObservationIds(db);
+    const physicalSourceDuplicateRows = Number((db.prepare(
+      "SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2",
+    ).get() as { n: number }).n);
+    if (validSourceDuplicates.size !== physicalSourceDuplicateRows) {
+      throw new Error(
+        `REPARSE_ROLLBACK_SOURCE_DUPLICATE_AUTHORITY_INVALID:${validSourceDuplicates.size}/${physicalSourceDuplicateRows}`,
+      );
+    }
     // (1) operational disable: resolver-only rollback。
     const corrected = activeStatusCounts(db, false);
     const rolledBack = activeStatusCounts(db, true);
