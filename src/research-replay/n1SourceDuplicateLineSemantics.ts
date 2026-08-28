@@ -6,6 +6,7 @@ const BET_TYPE_SET: ReadonlySet<string> = new Set(BET_TYPES);
 const REFUND_SCOPE_SET: ReadonlySet<string> = new Set(["selection", "bet_type", "race"]);
 
 type LineRow = {
+  lineNo: number;
   lineBetType: string;
   selectionRaw: string | null;
   selectionNormalized: string | null;
@@ -46,6 +47,7 @@ function parsedSelectionMatches(
 }
 
 function payoutLineSemanticsValid(candidateBetType: SettlementBetType, row: PayoutLineRow): boolean {
+  if (!Number.isSafeInteger(row.lineNo) || row.lineNo < 1) return false;
   if (row.lineBetType !== candidateBetType) return false;
   if (!Number.isSafeInteger(row.payoutYen) || row.payoutYen < 0) return false;
   if (row.popularity !== null && (!Number.isSafeInteger(row.popularity) || row.popularity < 1)) return false;
@@ -63,6 +65,7 @@ function payoutLineSemanticsValid(candidateBetType: SettlementBetType, row: Payo
 }
 
 function refundLineSemanticsValid(candidateBetType: SettlementBetType, row: RefundLineRow): boolean {
+  if (!Number.isSafeInteger(row.lineNo) || row.lineNo < 1) return false;
   if (row.lineBetType !== candidateBetType) return false;
   if (!REFUND_SCOPE_SET.has(row.refundScope)) return false;
   if (row.refundYenPer100 !== null
@@ -71,6 +74,10 @@ function refundLineSemanticsValid(candidateBetType: SettlementBetType, row: Refu
     return row.selectionRaw === null && row.selectionNormalized === null;
   }
   return parsedSelectionMatches(candidateBetType, row, true);
+}
+
+function lineNumbersUnique(rows: readonly LineRow[]): boolean {
+  return new Set(rows.map((row) => row.lineNo)).size === rows.length;
 }
 
 /**
@@ -98,13 +105,14 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", required);
   if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
   if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
-  if (!tableHasColumns(db, "race_payout_lines_v2", ["payout_yen"])) return false;
-  if (!tableHasColumns(db, "race_refund_lines_v2", ["refund_scope", "refund_yen_per_100"])) return false;
+  if (!tableHasColumns(db, "race_payout_lines_v2", ["line_no", "payout_yen"])) return false;
+  if (!tableHasColumns(db, "race_refund_lines_v2", ["line_no", "refund_scope", "refund_yen_per_100"])) return false;
 
   const payoutHasLineKind = tableHasColumns(db, "race_payout_lines_v2", ["line_kind"]);
   const payoutHasPopularity = tableHasColumns(db, "race_payout_lines_v2", ["popularity"]);
   const payouts = db.prepare(`
-    SELECT bet_type AS lineBetType,
+    SELECT line_no AS lineNo,
+           bet_type AS lineBetType,
            selection_raw AS selectionRaw,
            selection_normalized AS selectionNormalized,
            selection_canonical AS selectionCanonical,
@@ -116,7 +124,8 @@ export function sourceDuplicateCandidateLineSemanticsValid(
     ORDER BY line_no
   `).all(candidateId) as unknown as PayoutLineRow[];
   const refunds = db.prepare(`
-    SELECT bet_type AS lineBetType,
+    SELECT line_no AS lineNo,
+           bet_type AS lineBetType,
            selection_raw AS selectionRaw,
            selection_normalized AS selectionNormalized,
            selection_canonical AS selectionCanonical,
@@ -128,6 +137,8 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   `).all(candidateId) as unknown as RefundLineRow[];
 
   const betType = candidateBetType as SettlementBetType;
-  return payouts.every((row) => payoutLineSemanticsValid(betType, row))
+  return lineNumbersUnique(payouts)
+    && lineNumbersUnique(refunds)
+    && payouts.every((row) => payoutLineSemanticsValid(betType, row))
     && refunds.every((row) => refundLineSemanticsValid(betType, row));
 }
