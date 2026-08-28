@@ -10,6 +10,9 @@ const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
 const RESULT_KIND_SET: ReadonlySet<string> = new Set([
   "normal", "dead_heat", "special_payout", "source_defined", "unknown",
 ]);
+const RESOLUTION_STATUS_SET: ReadonlySet<string> = new Set([
+  "resolved", "source_conflict", "unresolved", "quarantined",
+]);
 const CURRENT_CANDIDATE_AUTHORITY_COLUMNS = [
   "candidate_id", "canonical_race_key", "bet_type", "settlement_status", "result_kind",
   "revision_kind", "resolution_status", "source_kind", "source_schema_version", "observation_id",
@@ -73,10 +76,12 @@ function candidateMetadataSemanticsValid(
   const required = ["candidate_id", "bet_type", "settlement_status", "result_kind"] as const;
   if (!tableHasColumns(db, "settlement_candidates_v2", required)) return true;
   const hasSemanticHash = tableHasColumns(db, "settlement_candidates_v2", ["semantic_hash"]);
+  const hasResolutionStatus = tableHasColumns(db, "settlement_candidates_v2", ["resolution_status"]);
   const row = db.prepare(`
     SELECT bet_type AS betType,
            settlement_status AS settlementStatus,
            result_kind AS resultKind,
+           ${hasResolutionStatus ? "resolution_status" : "NULL"} AS resolutionStatus,
            ${hasSemanticHash ? "semantic_hash" : "NULL"} AS semanticHash
     FROM settlement_candidates_v2
     WHERE candidate_id=?
@@ -84,12 +89,16 @@ function candidateMetadataSemanticsValid(
     betType: string;
     settlementStatus: string;
     resultKind: string;
+    resolutionStatus: string | null;
     semanticHash: string | null;
   } | undefined;
   if (row === undefined
     || row.betType !== candidateBetType
     || !SETTLEMENT_STATUS_SET.has(row.settlementStatus)
-    || !RESULT_KIND_SET.has(row.resultKind)) return false;
+    || !RESULT_KIND_SET.has(row.resultKind)
+    || (hasResolutionStatus && (row.resolutionStatus === null || !RESOLUTION_STATUS_SET.has(row.resolutionStatus)))) {
+    return false;
+  }
 
   // Current N1 candidate + semantic line authority never persist placeholder hashes. Keep narrow
   // synthetic fixtures compatible, but fail closed once the full production candidate schema and
