@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "./canonical";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 import { enumerateBetSelections } from "./n2DatasetContract";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import { parseSettlementSelection } from "./settlement";
@@ -36,6 +37,7 @@ export type N2EvaluationMetricsSettlementRead = {
 
 type Row = {
   raceKey: string;
+  candidateId: string;
   observationId: string;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
@@ -160,6 +162,7 @@ export function readN2EvaluationMetricsSettlements(input: {
     const rows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
+        c.candidate_id AS candidateId,
         c.observation_id AS observationId,
         c.parse_run_id AS candidateParseRunId,
         c.raw_document_id AS candidateRawDocumentId,
@@ -221,6 +224,10 @@ export function readN2EvaluationMetricsSettlements(input: {
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1) {
         blockers.push(`${row.raceKey}:SETTLEMENT_LINEAGE_MISMATCH:${row.observationId}`);
+        continue;
+      }
+      if (!settlementCandidateSemanticHashValid(db, row.candidateId)) {
+        blockers.push(`${row.raceKey}:SETTLEMENT_SEMANTIC_HASH_MISMATCH:${row.candidateId}`);
         continue;
       }
       const selection = parseSettlementSelection("trifecta", row.winningSelectionRaw);
