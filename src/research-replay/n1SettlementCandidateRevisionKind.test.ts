@@ -1,0 +1,66 @@
+import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
+import test from "node:test";
+
+import { canonicalHash } from "./canonical";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
+
+function fixture(revisionKind: string): DatabaseSync {
+  const db = new DatabaseSync(":memory:");
+  db.exec(`
+    CREATE TABLE settlement_candidates_v2 (
+      candidate_id TEXT PRIMARY KEY,
+      bet_type TEXT NOT NULL,
+      settlement_status TEXT NOT NULL,
+      result_kind TEXT NOT NULL,
+      revision_kind TEXT NOT NULL,
+      semantic_hash TEXT NOT NULL
+    );
+    CREATE TABLE race_payout_lines_v2 (
+      candidate_id TEXT NOT NULL,
+      line_no INTEGER NOT NULL,
+      selection_canonical TEXT,
+      payout_yen INTEGER NOT NULL,
+      popularity INTEGER,
+      line_kind TEXT
+    );
+    CREATE TABLE race_refund_lines_v2 (
+      candidate_id TEXT NOT NULL,
+      line_no INTEGER NOT NULL,
+      selection_canonical TEXT,
+      refund_scope TEXT NOT NULL,
+      refund_yen_per_100 INTEGER,
+      reason_code TEXT NOT NULL
+    );
+  `);
+  const semanticHash = canonicalHash({
+    betType: "trifecta",
+    settlementStatus: "settled",
+    resultKind: "normal",
+    payouts: [],
+    refunds: [],
+  });
+  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?)")
+    .run("candidate", "trifecta", "settled", "normal", revisionKind, semanticHash);
+  return db;
+}
+
+for (const revisionKind of ["initial", "official_correction", "parser_reparse", "source_revision"] as const) {
+  test(`settlement candidate semantic authority accepts canonical revision kind ${revisionKind}`, () => {
+    const db = fixture(revisionKind);
+    try {
+      assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), true);
+    } finally {
+      db.close();
+    }
+  });
+}
+
+test("settlement candidate semantic authority rejects producer-impossible revision kind", () => {
+  const db = fixture("producer_impossible");
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
