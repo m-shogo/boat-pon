@@ -45,10 +45,11 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
 
   const hasRevisionKind = tableHasColumns(db, "settlement_candidates_v2", ["revision_kind"]);
   const hasRevisionLineage = tableHasColumns(db, "settlement_candidates_v2", [
-    "revision_kind", "supersedes_candidate_id", "correction_reason",
+    "canonical_race_key", "revision_kind", "supersedes_candidate_id", "correction_reason",
   ]);
   const candidate = db.prepare(`
-    SELECT bet_type AS betType,
+    SELECT ${hasRevisionLineage ? "canonical_race_key" : "NULL"} AS canonicalRaceKey,
+           bet_type AS betType,
            settlement_status AS settlementStatus,
            result_kind AS resultKind,
            ${hasRevisionKind ? "revision_kind" : "NULL"} AS revisionKind,
@@ -58,6 +59,7 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     FROM settlement_candidates_v2
     WHERE candidate_id=?
   `).get(candidateId) as {
+    canonicalRaceKey: string | null;
     betType: string;
     settlementStatus: string;
     resultKind: string;
@@ -72,10 +74,22 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     || (hasRevisionKind && (candidate.revisionKind === null || !REVISION_KIND_SET.has(candidate.revisionKind)))) {
     return false;
   }
-  if (hasRevisionLineage
-    && candidate.revisionKind !== "initial"
-    && (!candidate.supersedesCandidateId || !candidate.correctionReason)) {
-    return false;
+  if (hasRevisionLineage && candidate.revisionKind !== "initial") {
+    if (!candidate.supersedesCandidateId || !candidate.correctionReason || !candidate.canonicalRaceKey) return false;
+    const superseded = db.prepare(`
+      SELECT canonical_race_key AS canonicalRaceKey,
+             bet_type AS betType
+      FROM settlement_candidates_v2
+      WHERE candidate_id=?
+    `).get(candidate.supersedesCandidateId) as {
+      canonicalRaceKey: string;
+      betType: string;
+    } | undefined;
+    if (!superseded
+      || superseded.canonicalRaceKey !== candidate.canonicalRaceKey
+      || superseded.betType !== candidate.betType) {
+      return false;
+    }
   }
   if (!sourceDuplicateCandidateLineSemanticsValid(db, candidateId, candidate.betType)) return false;
 
