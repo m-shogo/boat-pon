@@ -47,13 +47,15 @@ function recordBeforeinfo(input: {
     contentType: "application/json",
     charset: "utf-8",
   });
-  return input.repository.parseFixtureEnvelope({
+  const parsed = input.repository.parseFixtureEnvelope({
     rawDocumentId: raw.rawDocumentId,
     parserVersion: "rr-parser-manifest-supersession-v1",
     supersedesObservationId: input.supersedesObservationId,
     correctionKind: input.supersedesObservationId ? "test_correction" : null,
     correctionReason: input.supersedesObservationId ? "test" : null,
-  }).observationId;
+  });
+  assert.ok(parsed.observationId);
+  return parsed.observationId;
 }
 
 function build(db: ReturnType<typeof openSidecarDatabase>, repository: ResearchReplayRepository) {
