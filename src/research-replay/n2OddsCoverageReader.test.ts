@@ -31,7 +31,7 @@ function payloadSemanticHash(payloadJson: string): string {
   return semanticPayloadHash("trifecta_market", JSON.parse(payloadJson) as unknown);
 }
 
-function createFixture(): { dir: string; primaryPath: string; sidecarPath: string } {
+function createFixture(scheduleRaceKey = "2026-05-20:01:R1"): { dir: string; primaryPath: string; sidecarPath: string } {
   const dir = mkdtempSync(join(tmpdir(), "n2-odds-coverage-"));
   const primaryPath = join(dir, "primary.sqlite");
   const sidecarPath = join(dir, "sidecar.sqlite");
@@ -73,6 +73,22 @@ function createFixture(): { dir: string; primaryPath: string; sidecarPath: strin
       payload_schema_version TEXT NOT NULL, payload_json TEXT NOT NULL, payload_hash TEXT NOT NULL
     );
   `);
+  const schedulePayload = {
+    canonicalRaceKey: scheduleRaceKey,
+    scheduledCloseAt: "2026-05-20T03:00:00Z",
+    scheduledCloseOriginalOffset: "+09:00",
+    scheduleStatus: "scheduled",
+  };
+  const scheduleHash = semanticPayloadHash("race_schedule", schedulePayload);
+  sidecar.prepare("INSERT INTO raw_documents VALUES ('raw-schedule', 'verified', 'passed', 1)").run();
+  sidecar.prepare("INSERT INTO parse_runs VALUES ('parse-schedule', 'raw-schedule', 'success')").run();
+  sidecar.prepare(`INSERT INTO domain_observations VALUES (
+    'schedule-1', ?, 'race_schedule', 'race_schedule', 'rr-payload-v1', ?,
+    'raw-schedule', 'parse-schedule', '2026-05-20T02:00:00Z', '2026-05-20T02:00:00Z',
+    '2026-05-20T02:00:01Z', 'source_exact', 'official_public'
+  )`).run(scheduleRaceKey, scheduleHash);
+  sidecar.prepare("INSERT INTO typed_observation_payloads VALUES ('schedule-1', 'race_schedule', 'rr-payload-v1', ?, ?)")
+    .run(JSON.stringify(schedulePayload), scheduleHash);
   sidecar.close();
   return { dir, primaryPath, sidecarPath };
 }
@@ -123,6 +139,28 @@ test("F0 trifecta T-5 is verified while legacy odds without bet_type is never pr
     assert.equal(profile.overall.coveragePct, 50);
     assert.equal(sha256(fixture.primaryPath), beforePrimary);
     assert.equal(sha256(fixture.sidecarPath), beforeSidecar);
+  } finally {
+    rmSync(fixture.dir, { recursive: true, force: true });
+  }
+});
+
+test("cross-race scheduled-close reference is excluded from verified market coverage", () => {
+  const fixture = createFixture("2026-05-20:01:R2");
+  try {
+    insertMarket({
+      sidecarPath: fixture.sidecarPath,
+      suffix: "cross-race-schedule",
+      raceKey: "2026-05-20:01:R1",
+      observedAt: "2026-05-20T02:55:00Z",
+      payloadJson: payload("2026-05-20T02:55:00Z"),
+    });
+    const events = readTrifectaMarketCoverageEvents({
+      primaryDbPath: fixture.primaryPath, sidecarDbPath: fixture.sidecarPath,
+      dateFrom: "2026-05-20", dateTo: "2026-05-20", checkpoint: "T-5",
+    });
+    assert.equal(events.length, 120);
+    assert.equal(events.filter((event) => event.status === "verified").length, 0);
+    assert.ok(events.every((event) => event.exclusionReason === "excluded_invalid_market_payload"));
   } finally {
     rmSync(fixture.dir, { recursive: true, force: true });
   }
