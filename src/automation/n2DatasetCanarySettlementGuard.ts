@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../research-replay/n1SourceDuplicateResolutionValidation";
 import { sourceDuplicateCandidateLineSemanticsValid } from "../research-replay/n1SourceDuplicateLineSemantics";
+import { settlementCandidateSemanticHashValid } from "../research-replay/n1SettlementCandidateSemanticHash";
 import { CANARY_COHORT } from "./taskExecutorsCore";
 
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
@@ -130,7 +131,8 @@ function preflightActiveSettlementLineage(
         || row.rawIntegrityStatus !== "verified"
         || row.rawSecurityScanStatus !== "passed"
         || row.rawParserReplayEligible !== 1
-        || !sourceDuplicateCandidateLineSemanticsValid(db, row.candidateId, row.candidateBetType)) {
+        || !sourceDuplicateCandidateLineSemanticsValid(db, row.candidateId, row.candidateBetType)
+        || !settlementCandidateSemanticHashValid(db, row.candidateId)) {
         blocks.push(`${prefix}_SETTLEMENT_LINEAGE_INVALID:${row.candidateId}`);
       }
     }
