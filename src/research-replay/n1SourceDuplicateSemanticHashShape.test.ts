@@ -34,7 +34,8 @@ function fixture(semanticHash: string): DatabaseSync {
       selection_normalized TEXT,
       selection_canonical TEXT,
       refund_scope TEXT NOT NULL,
-      refund_yen_per_100 INTEGER
+      refund_yen_per_100 INTEGER,
+      reason_code TEXT NOT NULL
     );
   `);
   db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?)")
