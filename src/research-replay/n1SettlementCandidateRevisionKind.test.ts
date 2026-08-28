@@ -5,7 +5,11 @@ import test from "node:test";
 import { canonicalHash } from "./canonical";
 import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 
-function fixture(revisionKind: string): DatabaseSync {
+function fixture(
+  revisionKind: string,
+  supersedesCandidateId: string | null = revisionKind === "initial" ? null : "prior-candidate",
+  correctionReason: string | null = revisionKind === "initial" ? null : "research-correction",
+): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   db.exec(`
     CREATE TABLE settlement_candidates_v2 (
@@ -14,6 +18,8 @@ function fixture(revisionKind: string): DatabaseSync {
       settlement_status TEXT NOT NULL,
       result_kind TEXT NOT NULL,
       revision_kind TEXT NOT NULL,
+      supersedes_candidate_id TEXT,
+      correction_reason TEXT,
       semantic_hash TEXT NOT NULL
     );
     CREATE TABLE race_payout_lines_v2 (
@@ -40,8 +46,11 @@ function fixture(revisionKind: string): DatabaseSync {
     payouts: [],
     refunds: [],
   });
-  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?)")
-    .run("candidate", "trifecta", "settled", "normal", revisionKind, semanticHash);
+  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?)")
+    .run(
+      "candidate", "trifecta", "settled", "normal", revisionKind,
+      supersedesCandidateId, correctionReason, semanticHash,
+    );
   return db;
 }
 
@@ -58,6 +67,24 @@ for (const revisionKind of ["initial", "official_correction", "parser_reparse", 
 
 test("settlement candidate semantic authority rejects producer-impossible revision kind", () => {
   const db = fixture("producer_impossible");
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("revised settlement candidate requires a superseded candidate", () => {
+  const db = fixture("parser_reparse", null, "research-correction");
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("revised settlement candidate requires a correction reason", () => {
+  const db = fixture("official_correction", "prior-candidate", null);
   try {
     assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
   } finally {
