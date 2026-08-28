@@ -62,7 +62,8 @@ export function loadSourceDuplicateSet(db: DatabaseSync): Set<string> {
 }
 
 // 1回の sequential full scan で active map・before status counts・physical rows を構築する。
-// source_dup obs と superseded candidate を除外する。
+// source_dup obs と superseded candidate を除外し、残る incumbent は observation/parse/raw lineage を
+// current research authority と同じ fail-closed eligibility で再検証する。
 export function loadActiveState(db: DatabaseSync, sourceDup: Set<string>): ActiveState {
   const superseded = new Set<string>();
   for (const r of db.prepare("SELECT supersedes_candidate_id AS id FROM settlement_candidates_v2 WHERE supersedes_candidate_id IS NOT NULL").all() as Array<{ id: string }>) superseded.add(r.id);
@@ -70,11 +71,42 @@ export function loadActiveState(db: DatabaseSync, sourceDup: Set<string>): Activ
   const ambiguousKeys = new Set<string>();
   const before: Record<string, number> = {};
   let physicalRows = 0;
-  const stmt = db.prepare("SELECT candidate_id AS c, canonical_race_key AS k, bet_type AS b, settlement_status AS s, result_kind AS r, observation_id AS o FROM settlement_candidates_v2");
-  for (const row of stmt.iterate() as IterableIterator<{ c: string; k: string; b: string; s: string; r: string; o: string }>) {
+  const stmt = db.prepare(`SELECT c.candidate_id AS c, c.canonical_race_key AS k, c.bet_type AS b,
+      c.settlement_status AS s, c.result_kind AS r, c.observation_id AS o,
+      c.parse_run_id AS candidateParseRunId, c.raw_document_id AS candidateRawDocumentId,
+      obs.canonical_race_key AS observationRaceKey, obs.observation_type AS observationType,
+      obs.payload_type AS observationPayloadType, obs.parse_run_id AS observationParseRunId,
+      obs.raw_document_id AS observationRawDocumentId,
+      pr.raw_document_id AS parseRawDocumentId, pr.status AS parseStatus,
+      rd.integrity_status AS rawIntegrityStatus, rd.security_scan_status AS rawSecurityScanStatus,
+      rd.parser_replay_eligible AS rawParserReplayEligible
+    FROM settlement_candidates_v2 c
+    LEFT JOIN domain_observations obs ON obs.observation_id=c.observation_id
+    LEFT JOIN parse_runs pr ON pr.parse_run_id=obs.parse_run_id
+    LEFT JOIN raw_documents rd ON rd.raw_document_id=obs.raw_document_id`);
+  type ActiveRow = {
+    c: string; k: string; b: string; s: string; r: string; o: string;
+    candidateParseRunId: string; candidateRawDocumentId: string;
+    observationRaceKey: string | null; observationType: string | null; observationPayloadType: string | null;
+    observationParseRunId: string | null; observationRawDocumentId: string | null;
+    parseRawDocumentId: string | null; parseStatus: string | null;
+    rawIntegrityStatus: string | null; rawSecurityScanStatus: string | null; rawParserReplayEligible: number | null;
+  };
+  for (const row of stmt.iterate() as IterableIterator<ActiveRow>) {
     physicalRows += 1;
     if (sourceDup.has(row.o)) continue;
     if (superseded.has(row.c)) continue;
+    const lineageValid = row.observationRaceKey === row.k
+      && row.observationType === "settlement_result"
+      && row.observationPayloadType === "settlement_result"
+      && row.observationParseRunId === row.candidateParseRunId
+      && row.observationRawDocumentId === row.candidateRawDocumentId
+      && row.parseRawDocumentId === row.candidateRawDocumentId
+      && (row.parseStatus === "success" || row.parseStatus === "warning")
+      && row.rawIntegrityStatus === "verified"
+      && row.rawSecurityScanStatus === "passed"
+      && row.rawParserReplayEligible === 1;
+    if (!lineageValid) throw new Error(`REPARSE_ACTIVE_LINEAGE_INVALID:${row.c}`);
     const key = candidateKey(row.k, row.b as SettlementBetType);
     if (active.has(key)) { ambiguousKeys.add(key); continue; }
     active.set(key, { candidateId: row.c, status: row.s as SettlementStatus, resultKind: row.r as ResultKind });
