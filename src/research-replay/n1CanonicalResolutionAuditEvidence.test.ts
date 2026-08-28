@@ -22,6 +22,7 @@ function fixture() {
 
   const replay = new ResearchReplayRepository(db, new RawStore(join(root, "raw")), undefined, () => NOW);
   const raw = replay.recordRawDocument({ bytes: Buffer.from("same-source"), contentType: "text/plain", charset: "utf-8" });
+  db.prepare("UPDATE raw_documents SET integrity_status='verified', security_scan_status='passed', parser_replay_eligible=1 WHERE raw_document_id=?").run(raw.rawDocumentId);
   const parseRunId = "parse-source";
   db.prepare(`INSERT INTO parse_runs
     (parse_run_id,raw_document_id,parser_name,parser_version,source_schema_version,canonicalization_version,
