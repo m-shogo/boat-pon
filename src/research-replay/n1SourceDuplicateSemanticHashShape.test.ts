@@ -5,15 +5,24 @@ import test from "node:test";
 import { canonicalHash } from "./canonical";
 import { sourceDuplicateCandidateLineSemanticsValid } from "./n1SourceDuplicateLineSemantics";
 
+const RACE_KEY = "2026-08-01:01:R1";
+
 function fixture(semanticHash: string): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   db.exec(`
     CREATE TABLE settlement_candidates_v2 (
       candidate_id TEXT PRIMARY KEY,
+      canonical_race_key TEXT NOT NULL,
       bet_type TEXT NOT NULL,
       settlement_status TEXT NOT NULL,
       result_kind TEXT NOT NULL,
-      semantic_hash TEXT NOT NULL
+      revision_kind TEXT NOT NULL,
+      observation_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      semantic_hash TEXT NOT NULL,
+      supersedes_candidate_id TEXT,
+      correction_reason TEXT
     );
     CREATE TABLE race_payout_lines_v2 (
       candidate_id TEXT NOT NULL,
@@ -38,8 +47,11 @@ function fixture(semanticHash: string): DatabaseSync {
       reason_code TEXT NOT NULL
     );
   `);
-  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?)")
-    .run("candidate", "trifecta", "settled", "normal", semanticHash);
+  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+    .run(
+      "candidate", RACE_KEY, "trifecta", "settled", "normal", "initial",
+      "obs-1", "parse-1", "raw-1", semanticHash, null, null,
+    );
   db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?,?,?)")
     .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", 1000, 1, "payout");
   return db;
