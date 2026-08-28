@@ -389,8 +389,15 @@ export function buildRaceAsOfManifest(input: {
     JOIN parse_runs p ON p.parse_run_id = o.parse_run_id
     JOIN raw_documents r ON r.raw_document_id = o.raw_document_id
     WHERE o.canonical_race_key = ?
+      AND o.recorded_at <= ?
+      AND NOT EXISTS (
+        SELECT 1
+        FROM domain_observations successor
+        WHERE successor.supersedes_id = o.observation_id
+          AND successor.recorded_at <= ?
+      )
     ORDER BY o.observation_id
-  `).all(input.canonicalRaceKey) as ObservationRow[];
+  `).all(input.canonicalRaceKey, asOfAt, asOfAt) as ObservationRow[];
   const guards = new Map(rows.map((row) => [
     row.observation_id,
     strictPitGuard({
