@@ -32,6 +32,11 @@ function marketObservation() {
 
 function repository(schedule: { canonicalRaceKey: string; scheduledCloseAt: string } | null) {
   return {
+    db: {
+      prepare() {
+        return { get: () => ({ eligible: 1 }) };
+      },
+    },
     loadTypedPayload(observationId: string) {
       if (observationId === MARKET_OBSERVATION_ID) {
         return {
