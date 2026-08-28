@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "./canonical";
+import { sourceDuplicateCandidateLineSemanticsValid } from "./n1SourceDuplicateLineSemantics";
 
 function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
@@ -46,6 +47,7 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     semanticHash: string;
   } | undefined;
   if (!candidate) return false;
+  if (!sourceDuplicateCandidateLineSemanticsValid(db, candidateId, candidate.betType)) return false;
 
   const payouts = (db.prepare(`
     SELECT selection_canonical AS selectionCanonical,
