@@ -28,6 +28,10 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import {
+  historicalTrifectaCanonicalSourcePredicate,
+  historicalTrifectaCompleteMarketPredicate,
+} from "../src/research-replay/historicalTrifectaMarketAuthority";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/condb-switch-historical-closing-odds.md";
@@ -88,9 +92,11 @@ const closingOddsMap = new Map<string, OddsMap>(); // race_id â†’ combination â†
 
 type OddsRow = { race_id: string; combination: string; odds: number };
 const allOdds = db.prepare(`
-  SELECT race_id, combination, odds
-  FROM historical_alternative_odds
-  WHERE source_quality = 'historical_closing_odds'
+  SELECT h.race_id, h.combination, h.odds
+  FROM historical_alternative_odds h
+  WHERE h.bet_type = 'trifecta'
+    AND ${historicalTrifectaCanonicalSourcePredicate("h")}
+    AND ${historicalTrifectaCompleteMarketPredicate("h.race_id")}
 `).all() as OddsRow[];
 
 for (const row of allOdds) {
