@@ -51,7 +51,7 @@ function fixture(
     payouts: [],
     refunds: [],
   });
-  if (supersedesCandidateId) {
+  if (supersedesCandidateId && supersedesCandidateId !== "candidate") {
     db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?)")
       .run(
         supersedesCandidateId, supersededRaceKey, supersededBetType, "settled", "normal", "initial",
@@ -115,6 +115,15 @@ test("revised settlement candidate requires a superseded candidate", () => {
 
 test("revised settlement candidate requires a correction reason", () => {
   const db = fixture("official_correction", "prior-candidate", null);
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("revised settlement candidate cannot supersede itself", () => {
+  const db = fixture("source_revision", "candidate", "research-correction");
   try {
     assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
   } finally {
