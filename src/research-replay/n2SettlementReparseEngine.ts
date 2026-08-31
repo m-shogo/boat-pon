@@ -67,7 +67,28 @@ export function loadSourceDuplicateSet(db: DatabaseSync): Set<string> {
 // current research authority と同じ fail-closed eligibility で再検証する。
 export function loadActiveState(db: DatabaseSync, sourceDup: Set<string>): ActiveState {
   const superseded = new Set<string>();
-  for (const r of db.prepare("SELECT supersedes_candidate_id AS id FROM settlement_candidates_v2 WHERE supersedes_candidate_id IS NOT NULL").all() as Array<{ id: string }>) superseded.add(r.id);
+  const supersessionRows = db.prepare(`
+    SELECT newer.candidate_id AS supersederId,
+           newer.supersedes_candidate_id AS supersededId,
+           newer.canonical_race_key AS supersederRaceKey,
+           newer.bet_type AS supersederBetType,
+           older.canonical_race_key AS supersededRaceKey,
+           older.bet_type AS supersededBetType
+      FROM settlement_candidates_v2 newer
+      LEFT JOIN settlement_candidates_v2 older ON older.candidate_id=newer.supersedes_candidate_id
+     WHERE newer.supersedes_candidate_id IS NOT NULL
+  `).all() as Array<{
+    supersederId: string; supersededId: string;
+    supersederRaceKey: string; supersederBetType: string;
+    supersededRaceKey: string | null; supersededBetType: string | null;
+  }>;
+  for (const row of supersessionRows) {
+    if (row.supersededRaceKey !== null
+      && (row.supersederRaceKey !== row.supersededRaceKey || row.supersederBetType !== row.supersededBetType)) {
+      throw new Error(`REPARSE_ACTIVE_SUPERSESSION_IDENTITY_INVALID:${row.supersederId}:${row.supersededId}`);
+    }
+    superseded.add(row.supersededId);
+  }
   const active = new Map<string, ActiveValue>();
   const ambiguousKeys = new Set<string>();
   const before: Record<string, number> = {};
