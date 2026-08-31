@@ -8,6 +8,20 @@ import { settlementCandidateSemanticHashValid } from "../research-replay/n1Settl
 import { CANARY_COHORT } from "./taskExecutorsCore";
 
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
+const CURRENT_CANDIDATE_AUTHORITY_COLUMNS = [
+  "candidate_id", "canonical_race_key", "bet_type", "settlement_status", "result_kind",
+  "revision_kind", "resolution_status", "source_kind", "source_schema_version", "observation_id",
+  "parse_run_id", "raw_document_id", "semantic_hash", "supersedes_candidate_id", "correction_reason",
+  "observed_at", "created_at",
+] as const;
+const CURRENT_PAYOUT_AUTHORITY_COLUMNS = [
+  "payout_line_id", "candidate_id", "line_no", "bet_type", "selection_raw", "selection_normalized",
+  "selection_canonical", "payout_yen", "popularity", "line_kind", "created_at",
+] as const;
+const CURRENT_REFUND_AUTHORITY_COLUMNS = [
+  "refund_line_id", "candidate_id", "line_no", "bet_type", "selection_raw", "selection_normalized",
+  "selection_canonical", "refund_scope", "refund_yen_per_100", "reason_code", "created_at",
+] as const;
 
 export type N2DatasetSettlementPreflight = {
   ok: boolean;
@@ -42,6 +56,12 @@ function tableExists(db: DatabaseSync, name: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name));
 }
 
+function tableHasColumns(db: DatabaseSync, table: string, required: readonly string[]): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  const names = new Set(rows.map((row) => row.name));
+  return required.every((column) => names.has(column));
+}
+
 function preflightActiveSettlementLineage(
   sidecarPath: string,
   prefix: "DATASET_CANARY" | "DATASET_ACTIVE",
@@ -69,6 +89,20 @@ function preflightActiveSettlementLineage(
         return {
           ok: false,
           blocks: [`${prefix}_LINEAGE_TABLE_MISSING:${table}`],
+          checkedCandidateCount: 0,
+        };
+      }
+    }
+
+    for (const [table, required] of [
+      ["settlement_candidates_v2", CURRENT_CANDIDATE_AUTHORITY_COLUMNS],
+      ["race_payout_lines_v2", CURRENT_PAYOUT_AUTHORITY_COLUMNS],
+      ["race_refund_lines_v2", CURRENT_REFUND_AUTHORITY_COLUMNS],
+    ] as const) {
+      if (!tableHasColumns(db, table, required)) {
+        return {
+          ok: false,
+          blocks: [`${prefix}_LINEAGE_SCHEMA_INVALID:${table}`],
           checkedCandidateCount: 0,
         };
       }
