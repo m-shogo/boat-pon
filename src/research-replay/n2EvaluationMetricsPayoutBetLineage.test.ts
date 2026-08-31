@@ -61,6 +61,18 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
         payout_yen INTEGER NOT NULL,
         line_kind TEXT NOT NULL
       );
+      CREATE TABLE race_refund_lines_v2 (
+        refund_line_id TEXT PRIMARY KEY,
+        candidate_id TEXT NOT NULL,
+        line_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
+        selection_canonical TEXT,
+        refund_scope TEXT NOT NULL,
+        refund_yen_per_100 INTEGER,
+        reason_code TEXT NOT NULL
+      );
       CREATE TABLE settlement_source_duplicate_resolutions_v2 (
         resolution_id TEXT PRIMARY KEY,
         duplicate_observation_id TEXT NOT NULL,
