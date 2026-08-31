@@ -86,6 +86,24 @@ test("settlement candidate semantic authority rejects producer-impossible revisi
   }
 });
 
+test("initial settlement candidate cannot supersede another candidate", () => {
+  const db = fixture("initial", "prior-candidate", null);
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
+test("initial settlement candidate cannot carry a correction reason", () => {
+  const db = fixture("initial", null, "research-correction");
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
 test("revised settlement candidate requires a superseded candidate", () => {
   const db = fixture("parser_reparse", null, "research-correction");
   try {
