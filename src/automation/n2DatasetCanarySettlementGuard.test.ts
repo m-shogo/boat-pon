@@ -5,11 +5,14 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import { canonicalHash } from "../research-replay/canonical";
 import { resolveExecutor, type ExecutorContext } from "./taskExecutors";
 import {
   preflightN2AllActiveSettlementLineage,
   preflightN2DatasetCanarySettlementLineage,
 } from "./n2DatasetCanarySettlementGuard";
+
+const FIXTURE_TIME = "2024-06-05T03:00:00.000Z";
 
 function withSidecar(
   raw: { integrity: string; security: string; replayEligible: number },
@@ -45,28 +48,64 @@ function withSidecar(
       bet_type TEXT NOT NULL,
       settlement_status TEXT NOT NULL,
       result_kind TEXT NOT NULL,
+      revision_kind TEXT NOT NULL,
+      resolution_status TEXT NOT NULL,
+      source_kind TEXT NOT NULL,
+      source_schema_version TEXT NOT NULL,
       observation_id TEXT NOT NULL,
       parse_run_id TEXT NOT NULL,
       raw_document_id TEXT NOT NULL,
-      supersedes_candidate_id TEXT
+      semantic_hash TEXT NOT NULL,
+      supersedes_candidate_id TEXT,
+      correction_reason TEXT,
+      observed_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
     CREATE TABLE race_payout_lines_v2 (
-      candidate_id TEXT
+      payout_line_id TEXT PRIMARY KEY,
+      candidate_id TEXT NOT NULL,
+      line_no INTEGER NOT NULL,
+      bet_type TEXT NOT NULL,
+      selection_raw TEXT NOT NULL,
+      selection_normalized TEXT NOT NULL,
+      selection_canonical TEXT,
+      payout_yen INTEGER NOT NULL,
+      popularity INTEGER,
+      line_kind TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
     CREATE TABLE race_refund_lines_v2 (
-      candidate_id TEXT
+      refund_line_id TEXT PRIMARY KEY,
+      candidate_id TEXT NOT NULL,
+      line_no INTEGER NOT NULL,
+      bet_type TEXT NOT NULL,
+      selection_raw TEXT,
+      selection_normalized TEXT,
+      selection_canonical TEXT,
+      refund_scope TEXT NOT NULL,
+      refund_yen_per_100 INTEGER,
+      reason_code TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
       duplicate_observation_id TEXT
     );
   `);
+  const semanticHash = canonicalHash({
+    betType: "trifecta",
+    settlementStatus: "settled",
+    resultKind: "normal",
+    payouts: [],
+    refunds: [],
+  });
   db.prepare("INSERT INTO raw_documents VALUES ('raw-a',?,?,?)")
     .run(raw.integrity, raw.security, raw.replayEligible);
   db.prepare("INSERT INTO parse_runs VALUES ('parse-a','raw-a','success')").run();
   db.prepare(`INSERT INTO domain_observations
     VALUES ('obs-a',?,'settlement_result','settlement_result','raw-a','parse-a')`).run(raceKey);
-  db.prepare(`INSERT INTO settlement_candidates_v2
-    VALUES ('candidate-a',?,'trifecta','settled','normal','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
+  db.prepare(`INSERT INTO settlement_candidates_v2 VALUES
+    ('candidate-a',?,'trifecta','settled','normal','initial','resolved','official','fixture-v1',
+     'obs-a','parse-a','raw-a',?,NULL,NULL,?,?)`).run(raceKey, semanticHash, FIXTURE_TIME, FIXTURE_TIME);
   db.close();
   try {
     fn(path);
@@ -116,6 +155,38 @@ test("dataset settlement preflight fails closed when settlement line authority t
   });
 });
 
+test("dataset settlement preflight fails closed when current settlement authority columns are missing", () => {
+  withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
+    const db = new DatabaseSync(path);
+    db.exec(`
+      DROP TABLE race_refund_lines_v2;
+      CREATE TABLE race_refund_lines_v2 (
+        refund_line_id TEXT PRIMARY KEY,
+        candidate_id TEXT NOT NULL,
+        line_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
+        selection_canonical TEXT,
+        refund_scope TEXT NOT NULL,
+        refund_yen_per_100 INTEGER,
+        created_at TEXT NOT NULL
+      );
+    `);
+    db.close();
+
+    const canary = preflightN2DatasetCanarySettlementLineage(path);
+    assert.equal(canary.ok, false);
+    assert.deepEqual(canary.blocks, ["DATASET_CANARY_LINEAGE_SCHEMA_INVALID:race_refund_lines_v2"]);
+    assert.equal(canary.checkedCandidateCount, 0);
+
+    const active = preflightN2AllActiveSettlementLineage(path);
+    assert.equal(active.ok, false);
+    assert.deepEqual(active.blocks, ["DATASET_ACTIVE_LINEAGE_SCHEMA_INVALID:race_refund_lines_v2"]);
+    assert.equal(active.checkedCandidateCount, 0);
+  });
+});
+
 test("dataset settlement preflight fails closed when an active WAL prevents immutable verification", () => {
   withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
     writeFileSync(`${path}-wal`, "active-wal");
@@ -159,31 +230,8 @@ test("runtime dataset canary fails closed on tainted active settlement lineage",
 test("all-active preflight rejects producer-impossible settlement line semantics", () => {
   withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
     const db = new DatabaseSync(path);
-    db.exec(`
-      DROP TABLE race_payout_lines_v2;
-      DROP TABLE race_refund_lines_v2;
-      CREATE TABLE race_payout_lines_v2 (
-        payout_line_id TEXT PRIMARY KEY,
-        candidate_id TEXT NOT NULL,
-        line_no INTEGER NOT NULL,
-        bet_type TEXT NOT NULL,
-        selection_raw TEXT,
-        selection_normalized TEXT,
-        selection_canonical TEXT,
-        line_kind TEXT
-      );
-      CREATE TABLE race_refund_lines_v2 (
-        refund_line_id TEXT PRIMARY KEY,
-        candidate_id TEXT NOT NULL,
-        line_no INTEGER NOT NULL,
-        bet_type TEXT NOT NULL,
-        selection_raw TEXT,
-        selection_normalized TEXT,
-        selection_canonical TEXT
-      );
-    `);
-    db.prepare(`INSERT INTO race_payout_lines_v2
-      VALUES ('payout-a','candidate-a',1,'trifecta','1-2-3','1-2-3','2-1-3','payout')`).run();
+    db.prepare(`INSERT INTO race_payout_lines_v2 VALUES
+      ('payout-a','candidate-a',1,'trifecta','1-2-3','1-2-3','2-1-3',100,1,'payout',?)`).run(FIXTURE_TIME);
     db.close();
 
     const checked = preflightN2AllActiveSettlementLineage(path);
