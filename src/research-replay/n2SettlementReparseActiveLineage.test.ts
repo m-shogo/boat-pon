@@ -10,7 +10,7 @@ import {
   initializeN1SettlementSchema,
   SettlementRepository,
 } from "./settlement";
-import { loadActiveState } from "./n2SettlementReparseEngine";
+import { activeStatusCounts, loadActiveState } from "./n2SettlementReparseEngine";
 
 const NOW = "2026-08-28T00:00:00.000Z";
 const RACE_KEY = "2020-05-01:12:R1";
@@ -102,6 +102,33 @@ test("settlement reparse fails closed when a cross-race candidate claims the inc
     .run("d".repeat(64));
   assert.throws(
     () => loadActiveState(db, new Set()),
+    /REPARSE_ACTIVE_SUPERSESSION_IDENTITY_INVALID:candidate-cross-race-superseder:candidate-incumbent/,
+  );
+  db.close();
+});
+
+test("active status counts independently fail closed on invalid incumbent raw lineage", () => {
+  const db = setup("quarantined");
+  assert.throws(
+    () => activeStatusCounts(db, false),
+    /REPARSE_ACTIVE_LINEAGE_INVALID:candidate-incumbent/,
+  );
+  db.close();
+});
+
+test("active status counts independently fail closed on cross-race supersession identity", () => {
+  const db = setup("verified");
+  db.prepare(`INSERT INTO settlement_candidates_v2
+    (candidate_id, canonical_race_key, bet_type, settlement_status, result_kind, revision_kind,
+     resolution_status, source_kind, source_schema_version, observation_id, parse_run_id,
+     raw_document_id, semantic_hash, supersedes_candidate_id, correction_reason, observed_at, created_at)
+    SELECT 'candidate-cross-race-superseder', '2020-05-01:12:R2', bet_type, settlement_status,
+           result_kind, 'official_correction', resolution_status, source_kind, source_schema_version,
+           observation_id, parse_run_id, raw_document_id, ?, candidate_id, 'fixture-cross-race', observed_at, created_at
+      FROM settlement_candidates_v2 WHERE candidate_id='candidate-incumbent'`)
+    .run("d".repeat(64));
+  assert.throws(
+    () => activeStatusCounts(db, false),
     /REPARSE_ACTIVE_SUPERSESSION_IDENTITY_INVALID:candidate-cross-race-superseder:candidate-incumbent/,
   );
   db.close();
