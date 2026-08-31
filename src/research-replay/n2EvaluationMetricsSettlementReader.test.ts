@@ -240,7 +240,7 @@ test("evaluation reader rejects incomplete settlement semantic authority schema"
   });
 });
 
-test("persisted winning selection must match producer raw and normalized semantics", () => {
+test("persisted winning selection mismatch is rejected by settlement semantic authority", () => {
   withDb((path, db) => {
     const raceKey = "2026-08-07:05:R1";
     insertClean(db, "a", raceKey, "1-2-3", 1230, {
@@ -250,7 +250,7 @@ test("persisted winning selection must match producer raw and normalized semanti
     db.close();
     const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: [raceKey] });
     assert.equal(report.status, "BLOCKED");
-    assert.ok(report.blockers.includes(`${raceKey}:WINNING_SELECTION_SEMANTICS_MISMATCH`));
+    assert.ok(report.blockers.includes(`${raceKey}:SETTLEMENT_SEMANTIC_HASH_MISMATCH:a`));
     assert.equal(report.settlementCount, 0);
   });
 });
