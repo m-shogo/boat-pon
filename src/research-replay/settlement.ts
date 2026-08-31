@@ -542,8 +542,22 @@ export class SettlementRepository {
     if (input.settlementStatus === "refunded" && (payoutLines.length || !refundLines.length)) {
       throw new Error("REFUNDED_REQUIRES_REFUND_ONLY");
     }
-    if (input.revisionKind !== "initial" && (!input.supersedesCandidateId || !input.correctionReason)) {
-      throw new Error("REVISION_REQUIRES_SUPERSESSION_AND_REASON");
+    const supersedesCandidateId = input.supersedesCandidateId ?? null;
+    const correctionReason = input.correctionReason ?? null;
+    if (input.revisionKind === "initial") {
+      if (supersedesCandidateId !== null || correctionReason !== null) {
+        throw new Error("INITIAL_REVISION_FORBIDS_SUPERSESSION_OR_REASON");
+      }
+    } else {
+      if (!supersedesCandidateId || !correctionReason?.trim()) {
+        throw new Error("REVISION_REQUIRES_SUPERSESSION_AND_REASON");
+      }
+      const superseded = this.db.prepare(`
+        SELECT canonical_race_key,bet_type FROM settlement_candidates_v2 WHERE candidate_id=?
+      `).get(supersedesCandidateId) as { canonical_race_key: string; bet_type: string } | undefined;
+      if (!superseded) throw new Error("SUPERSEDED_CANDIDATE_MISSING");
+      if (superseded.canonical_race_key !== input.canonicalRaceKey) throw new Error("SUPERSESSION_RACE_MISMATCH");
+      if (superseded.bet_type !== input.betType) throw new Error("SUPERSESSION_BET_TYPE_MISMATCH");
     }
     const semanticHash = canonicalHash({
       betType: input.betType, settlementStatus: input.settlementStatus, resultKind: input.resultKind,
@@ -595,19 +609,25 @@ export class SettlementRepository {
           || existing.sourceSchemaVersion !== input.sourceSchemaVersion
           || existing.parseRunId !== input.parseRunId
           || existing.rawDocumentId !== input.rawDocumentId
-          || existing.supersedesCandidateId !== (input.supersedesCandidateId ?? null)
-          || existing.correctionReason !== (input.correctionReason ?? null)) {
+          || existing.supersedesCandidateId !== supersedesCandidateId
+          || existing.correctionReason !== correctionReason) {
           throw new Error(`SETTLEMENT_CANDIDATE_REUSE_CONFLICT:${existing.candidateId}`);
         }
         if (manageTransaction) this.db.exec("COMMIT");
         return { candidateId: existing.candidateId, inserted: false, semanticHash };
+      }
+      if (supersedesCandidateId) {
+        const existingSuccessor = this.db.prepare(`
+          SELECT candidate_id FROM settlement_candidates_v2 WHERE supersedes_candidate_id=? LIMIT 1
+        `).get(supersedesCandidateId) as { candidate_id: string } | undefined;
+        if (existingSuccessor) throw new Error(`SUPERSESSION_ALREADY_HAS_SUCCESSOR:${existingSuccessor.candidate_id}`);
       }
       const candidateId = this.idFactory();
       this.db.prepare(`INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
         candidateId, input.canonicalRaceKey, input.betType, input.settlementStatus, input.resultKind,
         input.revisionKind, input.resolutionStatus, input.sourceKind, input.sourceSchemaVersion,
         input.observationId, input.parseRunId, input.rawDocumentId, semanticHash,
-        input.supersedesCandidateId ?? null, input.correctionReason ?? null, now, now,
+        supersedesCandidateId, correctionReason, now, now,
       );
       const payout = this.db.prepare(`INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?)`);
       payoutLines.forEach((line, index) => payout.run(
