@@ -13,6 +13,7 @@ import {
   initializeN1CanonicalResolutionSchema,
   initializeN1SettlementSchema,
   SettlementRepository,
+  SourceDuplicateResolutionRepository,
 } from "./settlement";
 import {
   applySourceDuplicateResolution,
@@ -190,6 +191,41 @@ test("source duplicate resolution preserves exact retry idempotency across times
   assert.deepEqual(
     applySourceDuplicateResolution(db, plan, "2026-07-29T05:00:00.000Z"),
     { inserted: 0, noop: 1 },
+  );
+  db.close();
+});
+
+test("source duplicate resolution rolls back when an existing duplicate id has a conflicting immutable body", () => {
+  const { db, replay } = setup();
+  const canonicalObservationId = addObservationWithCandidates(db, replay);
+  const duplicateObservationId = addObservationWithCandidates(db, replay);
+  const alternateCanonicalObservationId = addObservationWithCandidates(db, replay);
+  const plan = planSourceDuplicateResolution(db);
+  const item = plan.plannedResolutions.find((entry) => entry.duplicateObservationId === duplicateObservationId);
+  assert.ok(item);
+
+  const repo = new SourceDuplicateResolutionRepository(db, () => "forged-resolution");
+  repo.record({
+    duplicateObservationId,
+    canonicalObservationId: alternateCanonicalObservationId,
+    canonicalRaceKey: item.canonicalRaceKey,
+    rawDocumentId: item.rawDocumentId,
+    sourceArchiveFile: item.sourceArchiveFile,
+    detectionReason: "intra_file_source_duplicate: same raw document produced multiple identical race observations",
+    duplicateSemanticDigest: item.duplicateSemanticDigest,
+    resolverVersion: plan.resolverVersion,
+    policyVersion: plan.policyVersion,
+    detectedAt: NOW,
+  });
+
+  assert.notEqual(alternateCanonicalObservationId, canonicalObservationId);
+  assert.throws(
+    () => applySourceDuplicateResolution(db, plan, "2026-07-29T05:00:00.000Z"),
+    /SOURCE_DUPLICATE_RESOLUTION_CONFLICT/,
+  );
+  assert.equal(
+    Number((db.prepare("SELECT COUNT(*) AS n FROM settlement_source_duplicate_resolutions_v2").get() as { n: number }).n),
+    1,
   );
   db.close();
 });
