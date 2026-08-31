@@ -80,6 +80,7 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
   }
   if (hasRevisionLineage && candidate.revisionKind !== "initial") {
     if (!candidate.supersedesCandidateId || !candidate.correctionReason || !candidate.canonicalRaceKey) return false;
+    if (candidate.supersedesCandidateId === candidateId) return false;
     const superseded = db.prepare(`
       SELECT canonical_race_key AS canonicalRaceKey,
              bet_type AS betType
