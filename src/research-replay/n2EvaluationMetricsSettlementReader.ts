@@ -133,6 +133,7 @@ export function readN2EvaluationMetricsSettlements(input: {
       "raw_documents",
       "settlement_candidates_v2",
       "race_payout_lines_v2",
+      "race_refund_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
     ]) {
       if (!tableExists(db, table)) return blocked([`SIDECAR_TABLE_MISSING:${table}`], requested.length, 1);
