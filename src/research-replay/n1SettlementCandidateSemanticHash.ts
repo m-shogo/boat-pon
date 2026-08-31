@@ -95,6 +95,12 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
       || superseded.betType !== candidate.betType) {
       return false;
     }
+    const successorCount = Number((db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM settlement_candidates_v2
+      WHERE supersedes_candidate_id=?
+    `).get(candidate.supersedesCandidateId) as { count: number }).count);
+    if (successorCount !== 1) return false;
   }
   if (!sourceDuplicateCandidateLineSemanticsValid(db, candidateId, candidate.betType)) return false;
 
