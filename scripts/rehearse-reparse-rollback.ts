@@ -9,7 +9,7 @@ import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
-import { activeStatusCounts, physicalRowCount } from "../src/research-replay/n2SettlementReparseEngine";
+import { activeStatusCounts, loadActiveState, physicalRowCount } from "../src/research-replay/n2SettlementReparseEngine";
 
 const root = resolve(process.cwd());
 const arg = (name: string): string | null => {
@@ -68,6 +68,11 @@ function main(): void {
         `REPARSE_ROLLBACK_SOURCE_DUPLICATE_AUTHORITY_INVALID:${validSourceDuplicates.size}/${physicalSourceDuplicateRows}`,
       );
     }
+    // Rollback evidence must use the same fail-closed active-settlement authority as reparse itself.
+    // This rejects producer-impossible cross-race/cross-bet supersession and invalid incumbent lineage
+    // before resolver-only counts are allowed to become audit evidence.
+    loadActiveState(db, validSourceDuplicates);
+
     // (1) operational disable: resolver-only rollback。
     const corrected = activeStatusCounts(db, false);
     const rolledBack = activeStatusCounts(db, true);
