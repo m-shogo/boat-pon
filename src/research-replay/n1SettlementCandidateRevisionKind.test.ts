@@ -122,6 +122,15 @@ test("revised settlement candidate requires a correction reason", () => {
   }
 });
 
+test("revised settlement candidate requires a nonblank correction reason", () => {
+  const db = fixture("official_correction", "prior-candidate", "   ");
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+  } finally {
+    db.close();
+  }
+});
+
 test("revised settlement candidate cannot supersede itself", () => {
   const db = fixture("source_revision", "candidate", "research-correction");
   try {
