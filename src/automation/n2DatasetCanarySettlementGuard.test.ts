@@ -50,6 +50,12 @@ function withSidecar(
       raw_document_id TEXT NOT NULL,
       supersedes_candidate_id TEXT
     );
+    CREATE TABLE race_payout_lines_v2 (
+      candidate_id TEXT
+    );
+    CREATE TABLE race_refund_lines_v2 (
+      candidate_id TEXT
+    );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
       duplicate_observation_id TEXT
     );
@@ -89,6 +95,24 @@ test("dataset canary preflight accepts verified active settlement lineage", () =
     assert.equal(result.ok, true);
     assert.equal(result.checkedCandidateCount, 1);
     assert.deepEqual(result.blocks, []);
+  });
+});
+
+test("dataset settlement preflight fails closed when settlement line authority table is missing", () => {
+  withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
+    const db = new DatabaseSync(path);
+    db.exec("DROP TABLE race_refund_lines_v2");
+    db.close();
+
+    const canary = preflightN2DatasetCanarySettlementLineage(path);
+    assert.equal(canary.ok, false);
+    assert.deepEqual(canary.blocks, ["DATASET_CANARY_LINEAGE_TABLE_MISSING:race_refund_lines_v2"]);
+    assert.equal(canary.checkedCandidateCount, 0);
+
+    const active = preflightN2AllActiveSettlementLineage(path);
+    assert.equal(active.ok, false);
+    assert.deepEqual(active.blocks, ["DATASET_ACTIVE_LINEAGE_TABLE_MISSING:race_refund_lines_v2"]);
+    assert.equal(active.checkedCandidateCount, 0);
   });
 });
 
@@ -136,6 +160,8 @@ test("all-active preflight rejects producer-impossible settlement line semantics
   withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
     const db = new DatabaseSync(path);
     db.exec(`
+      DROP TABLE race_payout_lines_v2;
+      DROP TABLE race_refund_lines_v2;
       CREATE TABLE race_payout_lines_v2 (
         payout_line_id TEXT PRIMARY KEY,
         candidate_id TEXT NOT NULL,
