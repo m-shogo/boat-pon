@@ -74,6 +74,10 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     || (hasRevisionKind && (candidate.revisionKind === null || !REVISION_KIND_SET.has(candidate.revisionKind)))) {
     return false;
   }
+  if (hasRevisionLineage && candidate.revisionKind === "initial"
+    && (candidate.supersedesCandidateId !== null || candidate.correctionReason !== null)) {
+    return false;
+  }
   if (hasRevisionLineage && candidate.revisionKind !== "initial") {
     if (!candidate.supersedesCandidateId || !candidate.correctionReason || !candidate.canonicalRaceKey) return false;
     const superseded = db.prepare(`
