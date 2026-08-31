@@ -157,3 +157,21 @@ test("revised settlement candidate cannot supersede a different bet type", () =>
     db.close();
   }
 });
+
+test("revised settlement candidate rejects branching supersession authority", () => {
+  const db = fixture("parser_reparse");
+  try {
+    const semanticHash = (db.prepare(
+      "SELECT semantic_hash AS semanticHash FROM settlement_candidates_v2 WHERE candidate_id='candidate'",
+    ).get() as { semanticHash: string }).semanticHash;
+    db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?)")
+      .run(
+        "competing-successor", RACE, "trifecta", "settled", "normal", "source_revision",
+        "prior-candidate", "competing-correction", semanticHash,
+      );
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+    assert.equal(settlementCandidateSemanticHashValid(db, "competing-successor"), false);
+  } finally {
+    db.close();
+  }
+});
