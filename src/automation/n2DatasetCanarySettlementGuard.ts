@@ -61,6 +61,8 @@ function preflightActiveSettlementLineage(
       "parse_runs",
       "raw_documents",
       "settlement_candidates_v2",
+      "race_payout_lines_v2",
+      "race_refund_lines_v2",
       "settlement_source_duplicate_resolutions_v2",
     ]) {
       if (!tableExists(db, table)) {
