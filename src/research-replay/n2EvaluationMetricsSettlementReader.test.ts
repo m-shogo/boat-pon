@@ -69,6 +69,7 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
         selection_normalized TEXT NOT NULL,
         selection_canonical TEXT,
         payout_yen INTEGER NOT NULL,
+        popularity INTEGER,
         line_kind TEXT NOT NULL
       );
       CREATE TABLE race_refund_lines_v2 (
@@ -105,6 +106,16 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
   }
 }
 
+function cleanSemanticHash(selection: string, payoutYen: number): string {
+  return canonicalHash({
+    betType: "trifecta",
+    settlementStatus: "settled",
+    resultKind: "normal",
+    payouts: [[selection, payoutYen, null, "payout"]],
+    refunds: [],
+  });
+}
+
 function insertClean(
   db: DatabaseSync,
   id: string,
@@ -122,7 +133,7 @@ function insertClean(
   const observationId = `obs-${id}`;
   const rawDocumentId = options.rawDocumentId ?? `raw-${id}`;
   const parseRunId = options.parseRunId ?? `parse-${id}`;
-  const semanticHash = options.semanticHash ?? `semantic-${id}`;
+  const semanticHash = options.semanticHash ?? cleanSemanticHash(selection, payoutYen);
   const selectionRaw = options.selectionRaw ?? selection;
   const selectionNormalized = options.selectionNormalized ?? selection;
   db.prepare("INSERT OR IGNORE INTO raw_documents VALUES (?,'verified','passed',1)").run(rawDocumentId);
@@ -136,8 +147,8 @@ function insertClean(
     VALUES (?,?, 'trifecta','settled','normal','initial','resolved',?,?,?,?,NULL,NULL)`)
     .run(id, raceKey, observationId, parseRunId, rawDocumentId, semanticHash);
   db.prepare(`INSERT INTO race_payout_lines_v2
-    (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
-    VALUES (?,?,1,'trifecta',?,?,?,?,'payout')`)
+    (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,popularity,line_kind)
+    VALUES (?,?,1,'trifecta',?,?,?,?,NULL,'payout')`)
     .run(`p-${id}`, id, selectionRaw, selectionNormalized, selection, payoutYen);
 }
 
@@ -203,6 +214,32 @@ test("evaluation reader requires refund authority table", () => {
   });
 });
 
+test("evaluation reader rejects incomplete settlement semantic authority schema", () => {
+  withDb((path, db) => {
+    const raceKey = "2026-08-07:05:R1";
+    insertClean(db, "a", raceKey, "1-2-3", 1230);
+    db.exec(`
+      DROP TABLE race_refund_lines_v2;
+      CREATE TABLE race_refund_lines_v2 (
+        refund_line_id TEXT PRIMARY KEY,
+        candidate_id TEXT NOT NULL,
+        line_no INTEGER NOT NULL,
+        bet_type TEXT NOT NULL,
+        selection_raw TEXT,
+        selection_normalized TEXT,
+        selection_canonical TEXT,
+        refund_scope TEXT NOT NULL,
+        refund_yen_per_100 INTEGER
+      );
+    `);
+    db.close();
+    const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: [raceKey] });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("SIDECAR_SETTLEMENT_SCHEMA_INVALID:race_refund_lines_v2"));
+    assert.equal(report.settlementCount, 0);
+  });
+});
+
 test("persisted winning selection must match producer raw and normalized semantics", () => {
   withDb((path, db) => {
     const raceKey = "2026-08-07:05:R1";
@@ -223,7 +260,7 @@ test("currently valid source-duplicate resolution excludes the duplicate observa
     const raceKey = "2026-08-07:05:R1";
     const rawDocumentId = "raw-shared";
     const parseRunId = "parse-shared";
-    const semanticHash = "semantic-shared";
+    const semanticHash = cleanSemanticHash("1-2-3", 1230);
     insertClean(db, "canonical", raceKey, "1-2-3", 1230, { rawDocumentId, parseRunId, semanticHash });
     insertClean(db, "duplicate", raceKey, "1-2-3", 1230, { rawDocumentId, parseRunId, semanticHash });
     insertValidResolution(db, "duplicate", "canonical", raceKey, rawDocumentId, semanticHash);
@@ -282,8 +319,8 @@ test("special-payout candidate is excluded from normal economic evaluation", () 
   withDb((path, db) => {
     insertClean(db, "a", "2026-08-07:05:R1", "1-2-3", 1230);
     db.prepare(`INSERT INTO race_payout_lines_v2
-      (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
-      VALUES ('special-a','a',2,'trifecta','1-2-3','1-2-3','1-2-3',70,'special_payout')`).run();
+      (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,popularity,line_kind)
+      VALUES ('special-a','a',2,'trifecta','1-2-3','1-2-3','1-2-3',70,NULL,'special_payout')`).run();
     db.close();
     const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: ["2026-08-07:05:R1"] });
     assert.equal(report.status, "BLOCKED");
