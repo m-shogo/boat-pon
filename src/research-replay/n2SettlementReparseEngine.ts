@@ -474,6 +474,8 @@ export const physicalRowCount = (db: DatabaseSync): number =>
 // revision_kind='initial' だが reparse parse_run に属するため、これで正しく除外される。
 // 既存 row は削除せず resolver だけで切替える（append-only rollback）。
 export function activeStatusCounts(db: DatabaseSync, excludeReparse: boolean): Record<string, number> {
+  // Exported resolver must be safe even when a caller does not run the rollback rehearsal preflight first.
+  loadActiveState(db, loadSourceDuplicateSet(db));
   const rows = excludeReparse
     ? db.prepare(
       `SELECT settlement_status AS s, COUNT(*) AS n FROM settlement_candidates_v2 c
