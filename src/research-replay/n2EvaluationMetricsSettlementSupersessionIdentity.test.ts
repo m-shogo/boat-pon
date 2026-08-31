@@ -60,6 +60,7 @@ test("evaluation metrics blocks a cross-race superseder before it can hide reque
         selection_normalized TEXT NOT NULL,
         selection_canonical TEXT,
         payout_yen INTEGER NOT NULL,
+        popularity INTEGER,
         line_kind TEXT NOT NULL
       );
       CREATE TABLE race_refund_lines_v2 (
@@ -96,7 +97,7 @@ test("evaluation metrics blocks a cross-race superseder before it can hide reque
     db.prepare(`INSERT INTO settlement_candidates_v2
       VALUES ('candidate-a',?,'trifecta','settled','normal','initial','resolved','obs-a','parse-a','raw-a','semantic-a',NULL,NULL)`).run(raceKey);
     db.prepare(`INSERT INTO race_payout_lines_v2
-      VALUES ('p-a','candidate-a',1,'trifecta','1-2-3','1-2-3','1-2-3',1230,'payout')`).run();
+      VALUES ('p-a','candidate-a',1,'trifecta','1-2-3','1-2-3','1-2-3',1230,NULL,'payout')`).run();
     db.prepare(`INSERT INTO settlement_candidates_v2
       VALUES ('cross-race-newer','2026-08-08:05:R1','trifecta','settled','normal','correction','resolved','obs-a','parse-a','raw-a','semantic-newer','candidate-a','synthetic-cross-race')`).run();
   } finally {

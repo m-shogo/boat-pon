@@ -59,6 +59,7 @@ function withDb(fn: (path: string, db: DatabaseSync) => void): void {
         selection_normalized TEXT NOT NULL,
         selection_canonical TEXT,
         payout_yen INTEGER NOT NULL,
+        popularity INTEGER,
         line_kind TEXT NOT NULL
       );
       CREATE TABLE race_refund_lines_v2 (
@@ -109,11 +110,11 @@ test("mismatched payout bet lineage cannot hide special-payout evidence from eva
       VALUES ('a',?,'trifecta','settled','normal','initial','resolved','obs-a','parse-a','raw-a','semantic-a',NULL,NULL)`)
       .run(raceKey);
     db.prepare(`INSERT INTO race_payout_lines_v2
-      (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
-      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3',1230,'payout')`).run();
+      (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,popularity,line_kind)
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3',1230,NULL,'payout')`).run();
     db.prepare(`INSERT INTO race_payout_lines_v2
-      (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,line_kind)
-      VALUES ('forged-special-a','a',2,'exacta','1-2','1-2','1-2',70,'special_payout')`).run();
+      (payout_line_id,candidate_id,line_no,bet_type,selection_raw,selection_normalized,selection_canonical,payout_yen,popularity,line_kind)
+      VALUES ('forged-special-a','a',2,'exacta','1-2','1-2','1-2',70,NULL,'special_payout')`).run();
     db.close();
 
     const report = readN2EvaluationMetricsSettlements({ sidecarDbPath: path, raceKeys: [raceKey] });

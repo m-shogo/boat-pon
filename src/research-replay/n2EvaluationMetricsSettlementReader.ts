@@ -14,6 +14,16 @@ export const N2_EVALUATION_METRICS_SETTLEMENT_READER_VERSION =
 const SELECTIONS = new Set(enumerateBetSelections("trifecta"));
 const RACE_KEY_RE = /^(\d{4}-\d{2}-\d{2}):(0[1-9]|1\d|2[0-4]):R([1-9]|1[0-2])$/u;
 const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
+const SEMANTIC_CANDIDATE_COLUMNS = [
+  "candidate_id", "canonical_race_key", "bet_type", "settlement_status", "result_kind",
+  "revision_kind", "supersedes_candidate_id", "correction_reason", "semantic_hash",
+] as const;
+const SEMANTIC_PAYOUT_COLUMNS = [
+  "candidate_id", "line_no", "selection_canonical", "payout_yen", "popularity", "line_kind",
+] as const;
+const SEMANTIC_REFUND_COLUMNS = [
+  "candidate_id", "line_no", "selection_canonical", "refund_scope", "refund_yen_per_100", "reason_code",
+] as const;
 
 export type N2EvaluationSettlement = {
   canonicalRaceKey: string;
@@ -99,6 +109,12 @@ function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
 }
 
+function tableHasColumns(db: DatabaseSync, table: string, required: readonly string[]): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  const names = new Set(rows.map((row) => row.name));
+  return required.every((column) => names.has(column));
+}
+
 function openImmutable(path: string): DatabaseSync {
   const walPath = `${path}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) throw new Error("SIDECAR_ACTIVE_WAL");
@@ -137,6 +153,15 @@ export function readN2EvaluationMetricsSettlements(input: {
       "settlement_source_duplicate_resolutions_v2",
     ]) {
       if (!tableExists(db, table)) return blocked([`SIDECAR_TABLE_MISSING:${table}`], requested.length, 1);
+    }
+    for (const [table, required] of [
+      ["settlement_candidates_v2", SEMANTIC_CANDIDATE_COLUMNS],
+      ["race_payout_lines_v2", SEMANTIC_PAYOUT_COLUMNS],
+      ["race_refund_lines_v2", SEMANTIC_REFUND_COLUMNS],
+    ] as const) {
+      if (!tableHasColumns(db, table, required)) {
+        return blocked([`SIDECAR_SETTLEMENT_SCHEMA_INVALID:${table}`], requested.length, 1);
+      }
     }
     let validResolvedObservationIds: Set<string>;
     try {
