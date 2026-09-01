@@ -132,3 +132,29 @@ test("edge holdout source rejects producer-impossible winner selection semantics
     assert.deepEqual(result.candidates, []);
   });
 });
+
+test("edge holdout source fails closed when a cross-race successor would hide holdout history", () => {
+  withDb((path, db) => {
+    const raceKey = "2024-08-01:05:R1";
+    const otherRaceKey = "2024-08-02:05:R1";
+    seedCandidate(db, raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('forged-successor',?,'trifecta','pending','normal','unresolved','obs-a','parse-a','raw-a','a')`).run(otherRaceKey);
+    db.prepare(`INSERT INTO race_payout_lines_v2
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
+    db.close();
+
+    const result = readN2EdgeHoldoutSource({
+      sidecarDbPath: path,
+      primaryDbPath: join(tmpdir(), "must-not-be-read.sqlite"),
+    });
+    assert.equal(result.status, "BLOCKED");
+    assert.deepEqual(result.blockers, [
+      `${raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:forged-successor`,
+    ]);
+    assert.equal(result.reads.primaryDatabaseReadCount, 0);
+    assert.equal(result.reads.sidecarDatabaseReadCount, 1);
+    assert.deepEqual(result.historicalOutcomes, []);
+    assert.deepEqual(result.candidates, []);
+  });
+});
