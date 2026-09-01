@@ -150,7 +150,7 @@ function observationCandidateDigest(
       row.canonical_race_key === expectedRaceKey
       && row.raw_document_id === expectedRawDocumentId
       && row.parse_run_id === expectedParseRunId),
-    semanticIntegrityValid: rows.every((row) =>
+    semanticIntegrityValid: rows.length > 0 && rows.every((row) =>
       candidateSemanticHashValid(db, row)
       && sourceDuplicateCandidateLineSemanticsValid(db, row.candidate_id, row.bet_type)),
   };
