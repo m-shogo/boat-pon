@@ -25,6 +25,8 @@ const CURRENT_CANDIDATE_AUTHORITY_MARKERS = [
 const CURRENT_LINE_IDENTITY_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
 ] as const;
+const CURRENT_PAYOUT_AUTHORITY_MARKERS = ["payout_line_id", "created_at"] as const;
+const CURRENT_REFUND_AUTHORITY_MARKERS = ["refund_line_id", "created_at"] as const;
 const LEGACY_LINE_IDENTITY_ABSENT_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized",
 ] as const;
@@ -68,6 +70,12 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
 
 function lineIdentitySchemaKind(db: DatabaseSync, table: string): LineIdentitySchemaKind {
   if (tableHasColumns(db, table, CURRENT_LINE_IDENTITY_COLUMNS)) return "current";
+  const currentMarkers = table === "race_payout_lines_v2"
+    ? CURRENT_PAYOUT_AUTHORITY_MARKERS
+    : table === "race_refund_lines_v2"
+      ? CURRENT_REFUND_AUTHORITY_MARKERS
+      : [];
+  if (currentMarkers.some((column) => tableHasColumns(db, table, [column]))) return "partial";
   const legacyOnly = LEGACY_LINE_IDENTITY_ABSENT_COLUMNS.every((column) =>
     !tableHasColumns(db, table, [column]));
   return legacyOnly ? "legacy" : "partial";
