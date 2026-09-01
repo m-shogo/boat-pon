@@ -160,3 +160,25 @@ test("producer-impossible payout selection lineage cannot make market readiness 
     assert.equal(result.rawOddsValuesRead, false);
   });
 });
+
+test("same-race supersession cycle cannot silently hide market readiness settlement evidence", () => {
+  withRoot((root) => {
+    writeAcceptedT5(root);
+    createSidecar(root);
+    const path = join(root, "data/research-replay.sqlite");
+    const db = new DatabaseSync(path);
+    db.prepare("UPDATE settlement_candidates_v2 SET supersedes_candidate_id='b' WHERE candidate_id='a'").run();
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('b','2026-08-07:10:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a','a')`).run();
+    db.close();
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.integrityBlockedRaceKeys, []);
+    assert.deepEqual(result.sourceBlockers, ["SETTLEMENT_SUPERSESSION_CYCLE_INVALID:a"]);
+    assert.equal(result.settlementEligibleRaceCount, 0);
+    assert.equal(result.settlementIneligibleRaceCount, 0);
+    assert.equal(result.databaseWriteCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
+  });
+});
