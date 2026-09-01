@@ -74,7 +74,9 @@ function candidateMetadataSemanticsValid(
 ): boolean {
   if (!tableExists(db, "settlement_candidates_v2")) return true;
   const required = ["candidate_id", "bet_type", "settlement_status", "result_kind"] as const;
-  if (!tableHasColumns(db, "settlement_candidates_v2", required)) return true;
+  const requiredPresence = required.map((column) => tableHasColumns(db, "settlement_candidates_v2", [column]));
+  if (requiredPresence.every((present) => !present)) return true;
+  if (requiredPresence.some((present) => !present)) return false;
   const hasSemanticHash = tableHasColumns(db, "settlement_candidates_v2", ["semantic_hash"]);
   const hasResolutionStatus = tableHasColumns(db, "settlement_candidates_v2", ["resolution_status"]);
   const row = db.prepare(`
