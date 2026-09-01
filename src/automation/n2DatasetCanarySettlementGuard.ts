@@ -67,7 +67,9 @@ function preflightActiveSettlementLineage(
   prefix: "DATASET_CANARY" | "DATASET_ACTIVE",
   bounds?: Bounds,
 ): N2DatasetSettlementPreflight {
-  if (!existsSync(sidecarPath)) return { ok: true, blocks: [], checkedCandidateCount: 0 };
+  if (!existsSync(sidecarPath)) {
+    return { ok: false, blocks: [`${prefix}_SIDECAR_NOT_FOUND`], checkedCandidateCount: 0 };
+  }
   const walPath = `${sidecarPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) {
     return { ok: false, blocks: [`${prefix}_SIDECAR_ACTIVE_WAL`], checkedCandidateCount: 0 };
