@@ -122,3 +122,45 @@ test("selection profile rejects an in-month successor pointing to a cross-race p
     db.close();
   }
 });
+
+test("selection profile rejects an in-month candidate pointing to a missing predecessor", () => {
+  const db = makeDb();
+  try {
+    db.exec(`
+      DELETE FROM settlement_candidates_v2;
+      INSERT INTO settlement_candidates_v2 VALUES (
+        'dangling', '2026-05-01:01:R1', 'trifecta', 'settled', 'normal',
+        'official_correction', 'resolved', 'obs-new', 'parse-new', 'raw-new', 'semantic-new', 'missing', 'correction'
+      );
+    `);
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_SUPERSESSION_PREDECESSOR_MISSING:dangling/u,
+    );
+  } finally {
+    db.close();
+  }
+});
+
+test("selection profile rejects a same-race supersession cycle before active filtering", () => {
+  const db = makeDb();
+  try {
+    db.exec(`
+      DELETE FROM settlement_candidates_v2;
+      INSERT INTO settlement_candidates_v2 VALUES (
+        'a', '2026-05-01:01:R1', 'trifecta', 'settled', 'normal', 'official_correction', 'resolved',
+        'obs-a', 'parse-a', 'raw-a', 'semantic-a', 'b', 'correction'
+      );
+      INSERT INTO settlement_candidates_v2 VALUES (
+        'b', '2026-05-01:01:R1', 'trifecta', 'settled', 'normal', 'official_correction', 'resolved',
+        'obs-b', 'parse-b', 'raw-b', 'semantic-b', 'a', 'correction'
+      );
+    `);
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_SUPERSESSION_CYCLE_INVALID:a/u,
+    );
+  } finally {
+    db.close();
+  }
+});
