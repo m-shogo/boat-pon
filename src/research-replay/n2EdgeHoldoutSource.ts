@@ -152,12 +152,19 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
       FROM settlement_candidates_v2 newer
       JOIN settlement_candidates_v2 prior
         ON prior.candidate_id=newer.supersedes_candidate_id
-      WHERE substr(prior.canonical_race_key,1,10) >= ?
-        AND substr(prior.canonical_race_key,1,10) <= ?
+      WHERE (
+          (substr(prior.canonical_race_key,1,10) >= ? AND substr(prior.canonical_race_key,1,10) <= ?)
+          OR (substr(newer.canonical_race_key,1,10) >= ? AND substr(newer.canonical_race_key,1,10) <= ?)
+        )
         AND (newer.canonical_race_key<>prior.canonical_race_key OR newer.bet_type<>prior.bet_type)
       ORDER BY prior.canonical_race_key,newer.candidate_id
       LIMIT 1
-    `).get(N2_EDGE_HOLDOUT_HISTORY_FROM_DATE,N2_EDGE_TEST_TO_DATE) as { candidateId: string; raceKey: string } | undefined;
+    `).get(
+      N2_EDGE_HOLDOUT_HISTORY_FROM_DATE,
+      N2_EDGE_TEST_TO_DATE,
+      N2_EDGE_HOLDOUT_HISTORY_FROM_DATE,
+      N2_EDGE_TEST_TO_DATE,
+    ) as { candidateId: string; raceKey: string } | undefined;
     if (invalidSuperseder) {
       return blocked([
         `${invalidSuperseder.raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${invalidSuperseder.candidateId}`,
