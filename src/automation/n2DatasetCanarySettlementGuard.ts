@@ -145,6 +145,42 @@ function preflightActiveSettlementLineage(
       };
     }
 
+    const cycleRangeClause = bounds
+      ? "AND seed.canonical_race_key >= ? AND seed.canonical_race_key < ?"
+      : "";
+    const cyclicSuperseders = db.prepare(`
+      WITH RECURSIVE ancestry(startId,currentId,nextId,path,cycle) AS (
+        SELECT seed.candidate_id,
+               seed.candidate_id,
+               seed.supersedes_candidate_id,
+               '|' || seed.candidate_id || '|',
+               0
+        FROM settlement_candidates_v2 seed
+        WHERE seed.supersedes_candidate_id IS NOT NULL
+          ${cycleRangeClause}
+        UNION ALL
+        SELECT ancestry.startId,
+               prior.candidate_id,
+               prior.supersedes_candidate_id,
+               ancestry.path || prior.candidate_id || '|',
+               instr(ancestry.path, '|' || prior.candidate_id || '|') > 0
+        FROM ancestry
+        JOIN settlement_candidates_v2 prior ON prior.candidate_id=ancestry.nextId
+        WHERE ancestry.nextId IS NOT NULL AND ancestry.cycle=0
+      )
+      SELECT DISTINCT startId AS candidateId
+      FROM ancestry
+      WHERE cycle=1
+      ORDER BY startId
+    `).all(...(bounds ? [bounds.fromRaceKey, bounds.toRaceKeyExclusive] : [])) as unknown as Array<{ candidateId: string }>;
+    if (cyclicSuperseders.length > 0) {
+      return {
+        ok: false,
+        blocks: cyclicSuperseders.map((row) => `${prefix}_SETTLEMENT_SUPERSESSION_CYCLE:${row.candidateId}`),
+        checkedCandidateCount: 0,
+      };
+    }
+
     const supersessionRangeClause = bounds
       ? "AND prior.canonical_race_key >= ? AND prior.canonical_race_key < ?"
       : "";
