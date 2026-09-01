@@ -32,15 +32,24 @@ function supersessionLineageValid(db: DatabaseSync, candidateId: string): boolea
     const row = db.prepare(`
       SELECT canonical_race_key AS canonicalRaceKey,
              bet_type AS betType,
-             supersedes_candidate_id AS supersedesCandidateId
+             revision_kind AS revisionKind,
+             supersedes_candidate_id AS supersedesCandidateId,
+             correction_reason AS correctionReason
       FROM settlement_candidates_v2
       WHERE candidate_id=?
     `).get(currentId) as {
       canonicalRaceKey: string;
       betType: string;
+      revisionKind: string;
       supersedesCandidateId: string | null;
+      correctionReason: string | null;
     } | undefined;
-    if (!row) return false;
+    if (!row || !REVISION_KIND_SET.has(row.revisionKind)) return false;
+    if (row.revisionKind === "initial") {
+      if (row.supersedesCandidateId !== null || row.correctionReason !== null) return false;
+    } else if (!row.supersedesCandidateId || !row.correctionReason?.trim()) {
+      return false;
+    }
     if (row.supersedesCandidateId !== null) {
       const predecessor = db.prepare(`
         SELECT canonical_race_key AS canonicalRaceKey,
