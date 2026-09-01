@@ -229,3 +229,40 @@ test("source duplicate resolution rolls back when an existing duplicate id has a
   );
   db.close();
 });
+
+test("source duplicate repository preserves exact retry idempotency without rewriting immutable rows", () => {
+  const { db, replay } = setup();
+  const canonicalObservationId = addObservationWithCandidates(db, replay);
+  const duplicateObservationId = addObservationWithCandidates(db, replay);
+  const plan = planSourceDuplicateResolution(db);
+  const item = plan.plannedResolutions.find((entry) => entry.duplicateObservationId === duplicateObservationId);
+  assert.ok(item);
+
+  let nextId = 0;
+  const repo = new SourceDuplicateResolutionRepository(db, () => `direct-resolution-${++nextId}`);
+  const input = {
+    duplicateObservationId,
+    canonicalObservationId,
+    canonicalRaceKey: item.canonicalRaceKey,
+    rawDocumentId: item.rawDocumentId,
+    sourceArchiveFile: item.sourceArchiveFile,
+    detectionReason: "intra_file_source_duplicate: same raw document produced multiple identical race observations",
+    duplicateSemanticDigest: item.duplicateSemanticDigest,
+    resolverVersion: plan.resolverVersion,
+    policyVersion: plan.policyVersion,
+    detectedAt: NOW,
+  };
+
+  const first = repo.record(input);
+  const retry = repo.record({ ...input, detectedAt: "2026-07-29T05:00:00.000Z" });
+
+  assert.deepEqual(first, { resolutionId: "direct-resolution-1", inserted: true });
+  assert.deepEqual(retry, { resolutionId: first.resolutionId, inserted: false });
+  assert.equal(repo.resolvedCount(), 1);
+  assert.equal(
+    (db.prepare(`SELECT created_at AS createdAt FROM settlement_source_duplicate_resolutions_v2 WHERE resolution_id=?`)
+      .get(first.resolutionId) as { createdAt: string }).createdAt,
+    NOW,
+  );
+  db.close();
+});
