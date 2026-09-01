@@ -32,11 +32,13 @@ function createStaleResolutionSidecar(root: string): string {
       duplicate_semantic_digest TEXT NOT NULL,
       resolver_version TEXT NOT NULL,
       policy_version TEXT NOT NULL,
-      schema_version TEXT NOT NULL
+      schema_version TEXT NOT NULL,
+      detected_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
   `);
   db.prepare(`
-    INSERT INTO settlement_source_duplicate_resolutions_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    INSERT INTO settlement_source_duplicate_resolutions_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(
     "resolution-stale",
     "duplicate-observation",
@@ -50,6 +52,8 @@ function createStaleResolutionSidecar(root: string): string {
     "stale-resolver-version",
     "n1c-source-duplicate-policy-v1",
     "n1-canonical-resolution-v2",
+    "2026-08-01T03:00:00.000Z",
+    "2026-08-01T03:00:00.000Z",
   );
   db.close();
   return path;
