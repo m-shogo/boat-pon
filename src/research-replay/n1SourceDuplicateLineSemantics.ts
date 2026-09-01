@@ -22,6 +22,9 @@ const CURRENT_CANDIDATE_AUTHORITY_COLUMNS = [
 const CURRENT_LINE_IDENTITY_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
 ] as const;
+const LEGACY_LINE_IDENTITY_ABSENT_COLUMNS = [
+  "bet_type", "selection_raw", "selection_normalized",
+] as const;
 const CURRENT_PAYOUT_SEMANTIC_COLUMNS = [
   ...CURRENT_LINE_IDENTITY_COLUMNS, "line_no", "payout_yen", "popularity", "line_kind",
 ] as const;
@@ -48,6 +51,8 @@ type RefundLineRow = LineRow & {
   refundYenPer100: number | null;
 };
 
+type LineIdentitySchemaKind = "legacy" | "current" | "partial";
+
 function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
 }
@@ -56,6 +61,13 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
   const names = new Set(rows.map((row) => row.name));
   return required.every((column) => names.has(column));
+}
+
+function lineIdentitySchemaKind(db: DatabaseSync, table: string): LineIdentitySchemaKind {
+  if (tableHasColumns(db, table, CURRENT_LINE_IDENTITY_COLUMNS)) return "current";
+  const legacyOnly = LEGACY_LINE_IDENTITY_ABSENT_COLUMNS.every((column) =>
+    !tableHasColumns(db, table, [column]));
+  return legacyOnly ? "legacy" : "partial";
 }
 
 function currentSemanticAuthorityPresent(db: DatabaseSync): boolean {
@@ -163,7 +175,8 @@ function lineNumbersUnique(rows: readonly LineRow[]): boolean {
  * A few old synthetic unit fixtures intentionally model only the subset of settlement tables needed
  * by that test, or model both payout/refund tables with the pre-v2 line schema. Production N1
  * settlement creates the candidate and both line tables atomically with the current columns. Preserve
- * the fixture-only fallback when those current columns are absent.
+ * the fixture-only fallback only for the known legacy identity shape; partial current identity authority
+ * is malformed and must fail closed.
  */
 export function sourceDuplicateCandidateLineSemanticsValid(
   db: DatabaseSync,
@@ -177,10 +190,11 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   const refundTableExists = tableExists(db, "race_refund_lines_v2");
   if (!payoutTableExists || !refundTableExists) return true;
 
-  const payoutSchemaCurrent = tableHasColumns(db, "race_payout_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS);
-  const refundSchemaCurrent = tableHasColumns(db, "race_refund_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS);
-  if (!payoutSchemaCurrent && !refundSchemaCurrent) return true;
-  if (payoutSchemaCurrent !== refundSchemaCurrent) return false;
+  const payoutSchemaKind = lineIdentitySchemaKind(db, "race_payout_lines_v2");
+  const refundSchemaKind = lineIdentitySchemaKind(db, "race_refund_lines_v2");
+  if (payoutSchemaKind === "partial" || refundSchemaKind === "partial") return false;
+  if (payoutSchemaKind === "legacy" && refundSchemaKind === "legacy") return true;
+  if (payoutSchemaKind !== refundSchemaKind) return false;
   if (!tableHasColumns(db, "race_payout_lines_v2", ["line_no", "payout_yen"])) return false;
   if (!tableHasColumns(db, "race_refund_lines_v2", ["line_no", "refund_scope", "refund_yen_per_100"])) return false;
 
