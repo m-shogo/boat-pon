@@ -83,3 +83,38 @@ test("dataset settlement preflights reject producer-impossible active candidate 
     assert.deepEqual(active.blocks, ["DATASET_ACTIVE_SETTLEMENT_LINEAGE_INVALID:candidate-semantic-invalid"]);
   });
 });
+
+test("dataset settlement preflights reject legacy payout schema before source-duplicate fixture fallback can apply", () => {
+  withInvalidSemanticHash((path) => {
+    const db = new DatabaseSync(path);
+    try {
+      db.exec(`
+        DROP TABLE race_payout_lines_v2;
+        CREATE TABLE race_payout_lines_v2 (
+          payout_line_id TEXT PRIMARY KEY,
+          candidate_id TEXT NOT NULL,
+          line_no INTEGER NOT NULL,
+          bet_type TEXT NOT NULL,
+          selection_raw TEXT,
+          selection_normalized TEXT,
+          selection_canonical TEXT,
+          payout_yen INTEGER NOT NULL,
+          line_kind TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+      `);
+    } finally {
+      db.close();
+    }
+
+    const canary = preflightN2DatasetCanarySettlementLineage(path);
+    assert.equal(canary.ok, false);
+    assert.equal(canary.checkedCandidateCount, 0);
+    assert.deepEqual(canary.blocks, ["DATASET_CANARY_LINEAGE_SCHEMA_INVALID:race_payout_lines_v2"]);
+
+    const active = preflightN2AllActiveSettlementLineage(path);
+    assert.equal(active.ok, false);
+    assert.equal(active.checkedCandidateCount, 0);
+    assert.deepEqual(active.blocks, ["DATASET_ACTIVE_LINEAGE_SCHEMA_INVALID:race_payout_lines_v2"]);
+  });
+});
