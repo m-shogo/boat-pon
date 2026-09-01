@@ -12,6 +12,9 @@ const RESULT_KIND_SET: ReadonlySet<string> = new Set([
 const REVISION_KIND_SET: ReadonlySet<string> = new Set([
   "initial", "official_correction", "parser_reparse", "source_revision",
 ]);
+const CURRENT_REVISION_AUTHORITY_MARKERS = [
+  "revision_kind", "correction_reason", "source_kind", "source_schema_version", "observed_at", "created_at",
+] as const;
 
 function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
@@ -101,7 +104,10 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
   const hasRevisionLineage = tableHasColumns(db, "settlement_candidates_v2", [
     "canonical_race_key", "revision_kind", "supersedes_candidate_id", "correction_reason",
   ]);
-  if (hasRevisionKind !== hasRevisionLineage) return false;
+  const hasCurrentRevisionAuthorityMarker = CURRENT_REVISION_AUTHORITY_MARKERS.some((column) =>
+    tableHasColumns(db, "settlement_candidates_v2", [column]));
+  if ((hasCurrentRevisionAuthorityMarker && !hasRevisionLineage)
+    || hasRevisionKind !== hasRevisionLineage) return false;
   if (hasRevisionLineage && !supersessionLineageValid(db, candidateId)) return false;
   const candidate = db.prepare(`
     SELECT ${hasRevisionLineage ? "canonical_race_key" : "NULL"} AS canonicalRaceKey,
