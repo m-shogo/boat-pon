@@ -236,3 +236,14 @@ test("source duplicate line semantics fail closed when only refund schema is cur
     db.close();
   }
 });
+
+test("source duplicate line semantics fail closed when both line tables expose partial current identity authority", () => {
+  const db = legacyFixture();
+  try {
+    db.exec("ALTER TABLE race_payout_lines_v2 ADD COLUMN bet_type TEXT");
+    db.exec("ALTER TABLE race_refund_lines_v2 ADD COLUMN bet_type TEXT");
+    assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+  } finally {
+    db.close();
+  }
+});
