@@ -99,3 +99,26 @@ test("selection profile rejects a cross-race successor before it can suppress a 
     db.close();
   }
 });
+
+test("selection profile rejects an in-month successor pointing to a cross-race predecessor outside the month", () => {
+  const db = makeDb();
+  try {
+    db.exec(`
+      DELETE FROM settlement_candidates_v2;
+      INSERT INTO settlement_candidates_v2 VALUES (
+        'outside-predecessor', '2026-04-30:01:R1', 'trifecta', 'settled', 'normal', 'initial', 'resolved',
+        'obs-old', 'parse-old', 'raw-old', 'semantic-old', NULL, NULL
+      );
+      INSERT INTO settlement_candidates_v2 VALUES (
+        'in-month-successor', '2026-05-01:02:R1', 'trifecta', 'settled', 'normal',
+        'official_correction', 'resolved', 'obs-new', 'parse-new', 'raw-new', 'semantic-new', 'outside-predecessor', 'correction'
+      );
+    `);
+    assert.throws(
+      () => readN2SelectionProfileSource(db, "2026-05"),
+      /N2_SELECTION_PROFILE_SUPERSESSION_IDENTITY_INVALID:in-month-successor/u,
+    );
+  } finally {
+    db.close();
+  }
+});
