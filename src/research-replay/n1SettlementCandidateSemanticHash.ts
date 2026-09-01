@@ -3,6 +3,9 @@ import type { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "./canonical";
 import { sourceDuplicateCandidateLineSemanticsValid } from "./n1SourceDuplicateLineSemantics";
 
+const BET_TYPE_SET: ReadonlySet<string> = new Set([
+  "win", "place", "exacta", "quinella", "trifecta", "trio", "wide",
+]);
 const SETTLEMENT_STATUS_SET: ReadonlySet<string> = new Set([
   "pending", "settled", "refunded", "partially_refunded", "cancelled", "no_sale",
 ]);
@@ -142,7 +145,8 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     semanticHash: string;
   } | undefined;
   if (!candidate) return false;
-  if (!SETTLEMENT_STATUS_SET.has(candidate.settlementStatus)
+  if (!BET_TYPE_SET.has(candidate.betType)
+    || !SETTLEMENT_STATUS_SET.has(candidate.settlementStatus)
     || !RESULT_KIND_SET.has(candidate.resultKind)
     || (hasRevisionKind && (candidate.revisionKind === null || !REVISION_KIND_SET.has(candidate.revisionKind)))) {
     return false;
