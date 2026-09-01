@@ -436,12 +436,52 @@ export type SourceDuplicateResolutionInput = {
 export class SourceDuplicateResolutionRepository {
   constructor(private readonly db: DatabaseSync, private readonly idFactory: () => string = randomUUID) {}
 
-  // append-only。既に同一 duplicate_observation_id が解決済みなら no-op（冪等）。
+  // append-only。完全一致の retry だけを no-op とし、同一 duplicate id の immutable body 競合は拒否する。
   record(input: SourceDuplicateResolutionInput): { resolutionId: string; inserted: boolean } {
-    const existing = this.db.prepare(
-      "SELECT resolution_id FROM settlement_source_duplicate_resolutions_v2 WHERE duplicate_observation_id=?",
-    ).get(input.duplicateObservationId) as { resolution_id: string } | undefined;
-    if (existing) return { resolutionId: existing.resolution_id, inserted: false };
+    const existing = this.db.prepare(`
+      SELECT resolution_id AS resolutionId,
+             canonical_observation_id AS canonicalObservationId,
+             canonical_race_key AS canonicalRaceKey,
+             raw_document_id AS rawDocumentId,
+             source_archive_file AS sourceArchiveFile,
+             resolution_kind AS resolutionKind,
+             detection_reason AS detectionReason,
+             duplicate_semantic_digest AS duplicateSemanticDigest,
+             resolver_version AS resolverVersion,
+             policy_version AS policyVersion,
+             schema_version AS schemaVersion
+      FROM settlement_source_duplicate_resolutions_v2
+      WHERE duplicate_observation_id=?
+    `).get(input.duplicateObservationId) as {
+      resolutionId: string;
+      canonicalObservationId: string;
+      canonicalRaceKey: string;
+      rawDocumentId: string;
+      sourceArchiveFile: string;
+      resolutionKind: string;
+      detectionReason: string;
+      duplicateSemanticDigest: string;
+      resolverVersion: string;
+      policyVersion: string;
+      schemaVersion: string;
+    } | undefined;
+    if (existing) {
+      if (
+        existing.canonicalObservationId !== input.canonicalObservationId ||
+        existing.canonicalRaceKey !== input.canonicalRaceKey ||
+        existing.rawDocumentId !== input.rawDocumentId ||
+        existing.sourceArchiveFile !== input.sourceArchiveFile ||
+        existing.resolutionKind !== "source_duplicate" ||
+        existing.detectionReason !== input.detectionReason ||
+        existing.duplicateSemanticDigest !== input.duplicateSemanticDigest ||
+        existing.resolverVersion !== input.resolverVersion ||
+        existing.policyVersion !== input.policyVersion ||
+        existing.schemaVersion !== N1_CANONICAL_RESOLUTION_SCHEMA_VERSION
+      ) {
+        throw new Error(`SOURCE_DUPLICATE_RESOLUTION_CONFLICT:${input.duplicateObservationId}:${existing.resolutionId}`);
+      }
+      return { resolutionId: existing.resolutionId, inserted: false };
+    }
     const id = this.idFactory();
     const now = canonicalUtcTimestamp(input.detectedAt);
     this.db.prepare(`
