@@ -163,6 +163,30 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
         `${invalidSuperseder.raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${invalidSuperseder.candidateId}`,
       ],0,1);
     }
+    const supersessionCycle = sidecar.prepare(`
+      WITH RECURSIVE chain(rootCandidateId,currentCandidateId,nextCandidateId,raceKey,depth) AS (
+        SELECT candidate_id,candidate_id,supersedes_candidate_id,canonical_race_key,0
+        FROM settlement_candidates_v2
+        WHERE substr(canonical_race_key,1,10) >= ?
+          AND substr(canonical_race_key,1,10) <= ?
+        UNION ALL
+        SELECT chain.rootCandidateId,prior.candidate_id,prior.supersedes_candidate_id,chain.raceKey,chain.depth+1
+        FROM chain
+        JOIN settlement_candidates_v2 prior ON prior.candidate_id=chain.nextCandidateId
+        WHERE chain.nextCandidateId IS NOT NULL
+          AND chain.depth < 1024
+      )
+      SELECT rootCandidateId AS candidateId,raceKey
+      FROM chain
+      WHERE nextCandidateId=rootCandidateId
+      ORDER BY raceKey,candidateId
+      LIMIT 1
+    `).get(N2_EDGE_HOLDOUT_HISTORY_FROM_DATE,N2_EDGE_TEST_TO_DATE) as { candidateId: string; raceKey: string } | undefined;
+    if (supersessionCycle) {
+      return blocked([
+        `${supersessionCycle.raceKey}:SETTLEMENT_SUPERSESSION_CYCLE_INVALID:${supersessionCycle.candidateId}`,
+      ],0,1);
+    }
     const payoutBetLineageRows = sidecar.prepare(`
       SELECT c.canonical_race_key AS raceKey,
              c.candidate_id AS candidateId,
