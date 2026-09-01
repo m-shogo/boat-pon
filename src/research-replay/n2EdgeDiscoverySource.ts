@@ -246,6 +246,26 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
         blockers: [`${invalidSuperseder.raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${invalidSuperseder.candidateId}`],
       };
     }
+    const missingSupersessionPredecessor = db.prepare(`
+      SELECT newer.candidate_id AS candidateId,
+             newer.canonical_race_key AS raceKey
+      FROM settlement_candidates_v2 newer
+      WHERE substr(newer.canonical_race_key,1,10) >= ?
+        AND substr(newer.canonical_race_key,1,10) <= ?
+        AND newer.supersedes_candidate_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM settlement_candidates_v2 prior
+          WHERE prior.candidate_id=newer.supersedes_candidate_id
+        )
+      ORDER BY newer.canonical_race_key,newer.candidate_id
+      LIMIT 1
+    `).get(N2_EDGE_DISCOVERY_HISTORY_FROM_DATE, N2_EDGE_DISCOVERY_TO_DATE) as { candidateId: string; raceKey: string } | undefined;
+    if (missingSupersessionPredecessor) {
+      return {
+        rows: [],
+        blockers: [`${missingSupersessionPredecessor.raceKey}:SETTLEMENT_SUPERSESSION_PREDECESSOR_MISSING:${missingSupersessionPredecessor.candidateId}`],
+      };
+    }
     const supersessionCycle = db.prepare(`
       WITH RECURSIVE chain(rootCandidateId,currentCandidateId,nextCandidateId,raceKey,depth) AS (
         SELECT candidate_id,candidate_id,supersedes_candidate_id,canonical_race_key,0
