@@ -75,12 +75,15 @@ function withInvalidDuplicateAuthority(fn: (path: string) => void): void {
       duplicate_semantic_digest TEXT NOT NULL,
       resolver_version TEXT NOT NULL,
       policy_version TEXT NOT NULL,
-      schema_version TEXT NOT NULL
+      schema_version TEXT NOT NULL,
+      detected_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
   `);
   db.prepare(`INSERT INTO settlement_source_duplicate_resolutions_v2 VALUES
     ('resolution-invalid','obs-duplicate','obs-canonical','2024-06-05:12:R1','raw-a','k240605.lzh',
-     'producer_impossible_kind','invalid','${"a".repeat(64)}','invalid','invalid','invalid')`).run();
+     'producer_impossible_kind','invalid','${"a".repeat(64)}','invalid','invalid','invalid',
+     '2024-06-05T03:00:00.000Z','2024-06-05T03:00:00.000Z')`).run();
   db.close();
   try {
     fn(path);
