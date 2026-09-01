@@ -369,6 +369,24 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
       return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
     }
     const placeholders = raceKeys.map(() => "?").join(",");
+    const invalidSuperseders = db.prepare(`
+      SELECT newer.candidate_id AS candidateId
+      FROM settlement_candidates_v2 newer
+      JOIN settlement_candidates_v2 prior
+        ON prior.candidate_id=newer.supersedes_candidate_id
+      WHERE prior.canonical_race_key IN (${placeholders})
+        AND (newer.canonical_race_key<>prior.canonical_race_key OR newer.bet_type<>prior.bet_type)
+      ORDER BY newer.candidate_id
+    `).all(...raceKeys) as unknown as Array<{ candidateId: string }>;
+    if (invalidSuperseders.length > 0) {
+      return {
+        settledRaceKeys: [],
+        integrityBlockedRaceKeys: [],
+        eligibleRaceCount: 0,
+        ineligibleRaceCount: 0,
+        blockers: invalidSuperseders.map((row) => `SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${row.candidateId}`),
+      };
+    }
     const rows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
@@ -416,6 +434,8 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         AND NOT EXISTS (
           SELECT 1 FROM settlement_candidates_v2 newer
           WHERE newer.supersedes_candidate_id=c.candidate_id
+            AND newer.canonical_race_key=c.canonical_race_key
+            AND newer.bet_type=c.bet_type
         )
       GROUP BY c.canonical_race_key,c.candidate_id,c.observation_id,c.parse_run_id,c.raw_document_id,
         o.canonical_race_key,o.observation_type,o.payload_type,o.parse_run_id,o.raw_document_id,

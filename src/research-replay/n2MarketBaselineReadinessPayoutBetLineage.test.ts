@@ -163,3 +163,22 @@ test("mismatched payout bet lineage cannot hide special-payout evidence from mar
     assert.equal(result.rawOddsValuesRead, false);
   });
 });
+
+test("cross-race superseder cannot silently hide market readiness settlement evidence", () => {
+  withRoot((root) => {
+    writeAcceptedT5(root);
+    const sidecarPath = createSidecar(root);
+    const db = new DatabaseSync(sidecarPath);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('bad-successor','2026-08-08:10:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a','a')`).run();
+    db.close();
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.sourceBlockers, ["SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:bad-successor"]);
+    assert.equal(result.settlementEligibleRaceCount, 0);
+    assert.equal(result.databaseReadCount, 0);
+    assert.equal(result.databaseWriteCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
+  });
+});
