@@ -159,6 +159,33 @@ test("edge discovery source fails closed when a cross-race successor would hide 
   });
 });
 
+test("edge discovery source fails closed when an in-range candidate supersedes a predecessor before discovery history", () => {
+  withDb((path, db) => {
+    const raceKey = "2003-07-05:05:R1";
+    const priorRaceKey = "2003-07-04:05:R1";
+    seedCandidate(db, raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('prior',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(priorRaceKey);
+    db.prepare("UPDATE settlement_candidates_v2 SET supersedes_candidate_id='prior' WHERE candidate_id='a'").run();
+    db.prepare(`INSERT INTO race_payout_lines_v2
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
+    db.close();
+
+    const result = readN2EdgeDiscoverySource({
+      sidecarDbPath: path,
+      primaryDbPath: join(tmpdir(), "must-not-be-read.sqlite"),
+    });
+    assert.equal(result.status, "BLOCKED");
+    assert.deepEqual(result.blockers, [
+      `${raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:a`,
+    ]);
+    assert.equal(result.reads.primaryDatabaseReadCount, 0);
+    assert.equal(result.reads.sidecarDatabaseReadCount, 1);
+    assert.deepEqual(result.historicalOutcomes, []);
+    assert.deepEqual(result.candidates, []);
+  });
+});
+
 test("edge discovery source fails closed when a same-race supersession cycle would hide discovery history", () => {
   withDb((path, db) => {
     const raceKey = "2021-08-01:05:R1";
