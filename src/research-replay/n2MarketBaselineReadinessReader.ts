@@ -374,10 +374,10 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
       FROM settlement_candidates_v2 newer
       JOIN settlement_candidates_v2 prior
         ON prior.candidate_id=newer.supersedes_candidate_id
-      WHERE prior.canonical_race_key IN (${placeholders})
+      WHERE (prior.canonical_race_key IN (${placeholders}) OR newer.canonical_race_key IN (${placeholders}))
         AND (newer.canonical_race_key<>prior.canonical_race_key OR newer.bet_type<>prior.bet_type)
       ORDER BY newer.candidate_id
-    `).all(...raceKeys) as unknown as Array<{ candidateId: string }>;
+    `).all(...raceKeys, ...raceKeys) as unknown as Array<{ candidateId: string }>;
     if (invalidSuperseders.length > 0) {
       return {
         settledRaceKeys: [],
