@@ -13,7 +13,20 @@ function fixture(): DatabaseSync {
     CREATE TABLE settlement_candidates_v2(candidate_id TEXT PRIMARY KEY,canonical_race_key TEXT,bet_type TEXT,settlement_status TEXT,resolution_status TEXT,observation_id TEXT,parse_run_id TEXT,raw_document_id TEXT,supersedes_candidate_id TEXT);
     CREATE TABLE race_payout_lines_v2(payout_line_id TEXT PRIMARY KEY,candidate_id TEXT,line_no INTEGER,bet_type TEXT,selection_raw TEXT,selection_normalized TEXT,selection_canonical TEXT,payout_yen INTEGER,line_kind TEXT);
     CREATE TABLE race_refund_lines_v2(refund_line_id TEXT PRIMARY KEY,candidate_id TEXT,line_no INTEGER,bet_type TEXT,selection_raw TEXT,selection_normalized TEXT,selection_canonical TEXT,refund_scope TEXT,refund_yen_per_100 INTEGER);
-    CREATE TABLE settlement_source_duplicate_resolutions_v2(duplicate_observation_id TEXT);
+    CREATE TABLE settlement_source_duplicate_resolutions_v2(
+      resolution_id TEXT,
+      duplicate_observation_id TEXT,
+      canonical_observation_id TEXT,
+      canonical_race_key TEXT,
+      raw_document_id TEXT,
+      source_archive_file TEXT,
+      resolution_kind TEXT,
+      detection_reason TEXT,
+      duplicate_semantic_digest TEXT,
+      resolver_version TEXT,
+      policy_version TEXT,
+      schema_version TEXT
+    );
   `);
   db.prepare("INSERT INTO raw_documents VALUES ('raw','verified','passed',1)").run();
   db.prepare("INSERT INTO parse_runs VALUES ('parse','raw','success')").run();
