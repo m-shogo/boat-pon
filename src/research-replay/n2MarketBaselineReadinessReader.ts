@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 import { readN2T5DecisionCutoffMetadata } from "./n2T5DecisionCutoffMetadata";
 import { parseSettlementSelection } from "./settlement";
 
@@ -329,6 +330,11 @@ function tableExists(db: DatabaseSync, name: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name));
 }
 
+function tableHasColumn(db: DatabaseSync, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
+}
+
 function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
   settledRaceKeys: string[];
   integrityBlockedRaceKeys: string[];
@@ -368,6 +374,7 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
     } catch {
       return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
     }
+    const hasSemanticHashAuthority = tableHasColumn(db, "settlement_candidates_v2", "semantic_hash");
     const placeholders = raceKeys.map(() => "?").join(",");
     const invalidSuperseders = db.prepare(`
       SELECT newer.candidate_id AS candidateId
@@ -497,6 +504,10 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
     const lineageBlockedRaceKeys = new Set<string>();
     for (const row of rows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (hasSemanticHashAuthority && !settlementCandidateSemanticHashValid(db, row.candidateId)) {
+        lineageBlockedRaceKeys.add(row.raceKey);
+        continue;
+      }
       const parsedSelection = row.payoutSelectionRaw === null
         ? null
         : parseSettlementSelection("trifecta", row.payoutSelectionRaw);
