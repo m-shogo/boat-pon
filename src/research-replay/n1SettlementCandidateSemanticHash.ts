@@ -56,6 +56,12 @@ function supersessionLineageValid(db: DatabaseSync, candidateId: string): boolea
         || predecessor.betType !== row.betType) {
         return false;
       }
+      const successorCount = Number((db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM settlement_candidates_v2
+        WHERE supersedes_candidate_id=?
+      `).get(row.supersedesCandidateId) as { count: number }).count);
+      if (successorCount !== 1) return false;
     }
     currentId = row.supersedesCandidateId;
   }
