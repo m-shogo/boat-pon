@@ -266,3 +266,41 @@ test("source duplicate repository preserves exact retry idempotency without rewr
   );
   db.close();
 });
+
+test("source duplicate repository rejects reuse of a duplicate id with a different immutable body", () => {
+  const { db, replay } = setup();
+  const canonicalObservationId = addObservationWithCandidates(db, replay);
+  const duplicateObservationId = addObservationWithCandidates(db, replay);
+  const alternateCanonicalObservationId = addObservationWithCandidates(db, replay);
+  const plan = planSourceDuplicateResolution(db);
+  const item = plan.plannedResolutions.find((entry) => entry.duplicateObservationId === duplicateObservationId);
+  assert.ok(item);
+
+  const repo = new SourceDuplicateResolutionRepository(db, () => "direct-conflict-resolution");
+  const input = {
+    duplicateObservationId,
+    canonicalObservationId,
+    canonicalRaceKey: item.canonicalRaceKey,
+    rawDocumentId: item.rawDocumentId,
+    sourceArchiveFile: item.sourceArchiveFile,
+    detectionReason: "intra_file_source_duplicate: same raw document produced multiple identical race observations",
+    duplicateSemanticDigest: item.duplicateSemanticDigest,
+    resolverVersion: plan.resolverVersion,
+    policyVersion: plan.policyVersion,
+    detectedAt: NOW,
+  };
+
+  assert.deepEqual(repo.record(input), { resolutionId: "direct-conflict-resolution", inserted: true });
+  assert.throws(
+    () => repo.record({ ...input, canonicalObservationId: alternateCanonicalObservationId }),
+    /SOURCE_DUPLICATE_RESOLUTION_CONFLICT/,
+  );
+  assert.equal(repo.resolvedCount(), 1);
+  assert.equal(
+    (db.prepare(`SELECT canonical_observation_id AS canonicalObservationId
+                 FROM settlement_source_duplicate_resolutions_v2 WHERE duplicate_observation_id=?`)
+      .get(duplicateObservationId) as { canonicalObservationId: string }).canonicalObservationId,
+    canonicalObservationId,
+  );
+  db.close();
+});
