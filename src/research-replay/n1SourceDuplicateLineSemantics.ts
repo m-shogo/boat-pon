@@ -201,14 +201,17 @@ export function sourceDuplicateCandidateLineSemanticsValid(
   if (!BET_TYPE_SET.has(candidateBetType)) return false;
   if (!candidateMetadataSemanticsValid(db, candidateId, candidateBetType)) return false;
 
+  const hasCurrentCandidateAuthorityMarker = tableExists(db, "settlement_candidates_v2")
+    && CURRENT_CANDIDATE_AUTHORITY_MARKERS.some((column) =>
+      tableHasColumns(db, "settlement_candidates_v2", [column]));
   const payoutTableExists = tableExists(db, "race_payout_lines_v2");
   const refundTableExists = tableExists(db, "race_refund_lines_v2");
-  if (!payoutTableExists || !refundTableExists) return true;
+  if (!payoutTableExists || !refundTableExists) return !hasCurrentCandidateAuthorityMarker;
 
   const payoutSchemaKind = lineIdentitySchemaKind(db, "race_payout_lines_v2");
   const refundSchemaKind = lineIdentitySchemaKind(db, "race_refund_lines_v2");
   if (payoutSchemaKind === "partial" || refundSchemaKind === "partial") return false;
-  if (payoutSchemaKind === "legacy" && refundSchemaKind === "legacy") return true;
+  if (payoutSchemaKind === "legacy" && refundSchemaKind === "legacy") return !hasCurrentCandidateAuthorityMarker;
   if (payoutSchemaKind !== refundSchemaKind) return false;
   if (!tableHasColumns(db, "race_payout_lines_v2", ["line_no", "payout_yen"])) return false;
   if (!tableHasColumns(db, "race_refund_lines_v2", ["line_no", "refund_scope", "refund_yen_per_100"])) return false;
