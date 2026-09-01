@@ -23,6 +23,23 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
   return required.every((column) => names.has(column));
 }
 
+function supersessionLineageAcyclic(db: DatabaseSync, candidateId: string): boolean {
+  const visited = new Set<string>();
+  let currentId: string | null = candidateId;
+  while (currentId !== null) {
+    if (visited.has(currentId)) return false;
+    visited.add(currentId);
+    const row = db.prepare(`
+      SELECT supersedes_candidate_id AS supersedesCandidateId
+      FROM settlement_candidates_v2
+      WHERE candidate_id=?
+    `).get(currentId) as { supersedesCandidateId: string | null } | undefined;
+    if (!row) return true;
+    currentId = row.supersedesCandidateId;
+  }
+  return true;
+}
+
 /**
  * Recompute the append-only settlement candidate semantic hash from its persisted payout/refund lines.
  * Current research readers treat missing settlement authority tables/columns as invalid: a caller cannot
@@ -48,6 +65,7 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     "canonical_race_key", "revision_kind", "supersedes_candidate_id", "correction_reason",
   ]);
   if (hasRevisionKind !== hasRevisionLineage) return false;
+  if (hasRevisionLineage && !supersessionLineageAcyclic(db, candidateId)) return false;
   const candidate = db.prepare(`
     SELECT ${hasRevisionLineage ? "canonical_race_key" : "NULL"} AS canonicalRaceKey,
            bet_type AS betType,

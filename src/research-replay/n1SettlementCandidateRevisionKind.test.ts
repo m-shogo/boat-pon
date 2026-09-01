@@ -175,3 +175,20 @@ test("revised settlement candidate rejects branching supersession authority", ()
     db.close();
   }
 });
+
+test("revised settlement candidate rejects a multi-candidate supersession cycle", () => {
+  const db = fixture("parser_reparse");
+  try {
+    db.prepare(`
+      UPDATE settlement_candidates_v2
+      SET revision_kind='source_revision',
+          supersedes_candidate_id='candidate',
+          correction_reason='cycle-correction'
+      WHERE candidate_id='prior-candidate'
+    `).run();
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+    assert.equal(settlementCandidateSemanticHashValid(db, "prior-candidate"), false);
+  } finally {
+    db.close();
+  }
+});
