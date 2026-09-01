@@ -152,16 +152,29 @@ export function readCleanTrifectaWinners(input: {
     }
     const invalidSuperseder = db.prepare(`
       SELECT newer.candidate_id AS candidateId,
-             prior.canonical_race_key AS raceKey
+             CASE
+               WHEN substr(prior.canonical_race_key,1,10) >= ? AND substr(prior.canonical_race_key,1,10) <= ?
+                 THEN prior.canonical_race_key
+               ELSE newer.canonical_race_key
+             END AS raceKey
       FROM settlement_candidates_v2 newer
       JOIN settlement_candidates_v2 prior
         ON prior.candidate_id=newer.supersedes_candidate_id
-      WHERE substr(prior.canonical_race_key,1,10) >= ?
-        AND substr(prior.canonical_race_key,1,10) <= ?
+      WHERE (
+          (substr(prior.canonical_race_key,1,10) >= ? AND substr(prior.canonical_race_key,1,10) <= ?)
+          OR (substr(newer.canonical_race_key,1,10) >= ? AND substr(newer.canonical_race_key,1,10) <= ?)
+        )
         AND (newer.canonical_race_key<>prior.canonical_race_key OR newer.bet_type<>prior.bet_type)
-      ORDER BY prior.canonical_race_key,newer.candidate_id
+      ORDER BY raceKey,newer.candidate_id
       LIMIT 1
-    `).get(input.fromDate, input.toDate) as { candidateId: string; raceKey: string } | undefined;
+    `).get(
+      input.fromDate,
+      input.toDate,
+      input.fromDate,
+      input.toDate,
+      input.fromDate,
+      input.toDate,
+    ) as { candidateId: string; raceKey: string } | undefined;
     if (invalidSuperseder) {
       return {
         rows: [],
