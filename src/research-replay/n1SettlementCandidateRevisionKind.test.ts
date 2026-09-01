@@ -209,3 +209,28 @@ test("revised settlement candidate rejects a dangling supersession ancestor", ()
     db.close();
   }
 });
+
+test("revised settlement candidate rejects a cross-race supersession ancestor", () => {
+  const db = fixture("parser_reparse");
+  try {
+    const semanticHash = (db.prepare(
+      "SELECT semantic_hash AS semanticHash FROM settlement_candidates_v2 WHERE candidate_id='candidate'",
+    ).get() as { semanticHash: string }).semanticHash;
+    db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?)")
+      .run(
+        "ancestor-candidate", "2026-07-24:01:R2", "trifecta", "settled", "normal", "initial",
+        null, null, semanticHash,
+      );
+    db.prepare(`
+      UPDATE settlement_candidates_v2
+      SET revision_kind='source_revision',
+          supersedes_candidate_id='ancestor-candidate',
+          correction_reason='ancestor-correction'
+      WHERE candidate_id='prior-candidate'
+    `).run();
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
+    assert.equal(settlementCandidateSemanticHashValid(db, "prior-candidate"), false);
+  } finally {
+    db.close();
+  }
+});

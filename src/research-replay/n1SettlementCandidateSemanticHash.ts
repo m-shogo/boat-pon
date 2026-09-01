@@ -23,18 +23,55 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
   return required.every((column) => names.has(column));
 }
 
-function supersessionLineageAcyclic(db: DatabaseSync, candidateId: string): boolean {
+function supersessionLineageValid(db: DatabaseSync, candidateId: string): boolean {
   const visited = new Set<string>();
   let currentId: string | null = candidateId;
   while (currentId !== null) {
     if (visited.has(currentId)) return false;
     visited.add(currentId);
     const row = db.prepare(`
-      SELECT supersedes_candidate_id AS supersedesCandidateId
+      SELECT canonical_race_key AS canonicalRaceKey,
+             bet_type AS betType,
+             revision_kind AS revisionKind,
+             supersedes_candidate_id AS supersedesCandidateId,
+             correction_reason AS correctionReason
       FROM settlement_candidates_v2
       WHERE candidate_id=?
-    `).get(currentId) as { supersedesCandidateId: string | null } | undefined;
-    if (!row) return false;
+    `).get(currentId) as {
+      canonicalRaceKey: string;
+      betType: string;
+      revisionKind: string;
+      supersedesCandidateId: string | null;
+      correctionReason: string | null;
+    } | undefined;
+    if (!row || !REVISION_KIND_SET.has(row.revisionKind)) return false;
+    if (row.revisionKind === "initial") {
+      if (row.supersedesCandidateId !== null || row.correctionReason !== null) return false;
+    } else if (!row.supersedesCandidateId || !row.correctionReason?.trim()) {
+      return false;
+    }
+    if (row.supersedesCandidateId !== null) {
+      const predecessor = db.prepare(`
+        SELECT canonical_race_key AS canonicalRaceKey,
+               bet_type AS betType
+        FROM settlement_candidates_v2
+        WHERE candidate_id=?
+      `).get(row.supersedesCandidateId) as {
+        canonicalRaceKey: string;
+        betType: string;
+      } | undefined;
+      if (!predecessor
+        || predecessor.canonicalRaceKey !== row.canonicalRaceKey
+        || predecessor.betType !== row.betType) {
+        return false;
+      }
+      const successorCount = Number((db.prepare(`
+        SELECT COUNT(*) AS count
+        FROM settlement_candidates_v2
+        WHERE supersedes_candidate_id=?
+      `).get(row.supersedesCandidateId) as { count: number }).count);
+      if (successorCount !== 1) return false;
+    }
     currentId = row.supersedesCandidateId;
   }
   return true;
@@ -65,7 +102,7 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     "canonical_race_key", "revision_kind", "supersedes_candidate_id", "correction_reason",
   ]);
   if (hasRevisionKind !== hasRevisionLineage) return false;
-  if (hasRevisionLineage && !supersessionLineageAcyclic(db, candidateId)) return false;
+  if (hasRevisionLineage && !supersessionLineageValid(db, candidateId)) return false;
   const candidate = db.prepare(`
     SELECT ${hasRevisionLineage ? "canonical_race_key" : "NULL"} AS canonicalRaceKey,
            bet_type AS betType,
