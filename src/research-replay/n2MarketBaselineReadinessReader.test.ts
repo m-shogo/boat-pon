@@ -408,3 +408,41 @@ test("active sidecar WAL blocks settlement readiness without retry", () => {
     assert.equal(result.databaseReadCount, 0);
   });
 });
+
+test("invalid cross-race supersession is retained as integrity-blocked readiness evidence", () => {
+  withRoot((root) => {
+    const raceKey = "2026-08-07:10:R1";
+    writeAcceptedT5(root, { date: "2026-08-07", venue: "10", raceNo: 1 });
+    const sidecar = createSidecar(root);
+    insertCandidate(sidecar, {
+      raceKey,
+      candidateId: "c1",
+      status: "settled",
+      payoutSelection: "1-2-3",
+    });
+    const db = new DatabaseSync(sidecar);
+    try {
+      db.prepare(`
+        INSERT INTO settlement_candidates_v2 (
+          candidate_id, canonical_race_key, bet_type, settlement_status,
+          result_kind, resolution_status, observation_id, parse_run_id,
+          raw_document_id, supersedes_candidate_id
+        ) VALUES ('forged-successor', '2026-08-07:10:R2', 'trifecta', 'pending',
+          'normal', 'unresolved', 'obs-c1', 'parse-c1', 'raw-c1', 'c1')
+      `).run();
+    } finally {
+      db.close();
+    }
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.acceptedT5RaceKeys, [raceKey]);
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.integrityBlockedRaceKeys, [raceKey]);
+    assert.deepEqual(result.sourceBlockers, []);
+    assert.equal(result.settlementEligibleRaceCount, 0);
+    assert.equal(result.settlementIneligibleRaceCount, 0);
+    assert.equal(result.databaseReadCount, 1);
+    assert.equal(result.databaseWriteCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
+  });
+});
