@@ -203,7 +203,12 @@ export function sourceDuplicateCandidateLineSemanticsValid(
 
   const payoutTableExists = tableExists(db, "race_payout_lines_v2");
   const refundTableExists = tableExists(db, "race_refund_lines_v2");
-  if (!payoutTableExists || !refundTableExists) return true;
+  if (!payoutTableExists || !refundTableExists) {
+    const hasCurrentCandidateAuthorityMarker = tableExists(db, "settlement_candidates_v2")
+      && CURRENT_CANDIDATE_AUTHORITY_MARKERS.some((column) =>
+        tableHasColumns(db, "settlement_candidates_v2", [column]));
+    return !hasCurrentCandidateAuthorityMarker;
+  }
 
   const payoutSchemaKind = lineIdentitySchemaKind(db, "race_payout_lines_v2");
   const refundSchemaKind = lineIdentitySchemaKind(db, "race_refund_lines_v2");
