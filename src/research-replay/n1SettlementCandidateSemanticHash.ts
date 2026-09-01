@@ -25,23 +25,23 @@ function tableHasColumns(db: DatabaseSync, table: string, required: readonly str
 
 /**
  * Recompute the append-only settlement candidate semantic hash from its persisted payout/refund lines.
- * Legacy synthetic fixtures that intentionally omit the current semantic-hash/line columns are left to
- * their narrower tests; production N1 settlement always creates the current columns together.
+ * Current research readers treat missing settlement authority tables/columns as invalid: a caller cannot
+ * prove semantic integrity from an incomplete schema, so validation must fail closed rather than bypass it.
  */
 export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidateId: string): boolean {
   if (!tableExists(db, "settlement_candidates_v2")
     || !tableExists(db, "race_payout_lines_v2")
-    || !tableExists(db, "race_refund_lines_v2")) return true;
+    || !tableExists(db, "race_refund_lines_v2")) return false;
 
   if (!tableHasColumns(db, "settlement_candidates_v2", [
     "candidate_id", "bet_type", "settlement_status", "result_kind", "semantic_hash",
-  ])) return true;
+  ])) return false;
   if (!tableHasColumns(db, "race_payout_lines_v2", [
     "candidate_id", "line_no", "selection_canonical", "payout_yen", "popularity", "line_kind",
-  ])) return true;
+  ])) return false;
   if (!tableHasColumns(db, "race_refund_lines_v2", [
     "candidate_id", "line_no", "selection_canonical", "refund_scope", "refund_yen_per_100", "reason_code",
-  ])) return true;
+  ])) return false;
 
   const hasRevisionKind = tableHasColumns(db, "settlement_candidates_v2", ["revision_kind"]);
   const hasRevisionLineage = tableHasColumns(db, "settlement_candidates_v2", [
