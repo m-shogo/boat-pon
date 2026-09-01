@@ -34,7 +34,7 @@ function supersessionLineageAcyclic(db: DatabaseSync, candidateId: string): bool
       FROM settlement_candidates_v2
       WHERE candidate_id=?
     `).get(currentId) as { supersedesCandidateId: string | null } | undefined;
-    if (!row) return true;
+    if (!row) return false;
     currentId = row.supersedesCandidateId;
   }
   return true;
