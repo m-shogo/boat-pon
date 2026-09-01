@@ -47,6 +47,7 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
   const hasRevisionLineage = tableHasColumns(db, "settlement_candidates_v2", [
     "canonical_race_key", "revision_kind", "supersedes_candidate_id", "correction_reason",
   ]);
+  if (hasRevisionKind !== hasRevisionLineage) return false;
   const candidate = db.prepare(`
     SELECT ${hasRevisionLineage ? "canonical_race_key" : "NULL"} AS canonicalRaceKey,
            bet_type AS betType,
