@@ -200,6 +200,22 @@ function requireCandidateSemantics(row: CandidateRow): ValidCandidateRow {
   return row as ValidCandidateRow;
 }
 
+function requireSupersessionIdentity(db: DatabaseSync, lower: string, upper: string): void {
+  const invalid = db.prepare(`
+    SELECT newer.candidate_id AS candidateId
+    FROM settlement_candidates_v2 newer
+    JOIN settlement_candidates_v2 prior
+      ON prior.candidate_id = newer.supersedes_candidate_id
+    WHERE prior.canonical_race_key >= ? AND prior.canonical_race_key < ?
+      AND (newer.canonical_race_key <> prior.canonical_race_key OR newer.bet_type <> prior.bet_type)
+    ORDER BY newer.candidate_id
+    LIMIT 1
+  `).get(lower, upper) as { candidateId: string } | undefined;
+  if (invalid) {
+    throw new Error(`N2_SELECTION_PROFILE_SUPERSESSION_IDENTITY_INVALID:${invalid.candidateId}`);
+  }
+}
+
 export function readN2SelectionProfileSource(
   db: DatabaseSync,
   month: string,
@@ -210,6 +226,7 @@ export function readN2SelectionProfileSource(
   const validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
   const lower = `${month}-01`;
   const upper = `${month}-99`;
+  requireSupersessionIdentity(db, lower, upper);
   const candidateRows = db.prepare(`
     SELECT c.candidate_id id,
            c.observation_id observationId,
