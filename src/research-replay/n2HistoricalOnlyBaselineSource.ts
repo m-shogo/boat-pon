@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { parseCanonicalRaceKey } from "./identity";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 import {
   N2_HISTORICAL_EVALUATION_COHORT_RACE_COUNT,
   N2_HISTORICAL_LOOKBACK_DAYS,
@@ -45,6 +46,7 @@ export type N2HistoricalOnlyBaselineSourceRead = {
 
 type WinnerRow = {
   raceKey: string;
+  candidateId: string;
   observationId: string;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
@@ -117,6 +119,11 @@ function tableExists(db: DatabaseSync, name: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name));
 }
 
+function tableHasColumn(db: DatabaseSync, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
+}
+
 function openImmutableSidecar(path: string): DatabaseSync {
   const walPath = `${path}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) {
@@ -150,6 +157,7 @@ export function readCleanTrifectaWinners(input: {
     } catch {
       return { rows: [], blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
     }
+    const hasSemanticHashAuthority = tableHasColumn(db, "settlement_candidates_v2", "semantic_hash");
     const invalidSuperseder = db.prepare(`
       SELECT newer.candidate_id AS candidateId,
              CASE
@@ -254,6 +262,7 @@ export function readCleanTrifectaWinners(input: {
     const rawRows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
+        c.candidate_id AS candidateId,
         c.observation_id AS observationId,
         c.parse_run_id AS candidateParseRunId,
         c.raw_document_id AS candidateRawDocumentId,
@@ -305,6 +314,10 @@ export function readCleanTrifectaWinners(input: {
     const grouped = new Map<string, string[]>();
     for (const row of rawRows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (hasSemanticHashAuthority && !settlementCandidateSemanticHashValid(db, row.candidateId)) {
+        blockers.push(`${row.raceKey}:SETTLEMENT_SEMANTIC_HASH_INVALID:${row.candidateId}`);
+        continue;
+      }
       if (row.observationRaceKey !== row.raceKey
         || row.observationType !== "settlement_result"
         || row.observationPayloadType !== "settlement_result"
