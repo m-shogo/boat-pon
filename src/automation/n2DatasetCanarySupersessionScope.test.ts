@@ -81,7 +81,20 @@ test("canary runtime blocks an out-of-scope cross-race superseder before it can 
         created_at TEXT NOT NULL
       );
       CREATE TABLE settlement_source_duplicate_resolutions_v2 (
-        duplicate_observation_id TEXT
+        resolution_id TEXT PRIMARY KEY,
+        duplicate_observation_id TEXT NOT NULL,
+        canonical_observation_id TEXT NOT NULL,
+        canonical_race_key TEXT NOT NULL,
+        raw_document_id TEXT NOT NULL,
+        source_archive_file TEXT NOT NULL,
+        resolution_kind TEXT NOT NULL,
+        detection_reason TEXT NOT NULL,
+        duplicate_semantic_digest TEXT NOT NULL,
+        resolver_version TEXT NOT NULL,
+        policy_version TEXT NOT NULL,
+        schema_version TEXT NOT NULL,
+        detected_at TEXT NOT NULL,
+        created_at TEXT NOT NULL
       );
     `);
     db.prepare("INSERT INTO raw_documents VALUES ('raw-a','verified','passed',1)").run();

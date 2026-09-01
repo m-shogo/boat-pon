@@ -22,6 +22,12 @@ const CURRENT_REFUND_AUTHORITY_COLUMNS = [
   "refund_line_id", "candidate_id", "line_no", "bet_type", "selection_raw", "selection_normalized",
   "selection_canonical", "refund_scope", "refund_yen_per_100", "reason_code", "created_at",
 ] as const;
+const CURRENT_SOURCE_DUPLICATE_RESOLUTION_AUTHORITY_COLUMNS = [
+  "resolution_id", "duplicate_observation_id", "canonical_observation_id", "canonical_race_key",
+  "raw_document_id", "source_archive_file", "resolution_kind", "detection_reason",
+  "duplicate_semantic_digest", "resolver_version", "policy_version", "schema_version",
+  "detected_at", "created_at",
+] as const;
 
 export type N2DatasetSettlementPreflight = {
   ok: boolean;
@@ -100,6 +106,7 @@ function preflightActiveSettlementLineage(
       ["settlement_candidates_v2", CURRENT_CANDIDATE_AUTHORITY_COLUMNS],
       ["race_payout_lines_v2", CURRENT_PAYOUT_AUTHORITY_COLUMNS],
       ["race_refund_lines_v2", CURRENT_REFUND_AUTHORITY_COLUMNS],
+      ["settlement_source_duplicate_resolutions_v2", CURRENT_SOURCE_DUPLICATE_RESOLUTION_AUTHORITY_COLUMNS],
     ] as const) {
       if (!tableHasColumns(db, table, required)) {
         return {

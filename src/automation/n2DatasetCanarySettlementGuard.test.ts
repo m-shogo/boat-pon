@@ -88,7 +88,20 @@ function withSidecar(
       created_at TEXT NOT NULL
     );
     CREATE TABLE settlement_source_duplicate_resolutions_v2 (
-      duplicate_observation_id TEXT
+      resolution_id TEXT PRIMARY KEY,
+      duplicate_observation_id TEXT NOT NULL,
+      canonical_observation_id TEXT NOT NULL,
+      canonical_race_key TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      source_archive_file TEXT NOT NULL,
+      resolution_kind TEXT NOT NULL,
+      detection_reason TEXT NOT NULL,
+      duplicate_semantic_digest TEXT NOT NULL,
+      resolver_version TEXT NOT NULL,
+      policy_version TEXT NOT NULL,
+      schema_version TEXT NOT NULL,
+      detected_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
   `);
   const semanticHash = canonicalHash({
@@ -183,6 +196,33 @@ test("dataset settlement preflight fails closed when current settlement authorit
     const active = preflightN2AllActiveSettlementLineage(path);
     assert.equal(active.ok, false);
     assert.deepEqual(active.blocks, ["DATASET_ACTIVE_LINEAGE_SCHEMA_INVALID:race_refund_lines_v2"]);
+    assert.equal(active.checkedCandidateCount, 0);
+  });
+});
+
+test("dataset settlement preflight fails closed on incomplete source duplicate authority even when it is empty", () => {
+  withSidecar({ integrity: "verified", security: "passed", replayEligible: 1 }, (path) => {
+    const db = new DatabaseSync(path);
+    db.exec(`
+      DROP TABLE settlement_source_duplicate_resolutions_v2;
+      CREATE TABLE settlement_source_duplicate_resolutions_v2 (
+        duplicate_observation_id TEXT
+      );
+    `);
+    db.close();
+
+    const canary = preflightN2DatasetCanarySettlementLineage(path);
+    assert.equal(canary.ok, false);
+    assert.deepEqual(canary.blocks, [
+      "DATASET_CANARY_LINEAGE_SCHEMA_INVALID:settlement_source_duplicate_resolutions_v2",
+    ]);
+    assert.equal(canary.checkedCandidateCount, 0);
+
+    const active = preflightN2AllActiveSettlementLineage(path);
+    assert.equal(active.ok, false);
+    assert.deepEqual(active.blocks, [
+      "DATASET_ACTIVE_LINEAGE_SCHEMA_INVALID:settlement_source_duplicate_resolutions_v2",
+    ]);
     assert.equal(active.checkedCandidateCount, 0);
   });
 });
