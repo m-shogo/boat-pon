@@ -131,6 +131,34 @@ test("historical winner reader fails closed when a cross-race successor would hi
   });
 });
 
+test("historical winner reader fails closed when an in-range candidate supersedes a predecessor outside the training window", () => {
+  withDb((path, db) => {
+    const raceKey = "2026-08-01:05:R1";
+    const priorRaceKey = "2026-07-31:05:R1";
+    db.prepare("INSERT INTO raw_documents VALUES ('raw-a','verified','passed',1)").run();
+    db.prepare("INSERT INTO parse_runs VALUES ('parse-a','raw-a','success')").run();
+    db.prepare(`INSERT INTO domain_observations
+      VALUES ('obs-a',?,'settlement_result','settlement_result','raw-a','parse-a')`).run(raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('prior',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(priorRaceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('a',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a','prior')`).run(raceKey);
+    db.prepare(`INSERT INTO race_payout_lines_v2
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
+    db.close();
+
+    const result = readCleanTrifectaWinners({
+      sidecarDbPath: path,
+      fromDate: "2026-08-01",
+      toDate: "2026-08-01",
+    });
+    assert.deepEqual(result.rows, []);
+    assert.deepEqual(result.blockers, [
+      `${raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:a`,
+    ]);
+  });
+});
+
 test("historical winner reader fails closed when a same-race supersession cycle would hide training evidence", () => {
   withDb((path, db) => {
     const raceKey = "2026-08-01:05:R1";
