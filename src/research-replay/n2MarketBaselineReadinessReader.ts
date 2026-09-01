@@ -369,6 +369,16 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
       return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
     }
     const placeholders = raceKeys.map(() => "?").join(",");
+    const invalidSupersessionRaceKeys = new Set(
+      (db.prepare(`
+        SELECT DISTINCT prior.canonical_race_key AS raceKey
+        FROM settlement_candidates_v2 newer
+        JOIN settlement_candidates_v2 prior
+          ON prior.candidate_id=newer.supersedes_candidate_id
+        WHERE prior.canonical_race_key IN (${placeholders})
+          AND (newer.canonical_race_key<>prior.canonical_race_key OR newer.bet_type<>prior.bet_type)
+      `).all(...raceKeys) as unknown as Array<{ raceKey: string }>).map((row) => row.raceKey),
+    );
     const rows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
@@ -425,7 +435,7 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
     `).all(...raceKeys) as unknown as SettlementRow[];
 
     const byRace = new Map<string, SettlementRow[]>();
-    const lineageBlockedRaceKeys = new Set<string>();
+    const lineageBlockedRaceKeys = new Set<string>(invalidSupersessionRaceKeys);
     for (const row of rows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
       const parsedSelection = row.payoutSelectionRaw === null
