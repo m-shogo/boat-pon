@@ -5,7 +5,7 @@ import test from "node:test";
 import { canonicalHash } from "./canonical";
 import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 
-function fixture(settlementStatus: string, resultKind: string): DatabaseSync {
+function fixture(settlementStatus: string, resultKind: string, betType = "trifecta"): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   db.exec(`
     CREATE TABLE settlement_candidates_v2 (
@@ -40,16 +40,16 @@ function fixture(settlementStatus: string, resultKind: string): DatabaseSync {
   `);
   const payouts = [["1-2-3", 1000, 1, "payout"]];
   const semanticHash = canonicalHash({
-    betType: "trifecta",
+    betType,
     settlementStatus,
     resultKind,
     payouts,
     refunds: [],
   });
   db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?)")
-    .run("candidate", "trifecta", settlementStatus, resultKind, semanticHash);
+    .run("candidate", betType, settlementStatus, resultKind, semanticHash);
   db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?,?,?)")
-    .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", 1000, 1, "payout");
+    .run("candidate", 1, betType, "1-2-3", "1-2-3", "1-2-3", 1000, 1, "payout");
   return db;
 }
 
@@ -57,6 +57,15 @@ test("settlement semantic hash accepts canonical candidate enums", () => {
   const db = fixture("settled", "normal");
   try {
     assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), true);
+  } finally {
+    db.close();
+  }
+});
+
+test("settlement semantic hash rejects matching hashes with impossible bet type", () => {
+  const db = fixture("settled", "normal", "producer_impossible");
+  try {
+    assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
   } finally {
     db.close();
   }
