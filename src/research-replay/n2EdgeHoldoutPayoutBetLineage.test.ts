@@ -159,6 +159,30 @@ test("edge holdout source fails closed when a cross-race successor would hide ho
   });
 });
 
+test("edge holdout source fails closed when an in-range successor points to a cross-race predecessor outside the history range", () => {
+  withDb((path, db) => {
+    const predecessorRaceKey = "2021-07-04:05:R1";
+    const inRangeRaceKey = "2021-07-05:05:R1";
+    seedCandidate(db, predecessorRaceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('forged-successor',?,'trifecta','pending','normal','unresolved','obs-a','parse-a','raw-a','a')`).run(inRangeRaceKey);
+    db.close();
+
+    const result = readN2EdgeHoldoutSource({
+      sidecarDbPath: path,
+      primaryDbPath: join(tmpdir(), "must-not-be-read.sqlite"),
+    });
+    assert.equal(result.status, "BLOCKED");
+    assert.deepEqual(result.blockers, [
+      `${predecessorRaceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:forged-successor`,
+    ]);
+    assert.equal(result.reads.primaryDatabaseReadCount, 0);
+    assert.equal(result.reads.sidecarDatabaseReadCount, 1);
+    assert.deepEqual(result.historicalOutcomes, []);
+    assert.deepEqual(result.candidates, []);
+  });
+});
+
 test("edge holdout source fails closed when a same-race supersession cycle would hide holdout history", () => {
   withDb((path, db) => {
     const raceKey = "2024-08-01:05:R1";
