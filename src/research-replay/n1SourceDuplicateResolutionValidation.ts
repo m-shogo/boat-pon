@@ -11,6 +11,20 @@ import { N1_CANONICAL_RESOLUTION_SCHEMA_VERSION } from "./settlement";
 
 const SOURCE_DUPLICATE_DETECTION_REASON =
   "intra_file_source_duplicate: same raw document produced multiple identical race observations";
+const REQUIRED_SOURCE_DUPLICATE_EVIDENCE_COLUMNS = [
+  "resolution_id",
+  "duplicate_observation_id",
+  "canonical_observation_id",
+  "canonical_race_key",
+  "raw_document_id",
+  "source_archive_file",
+  "resolution_kind",
+  "detection_reason",
+  "duplicate_semantic_digest",
+  "resolver_version",
+  "policy_version",
+  "schema_version",
+] as const;
 
 const SOURCE_OBSERVATION_WHERE =
   "observation_type='settlement_result' AND payload_type='settlement_result' AND supersedes_id IS NULL AND correction_kind IS NULL AND correction_reason IS NULL";
@@ -64,6 +78,13 @@ type RefundRow = {
   refundYenPer100: number | null;
   reasonCode: string;
 };
+
+function sourceDuplicateEvidenceSchemaValid(db: DatabaseSync): boolean {
+  const columns = db.prepare("PRAGMA table_info(settlement_source_duplicate_resolutions_v2)")
+    .all() as unknown as Array<{ name: string }>;
+  const names = new Set(columns.map((row) => row.name));
+  return REQUIRED_SOURCE_DUPLICATE_EVIDENCE_COLUMNS.every((column) => names.has(column));
+}
 
 function observation(db: DatabaseSync, observationId: string): ObservationRow | null {
   return (db.prepare(`
@@ -251,6 +272,9 @@ function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
 }
 
 export function readCurrentlyValidSourceDuplicateObservationIds(db: DatabaseSync): Set<string> {
+  if (!sourceDuplicateEvidenceSchemaValid(db)) {
+    throw new Error("SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_SCHEMA_INVALID");
+  }
   const countRow = db.prepare("SELECT COUNT(*) AS count FROM settlement_source_duplicate_resolutions_v2")
     .get() as { count: number } | undefined;
   if (Number(countRow?.count ?? 0) === 0) return new Set<string>();
