@@ -171,15 +171,18 @@ export function readN2EvaluationMetricsSettlements(input: {
     }
     const placeholders = requested.map(() => "?").join(",");
     const invalidSuperseders = db.prepare(`
-      SELECT prior.canonical_race_key AS raceKey,
+      SELECT CASE
+               WHEN prior.canonical_race_key IN (${placeholders}) THEN prior.canonical_race_key
+               ELSE newer.canonical_race_key
+             END AS raceKey,
              newer.candidate_id AS candidateId
       FROM settlement_candidates_v2 newer
       JOIN settlement_candidates_v2 prior
         ON prior.candidate_id=newer.supersedes_candidate_id
-      WHERE prior.canonical_race_key IN (${placeholders})
+      WHERE (prior.canonical_race_key IN (${placeholders}) OR newer.canonical_race_key IN (${placeholders}))
         AND (newer.canonical_race_key<>prior.canonical_race_key OR newer.bet_type<>prior.bet_type)
-      ORDER BY prior.canonical_race_key,newer.candidate_id
-    `).all(...requested) as unknown as SupersessionIdentityRow[];
+      ORDER BY raceKey,newer.candidate_id
+    `).all(...requested, ...requested, ...requested) as unknown as SupersessionIdentityRow[];
     if (invalidSuperseders.length > 0) {
       return blocked(
         invalidSuperseders.map((row) => `${row.raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${row.candidateId}`),
