@@ -15,6 +15,9 @@ const REVISION_KIND_SET: ReadonlySet<string> = new Set([
 const CURRENT_REVISION_AUTHORITY_MARKERS = [
   "revision_kind", "correction_reason", "source_kind", "source_schema_version", "observed_at", "created_at",
 ] as const;
+const CURRENT_LINE_COUPLING_MARKERS = [
+  "source_kind", "source_schema_version", "observed_at", "created_at",
+] as const;
 const CURRENT_LINE_IDENTITY_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
 ] as const;
@@ -109,9 +112,11 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
   ]);
   const hasCurrentRevisionAuthorityMarker = CURRENT_REVISION_AUTHORITY_MARKERS.some((column) =>
     tableHasColumns(db, "settlement_candidates_v2", [column]));
+  const hasCurrentLineCouplingMarker = CURRENT_LINE_COUPLING_MARKERS.some((column) =>
+    tableHasColumns(db, "settlement_candidates_v2", [column]));
   if ((hasCurrentRevisionAuthorityMarker && !hasRevisionLineage)
     || hasRevisionKind !== hasRevisionLineage) return false;
-  if (hasCurrentRevisionAuthorityMarker
+  if (hasCurrentLineCouplingMarker
     && (!tableHasColumns(db, "race_payout_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS)
       || !tableHasColumns(db, "race_refund_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS))) return false;
   if (hasRevisionLineage && !supersessionLineageValid(db, candidateId)) return false;
