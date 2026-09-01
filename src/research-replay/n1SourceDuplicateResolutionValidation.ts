@@ -262,7 +262,8 @@ function resolutionRowValid(db: DatabaseSync, row: ResolutionRow): boolean {
     canonical.rawDocumentId,
     canonical.parseRunId,
   );
-  return duplicateDigest.lineageValid
+  return duplicateDigest.count > 0
+    && duplicateDigest.lineageValid
     && canonicalDigest.lineageValid
     && duplicateDigest.semanticIntegrityValid
     && canonicalDigest.semanticIntegrityValid
