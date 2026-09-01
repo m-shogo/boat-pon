@@ -175,6 +175,8 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     `).get(candidate.supersedesCandidateId) as { count: number }).count);
     if (successorCount !== 1) return false;
   }
+  if (hasRevisionLineage && candidate.supersedesCandidateId !== null
+    && !settlementCandidateSemanticHashValid(db, candidate.supersedesCandidateId)) return false;
   if (!sourceDuplicateCandidateLineSemanticsValid(db, candidateId, candidate.betType)) return false;
 
   const payouts = (db.prepare(`
