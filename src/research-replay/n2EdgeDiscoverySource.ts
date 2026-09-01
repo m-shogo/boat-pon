@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { officialVenueCode } from "../domain/officialLinks";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { canonicalRaceKey } from "./identity";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
 import {
   N2_EDGE_DISCOVERY_FROM_DATE,
@@ -65,6 +66,7 @@ export type N2EdgeDiscoverySourceRead = {
 
 type WinnerRow = {
   raceKey: string;
+  candidateId: string;
   observationId: string;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
@@ -181,6 +183,11 @@ function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
 }
 
+function tableHasColumn(db: DatabaseSync, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
+}
+
 function openReadOnlyPrimary(path: string): DatabaseSync {
   const db = new DatabaseSync(path, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
@@ -215,6 +222,8 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
     } catch {
       return { rows: [], blockers: ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"] };
     }
+    const hasCurrentSemanticAuthority = ["source_kind", "source_schema_version", "observed_at", "created_at"]
+      .some((column) => tableHasColumn(db, "settlement_candidates_v2", column));
     const invalidSuperseder = db.prepare(`
       SELECT newer.candidate_id AS candidateId,
              CASE
@@ -319,6 +328,7 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
     const raw = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
+        c.candidate_id AS candidateId,
         c.observation_id AS observationId,
         c.parse_run_id AS candidateParseRunId,
         c.raw_document_id AS candidateRawDocumentId,
@@ -370,6 +380,10 @@ function readHistoricalOutcomes(path: string): { rows: N2HistoricalOutcomeRow[];
     const grouped = new Map<string, string[]>();
     for (const row of raw) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (hasCurrentSemanticAuthority && !settlementCandidateSemanticHashValid(db, row.candidateId)) {
+        blockers.push(`${row.raceKey}:SETTLEMENT_SEMANTIC_HASH_INVALID:${row.candidateId}`);
+        continue;
+      }
       if (row.observationRaceKey !== row.raceKey
         || row.observationType !== "settlement_result"
         || row.observationPayloadType !== "settlement_result"
