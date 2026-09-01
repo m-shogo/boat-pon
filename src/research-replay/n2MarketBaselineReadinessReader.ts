@@ -387,6 +387,33 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
         blockers: invalidSuperseders.map((row) => `SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${row.candidateId}`),
       };
     }
+    const supersessionCycle = db.prepare(`
+      WITH RECURSIVE chain(rootCandidateId,currentCandidateId,nextCandidateId,depth) AS (
+        SELECT candidate_id,candidate_id,supersedes_candidate_id,0
+        FROM settlement_candidates_v2
+        WHERE canonical_race_key IN (${placeholders})
+        UNION ALL
+        SELECT chain.rootCandidateId,prior.candidate_id,prior.supersedes_candidate_id,chain.depth+1
+        FROM chain
+        JOIN settlement_candidates_v2 prior ON prior.candidate_id=chain.nextCandidateId
+        WHERE chain.nextCandidateId IS NOT NULL
+          AND chain.depth < 1024
+      )
+      SELECT rootCandidateId AS candidateId
+      FROM chain
+      WHERE nextCandidateId=rootCandidateId
+      ORDER BY candidateId
+      LIMIT 1
+    `).get(...raceKeys) as { candidateId: string } | undefined;
+    if (supersessionCycle) {
+      return {
+        settledRaceKeys: [],
+        integrityBlockedRaceKeys: [],
+        eligibleRaceCount: 0,
+        ineligibleRaceCount: 0,
+        blockers: [`SETTLEMENT_SUPERSESSION_CYCLE_INVALID:${supersessionCycle.candidateId}`],
+      };
+    }
     const rows = db.prepare(`
       SELECT
         c.canonical_race_key AS raceKey,
