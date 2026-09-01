@@ -102,3 +102,31 @@ test("historical winner reader rejects cross-bet payout lineage before building 
     ]);
   });
 });
+
+test("historical winner reader fails closed when a cross-race successor would hide training evidence", () => {
+  withDb((path, db) => {
+    const raceKey = "2026-08-01:05:R1";
+    const otherRaceKey = "2026-08-02:05:R1";
+    db.prepare("INSERT INTO raw_documents VALUES ('raw-a','verified','passed',1)").run();
+    db.prepare("INSERT INTO parse_runs VALUES ('parse-a','raw-a','success')").run();
+    db.prepare(`INSERT INTO domain_observations
+      VALUES ('obs-a',?,'settlement_result','settlement_result','raw-a','parse-a')`).run(raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('a',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('forged-successor',?,'trifecta','pending','normal','unresolved','obs-a','parse-a','raw-a','a')`).run(otherRaceKey);
+    db.prepare(`INSERT INTO race_payout_lines_v2
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
+    db.close();
+
+    const result = readCleanTrifectaWinners({
+      sidecarDbPath: path,
+      fromDate: "2026-08-01",
+      toDate: "2026-08-01",
+    });
+    assert.deepEqual(result.rows, []);
+    assert.deepEqual(result.blockers, [
+      `${raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:forged-successor`,
+    ]);
+  });
+});
