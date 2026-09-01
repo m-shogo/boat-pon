@@ -275,24 +275,6 @@ function requireSupersessionStructure(db: DatabaseSync, lower: string, upper: st
   if (cycle) {
     throw new Error(`N2_SELECTION_PROFILE_SUPERSESSION_CYCLE_INVALID:${cycle.candidateId}`);
   }
-
-  const duplicateActive = db.prepare(`
-    SELECT c.canonical_race_key AS raceKey,
-           c.bet_type AS betType
-    FROM settlement_candidates_v2 c
-    WHERE c.canonical_race_key >= ? AND c.canonical_race_key < ?
-      AND NOT EXISTS (
-        SELECT 1 FROM settlement_candidates_v2 newer
-        WHERE newer.supersedes_candidate_id = c.candidate_id
-      )
-    GROUP BY c.canonical_race_key,c.bet_type
-    HAVING COUNT(*) > 1
-    ORDER BY c.canonical_race_key,c.bet_type
-    LIMIT 1
-  `).get(lower, upper) as { raceKey: string; betType: string } | undefined;
-  if (duplicateActive) {
-    throw new Error(`N2_SELECTION_PROFILE_ACTIVE_CANDIDATE_COUNT_INVALID:${duplicateActive.raceKey}:${duplicateActive.betType}`);
-  }
 }
 
 export function readN2SelectionProfileSource(
