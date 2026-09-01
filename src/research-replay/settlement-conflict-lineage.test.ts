@@ -129,3 +129,23 @@ test("settlement conflicts fail closed before writes when candidate race or bet 
   assert.equal((ctx.db.prepare("SELECT COUNT(*) count FROM settlement_conflict_members_v2").get() as { count: number }).count, 2);
   ctx.db.close();
 });
+
+test("settlement conflicts do not persist false conflicts when candidate semantics are identical", () => {
+  const ctx = setup();
+  const first = append(ctx, "same-semantics-a", RACE_A, "exacta", 500);
+  const second = append(ctx, "same-semantics-b", RACE_A, "exacta", 500);
+
+  assert.equal(first.semanticHash, second.semanticHash);
+  const conflict = ctx.settlement.createConflict({
+    canonicalRaceKey: RACE_A,
+    betType: "exacta",
+    candidateIds: [first.candidateId, second.candidateId],
+    reason: "PAYOUT_MISMATCH",
+    createdAt: NOW,
+  });
+
+  assert.equal(conflict, null);
+  assert.equal((ctx.db.prepare("SELECT COUNT(*) count FROM settlement_conflict_groups_v2").get() as { count: number }).count, 0);
+  assert.equal((ctx.db.prepare("SELECT COUNT(*) count FROM settlement_conflict_members_v2").get() as { count: number }).count, 0);
+  ctx.db.close();
+});
