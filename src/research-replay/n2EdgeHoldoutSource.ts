@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { canonicalHash } from "./canonical";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "./n1SourceDuplicateResolutionValidation";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 import {
   normalizeDiscoveryProgramRow,
   type N2EdgeDiscoveryCandidate,
@@ -24,6 +25,7 @@ const REUSABLE_PARSE_STATUSES = new Set(["success", "warning"]);
 
 type WinnerRow = {
   raceKey: string;
+  candidateId: string;
   observationId: string;
   candidateParseRunId: string;
   candidateRawDocumentId: string;
@@ -89,6 +91,10 @@ function validRaceKey(value: string): boolean {
 function tableExists(db: DatabaseSync, table: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
 }
+function tableHasColumn(db: DatabaseSync, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
+}
 function openPrimary(path: string): DatabaseSync {
   const db = new DatabaseSync(path, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON"); db.exec("PRAGMA busy_timeout=5000"); return db;
@@ -146,6 +152,8 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
     } catch {
       return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"],0,1);
     }
+    const hasCurrentSemanticAuthority = ["source_kind", "source_schema_version", "observed_at", "created_at"]
+      .some((column) => tableHasColumn(sidecar, "settlement_candidates_v2", column));
     const invalidSuperseder = sidecar.prepare(`
       SELECT newer.candidate_id AS candidateId,
              prior.canonical_race_key AS raceKey
@@ -241,6 +249,7 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
     const rows = sidecar.prepare(`
       SELECT
        c.canonical_race_key AS raceKey,
+       c.candidate_id AS candidateId,
        c.observation_id AS observationId,
        c.parse_run_id AS candidateParseRunId,
        c.raw_document_id AS candidateRawDocumentId,
@@ -273,6 +282,10 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
     const grouped = new Map<string,string[]>();
     for (const row of rows) {
       if (validResolvedObservationIds.has(row.observationId)) continue;
+      if (hasCurrentSemanticAuthority && !settlementCandidateSemanticHashValid(sidecar, row.candidateId)) {
+        blockers.push(`${row.raceKey}:SETTLEMENT_SEMANTIC_HASH_INVALID:${row.candidateId}`);
+        continue;
+      }
       if (row.observationRaceKey !== row.raceKey
         || row.observationType !== "settlement_result"
         || row.observationPayloadType !== "settlement_result"
