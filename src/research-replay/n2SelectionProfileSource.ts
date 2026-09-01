@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 
 import { parseCanonicalRaceKey } from "./identity";
+import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 import {
   buildN2SelectionProfile,
   type N2PayoutLineInput,
@@ -78,6 +79,11 @@ type RefundRow = {
 
 function tableExists(db: DatabaseSync, name: string): boolean {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name));
+}
+
+function tableHasColumn(db: DatabaseSync, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  return rows.some((row) => row.name === column);
 }
 
 function requireSourceTables(db: DatabaseSync): void {
@@ -285,6 +291,8 @@ export function readN2SelectionProfileSource(
   requireSourceTables(db);
 
   const validResolvedObservationIds = readCurrentlyValidSourceDuplicateObservationIds(db);
+  const hasCurrentSemanticAuthority = ["source_kind", "source_schema_version", "observed_at", "created_at"]
+    .some((column) => tableHasColumn(db, "settlement_candidates_v2", column));
   const lower = `${month}-01`;
   const upper = `${month}-99`;
   requireSupersessionIdentity(db, lower, upper);
@@ -324,6 +332,11 @@ export function readN2SelectionProfileSource(
   `).all(lower, upper) as unknown as CandidateRow[];
   const validatedRows = candidateRows.map((row) => {
     requireCanonicalRaceIdentity(row);
+    if (hasCurrentSemanticAuthority
+      && !validResolvedObservationIds.has(row.observationId)
+      && !settlementCandidateSemanticHashValid(db, row.id)) {
+      throw new Error(`N2_SELECTION_PROFILE_SETTLEMENT_SEMANTIC_HASH_INVALID:${row.id}`);
+    }
     return requireCandidateSemantics(row);
   });
   const candidates = validatedRows.map((row) => ({
