@@ -219,6 +219,46 @@ function requireSupersessionIdentity(db: DatabaseSync, lower: string, upper: str
   }
 }
 
+function requireSupersessionStructure(db: DatabaseSync, lower: string, upper: string): void {
+  const missingPredecessor = db.prepare(`
+    SELECT newer.candidate_id AS candidateId
+    FROM settlement_candidates_v2 newer
+    WHERE newer.canonical_race_key >= ? AND newer.canonical_race_key < ?
+      AND newer.supersedes_candidate_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM settlement_candidates_v2 prior
+        WHERE prior.candidate_id = newer.supersedes_candidate_id
+      )
+    ORDER BY newer.candidate_id
+    LIMIT 1
+  `).get(lower, upper) as { candidateId: string } | undefined;
+  if (missingPredecessor) {
+    throw new Error(`N2_SELECTION_PROFILE_SUPERSESSION_PREDECESSOR_MISSING:${missingPredecessor.candidateId}`);
+  }
+
+  const cycle = db.prepare(`
+    WITH RECURSIVE chain(rootCandidateId,currentCandidateId,nextCandidateId,depth) AS (
+      SELECT candidate_id,candidate_id,supersedes_candidate_id,0
+      FROM settlement_candidates_v2
+      WHERE canonical_race_key >= ? AND canonical_race_key < ?
+      UNION ALL
+      SELECT chain.rootCandidateId,prior.candidate_id,prior.supersedes_candidate_id,chain.depth+1
+      FROM chain
+      JOIN settlement_candidates_v2 prior ON prior.candidate_id=chain.nextCandidateId
+      WHERE chain.nextCandidateId IS NOT NULL
+        AND chain.depth < 1024
+    )
+    SELECT rootCandidateId AS candidateId
+    FROM chain
+    WHERE nextCandidateId=rootCandidateId
+    ORDER BY candidateId
+    LIMIT 1
+  `).get(lower, upper) as { candidateId: string } | undefined;
+  if (cycle) {
+    throw new Error(`N2_SELECTION_PROFILE_SUPERSESSION_CYCLE_INVALID:${cycle.candidateId}`);
+  }
+}
+
 export function readN2SelectionProfileSource(
   db: DatabaseSync,
   month: string,
@@ -230,6 +270,7 @@ export function readN2SelectionProfileSource(
   const lower = `${month}-01`;
   const upper = `${month}-99`;
   requireSupersessionIdentity(db, lower, upper);
+  requireSupersessionStructure(db, lower, upper);
   const candidateRows = db.prepare(`
     SELECT c.candidate_id id,
            c.observation_id observationId,
