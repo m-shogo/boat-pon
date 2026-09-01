@@ -236,6 +236,24 @@ function requireSupersessionStructure(db: DatabaseSync, lower: string, upper: st
     throw new Error(`N2_SELECTION_PROFILE_SUPERSESSION_PREDECESSOR_MISSING:${missingPredecessor.candidateId}`);
   }
 
+  const branching = db.prepare(`
+    SELECT prior.candidate_id AS candidateId
+    FROM settlement_candidates_v2 prior
+    JOIN settlement_candidates_v2 newer
+      ON newer.supersedes_candidate_id = prior.candidate_id
+    WHERE (
+        (prior.canonical_race_key >= ? AND prior.canonical_race_key < ?)
+        OR (newer.canonical_race_key >= ? AND newer.canonical_race_key < ?)
+      )
+    GROUP BY prior.candidate_id
+    HAVING COUNT(*) > 1
+    ORDER BY prior.candidate_id
+    LIMIT 1
+  `).get(lower, upper, lower, upper) as { candidateId: string } | undefined;
+  if (branching) {
+    throw new Error(`N2_SELECTION_PROFILE_SUPERSESSION_BRANCHING_INVALID:${branching.candidateId}`);
+  }
+
   const cycle = db.prepare(`
     WITH RECURSIVE chain(rootCandidateId,currentCandidateId,nextCandidateId,depth) AS (
       SELECT candidate_id,candidate_id,supersedes_candidate_id,0
