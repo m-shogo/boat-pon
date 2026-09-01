@@ -168,6 +168,31 @@ export function readCleanTrifectaWinners(input: {
         blockers: [`${invalidSuperseder.raceKey}:SETTLEMENT_SUPERSESSION_IDENTITY_INVALID:${invalidSuperseder.candidateId}`],
       };
     }
+    const supersessionCycle = db.prepare(`
+      WITH RECURSIVE chain(rootCandidateId,currentCandidateId,nextCandidateId,raceKey,depth) AS (
+        SELECT candidate_id,candidate_id,supersedes_candidate_id,canonical_race_key,0
+        FROM settlement_candidates_v2
+        WHERE substr(canonical_race_key,1,10) >= ?
+          AND substr(canonical_race_key,1,10) <= ?
+        UNION ALL
+        SELECT chain.rootCandidateId,prior.candidate_id,prior.supersedes_candidate_id,chain.raceKey,chain.depth+1
+        FROM chain
+        JOIN settlement_candidates_v2 prior ON prior.candidate_id=chain.nextCandidateId
+        WHERE chain.nextCandidateId IS NOT NULL
+          AND chain.depth < 1024
+      )
+      SELECT rootCandidateId AS candidateId,raceKey
+      FROM chain
+      WHERE nextCandidateId=rootCandidateId
+      ORDER BY raceKey,candidateId
+      LIMIT 1
+    `).get(input.fromDate, input.toDate) as { candidateId: string; raceKey: string } | undefined;
+    if (supersessionCycle) {
+      return {
+        rows: [],
+        blockers: [`${supersessionCycle.raceKey}:SETTLEMENT_SUPERSESSION_CYCLE_INVALID:${supersessionCycle.candidateId}`],
+      };
+    }
     const payoutBetLineageRows = db.prepare(`
       SELECT c.canonical_race_key AS raceKey,
              c.candidate_id AS candidateId,
