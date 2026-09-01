@@ -183,6 +183,26 @@ test("same-race supersession cycle cannot silently hide market readiness settlem
   });
 });
 
+test("requested settlement candidate cannot supersede a missing predecessor", () => {
+  withRoot((root) => {
+    writeAcceptedT5(root);
+    createSidecar(root);
+    const path = join(root, "data/research-replay.sqlite");
+    const db = new DatabaseSync(path);
+    db.prepare("UPDATE settlement_candidates_v2 SET supersedes_candidate_id='missing' WHERE candidate_id='a'").run();
+    db.close();
+
+    const result = readN2MarketBaselineReadiness({ dataRoot: root });
+    assert.deepEqual(result.settledRaceKeys, []);
+    assert.deepEqual(result.integrityBlockedRaceKeys, []);
+    assert.deepEqual(result.sourceBlockers, ["SETTLEMENT_SUPERSESSION_PREDECESSOR_MISSING:a"]);
+    assert.equal(result.settlementEligibleRaceCount, 0);
+    assert.equal(result.settlementIneligibleRaceCount, 0);
+    assert.equal(result.databaseWriteCount, 0);
+    assert.equal(result.rawOddsValuesRead, false);
+  });
+});
+
 test("requested settlement candidate cannot supersede a predecessor from another race", () => {
   withRoot((root) => {
     writeAcceptedT5(root);
