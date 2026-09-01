@@ -206,11 +206,14 @@ function requireSupersessionIdentity(db: DatabaseSync, lower: string, upper: str
     FROM settlement_candidates_v2 newer
     JOIN settlement_candidates_v2 prior
       ON prior.candidate_id = newer.supersedes_candidate_id
-    WHERE prior.canonical_race_key >= ? AND prior.canonical_race_key < ?
+    WHERE (
+        (prior.canonical_race_key >= ? AND prior.canonical_race_key < ?)
+        OR (newer.canonical_race_key >= ? AND newer.canonical_race_key < ?)
+      )
       AND (newer.canonical_race_key <> prior.canonical_race_key OR newer.bet_type <> prior.bet_type)
     ORDER BY newer.candidate_id
     LIMIT 1
-  `).get(lower, upper) as { candidateId: string } | undefined;
+  `).get(lower, upper, lower, upper) as { candidateId: string } | undefined;
   if (invalid) {
     throw new Error(`N2_SELECTION_PROFILE_SUPERSESSION_IDENTITY_INVALID:${invalid.candidateId}`);
   }
