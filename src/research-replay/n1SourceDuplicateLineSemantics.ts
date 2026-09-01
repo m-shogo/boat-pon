@@ -19,6 +19,9 @@ const CURRENT_CANDIDATE_AUTHORITY_COLUMNS = [
   "parse_run_id", "raw_document_id", "semantic_hash", "supersedes_candidate_id", "correction_reason",
   "observed_at", "created_at",
 ] as const;
+const CURRENT_CANDIDATE_AUTHORITY_MARKERS = [
+  "source_kind", "source_schema_version", "observed_at", "created_at",
+] as const;
 const CURRENT_LINE_IDENTITY_COLUMNS = [
   "bet_type", "selection_raw", "selection_normalized", "selection_canonical",
 ] as const;
@@ -89,6 +92,10 @@ function candidateMetadataSemanticsValid(
   const requiredPresence = required.map((column) => tableHasColumns(db, "settlement_candidates_v2", [column]));
   if (requiredPresence.every((present) => !present)) return true;
   if (requiredPresence.some((present) => !present)) return false;
+  const hasCurrentCandidateAuthorityMarker = CURRENT_CANDIDATE_AUTHORITY_MARKERS.some((column) =>
+    tableHasColumns(db, "settlement_candidates_v2", [column]));
+  if (hasCurrentCandidateAuthorityMarker
+    && !tableHasColumns(db, "settlement_candidates_v2", CURRENT_CANDIDATE_AUTHORITY_COLUMNS)) return false;
   const hasSemanticHash = tableHasColumns(db, "settlement_candidates_v2", ["semantic_hash"]);
   const hasResolutionStatus = tableHasColumns(db, "settlement_candidates_v2", ["resolution_status"]);
   const row = db.prepare(`
