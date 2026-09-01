@@ -98,7 +98,9 @@ function withSidecar(fn: (path: string, db: DatabaseSync) => void): void {
       duplicate_semantic_digest TEXT NOT NULL,
       resolver_version TEXT NOT NULL,
       policy_version TEXT NOT NULL,
-      schema_version TEXT NOT NULL
+      schema_version TEXT NOT NULL,
+      detected_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
   `);
   try {
