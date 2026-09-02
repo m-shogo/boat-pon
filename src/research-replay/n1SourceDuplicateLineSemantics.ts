@@ -111,7 +111,9 @@ function candidateMetadataSemanticsValid(
            settlement_status AS settlementStatus,
            result_kind AS resultKind,
            ${hasResolutionStatus ? "resolution_status" : "NULL"} AS resolutionStatus,
-           ${hasSemanticHash ? "semantic_hash" : "NULL"} AS semanticHash
+           ${hasSemanticHash ? "semantic_hash" : "NULL"} AS semanticHash,
+           ${hasCurrentCandidateAuthorityMarker ? "source_kind" : "NULL"} AS sourceKind,
+           ${hasCurrentCandidateAuthorityMarker ? "source_schema_version" : "NULL"} AS sourceSchemaVersion
     FROM settlement_candidates_v2
     WHERE candidate_id=?
   `).get(candidateId) as {
@@ -120,12 +122,15 @@ function candidateMetadataSemanticsValid(
     resultKind: string;
     resolutionStatus: string | null;
     semanticHash: string | null;
+    sourceKind: string | null;
+    sourceSchemaVersion: string | null;
   } | undefined;
   if (row === undefined
     || row.betType !== candidateBetType
     || !SETTLEMENT_STATUS_SET.has(row.settlementStatus)
     || !RESULT_KIND_SET.has(row.resultKind)
-    || (hasResolutionStatus && (row.resolutionStatus === null || !RESOLUTION_STATUS_SET.has(row.resolutionStatus)))) {
+    || (hasResolutionStatus && (row.resolutionStatus === null || !RESOLUTION_STATUS_SET.has(row.resolutionStatus)))
+    || (hasCurrentCandidateAuthorityMarker && (!row.sourceKind?.trim() || !row.sourceSchemaVersion?.trim()))) {
     return false;
   }
 
