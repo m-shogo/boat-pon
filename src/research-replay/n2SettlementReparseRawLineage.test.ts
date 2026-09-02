@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveN2SettlementReparseRawDates } from "./n2SettlementReparseRawLineage";
+import {
+  resolveN2SettlementReparseRawDates,
+  resolveN2SettlementReparseRawSchemaFamilies,
+} from "./n2SettlementReparseRawLineage";
 
 test("reparse raw date lineage resolves one canonical race date per raw", () => {
   const dates = resolveN2SettlementReparseRawDates([
@@ -28,5 +31,25 @@ test("reparse raw date lineage rejects cross-date observation lineage", () => {
       { rid: "raw-1", k: "2026-08-02:01:R1" },
     ]),
     /REPARSE_RAW_DATE_AMBIGUOUS:raw-1:2026-08-01:2026-08-02/,
+  );
+});
+
+test("reparse raw schema lineage resolves one family per raw", () => {
+  const families = resolveN2SettlementReparseRawSchemaFamilies([
+    { rid: "raw-1", fam: "modern_seven_display" },
+    { rid: "raw-1", fam: "modern_seven_display" },
+    { rid: "raw-2", fam: "legacy_six_display" },
+  ]);
+  assert.equal(families.get("raw-1"), "modern_seven_display");
+  assert.equal(families.get("raw-2"), "legacy_six_display");
+});
+
+test("reparse raw schema lineage rejects conflicting families", () => {
+  assert.throws(
+    () => resolveN2SettlementReparseRawSchemaFamilies([
+      { rid: "raw-1", fam: "modern_seven_display" },
+      { rid: "raw-1", fam: "legacy_six_display" },
+    ]),
+    /REPARSE_RAW_SCHEMA_FAMILY_AMBIGUOUS:raw-1:legacy_six_display:modern_seven_display/,
   );
 });
