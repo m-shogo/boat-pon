@@ -2,8 +2,10 @@ import { resolve } from "node:path";
 
 import {
   buildN2TrifectaPrivateMarketFeatureDayIndex,
-  writeN2TrifectaPrivateMarketFeatureDayIndex,
 } from "../src/research-replay/n2TrifectaPrivateMarketFeatureDayIndex";
+import {
+  writeVerifiedN2TrifectaPrivateMarketFeatureDayIndex,
+} from "../src/research-replay/n2TrifectaPrivateMarketFeatureDayIndexWriteBoundary";
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -28,7 +30,7 @@ const index = buildN2TrifectaPrivateMarketFeatureDayIndex({
   venueCode,
 });
 const writeResult = writePrivate
-  ? writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir, index })
+  ? writeVerifiedN2TrifectaPrivateMarketFeatureDayIndex({ rootDir, index })
   : null;
 
 // Stdout is intentionally metadata-only; private feature vectors remain on local disk.
