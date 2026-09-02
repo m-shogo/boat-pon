@@ -55,12 +55,24 @@ test("reparse raw schema lineage rejects conflicting families", () => {
   );
 });
 
-test("reparse raw schema lineage rejects blank family authority", () => {
+test("reparse raw schema lineage rejects blank or noncanonical family authority", () => {
   assert.throws(
     () => resolveN2SettlementReparseRawSchemaFamilies([
       { rid: "raw-blank", fam: "   " },
     ]),
     /REPARSE_RAW_SCHEMA_FAMILY_INVALID:raw-blank/,
+  );
+  assert.throws(
+    () => resolveN2SettlementReparseRawSchemaFamilies([
+      { rid: "raw-leading-space", fam: " modern_seven_display" },
+    ]),
+    /REPARSE_RAW_SCHEMA_FAMILY_INVALID:raw-leading-space/,
+  );
+  assert.throws(
+    () => resolveN2SettlementReparseRawSchemaFamilies([
+      { rid: "raw-trailing-space", fam: "modern_seven_display " },
+    ]),
+    /REPARSE_RAW_SCHEMA_FAMILY_INVALID:raw-trailing-space/,
   );
 });
 

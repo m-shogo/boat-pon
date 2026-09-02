@@ -25,13 +25,21 @@ test("unexpected additions raw lineage requires canonical same-day race identiti
   );
 });
 
-test("unexpected additions raw lineage fails closed on missing, blank, or ambiguous schema family", () => {
+test("unexpected additions raw lineage fails closed on missing, blank, noncanonical, or ambiguous schema family", () => {
   assert.throws(
     () => resolveUnexpectedAdditionsSourceSchemaFamily([]),
     /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_MISSING/,
   );
   assert.throws(
     () => resolveUnexpectedAdditionsSourceSchemaFamily(["   "]),
+    /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_INVALID/,
+  );
+  assert.throws(
+    () => resolveUnexpectedAdditionsSourceSchemaFamily([" modern_seven_display"]),
+    /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_INVALID/,
+  );
+  assert.throws(
+    () => resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display "]),
     /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_INVALID/,
   );
   assert.equal(resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display"]), "modern_seven_display");
