@@ -5,6 +5,11 @@ export type N2SettlementReparseRawObservationRow = {
   k: string;
 };
 
+export type N2SettlementReparseRawSchemaFamilyRow = {
+  rid: string;
+  fam: string;
+};
+
 export function resolveN2SettlementReparseRawDates(
   rows: readonly N2SettlementReparseRawObservationRow[],
 ): Map<string, string> {
@@ -23,4 +28,25 @@ export function resolveN2SettlementReparseRawDates(
     dateByRaw.set(row.rid, parsed.raceDateJst);
   }
   return dateByRaw;
+}
+
+export function resolveN2SettlementReparseRawSchemaFamilies(
+  rows: readonly N2SettlementReparseRawSchemaFamilyRow[],
+): Map<string, string> {
+  const familiesByRaw = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const families = familiesByRaw.get(row.rid) ?? new Set<string>();
+    families.add(row.fam);
+    familiesByRaw.set(row.rid, families);
+  }
+
+  const familyByRaw = new Map<string, string>();
+  for (const [rawDocumentId, families] of familiesByRaw) {
+    if (families.size > 1) {
+      throw new Error(`REPARSE_RAW_SCHEMA_FAMILY_AMBIGUOUS:${rawDocumentId}:${[...families].sort().join(":")}`);
+    }
+    const family = [...families][0];
+    if (family !== undefined) familyByRaw.set(rawDocumentId, family);
+  }
+  return familyByRaw;
 }
