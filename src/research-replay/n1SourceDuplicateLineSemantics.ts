@@ -130,7 +130,12 @@ function candidateMetadataSemanticsValid(
     || !SETTLEMENT_STATUS_SET.has(row.settlementStatus)
     || !RESULT_KIND_SET.has(row.resultKind)
     || (hasResolutionStatus && (row.resolutionStatus === null || !RESOLUTION_STATUS_SET.has(row.resolutionStatus)))
-    || (hasCurrentCandidateAuthorityMarker && (!row.sourceKind?.trim() || !row.sourceSchemaVersion?.trim()))) {
+    || (hasCurrentCandidateAuthorityMarker && (
+      !row.sourceKind?.trim()
+      || !row.sourceSchemaVersion?.trim()
+      || row.sourceKind !== row.sourceKind.trim()
+      || row.sourceSchemaVersion !== row.sourceSchemaVersion.trim()
+    ))) {
     return false;
   }
 
