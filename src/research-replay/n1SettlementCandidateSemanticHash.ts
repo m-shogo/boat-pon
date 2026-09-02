@@ -207,9 +207,11 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     reasonCode: string;
   }>).map((row) => [row.selectionCanonical, row.refundScope, row.refundYenPer100, row.reasonCode]);
 
-  if (candidate.settlementStatus === "settled" && (payouts.length === 0 || refunds.length !== 0)) return false;
-  if (candidate.settlementStatus === "refunded" && (payouts.length !== 0 || refunds.length === 0)) return false;
-  if (candidate.settlementStatus === "partially_refunded" && (payouts.length === 0 || refunds.length === 0)) return false;
+  if (hasCurrentLineCouplingMarker) {
+    if (candidate.settlementStatus === "settled" && (payouts.length === 0 || refunds.length !== 0)) return false;
+    if (candidate.settlementStatus === "refunded" && (payouts.length !== 0 || refunds.length === 0)) return false;
+    if (candidate.settlementStatus === "partially_refunded" && (payouts.length === 0 || refunds.length === 0)) return false;
+  }
 
   return canonicalHash({
     betType: candidate.betType,
