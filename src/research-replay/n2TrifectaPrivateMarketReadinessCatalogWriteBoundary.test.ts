@@ -7,6 +7,7 @@ import test from "node:test";
 import { canonicalHash } from "./canonical";
 import {
   buildN2TrifectaPrivateMarketReadinessCatalog,
+  writeN2TrifectaPrivateMarketReadinessCatalog,
   type N2TrifectaPrivateMarketReadinessCatalog,
   type N2TrifectaPrivateMarketReadinessCatalogEntry,
 } from "./n2TrifectaPrivateMarketReadinessCatalog";
@@ -125,6 +126,26 @@ test("rehashed writer with non-read-only provenance fails closed", () => {
   });
 });
 
+test("rehashed producer with noncanonical scope timestamp fails closed before persistence", () => {
+  withRoot((root) => {
+    const catalog = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:00:00.000Z",
+    });
+    catalog.entries = [entry("not-an-instant")];
+    catalog.sourceArtifactCount = 1;
+    catalog.entryCount = 1;
+    catalog.earliestDate = "2026-08-19";
+    catalog.latestDate = "2026-08-19";
+    rehash(catalog);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog }),
+      /READINESS_CATALOG_WRITE_SCOPE_AUTHORITY_INVALID/u,
+    );
+  });
+});
+
 test("digest-valid existing catalog cannot be replaced by lower append-only evidence count", () => {
   withRoot((root) => {
     const existing = buildN2TrifectaPrivateMarketReadinessCatalog({
@@ -160,7 +181,7 @@ test("digest-valid existing catalog with noncanonical scope timestamp is not tru
     existing.earliestDate = "2026-08-19";
     existing.latestDate = "2026-08-19";
     rehash(existing);
-    const first = writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: existing });
+    const first = writeN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: existing });
     assert.equal(first.changed, true);
 
     const next = buildN2TrifectaPrivateMarketReadinessCatalog({
