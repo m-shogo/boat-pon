@@ -45,6 +45,9 @@ export function resolveN2SettlementReparseRawSchemaFamilies(
 ): Map<string, string> {
   const familiesByRaw = new Map<string, Set<string>>();
   for (const row of rows) {
+    if (!row.fam.trim()) {
+      throw new Error(`REPARSE_RAW_SCHEMA_FAMILY_INVALID:${row.rid}`);
+    }
     const families = familiesByRaw.get(row.rid) ?? new Set<string>();
     families.add(row.fam);
     familiesByRaw.set(row.rid, families);
