@@ -9,6 +9,7 @@ import { initializeSidecarSchema, openSidecarDatabase } from "./schema";
 import {
   initializeN1CanonicalResolutionSchema,
   initializeN1SettlementSchema,
+  SettlementRepository,
 } from "./settlement";
 import {
   detectExactDuplicateObservationsInRaw,
@@ -54,12 +55,39 @@ function insertSettlementObservation(input: {
     .run(input.observationId, RACE_KEY, input.parseRunId, input.rawDocumentId, NOW, NOW, `${input.observationId}-hash`, NOW, NOW, NOW);
 }
 
+function insertSettlementCandidate(input: {
+  db: ReturnType<typeof openSidecarDatabase>;
+  observationId: string;
+  rawDocumentId: string;
+  parseRunId: string;
+}): void {
+  const settlement = new SettlementRepository(input.db, () => `candidate-${input.observationId}`);
+  settlement.appendCandidate({
+    canonicalRaceKey: RACE_KEY,
+    betType: "win",
+    settlementStatus: "settled",
+    resultKind: "normal",
+    revisionKind: "initial",
+    resolutionStatus: "resolved",
+    sourceKind: "official_archive",
+    sourceSchemaVersion: "scope-v1",
+    observationId: input.observationId,
+    parseRunId: input.parseRunId,
+    rawDocumentId: input.rawDocumentId,
+    observedAt: NOW,
+    payouts: [{ selection: "1", payoutYen: 100 }],
+    emitEvidencePins: false,
+  });
+}
+
 test("source-duplicate resolution refuses equal settlement observations from different parse runs", () => {
   const { db, rawDocumentId } = setup();
   insertParseRun(db, rawDocumentId, "parse-a");
   insertParseRun(db, rawDocumentId, "parse-b");
   insertSettlementObservation({ db, observationId: "settlement-a", rawDocumentId, parseRunId: "parse-a" });
+  insertSettlementCandidate({ db, observationId: "settlement-a", rawDocumentId, parseRunId: "parse-a" });
   insertSettlementObservation({ db, observationId: "settlement-b", rawDocumentId, parseRunId: "parse-b" });
+  insertSettlementCandidate({ db, observationId: "settlement-b", rawDocumentId, parseRunId: "parse-b" });
 
   const plan = planSourceDuplicateResolution(db);
   assert.equal(plan.duplicatedRaces, 1);
@@ -78,7 +106,9 @@ test("source-duplicate resolution still accepts equal observations from the same
   const { db, rawDocumentId } = setup();
   insertParseRun(db, rawDocumentId, "parse-a");
   insertSettlementObservation({ db, observationId: "settlement-a", rawDocumentId, parseRunId: "parse-a" });
+  insertSettlementCandidate({ db, observationId: "settlement-a", rawDocumentId, parseRunId: "parse-a" });
   insertSettlementObservation({ db, observationId: "settlement-b", rawDocumentId, parseRunId: "parse-a" });
+  insertSettlementCandidate({ db, observationId: "settlement-b", rawDocumentId, parseRunId: "parse-a" });
 
   const plan = planSourceDuplicateResolution(db);
   assert.equal(plan.plannedResolutions.length, 1);
