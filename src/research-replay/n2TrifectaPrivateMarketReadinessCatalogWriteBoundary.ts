@@ -10,6 +10,9 @@ import {
   type N2TrifectaPrivateMarketReadinessCatalogEntry,
 } from "./n2TrifectaPrivateMarketReadinessCatalog";
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
+const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/u;
+
 export function canonicalReadinessCatalogGeneratedAt(input: string | null, now: string): string {
   const candidate = input ?? now;
   try {
@@ -44,6 +47,15 @@ function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalo
   }
 }
 
+function isCanonicalInstant(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    return canonicalUtcTimestamp(value) === value;
+  } catch {
+    return false;
+  }
+}
+
 function asExistingCatalog(value: unknown): N2TrifectaPrivateMarketReadinessCatalog | null {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
@@ -55,6 +67,18 @@ function asExistingCatalog(value: unknown): N2TrifectaPrivateMarketReadinessCata
   if (!Number.isSafeInteger(record.sourceArtifactCount) || (record.sourceArtifactCount as number) < 0
     || !Number.isSafeInteger(record.entryCount) || (record.entryCount as number) < 0
     || !Array.isArray(record.entries) || record.entries.length !== record.entryCount) return null;
+  const scopes = new Set<string>();
+  for (const value of record.entries) {
+    if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
+    const entry = value as Record<string, unknown>;
+    if (typeof entry.date !== "string" || !DATE_RE.test(entry.date)
+      || typeof entry.venueCode !== "string" || !VENUE_RE.test(entry.venueCode)
+      || !isCanonicalInstant(entry.latestCheckedAt)
+      || !Number.isSafeInteger(entry.scopeArtifactCount) || (entry.scopeArtifactCount as number) < 1) return null;
+    const scope = `${entry.date}|${entry.venueCode}`;
+    if (scopes.has(scope)) return null;
+    scopes.add(scope);
+  }
   return record as unknown as N2TrifectaPrivateMarketReadinessCatalog;
 }
 
