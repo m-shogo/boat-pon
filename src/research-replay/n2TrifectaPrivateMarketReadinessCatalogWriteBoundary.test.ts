@@ -146,6 +146,50 @@ test("rehashed producer with noncanonical scope timestamp fails closed before pe
   });
 });
 
+test("rehashed producer cannot detach scope date from checked-at JST date", () => {
+  withRoot((root) => {
+    const catalog = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:00:00.000Z",
+    });
+    const mismatched = entry("2026-08-19T15:30:00.000Z");
+    mismatched.date = "2026-08-19";
+    catalog.entries = [mismatched];
+    catalog.sourceArtifactCount = 1;
+    catalog.entryCount = 1;
+    catalog.earliestDate = "2026-08-19";
+    catalog.latestDate = "2026-08-19";
+    rehash(catalog);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog }),
+      /READINESS_CATALOG_WRITE_SCOPE_AUTHORITY_INVALID/u,
+    );
+  });
+});
+
+test("rehashed producer cannot use a calendar-impossible scope date", () => {
+  withRoot((root) => {
+    const catalog = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:00:00.000Z",
+    });
+    const impossible = entry("2026-03-01T00:00:00.000Z");
+    impossible.date = "2026-02-30";
+    catalog.entries = [impossible];
+    catalog.sourceArtifactCount = 1;
+    catalog.entryCount = 1;
+    catalog.earliestDate = "2026-02-30";
+    catalog.latestDate = "2026-02-30";
+    rehash(catalog);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog }),
+      /READINESS_CATALOG_WRITE_SCOPE_AUTHORITY_INVALID/u,
+    );
+  });
+});
+
 test("rehashed producer cannot detach source artifact count from scope totals", () => {
   withRoot((root) => {
     const catalog = buildN2TrifectaPrivateMarketReadinessCatalog({
