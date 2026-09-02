@@ -32,6 +32,10 @@ function main(): void {
            COUNT(*) n
     FROM settlement_candidates_v2 c
     LEFT JOIN settlement_source_duplicate_resolutions_v2 r ON r.duplicate_observation_id = c.observation_id
+    WHERE NOT EXISTS (
+      SELECT 1 FROM settlement_candidates_v2 newer
+      WHERE newer.supersedes_candidate_id=c.candidate_id
+    )
     GROUP BY yr, bt, ss, rs, active
   `).all() as Array<{ yr: string; bt: string; ss: SettlementStatus; rs: ResolutionStatus; active: string; n: number }>;
 
@@ -58,6 +62,10 @@ function main(): void {
     FROM settlement_candidates_v2 c
     LEFT JOIN settlement_source_duplicate_resolutions_v2 r ON r.duplicate_observation_id=c.observation_id
     WHERE c.canonical_race_key >= ? AND c.canonical_race_key < ?
+      AND NOT EXISTS (
+        SELECT 1 FROM settlement_candidates_v2 newer
+        WHERE newer.supersedes_candidate_id=c.candidate_id
+      )
     ORDER BY c.canonical_race_key, c.bet_type
   `).all(`${PROTO_MONTH}-01`, `${PROTO_MONTH}-99`) as Array<{ k: string; bt: string; ss: SettlementStatus; rs: ResolutionStatus; dup: number; wins: string | null }>;
 
