@@ -130,15 +130,13 @@ function candidateMetadataSemanticsValid(
     || !SETTLEMENT_STATUS_SET.has(row.settlementStatus)
     || !RESULT_KIND_SET.has(row.resultKind)
     || (hasResolutionStatus && (row.resolutionStatus === null || !RESOLUTION_STATUS_SET.has(row.resolutionStatus)))
-    || (hasCurrentCandidateAuthorityMarker && (
-      !row.sourceKind?.trim()
-      || !row.sourceSchemaVersion?.trim()
-      || row.sourceKind !== row.sourceKind.trim()
-      || row.sourceSchemaVersion !== row.sourceSchemaVersion.trim()
-    ))) {
+    || (hasCurrentCandidateAuthorityMarker && (!row.sourceKind?.trim() || !row.sourceSchemaVersion?.trim()))) {
     return false;
   }
 
+  // Current N1 candidate + semantic line authority never persist placeholder hashes. Keep narrow
+  // synthetic fixtures compatible, but fail closed once the full production candidate schema and
+  // persisted semantic hash-input columns are present together.
   if (hasSemanticHash && currentSemanticAuthorityPresent(db)) {
     return typeof row.semanticHash === "string" && /^[0-9a-f]{64}$/.test(row.semanticHash);
   }
@@ -191,6 +189,15 @@ function lineNumbersUnique(rows: readonly LineRow[]): boolean {
   return new Set(rows.map((row) => row.lineNo)).size === rows.length;
 }
 
+/**
+ * Revalidate producer-only candidate and payout/refund line semantics before source-duplicate evidence is trusted.
+ *
+ * A few old synthetic unit fixtures intentionally model only the subset of settlement tables needed
+ * by that test, or model both payout/refund tables with the pre-v2 line schema. Production N1
+ * settlement creates the candidate and both line tables atomically with the current columns. Preserve
+ * the fixture-only fallback only for the known legacy identity shape; partial current identity authority
+ * is malformed and must fail closed.
+ */
 export function sourceDuplicateCandidateLineSemanticsValid(
   db: DatabaseSync,
   candidateId: string,
