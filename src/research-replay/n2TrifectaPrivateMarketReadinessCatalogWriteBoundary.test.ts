@@ -8,6 +8,7 @@ import { canonicalHash } from "./canonical";
 import {
   buildN2TrifectaPrivateMarketReadinessCatalog,
   type N2TrifectaPrivateMarketReadinessCatalog,
+  type N2TrifectaPrivateMarketReadinessCatalogEntry,
 } from "./n2TrifectaPrivateMarketReadinessCatalog";
 import {
   canonicalReadinessCatalogGeneratedAt,
@@ -27,6 +28,31 @@ function rehash(catalog: N2TrifectaPrivateMarketReadinessCatalog): void {
   const record = catalog as unknown as Record<string, unknown>;
   const { catalogDigest: _catalogDigest, ...core } = record;
   record.catalogDigest = canonicalHash(core);
+}
+
+function entry(latestCheckedAt: string): N2TrifectaPrivateMarketReadinessCatalogEntry {
+  return {
+    date: "2026-08-19",
+    venueCode: "01",
+    latestCheckedAt,
+    readinessStatus: "NO_DATA",
+    readinessDigest: "a".repeat(64),
+    sourceDayIndexDigest: "b".repeat(64),
+    sourceDayIndexStatus: "NO_DATA",
+    completeRaceCount: 0,
+    partialRaceCount: 0,
+    noDataRaceCount: 12,
+    cohortCandidateRaceCount: 0,
+    checkpointCoverageNumerator: 0,
+    checkpointCoverageDenominator: 48,
+    checkpointCoverageRatio: 0,
+    heartbeatStatus: "PASS",
+    heartbeatSignificantGapCount: 0,
+    heartbeatAffectedCheckpointCount: 0,
+    heartbeatCurrentGapOverThreshold: false,
+    heartbeatPlanStatus: "PASS",
+    scopeArtifactCount: 1,
+  };
 }
 
 test("readiness catalog CLI time rejects values JavaScript Date would normalize", () => {
@@ -118,6 +144,39 @@ test("digest-valid existing catalog cannot be replaced by lower append-only evid
     assert.throws(
       () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: regressed }),
       /READINESS_CATALOG_APPEND_ONLY_REGRESSION/u,
+    );
+  });
+});
+
+test("digest-valid existing catalog with noncanonical scope timestamp is not trusted as append-only authority", () => {
+  withRoot((root) => {
+    const existing = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:00:00.000Z",
+    });
+    existing.entries = [entry("not-an-instant")];
+    existing.sourceArtifactCount = 1;
+    existing.entryCount = 1;
+    existing.earliestDate = "2026-08-19";
+    existing.latestDate = "2026-08-19";
+    rehash(existing);
+    const first = writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: existing });
+    assert.equal(first.changed, true);
+
+    const next = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:10:00.000Z",
+    });
+    next.entries = [entry("2026-08-19T00:05:00.000Z")];
+    next.sourceArtifactCount = 1;
+    next.entryCount = 1;
+    next.earliestDate = "2026-08-19";
+    next.latestDate = "2026-08-19";
+    rehash(next);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: next }),
+      /READINESS_CATALOG_EXISTING_AUTHORITY_INVALID/u,
     );
   });
 });
