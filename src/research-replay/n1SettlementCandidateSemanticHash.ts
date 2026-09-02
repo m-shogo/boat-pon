@@ -151,7 +151,10 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
   } | undefined;
   if (!candidate) return false;
   if (hasCurrentSourceAuthority
-    && (!candidate.sourceKind?.trim() || !candidate.sourceSchemaVersion?.trim())) return false;
+    && (!candidate.sourceKind?.trim()
+      || !candidate.sourceSchemaVersion?.trim()
+      || candidate.sourceKind !== candidate.sourceKind.trim()
+      || candidate.sourceSchemaVersion !== candidate.sourceSchemaVersion.trim())) return false;
   if (!SETTLEMENT_STATUS_SET.has(candidate.settlementStatus)
     || !RESULT_KIND_SET.has(candidate.resultKind)
     || (hasRevisionKind && (candidate.revisionKind === null || !REVISION_KIND_SET.has(candidate.revisionKind)))) {
