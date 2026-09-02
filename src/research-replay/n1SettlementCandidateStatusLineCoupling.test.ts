@@ -61,7 +61,7 @@ function fixture({ settlementStatus, payout, refund }: FixtureOptions): Database
       .run("candidate", 1, "trifecta", "1-2-3", "1-2-3", "1-2-3", 1000, 1, "payout");
   }
   if (refund) {
-    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?,?,?)")
+    db.prepare("INSERT INTO race_refund_lines_v2 VALUES (?,?,?,?,?,?,?,?,?)")
       .run("candidate", 1, "trifecta", null, null, null, "bet_type", 100, "ARCHIVE_RETURNED");
   }
   return db;
