@@ -197,6 +197,31 @@ export function readN2EdgeHoldoutSource(input: { primaryDbPath: string; sidecarD
         `${missingSupersessionPredecessor.raceKey}:SETTLEMENT_SUPERSESSION_PREDECESSOR_MISSING:${missingSupersessionPredecessor.candidateId}`,
       ],0,1);
     }
+    const supersessionBranching = sidecar.prepare(`
+      SELECT prior.candidate_id AS candidateId,
+             prior.canonical_race_key AS raceKey
+      FROM settlement_candidates_v2 prior
+      JOIN settlement_candidates_v2 newer
+        ON newer.supersedes_candidate_id=prior.candidate_id
+      WHERE (
+          (substr(prior.canonical_race_key,1,10) >= ? AND substr(prior.canonical_race_key,1,10) <= ?)
+          OR (substr(newer.canonical_race_key,1,10) >= ? AND substr(newer.canonical_race_key,1,10) <= ?)
+        )
+      GROUP BY prior.candidate_id,prior.canonical_race_key
+      HAVING COUNT(*) > 1
+      ORDER BY prior.canonical_race_key,prior.candidate_id
+      LIMIT 1
+    `).get(
+      N2_EDGE_HOLDOUT_HISTORY_FROM_DATE,
+      N2_EDGE_TEST_TO_DATE,
+      N2_EDGE_HOLDOUT_HISTORY_FROM_DATE,
+      N2_EDGE_TEST_TO_DATE,
+    ) as { candidateId: string; raceKey: string } | undefined;
+    if (supersessionBranching) {
+      return blocked([
+        `${supersessionBranching.raceKey}:SETTLEMENT_SUPERSESSION_BRANCHING_INVALID:${supersessionBranching.candidateId}`,
+      ],0,1);
+    }
     const supersessionCycle = sidecar.prepare(`
       WITH RECURSIVE chain(rootCandidateId,currentCandidateId,nextCandidateId,raceKey,depth) AS (
         SELECT candidate_id,candidate_id,supersedes_candidate_id,canonical_race_key,0
