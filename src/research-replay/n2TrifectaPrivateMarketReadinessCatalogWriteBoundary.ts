@@ -31,10 +31,12 @@ function isCanonicalInstant(value: unknown): value is string {
   }
 }
 
-function hasValidScopeAuthority(entries: unknown, entryCount: unknown): boolean {
+function hasValidScopeAuthority(entries: unknown, entryCount: unknown, sourceArtifactCount: unknown): boolean {
   if (!Number.isSafeInteger(entryCount) || (entryCount as number) < 0
+    || !Number.isSafeInteger(sourceArtifactCount) || (sourceArtifactCount as number) < 0
     || !Array.isArray(entries) || entries.length !== entryCount) return false;
   const scopes = new Set<string>();
+  let scopeArtifactCountTotal = 0;
   for (const value of entries) {
     if (typeof value !== "object" || value == null || Array.isArray(value)) return false;
     const entry = value as Record<string, unknown>;
@@ -45,8 +47,10 @@ function hasValidScopeAuthority(entries: unknown, entryCount: unknown): boolean 
     const scope = `${entry.date}|${entry.venueCode}`;
     if (scopes.has(scope)) return false;
     scopes.add(scope);
+    scopeArtifactCountTotal += entry.scopeArtifactCount as number;
+    if (!Number.isSafeInteger(scopeArtifactCountTotal)) return false;
   }
-  return true;
+  return scopeArtifactCountTotal === sourceArtifactCount;
 }
 
 function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalog): void {
@@ -72,8 +76,7 @@ function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalo
     || catalog.productionApplyAuthorized !== false) {
     throw new Error("READINESS_CATALOG_WRITE_PROTECTED_BOUNDARY_INVALID");
   }
-  if (!Number.isSafeInteger(catalog.sourceArtifactCount) || catalog.sourceArtifactCount < 0
-    || !hasValidScopeAuthority(catalog.entries, catalog.entryCount)) {
+  if (!hasValidScopeAuthority(catalog.entries, catalog.entryCount, catalog.sourceArtifactCount)) {
     throw new Error("READINESS_CATALOG_WRITE_SCOPE_AUTHORITY_INVALID");
   }
 }
@@ -86,8 +89,7 @@ function asExistingCatalog(value: unknown): N2TrifectaPrivateMarketReadinessCata
     || !/^[0-9a-f]{64}$/u.test(record.catalogDigest)) return null;
   const { catalogDigest, ...core } = record;
   if (canonicalHash(core) !== catalogDigest) return null;
-  if (!Number.isSafeInteger(record.sourceArtifactCount) || (record.sourceArtifactCount as number) < 0
-    || !hasValidScopeAuthority(record.entries, record.entryCount)) return null;
+  if (!hasValidScopeAuthority(record.entries, record.entryCount, record.sourceArtifactCount)) return null;
   return record as unknown as N2TrifectaPrivateMarketReadinessCatalog;
 }
 
