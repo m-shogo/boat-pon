@@ -63,7 +63,7 @@ function fixture(sourceKind: string, sourceSchemaVersion: string): DatabaseSync 
 }
 
 test("source duplicate trust accepts canonical current candidate source authority", () => {
-  const db = fixture("official_archive", "legacy_six_display");
+  const db = fixture("official_archive", "legacy_pre_trifecta");
   try {
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), true);
   } finally {
@@ -72,7 +72,7 @@ test("source duplicate trust accepts canonical current candidate source authorit
 });
 
 test("source duplicate trust rejects blank current candidate source kind", () => {
-  const db = fixture("   ", "legacy_six_display");
+  const db = fixture("   ", "legacy_pre_trifecta");
   try {
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
   } finally {
@@ -91,10 +91,10 @@ test("source duplicate trust rejects blank current candidate source schema versi
 
 test("source duplicate trust rejects noncanonical current candidate source authority whitespace", () => {
   for (const [sourceKind, sourceSchemaVersion] of [
-    [" official_archive", "legacy_six_display"],
-    ["official_archive ", "legacy_six_display"],
-    ["official_archive", " legacy_six_display"],
-    ["official_archive", "legacy_six_display "],
+    [" official_archive", "legacy_pre_trifecta"],
+    ["official_archive ", "legacy_pre_trifecta"],
+    ["official_archive", " legacy_pre_trifecta"],
+    ["official_archive", "legacy_pre_trifecta "],
   ] as const) {
     const db = fixture(sourceKind, sourceSchemaVersion);
     try {
