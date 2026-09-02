@@ -22,8 +22,11 @@ test("unexpected additions raw lineage requires canonical same-day race identiti
   );
 });
 
-test("unexpected additions raw lineage fails closed on ambiguous schema family", () => {
-  assert.equal(resolveUnexpectedAdditionsSourceSchemaFamily([]), null);
+test("unexpected additions raw lineage fails closed on missing or ambiguous schema family", () => {
+  assert.throws(
+    () => resolveUnexpectedAdditionsSourceSchemaFamily([]),
+    /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_MISSING/,
+  );
   assert.equal(resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display"]), "modern_seven_display");
   assert.equal(
     resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display", "modern_seven_display"]),
