@@ -10,6 +10,16 @@ export type N2SettlementReparseRawSchemaFamilyRow = {
   fam: string;
 };
 
+class RequiredRawSchemaFamilyMap extends Map<string, string> {
+  override get(rawDocumentId: string): string {
+    const family = super.get(rawDocumentId);
+    if (family === undefined) {
+      throw new Error(`REPARSE_RAW_SCHEMA_FAMILY_MISSING:${rawDocumentId}`);
+    }
+    return family;
+  }
+}
+
 export function resolveN2SettlementReparseRawDates(
   rows: readonly N2SettlementReparseRawObservationRow[],
 ): Map<string, string> {
@@ -40,7 +50,7 @@ export function resolveN2SettlementReparseRawSchemaFamilies(
     familiesByRaw.set(row.rid, families);
   }
 
-  const familyByRaw = new Map<string, string>();
+  const familyByRaw = new RequiredRawSchemaFamilyMap();
   for (const [rawDocumentId, families] of familiesByRaw) {
     if (families.size > 1) {
       throw new Error(`REPARSE_RAW_SCHEMA_FAMILY_AMBIGUOUS:${rawDocumentId}:${[...families].sort().join(":")}`);

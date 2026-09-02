@@ -53,3 +53,13 @@ test("reparse raw schema lineage rejects conflicting families", () => {
     /REPARSE_RAW_SCHEMA_FAMILY_AMBIGUOUS:raw-1:legacy_six_display:modern_seven_display/,
   );
 });
+
+test("reparse raw schema lineage fails closed when a raw has no candidate family authority", () => {
+  const families = resolveN2SettlementReparseRawSchemaFamilies([
+    { rid: "raw-1", fam: "modern_seven_display" },
+  ]);
+  assert.throws(
+    () => families.get("raw-missing"),
+    /REPARSE_RAW_SCHEMA_FAMILY_MISSING:raw-missing/,
+  );
+});
