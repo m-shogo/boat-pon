@@ -7,7 +7,10 @@ import {
   archiveFileForRaceKey,
 } from "./n1CanonicalResolution";
 import { sourceDuplicateCandidateLineSemanticsValid } from "./n1SourceDuplicateLineSemantics";
-import { N1_CANONICAL_RESOLUTION_SCHEMA_VERSION } from "./settlement";
+import {
+  N1_CANONICAL_RESOLUTION_SCHEMA_VERSION,
+  verifyN1CanonicalResolutionSchema,
+} from "./settlement";
 
 const SOURCE_DUPLICATE_DETECTION_REASON =
   "intra_file_source_duplicate: same raw document produced multiple identical race observations";
@@ -83,7 +86,8 @@ function sourceDuplicateEvidenceSchemaValid(db: DatabaseSync): boolean {
   const columns = db.prepare("PRAGMA table_info(settlement_source_duplicate_resolutions_v2)")
     .all() as unknown as Array<{ name: string }>;
   const names = new Set(columns.map((row) => row.name));
-  return REQUIRED_SOURCE_DUPLICATE_EVIDENCE_COLUMNS.every((column) => names.has(column));
+  return REQUIRED_SOURCE_DUPLICATE_EVIDENCE_COLUMNS.every((column) => names.has(column))
+    && verifyN1CanonicalResolutionSchema(db).ok;
 }
 
 function observation(db: DatabaseSync, observationId: string): ObservationRow | null {
