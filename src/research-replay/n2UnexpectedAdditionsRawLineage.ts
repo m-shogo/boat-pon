@@ -22,6 +22,9 @@ export function resolveUnexpectedAdditionsRawDate(raceKeys: string[]): string {
 }
 
 export function resolveUnexpectedAdditionsSourceSchemaFamily(families: string[]): string {
+  if (families.some((family) => !family.trim())) {
+    throw new Error("N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_INVALID");
+  }
   const distinct = [...new Set(families)];
   if (distinct.length === 0) {
     throw new Error("N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_MISSING");
