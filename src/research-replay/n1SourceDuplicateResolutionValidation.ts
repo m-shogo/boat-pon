@@ -93,7 +93,11 @@ function sourceDuplicateEvidenceSchemaValid(db: DatabaseSync): boolean {
   const candidateNames = new Set(candidateColumns.map((row) => row.name));
   const hasCurrentSourceAuthority = candidateNames.has("source_kind") || candidateNames.has("source_schema_version");
   if (hasCurrentSourceAuthority || candidateNames.size === 0) {
-    return verifyN1CanonicalResolutionSchema(db).ok;
+    try {
+      return verifyN1CanonicalResolutionSchema(db).ok;
+    } catch {
+      return false;
+    }
   }
 
   // Legacy synthetic unit fixtures predate current candidate source-authority columns.
