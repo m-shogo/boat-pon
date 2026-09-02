@@ -98,3 +98,26 @@ test("rehashed writer with non-read-only provenance fails closed", () => {
     );
   });
 });
+
+test("digest-valid existing catalog cannot be replaced by lower append-only evidence count", () => {
+  withRoot((root) => {
+    const existing = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:00:00.000Z",
+    });
+    existing.sourceArtifactCount = 1;
+    rehash(existing);
+    const first = writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: existing });
+    assert.equal(first.changed, true);
+
+    const regressed = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:10:00.000Z",
+    });
+    assert.equal(regressed.sourceArtifactCount, 0);
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: regressed }),
+      /READINESS_CATALOG_APPEND_ONLY_REGRESSION/u,
+    );
+  });
+});
