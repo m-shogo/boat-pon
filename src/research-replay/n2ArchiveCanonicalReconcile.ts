@@ -81,14 +81,33 @@ function deriveResultKind(specialPayoutLines: number): ResultKind {
 }
 
 // ParsedResultDetail（v2）から canonical race identity 付き candidate を導出する。
-// 未知 venue / 不可能日 / 範囲外 raceNo は candidate を作らず除外（fail-closed）。
+// 未知 venue / 不可能日 / 範囲外 raceNo / condition と矛盾する payout identity は除外（fail-closed）。
 export function deriveArchiveCandidates(parsed: ParsedResultDetail): ArchiveCandidate[] {
-  const raceKeyById = new Map<string, string>();
+  type RaceIdentity = { raceKey: string; date: string; venue: string; raceNo: number };
+  const identityByRaceId = new Map<string, RaceIdentity>();
+  const ambiguousRaceIds = new Set<string>();
   for (const condition of parsed.conditions) {
     const code = VENUE_CODES[condition.venue];
     if (!code) continue;
     try {
-      raceKeyById.set(condition.raceId, canonicalRaceKey(condition.date, code, condition.raceNo));
+      const identity = {
+        raceKey: canonicalRaceKey(condition.date, code, condition.raceNo),
+        date: condition.date,
+        venue: condition.venue,
+        raceNo: condition.raceNo,
+      };
+      const previous = identityByRaceId.get(condition.raceId);
+      if (previous && (
+        previous.raceKey !== identity.raceKey
+        || previous.date !== identity.date
+        || previous.venue !== identity.venue
+        || previous.raceNo !== identity.raceNo
+      )) {
+        ambiguousRaceIds.add(condition.raceId);
+        identityByRaceId.delete(condition.raceId);
+        continue;
+      }
+      if (!ambiguousRaceIds.has(condition.raceId)) identityByRaceId.set(condition.raceId, identity);
     } catch {
       continue;
     }
@@ -96,14 +115,17 @@ export function deriveArchiveCandidates(parsed: ParsedResultDetail): ArchiveCand
 
   const grouped = new Map<string, { raceKey: string; betType: SettlementBetType; lines: typeof parsed.payouts }>();
   for (const line of parsed.payouts) {
-    if (!BET_TYPE_SET.has(line.betType)) continue;
-    const raceKey = raceKeyById.get(line.raceId);
-    if (!raceKey) continue;
+    if (!BET_TYPE_SET.has(line.betType) || ambiguousRaceIds.has(line.raceId)) continue;
+    const identity = identityByRaceId.get(line.raceId);
+    if (!identity
+      || line.date !== identity.date
+      || line.venue !== identity.venue
+      || line.raceNo !== identity.raceNo) continue;
     const betType = line.betType as SettlementBetType;
-    const key = candidateKey(raceKey, betType);
+    const key = candidateKey(identity.raceKey, betType);
     const bucket = grouped.get(key);
     if (bucket) bucket.lines.push(line);
-    else grouped.set(key, { raceKey, betType, lines: [line] });
+    else grouped.set(key, { raceKey: identity.raceKey, betType, lines: [line] });
   }
 
   const out: ArchiveCandidate[] = [];

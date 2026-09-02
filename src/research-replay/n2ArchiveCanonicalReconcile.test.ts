@@ -109,6 +109,28 @@ test("payout without a matching condition race is excluded", () => {
   assert.equal(out.length, 0);
 });
 
+test("payout metadata that conflicts with its condition identity is excluded", () => {
+  for (const drift of [
+    { date: "2020-05-02" },
+    { venue: "尼崎" },
+    { raceNo: 2 },
+  ] as Array<Partial<RacePayout>>) {
+    const out = deriveArchiveCandidates(parsed(
+      [condition()],
+      [payout("trifecta", "1-2-3", drift)],
+    ));
+    assert.equal(out.length, 0);
+  }
+});
+
+test("conflicting condition identities sharing one raceId are excluded", () => {
+  const out = deriveArchiveCandidates(parsed(
+    [condition(), condition({ date: "2020-05-02" })],
+    [payout("trifecta", "1-2-3")],
+  ));
+  assert.equal(out.length, 0);
+});
+
 test("derivation is deterministic and sorted", () => {
   const input = parsed(
     [condition()],
