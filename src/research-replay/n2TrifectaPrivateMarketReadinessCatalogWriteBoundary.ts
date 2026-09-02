@@ -61,6 +61,18 @@ function hasValidScopeAuthority(entries: unknown, entryCount: unknown, sourceArt
   return scopeArtifactCountTotal === sourceArtifactCount;
 }
 
+function hasValidSummaryAuthority(catalog: N2TrifectaPrivateMarketReadinessCatalog): boolean {
+  const dates = catalog.entries.map((entry) => entry.date).sort();
+  const expectedEarliestDate = dates.at(0) ?? null;
+  const expectedLatestDate = dates.at(-1) ?? null;
+  const expectedFullCoverageScopeCount = catalog.entries.filter(
+    (entry) => entry.checkpointCoverageNumerator === 48,
+  ).length;
+  return catalog.earliestDate === expectedEarliestDate
+    && catalog.latestDate === expectedLatestDate
+    && catalog.fullCoverageScopeCount === expectedFullCoverageScopeCount;
+}
+
 function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalog): void {
   if (catalog.catalogVersion !== N2_TRIFECTA_PRIVATE_MARKET_READINESS_CATALOG_VERSION
     || catalog.evidenceRole !== "EXPLORATION_READINESS_CATALOG_ONLY") {
@@ -87,6 +99,9 @@ function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalo
   if (!hasValidScopeAuthority(catalog.entries, catalog.entryCount, catalog.sourceArtifactCount)) {
     throw new Error("READINESS_CATALOG_WRITE_SCOPE_AUTHORITY_INVALID");
   }
+  if (!hasValidSummaryAuthority(catalog)) {
+    throw new Error("READINESS_CATALOG_WRITE_SUMMARY_AUTHORITY_INVALID");
+  }
 }
 
 function asExistingCatalog(value: unknown): N2TrifectaPrivateMarketReadinessCatalog | null {
@@ -98,7 +113,9 @@ function asExistingCatalog(value: unknown): N2TrifectaPrivateMarketReadinessCata
   const { catalogDigest, ...core } = record;
   if (canonicalHash(core) !== catalogDigest) return null;
   if (!hasValidScopeAuthority(record.entries, record.entryCount, record.sourceArtifactCount)) return null;
-  return record as unknown as N2TrifectaPrivateMarketReadinessCatalog;
+  const catalog = record as unknown as N2TrifectaPrivateMarketReadinessCatalog;
+  if (!hasValidSummaryAuthority(catalog)) return null;
+  return catalog;
 }
 
 function entryMap(entries: N2TrifectaPrivateMarketReadinessCatalogEntry[]): Map<string, N2TrifectaPrivateMarketReadinessCatalogEntry> {
