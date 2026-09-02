@@ -72,7 +72,7 @@ function fixture(sourceKind: string, sourceSchemaVersion: string): DatabaseSync 
 }
 
 test("settlement semantic validator accepts canonical current source authority", () => {
-  const db = fixture("official_archive", "legacy_six_display");
+  const db = fixture("official_archive", "legacy_pre_trifecta");
   try {
     assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), true);
   } finally {
@@ -81,7 +81,7 @@ test("settlement semantic validator accepts canonical current source authority",
 });
 
 test("settlement semantic validator rejects blank current source kind", () => {
-  const db = fixture("   ", "legacy_six_display");
+  const db = fixture("   ", "legacy_pre_trifecta");
   try {
     assert.equal(settlementCandidateSemanticHashValid(db, "candidate"), false);
   } finally {
@@ -100,10 +100,10 @@ test("settlement semantic validator rejects blank current source schema version"
 
 test("settlement semantic validator rejects noncanonical current source authority whitespace", () => {
   for (const [sourceKind, sourceSchemaVersion] of [
-    [" official_archive", "legacy_six_display"],
-    ["official_archive ", "legacy_six_display"],
-    ["official_archive", " legacy_six_display"],
-    ["official_archive", "legacy_six_display "],
+    [" official_archive", "legacy_pre_trifecta"],
+    ["official_archive ", "legacy_pre_trifecta"],
+    ["official_archive", " legacy_pre_trifecta"],
+    ["official_archive", "legacy_pre_trifecta "],
   ] as const) {
     const db = fixture(sourceKind, sourceSchemaVersion);
     try {
