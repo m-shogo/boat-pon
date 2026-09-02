@@ -101,6 +101,26 @@ test("deriveSettlementCandidates: unknown venue / out-of-range raceNo excluded",
   )).length, 0);
 });
 
+test("deriveSettlementCandidates: payout metadata drift is excluded", () => {
+  for (const drift of [
+    { date: "2020-05-02" },
+    { venue: "尼崎" },
+    { raceNo: 2 },
+  ] as Array<Partial<RacePayout>>) {
+    assert.equal(deriveSettlementCandidates(parsed(
+      [condition()],
+      [payout("trifecta", "1-2-3", drift)],
+    )).length, 0);
+  }
+});
+
+test("deriveSettlementCandidates: conflicting conditions sharing one raceId are excluded", () => {
+  assert.equal(deriveSettlementCandidates(parsed(
+    [condition(), condition({ date: "2020-05-02" })],
+    [payout("trifecta", "1-2-3")],
+  )).length, 0);
+});
+
 function v2(status: DerivedCandidate["status"], resultKind: DerivedCandidate["resultKind"]): DerivedCandidate {
   return {
     raceKey: "2020-05-01:12:R1", betType: "trifecta", status, resultKind,
