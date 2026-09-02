@@ -60,3 +60,19 @@ export function resolveN2SettlementReparseRawSchemaFamilies(
   }
   return familyByRaw;
 }
+
+export function resolveN2SettlementReparseRawAuthority(
+  rawDocumentId: string,
+  dateByRaw: ReadonlyMap<string, string>,
+  familyByRaw: ReadonlyMap<string, string>,
+): { date: string; family: string } | null {
+  const hasDate = dateByRaw.has(rawDocumentId);
+  const hasFamily = familyByRaw.has(rawDocumentId);
+  if (!hasDate && !hasFamily) return null;
+  if (!hasDate) throw new Error(`REPARSE_RAW_DATE_MISSING:${rawDocumentId}`);
+  if (!hasFamily) throw new Error(`REPARSE_RAW_SCHEMA_FAMILY_MISSING:${rawDocumentId}`);
+  return {
+    date: dateByRaw.get(rawDocumentId)!,
+    family: familyByRaw.get(rawDocumentId)!,
+  };
+}

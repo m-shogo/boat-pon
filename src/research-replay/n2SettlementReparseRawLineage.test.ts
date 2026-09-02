@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  resolveN2SettlementReparseRawAuthority,
   resolveN2SettlementReparseRawDates,
   resolveN2SettlementReparseRawSchemaFamilies,
 } from "./n2SettlementReparseRawLineage";
@@ -61,5 +62,23 @@ test("reparse raw schema lineage fails closed when a raw has no candidate family
   assert.throws(
     () => families.get("raw-missing"),
     /REPARSE_RAW_SCHEMA_FAMILY_MISSING:raw-missing/,
+  );
+});
+
+test("reparse raw authority requires paired date and schema-family lineage", () => {
+  const dates = new Map([["raw-1", "2026-08-01"]]);
+  const families = new Map([["raw-1", "modern_seven_display"]]);
+  assert.deepEqual(resolveN2SettlementReparseRawAuthority("raw-1", dates, families), {
+    date: "2026-08-01",
+    family: "modern_seven_display",
+  });
+  assert.equal(resolveN2SettlementReparseRawAuthority("raw-unrelated", dates, families), null);
+  assert.throws(
+    () => resolveN2SettlementReparseRawAuthority("raw-family-only", new Map(), new Map([["raw-family-only", "modern_seven_display"]])),
+    /REPARSE_RAW_DATE_MISSING:raw-family-only/,
+  );
+  assert.throws(
+    () => resolveN2SettlementReparseRawAuthority("raw-date-only", new Map([["raw-date-only", "2026-08-01"]]), new Map()),
+    /REPARSE_RAW_SCHEMA_FAMILY_MISSING:raw-date-only/,
   );
 });
