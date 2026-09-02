@@ -234,6 +234,32 @@ export function readCleanTrifectaWinners(input: {
         blockers: [`${supersessionCycle.raceKey}:SETTLEMENT_SUPERSESSION_CYCLE_INVALID:${supersessionCycle.candidateId}`],
       };
     }
+    const supersessionBranching = db.prepare(`
+      SELECT prior.candidate_id AS candidateId,
+             prior.canonical_race_key AS raceKey
+      FROM settlement_candidates_v2 prior
+      JOIN settlement_candidates_v2 newer
+        ON newer.supersedes_candidate_id=prior.candidate_id
+      WHERE (
+          (substr(prior.canonical_race_key,1,10) >= ? AND substr(prior.canonical_race_key,1,10) <= ?)
+          OR (substr(newer.canonical_race_key,1,10) >= ? AND substr(newer.canonical_race_key,1,10) <= ?)
+        )
+      GROUP BY prior.candidate_id,prior.canonical_race_key
+      HAVING COUNT(*) > 1
+      ORDER BY prior.canonical_race_key,prior.candidate_id
+      LIMIT 1
+    `).get(
+      input.fromDate,
+      input.toDate,
+      input.fromDate,
+      input.toDate,
+    ) as { candidateId: string; raceKey: string } | undefined;
+    if (supersessionBranching) {
+      return {
+        rows: [],
+        blockers: [`${supersessionBranching.raceKey}:SETTLEMENT_SUPERSESSION_BRANCHING_INVALID:${supersessionBranching.candidateId}`],
+      };
+    }
     const payoutBetLineageRows = db.prepare(`
       SELECT c.canonical_race_key AS raceKey,
              c.candidate_id AS candidateId,
