@@ -22,7 +22,7 @@ test("source duplicate evidence rejects malformed empty authority schema", () =>
   }
 });
 
-test("source duplicate evidence accepts empty semantic authority schema", () => {
+test("source duplicate evidence rejects column-shaped schema without canonical migration authority", () => {
   const db = new DatabaseSync(":memory:");
   try {
     db.exec(`
@@ -42,7 +42,10 @@ test("source duplicate evidence accepts empty semantic authority schema", () => 
       );
     `);
 
-    assert.deepEqual([...readCurrentlyValidSourceDuplicateObservationIds(db)], []);
+    assert.throws(
+      () => readCurrentlyValidSourceDuplicateObservationIds(db),
+      /SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_SCHEMA_INVALID/,
+    );
   } finally {
     db.close();
   }
