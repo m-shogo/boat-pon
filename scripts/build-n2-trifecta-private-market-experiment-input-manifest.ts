@@ -2,9 +2,11 @@ import { resolve } from "node:path";
 
 import {
   buildN2TrifectaPrivateMarketExperimentInputManifest,
-  writeN2TrifectaPrivateMarketExperimentInputManifest,
   type N2TrifectaExperimentInputScope,
 } from "../src/research-replay/n2TrifectaPrivateMarketExperimentInputManifest";
+import {
+  writeVerifiedN2TrifectaPrivateMarketExperimentInputManifest,
+} from "../src/research-replay/n2TrifectaPrivateMarketExperimentInputManifestWriteBoundary";
 
 function repeatedArgument(name: string): string[] {
   const values: string[] = [];
@@ -45,7 +47,7 @@ const rootDir = resolve(process.env.BOAT_PON_DATA_ROOT?.trim() || process.cwd())
 const writePrivate = process.argv.includes("--write-private");
 const manifest = buildN2TrifectaPrivateMarketExperimentInputManifest({ rootDir, scopes });
 const writeResult = writePrivate
-  ? writeN2TrifectaPrivateMarketExperimentInputManifest({ rootDir, manifest })
+  ? writeVerifiedN2TrifectaPrivateMarketExperimentInputManifest({ rootDir, manifest })
   : null;
 
 // Stdout contains lineage/cohort metadata only; feature vectors and labels stay unread here.
