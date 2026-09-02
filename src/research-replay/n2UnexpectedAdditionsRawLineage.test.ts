@@ -48,7 +48,7 @@ test("unexpected additions raw lineage fails closed on missing, blank, noncanoni
     "modern_seven_display",
   );
   assert.throws(
-    () => resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display", "legacy_six_display"]),
-    /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_AMBIGUOUS:legacy_six_display:modern_seven_display/,
+    () => resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display", "legacy_pre_trifecta"]),
+    /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_AMBIGUOUS:legacy_pre_trifecta:modern_seven_display/,
   );
 });
