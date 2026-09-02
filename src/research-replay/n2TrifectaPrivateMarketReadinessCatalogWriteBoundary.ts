@@ -22,6 +22,33 @@ export function canonicalReadinessCatalogGeneratedAt(input: string | null, now: 
   }
 }
 
+function isCanonicalInstant(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    return canonicalUtcTimestamp(value) === value;
+  } catch {
+    return false;
+  }
+}
+
+function hasValidScopeAuthority(entries: unknown, entryCount: unknown): boolean {
+  if (!Number.isSafeInteger(entryCount) || (entryCount as number) < 0
+    || !Array.isArray(entries) || entries.length !== entryCount) return false;
+  const scopes = new Set<string>();
+  for (const value of entries) {
+    if (typeof value !== "object" || value == null || Array.isArray(value)) return false;
+    const entry = value as Record<string, unknown>;
+    if (typeof entry.date !== "string" || !DATE_RE.test(entry.date)
+      || typeof entry.venueCode !== "string" || !VENUE_RE.test(entry.venueCode)
+      || !isCanonicalInstant(entry.latestCheckedAt)
+      || !Number.isSafeInteger(entry.scopeArtifactCount) || (entry.scopeArtifactCount as number) < 1) return false;
+    const scope = `${entry.date}|${entry.venueCode}`;
+    if (scopes.has(scope)) return false;
+    scopes.add(scope);
+  }
+  return true;
+}
+
 function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalog): void {
   if (catalog.catalogVersion !== N2_TRIFECTA_PRIVATE_MARKET_READINESS_CATALOG_VERSION
     || catalog.evidenceRole !== "EXPLORATION_READINESS_CATALOG_ONLY") {
@@ -45,14 +72,9 @@ function requireProducerBoundary(catalog: N2TrifectaPrivateMarketReadinessCatalo
     || catalog.productionApplyAuthorized !== false) {
     throw new Error("READINESS_CATALOG_WRITE_PROTECTED_BOUNDARY_INVALID");
   }
-}
-
-function isCanonicalInstant(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  try {
-    return canonicalUtcTimestamp(value) === value;
-  } catch {
-    return false;
+  if (!Number.isSafeInteger(catalog.sourceArtifactCount) || catalog.sourceArtifactCount < 0
+    || !hasValidScopeAuthority(catalog.entries, catalog.entryCount)) {
+    throw new Error("READINESS_CATALOG_WRITE_SCOPE_AUTHORITY_INVALID");
   }
 }
 
@@ -65,20 +87,7 @@ function asExistingCatalog(value: unknown): N2TrifectaPrivateMarketReadinessCata
   const { catalogDigest, ...core } = record;
   if (canonicalHash(core) !== catalogDigest) return null;
   if (!Number.isSafeInteger(record.sourceArtifactCount) || (record.sourceArtifactCount as number) < 0
-    || !Number.isSafeInteger(record.entryCount) || (record.entryCount as number) < 0
-    || !Array.isArray(record.entries) || record.entries.length !== record.entryCount) return null;
-  const scopes = new Set<string>();
-  for (const value of record.entries) {
-    if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
-    const entry = value as Record<string, unknown>;
-    if (typeof entry.date !== "string" || !DATE_RE.test(entry.date)
-      || typeof entry.venueCode !== "string" || !VENUE_RE.test(entry.venueCode)
-      || !isCanonicalInstant(entry.latestCheckedAt)
-      || !Number.isSafeInteger(entry.scopeArtifactCount) || (entry.scopeArtifactCount as number) < 1) return null;
-    const scope = `${entry.date}|${entry.venueCode}`;
-    if (scopes.has(scope)) return null;
-    scopes.add(scope);
-  }
+    || !hasValidScopeAuthority(record.entries, record.entryCount)) return null;
   return record as unknown as N2TrifectaPrivateMarketReadinessCatalog;
 }
 
