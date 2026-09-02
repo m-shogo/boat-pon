@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { settlementCandidateSemanticHashValid } from "../src/research-replay/n1SettlementCandidateSemanticHash";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import { classifyEligibility, N2_DATASET_CONTRACT_VERSION } from "../src/research-replay/n2DatasetContract";
 import {
@@ -24,6 +25,25 @@ function main(): void {
   const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
   // Fail closed before any profile/query output if append-only duplicate-resolution evidence is stale or forged.
   readCurrentlyValidSourceDuplicateObservationIds(db);
+
+  // Profile/label output claims canonical active settlement authority, so validate every active non-duplicate
+  // candidate before any aggregate can hide a tampered semantic hash or invalid revision lineage.
+  const activeCanonicalCandidateIds = db.prepare(`
+    SELECT c.candidate_id AS candidateId
+    FROM settlement_candidates_v2 c
+    LEFT JOIN settlement_source_duplicate_resolutions_v2 r ON r.duplicate_observation_id = c.observation_id
+    WHERE r.duplicate_observation_id IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM settlement_candidates_v2 newer
+        WHERE newer.supersedes_candidate_id=c.candidate_id
+      )
+  `).all() as Array<{ candidateId: string }>;
+  for (const { candidateId } of activeCanonicalCandidateIds) {
+    if (!settlementCandidateSemanticHashValid(db, candidateId)) {
+      db.close();
+      throw new Error(`N2_DATASET_SETTLEMENT_SEMANTIC_INVALID:${candidateId}`);
+    }
+  }
 
   // 単一スキャンで year × bet_type × settlement_status × resolution_status × active/duplicate を集計。
   const rows = db.prepare(`
