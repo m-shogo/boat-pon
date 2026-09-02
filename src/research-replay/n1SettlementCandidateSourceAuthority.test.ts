@@ -5,6 +5,8 @@ import test from "node:test";
 import { canonicalHash } from "./canonical";
 import { settlementCandidateSemanticHashValid } from "./n1SettlementCandidateSemanticHash";
 
+const NOW = "2026-07-24T03:00:00.000Z";
+
 function fixture(sourceKind: string, sourceSchemaVersion: string): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   db.exec(`
@@ -15,11 +17,17 @@ function fixture(sourceKind: string, sourceSchemaVersion: string): DatabaseSync 
       settlement_status TEXT NOT NULL,
       result_kind TEXT NOT NULL,
       revision_kind TEXT NOT NULL,
+      resolution_status TEXT NOT NULL,
       source_kind TEXT NOT NULL,
       source_schema_version TEXT NOT NULL,
+      observation_id TEXT NOT NULL,
+      parse_run_id TEXT NOT NULL,
+      raw_document_id TEXT NOT NULL,
+      semantic_hash TEXT NOT NULL,
       supersedes_candidate_id TEXT,
       correction_reason TEXT,
-      semantic_hash TEXT NOT NULL
+      observed_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
     CREATE TABLE race_payout_lines_v2 (
       candidate_id TEXT NOT NULL,
@@ -52,9 +60,10 @@ function fixture(sourceKind: string, sourceSchemaVersion: string): DatabaseSync 
     payouts,
     refunds: [],
   });
-  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
-    "candidate", "2026-07-24:01:R1", "exacta", "settled", "normal", "initial",
-    sourceKind, sourceSchemaVersion, null, null, semanticHash,
+  db.prepare("INSERT INTO settlement_candidates_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(
+    "candidate", "2026-07-24:01:R1", "exacta", "settled", "normal", "initial", "resolved",
+    sourceKind, sourceSchemaVersion, "observation", "parse", "raw", semanticHash,
+    null, null, NOW, NOW,
   );
   db.prepare("INSERT INTO race_payout_lines_v2 VALUES (?,?,?,?,?,?,?,?,?)").run(
     "candidate", 1, "exacta", "1-2", "1-2", "1-2", 500, null, "payout",
