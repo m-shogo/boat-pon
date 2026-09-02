@@ -10,7 +10,10 @@ test("unexpected additions raw lineage requires canonical same-day race identiti
     "2026-05-03:01:R1",
     "2026-05-03:24:R12",
   ]), "2026-05-03");
-  assert.equal(resolveUnexpectedAdditionsRawDate([]), null);
+  assert.throws(
+    () => resolveUnexpectedAdditionsRawDate([]),
+    /N2_UNEXPECTED_ADDITIONS_RAW_RACE_IDENTITY_MISSING/,
+  );
 
   assert.throws(
     () => resolveUnexpectedAdditionsRawDate(["2026-05-32:01:R1"]),
