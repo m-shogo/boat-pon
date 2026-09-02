@@ -137,6 +137,11 @@ export function classifyPair(
   if (archive && !canonical) return "archive_only";
   if (!archive && canonical) return "canonical_only";
   if (!archive || !canonical) throw new Error("classifyPair requires at least one candidate");
+  if (archive.raceKey !== canonical.raceKey || archive.betType !== canonical.betType) {
+    throw new Error(
+      `ARCHIVE_RECONCILE_IDENTITY_MISMATCH:${archive.raceKey}:${archive.betType}:${canonical.raceKey}:${canonical.betType}`,
+    );
+  }
   if (archive.status !== canonical.status) return "status_mismatch";
   if (archive.resultKind !== canonical.resultKind) return "result_kind_mismatch";
   return "exact_match";
