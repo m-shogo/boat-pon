@@ -22,13 +22,20 @@ export function canonicalReadinessCatalogGeneratedAt(input: string | null, now: 
   }
 }
 
-function isCanonicalInstant(value: unknown): value is string {
-  if (typeof value !== "string") return false;
+function canonicalInstant(value: unknown): string | null {
+  if (typeof value !== "string") return null;
   try {
-    return canonicalUtcTimestamp(value) === value;
+    const canonical = canonicalUtcTimestamp(value);
+    return canonical === value ? canonical : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function jstDate(value: string): string | null {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return null;
+  return new Date(parsed + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
 }
 
 function hasValidScopeAuthority(entries: unknown, entryCount: unknown, sourceArtifactCount: unknown): boolean {
@@ -40,9 +47,10 @@ function hasValidScopeAuthority(entries: unknown, entryCount: unknown, sourceArt
   for (const value of entries) {
     if (typeof value !== "object" || value == null || Array.isArray(value)) return false;
     const entry = value as Record<string, unknown>;
+    const latestCheckedAt = canonicalInstant(entry.latestCheckedAt);
     if (typeof entry.date !== "string" || !DATE_RE.test(entry.date)
+      || latestCheckedAt == null || jstDate(latestCheckedAt) !== entry.date
       || typeof entry.venueCode !== "string" || !VENUE_RE.test(entry.venueCode)
-      || !isCanonicalInstant(entry.latestCheckedAt)
       || !Number.isSafeInteger(entry.scopeArtifactCount) || (entry.scopeArtifactCount as number) < 1) return false;
     const scope = `${entry.date}|${entry.venueCode}`;
     if (scopes.has(scope)) return false;
