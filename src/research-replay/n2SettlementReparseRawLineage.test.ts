@@ -39,19 +39,19 @@ test("reparse raw schema lineage resolves one family per raw", () => {
   const families = resolveN2SettlementReparseRawSchemaFamilies([
     { rid: "raw-1", fam: "modern_seven_display" },
     { rid: "raw-1", fam: "modern_seven_display" },
-    { rid: "raw-2", fam: "legacy_six_display" },
+    { rid: "raw-2", fam: "legacy_pre_trifecta" },
   ]);
   assert.equal(families.get("raw-1"), "modern_seven_display");
-  assert.equal(families.get("raw-2"), "legacy_six_display");
+  assert.equal(families.get("raw-2"), "legacy_pre_trifecta");
 });
 
 test("reparse raw schema lineage rejects conflicting families", () => {
   assert.throws(
     () => resolveN2SettlementReparseRawSchemaFamilies([
       { rid: "raw-1", fam: "modern_seven_display" },
-      { rid: "raw-1", fam: "legacy_six_display" },
+      { rid: "raw-1", fam: "legacy_pre_trifecta" },
     ]),
-    /REPARSE_RAW_SCHEMA_FAMILY_AMBIGUOUS:raw-1:legacy_six_display:modern_seven_display/,
+    /REPARSE_RAW_SCHEMA_FAMILY_AMBIGUOUS:raw-1:legacy_pre_trifecta:modern_seven_display/,
   );
 });
 
