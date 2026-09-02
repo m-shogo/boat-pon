@@ -21,7 +21,10 @@ import { parseOfficialResultDetail } from "../src/domain/officialResultDetailPar
 import { canonicalHash, canonicalUtcTimestamp } from "../src/research-replay/canonical";
 import { listArchiveFiles } from "../src/research-replay/n1Backfill";
 import { assertN2SettlementReparseArchiveSelection } from "../src/research-replay/n2SettlementReparseArchiveSelection";
-import { resolveN2SettlementReparseRawDates } from "../src/research-replay/n2SettlementReparseRawLineage";
+import {
+  resolveN2SettlementReparseRawDates,
+  resolveN2SettlementReparseRawSchemaFamilies,
+} from "../src/research-replay/n2SettlementReparseRawLineage";
 import { SettlementRepository } from "../src/research-replay/settlement";
 import {
   assertN2SettlementReparseCheckpointIdentity,
@@ -162,10 +165,10 @@ function loadRawMaps(db: DatabaseSync): { byHash: Map<string, RawMeta>; sourceDu
     "SELECT raw_document_id AS rid, canonical_race_key AS k FROM domain_observations ORDER BY raw_document_id, canonical_race_key",
   ).all() as Array<{ rid: string; k: string }>;
   const dateByRaw = resolveN2SettlementReparseRawDates(observationRows);
-  const familyByRaw = new Map<string, string>();
-  for (const r of db.prepare("SELECT raw_document_id AS rid, source_schema_version AS fam FROM settlement_candidates_v2 GROUP BY raw_document_id").all() as Array<{ rid: string; fam: string }>) {
-    familyByRaw.set(r.rid, r.fam);
-  }
+  const familyRows = db.prepare(
+    "SELECT raw_document_id AS rid, source_schema_version AS fam FROM settlement_candidates_v2 ORDER BY raw_document_id, source_schema_version",
+  ).all() as Array<{ rid: string; fam: string }>;
+  const familyByRaw = resolveN2SettlementReparseRawSchemaFamilies(familyRows);
   const byHash = new Map<string, RawMeta>();
   for (const r of db.prepare("SELECT raw_document_id AS rid, raw_sha256 AS h FROM raw_documents").all() as Array<{ rid: string; h: string }>) {
     const date = dateByRaw.get(r.rid);
