@@ -9,6 +9,7 @@ import { initializeSidecarSchema, openSidecarDatabase } from "./schema";
 import {
   initializeN1CanonicalResolutionSchema,
   initializeN1SettlementSchema,
+  SettlementRepository,
 } from "./settlement";
 import {
   auditCanonicalDuplicates,
@@ -66,6 +67,31 @@ function insertObservation(input: {
     );
 }
 
+function insertSettlementCandidate(input: {
+  db: ReturnType<typeof openSidecarDatabase>;
+  observationId: string;
+  rawDocumentId: string;
+  parseRunId: string;
+}): void {
+  const settlement = new SettlementRepository(input.db, () => `candidate-${input.observationId}`);
+  settlement.appendCandidate({
+    canonicalRaceKey: RACE_KEY,
+    betType: "win",
+    settlementStatus: "settled",
+    resultKind: "normal",
+    revisionKind: "initial",
+    resolutionStatus: "resolved",
+    sourceKind: "official_archive",
+    sourceSchemaVersion: "scope-v1",
+    observationId: input.observationId,
+    parseRunId: input.parseRunId,
+    rawDocumentId: input.rawDocumentId,
+    observedAt: NOW,
+    payouts: [{ selection: "1", payoutYen: 100 }],
+    emitEvidencePins: false,
+  });
+}
+
 test("N1 canonical duplicate resolution ignores non-settlement observations on the same race", () => {
   const { db, rawDocumentId, parseRunId } = setup();
   insertObservation({ db, observationId: "program-1", observationType: "official_program", rawDocumentId, parseRunId });
@@ -90,7 +116,9 @@ test("N1 canonical duplicate resolution ignores non-settlement observations on t
   });
   assert.equal(detectExactDuplicateObservationsInRaw(db, rawDocumentId).length, 0);
 
+  insertSettlementCandidate({ db, observationId: "settlement-1", rawDocumentId, parseRunId });
   insertObservation({ db, observationId: "settlement-2", observationType: "settlement_result", rawDocumentId, parseRunId });
+  insertSettlementCandidate({ db, observationId: "settlement-2", rawDocumentId, parseRunId });
   const after = planSourceDuplicateResolution(db);
   assert.equal(after.duplicatedRaces, 1);
   assert.equal(after.plannedResolutions.length, 1);

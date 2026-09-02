@@ -8,7 +8,11 @@ import { planSourceDuplicateResolution } from "./n1CanonicalResolution";
 import { RawStore } from "./rawStore";
 import { ResearchReplayRepository } from "./repository";
 import { initializeSidecarSchema, openSidecarDatabase } from "./schema";
-import { initializeN1CanonicalResolutionSchema, initializeN1SettlementSchema } from "./settlement";
+import {
+  initializeN1CanonicalResolutionSchema,
+  initializeN1SettlementSchema,
+  SettlementRepository,
+} from "./settlement";
 
 const NOW = "2026-08-21T12:00:00.000Z";
 const RACE = "2026-08-21:05:R3";
@@ -50,14 +54,42 @@ function insertObservation(input: {
     .run(input.observationId, RACE, input.parseRunId, input.rawDocumentId, NOW, NOW, `${input.observationId}-hash`, NOW, NOW, NOW);
 }
 
+function insertSettlementCandidate(input: {
+  db: ReturnType<typeof openSidecarDatabase>;
+  observationId: string;
+  rawDocumentId: string;
+  parseRunId: string;
+}): void {
+  const settlement = new SettlementRepository(input.db, () => `candidate-${input.observationId}`);
+  settlement.appendCandidate({
+    canonicalRaceKey: RACE,
+    betType: "win",
+    settlementStatus: "settled",
+    resultKind: "normal",
+    revisionKind: "initial",
+    resolutionStatus: "resolved",
+    sourceKind: "official_archive",
+    sourceSchemaVersion: "scope-v1",
+    observationId: input.observationId,
+    parseRunId: input.parseRunId,
+    rawDocumentId: input.rawDocumentId,
+    observedAt: NOW,
+    payouts: [{ selection: "1", payoutYen: 100 }],
+    emitEvidencePins: false,
+  });
+}
+
 test("source duplicate planning isolates duplicate groups by raw document", () => {
   const { db, rawA, rawB } = setup();
   insertParseRun(db, rawA, "parse-a");
   insertParseRun(db, rawB, "parse-b");
 
   insertObservation({ db, observationId: "a-1", rawDocumentId: rawA, parseRunId: "parse-a" });
+  insertSettlementCandidate({ db, observationId: "a-1", rawDocumentId: rawA, parseRunId: "parse-a" });
   insertObservation({ db, observationId: "a-2", rawDocumentId: rawA, parseRunId: "parse-a" });
+  insertSettlementCandidate({ db, observationId: "a-2", rawDocumentId: rawA, parseRunId: "parse-a" });
   insertObservation({ db, observationId: "b-1", rawDocumentId: rawB, parseRunId: "parse-b" });
+  insertSettlementCandidate({ db, observationId: "b-1", rawDocumentId: rawB, parseRunId: "parse-b" });
 
   const plan = planSourceDuplicateResolution(db);
   assert.equal(plan.duplicatedRaces, 1);
