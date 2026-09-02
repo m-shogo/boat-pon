@@ -110,12 +110,16 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
   const hasRevisionLineage = tableHasColumns(db, "settlement_candidates_v2", [
     "canonical_race_key", "revision_kind", "supersedes_candidate_id", "correction_reason",
   ]);
+  const hasSourceKind = tableHasColumns(db, "settlement_candidates_v2", ["source_kind"]);
+  const hasSourceSchemaVersion = tableHasColumns(db, "settlement_candidates_v2", ["source_schema_version"]);
+  const hasCurrentSourceAuthority = hasSourceKind && hasSourceSchemaVersion;
   const hasCurrentRevisionAuthorityMarker = CURRENT_REVISION_AUTHORITY_MARKERS.some((column) =>
     tableHasColumns(db, "settlement_candidates_v2", [column]));
   const hasCurrentLineCouplingMarker = CURRENT_LINE_COUPLING_MARKERS.some((column) =>
     tableHasColumns(db, "settlement_candidates_v2", [column]));
   if ((hasCurrentRevisionAuthorityMarker && !hasRevisionLineage)
     || hasRevisionKind !== hasRevisionLineage) return false;
+  if (hasSourceKind !== hasSourceSchemaVersion) return false;
   if (hasCurrentLineCouplingMarker
     && (!tableHasColumns(db, "race_payout_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS)
       || !tableHasColumns(db, "race_refund_lines_v2", CURRENT_LINE_IDENTITY_COLUMNS))) return false;
@@ -128,6 +132,8 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
            ${hasRevisionKind ? "revision_kind" : "NULL"} AS revisionKind,
            ${hasRevisionLineage ? "supersedes_candidate_id" : "NULL"} AS supersedesCandidateId,
            ${hasRevisionLineage ? "correction_reason" : "NULL"} AS correctionReason,
+           ${hasCurrentSourceAuthority ? "source_kind" : "NULL"} AS sourceKind,
+           ${hasCurrentSourceAuthority ? "source_schema_version" : "NULL"} AS sourceSchemaVersion,
            semantic_hash AS semanticHash
     FROM settlement_candidates_v2
     WHERE candidate_id=?
@@ -139,9 +145,13 @@ export function settlementCandidateSemanticHashValid(db: DatabaseSync, candidate
     revisionKind: string | null;
     supersedesCandidateId: string | null;
     correctionReason: string | null;
+    sourceKind: string | null;
+    sourceSchemaVersion: string | null;
     semanticHash: string;
   } | undefined;
   if (!candidate) return false;
+  if (hasCurrentSourceAuthority
+    && (!candidate.sourceKind?.trim() || !candidate.sourceSchemaVersion?.trim())) return false;
   if (!SETTLEMENT_STATUS_SET.has(candidate.settlementStatus)
     || !RESULT_KIND_SET.has(candidate.resultKind)
     || (hasRevisionKind && (candidate.revisionKind === null || !REVISION_KIND_SET.has(candidate.revisionKind)))) {
