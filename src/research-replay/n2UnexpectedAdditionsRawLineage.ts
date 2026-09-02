@@ -1,6 +1,10 @@
 import { parseCanonicalRaceKey } from "./identity";
 
-export function resolveUnexpectedAdditionsRawDate(raceKeys: string[]): string | null {
+export function resolveUnexpectedAdditionsRawDate(raceKeys: string[]): string {
+  if (raceKeys.length === 0) {
+    throw new Error("N2_UNEXPECTED_ADDITIONS_RAW_RACE_IDENTITY_MISSING");
+  }
+
   let date: string | null = null;
   for (const raceKey of raceKeys) {
     let parsed;
@@ -14,7 +18,7 @@ export function resolveUnexpectedAdditionsRawDate(raceKeys: string[]): string | 
     }
     date = parsed.raceDateJst;
   }
-  return date;
+  return date!;
 }
 
 export function resolveUnexpectedAdditionsSourceSchemaFamily(families: string[]): string {
