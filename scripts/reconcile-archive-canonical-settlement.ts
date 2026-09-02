@@ -16,6 +16,7 @@ import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { fileDate, listArchiveFiles } from "../src/research-replay/n1Backfill";
+import { settlementCandidateSemanticHashValid } from "../src/research-replay/n1SettlementCandidateSemanticHash";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import {
   ARCHIVE_RECONCILE_CHECKPOINT_VERSION,
@@ -103,7 +104,6 @@ function unpack(path: string): Promise<Buffer> {
   });
 }
 
-// ---- 集計器（year × bet_type × venue × class）----
 type Cell = Record<ReconcileClass, number> & { falseRefund: number };
 const RECONCILE_CLASSES: ReconcileClass[] = [
   "exact_match", "status_mismatch", "result_kind_mismatch",
@@ -116,11 +116,9 @@ function emptyCell(): Cell {
 }
 
 type Aggregate = {
-  // 集計 key: `${year}\u0000${betType}\u0000${venueName}` → Cell
   cells: Map<string, Cell>;
-  // canonical_only を dbActive − paired で導出するための paired 数（同一 key 空間）
   paired: Map<string, number>;
-  statusMatrix: Map<string, number>; // `${canonicalStatus}->${archiveStatus}` → count（status_mismatch のみ）
+  statusMatrix: Map<string, number>;
   samples: SampleRow[];
   processedFiles: string[];
   parseErrors: Array<{ file: string; error: string }>;
@@ -166,7 +164,6 @@ function serializedAggregateState(agg: Aggregate): Record<string, unknown> {
   };
 }
 
-// checkpoint シリアライズ（Map → 配列、決定的順序）。
 function serializeAggregate(agg: Aggregate, checkpointContract: ArchiveReconcileCheckpointContract): unknown {
   const state = serializedAggregateState(agg);
   return {
@@ -204,10 +201,9 @@ function loadAggregate(path: string, expectedContract: ArchiveReconcileCheckpoin
   return agg;
 }
 
-// ---- canonical DB 側 active candidate を streaming で読み込み、in-memory map を構築 ----
 type DbSide = {
   map: Map<string, { status: SettlementStatus; resultKind: ResultKind }>;
-  dbActive: Map<string, number>;       // aggKey → active candidate 数
+  dbActive: Map<string, number>;
   ambiguousKeys: Set<string>;
   activeCandidateCount: number;
   totalCandidateCount: number;
@@ -221,7 +217,6 @@ function loadDbSide(): DbSide {
   const db = new DatabaseSync(uri, { readOnly: true } as never);
   try {
     db.exec("PRAGMA query_only=ON");
-    // schema version の fail-closed 検証
     const migrations = db.prepare(
       "SELECT migration_version FROM n1_schema_migrations WHERE status='applied' ORDER BY rowid",
     ).all() as Array<{ migration_version: string }>;
@@ -231,9 +226,7 @@ function loadDbSide(): DbSide {
         `settlement schema mismatch: expected ${EXPECTED_SETTLEMENT_SCHEMA_VERSION}, got ${schemaVersion}`,
       );
     }
-    // source-duplicate observation（active から除外する）
     const sourceDup = readCurrentlyValidSourceDuplicateObservationIds(db);
-    // superseded candidate（active から除外する）
     const superseded = new Set<string>();
     for (const row of db.prepare(
       "SELECT DISTINCT supersedes_candidate_id AS id FROM settlement_candidates_v2 WHERE supersedes_candidate_id IS NOT NULL",
@@ -258,6 +251,9 @@ function loadDbSide(): DbSide {
       if (sourceDup.has(row.observation_id)) continue;
       if (superseded.has(row.candidate_id)) continue;
       if (!BET_TYPE_SET.has(row.bet_type)) continue;
+      if (!settlementCandidateSemanticHashValid(db, row.candidate_id)) {
+        throw new Error(`N2_ARCHIVE_CANONICAL_SETTLEMENT_SEMANTIC_INVALID:${row.candidate_id}`);
+      }
       const betType = row.bet_type as SettlementBetType;
       const key = candidateKey(row.canonical_race_key, betType);
       const status = row.settlement_status as SettlementStatus;
@@ -279,7 +275,6 @@ function loadDbSide(): DbSide {
   }
 }
 
-// ---- archive 側 1 file を parse して candidate を導出 ----
 type FileParse = { file: string; candidates: ArchiveCandidate[]; error: string | null };
 async function parseArchiveFile(path: string): Promise<FileParse> {
   const file = basename(path);
@@ -365,7 +360,6 @@ async function main(): Promise<void> {
       const index = cursor++;
       const result = await parseArchiveFile(pending[index]);
       if (result.error) {
-        // parse 失敗は fail-closed: 成功扱いにせず parse_failure として明示記録。
         agg.parseErrors.push({ file: result.file, error: result.error.slice(0, 300) });
         const year = fileDate(pending[index]).slice(0, 4);
         cellOf(agg, aggKey(year, "-", "-")).parse_failure += 1;
@@ -384,7 +378,6 @@ async function main(): Promise<void> {
   await Promise.all(Array.from({ length: inFlight }, () => worker()));
   writeFileSync(checkpointPath, `${JSON.stringify(serializeAggregate(agg, checkpointContract))}\n`);
 
-  // canonical_only を dbActive − paired で導出し、cell へ反映する。
   for (const [key, active] of db.dbActive) {
     const paired = agg.paired.get(key) ?? 0;
     const canonicalOnly = active - paired;
@@ -394,7 +387,6 @@ async function main(): Promise<void> {
     if (canonicalOnly > 0) cellOf(agg, key).canonical_only += canonicalOnly;
   }
 
-  // ---- 集計 rollup ----
   const totals = emptyCell();
   const byYear = new Map<string, Cell>();
   const byBetType = new Map<string, Cell>();
@@ -426,7 +418,6 @@ async function main(): Promise<void> {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([transition, count]) => ({ transition, count }));
 
-  // 決定的 digest（runtime timestamp を含めない）。
   const digestBody = {
     reportSchemaVersion: REPORT_SCHEMA_VERSION,
     reconcileInputVersion: RECONCILE_INPUT_VERSION,
