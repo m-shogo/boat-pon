@@ -16,7 +16,10 @@ import {
   selectUnexpectedAdditionsArchives,
 } from "../src/research-replay/n2UnexpectedAdditionsArchiveSelection";
 import { isUnexpectedAdditionsRawEligible } from "../src/research-replay/n2UnexpectedAdditionsRawEligibility";
-import { resolveUnexpectedAdditionsRawDate } from "../src/research-replay/n2UnexpectedAdditionsRawLineage";
+import {
+  resolveUnexpectedAdditionsRawDate,
+  resolveUnexpectedAdditionsSourceSchemaFamily,
+} from "../src/research-replay/n2UnexpectedAdditionsRawLineage";
 import { classifyUnexpectedAddition, deriveSettlementCandidates, decideReparseAction, candidateKey } from "../src/research-replay/n2SettlementReparse";
 import type { ResultKind, SettlementBetType, SettlementStatus } from "../src/research-replay/settlement";
 import { loadActiveState, loadSourceDuplicateSet, type RawMeta } from "../src/research-replay/n2SettlementReparseEngine";
@@ -54,9 +57,13 @@ function loadRawMaps(db: DatabaseSync): { byHash: Map<string, RawMeta>; sourceDu
     if (keys) keys.push(r.k);
     else raceKeysByRaw.set(r.rid, [r.k]);
   }
-  const familyByRaw = new Map<string, string>();
-  for (const r of db.prepare("SELECT raw_document_id AS rid, source_schema_version AS fam FROM settlement_candidates_v2 GROUP BY raw_document_id").all() as Array<{ rid: string; fam: string }>) {
-    familyByRaw.set(r.rid, r.fam);
+  const familiesByRaw = new Map<string, string[]>();
+  for (const r of db.prepare(
+    "SELECT raw_document_id AS rid, source_schema_version AS fam FROM settlement_candidates_v2 ORDER BY raw_document_id, source_schema_version",
+  ).all() as Array<{ rid: string; fam: string }>) {
+    const families = familiesByRaw.get(r.rid);
+    if (families) families.push(r.fam);
+    else familiesByRaw.set(r.rid, [r.fam]);
   }
   const byHash = new Map<string, RawMeta>();
   for (const r of db.prepare(
@@ -64,7 +71,8 @@ function loadRawMaps(db: DatabaseSync): { byHash: Map<string, RawMeta>; sourceDu
   ).all() as Array<{ rid: string; h: string; integrityStatus: string; securityScanStatus: string; parserReplayEligible: number }>) {
     if (!isUnexpectedAdditionsRawEligible(r)) continue;
     const date = resolveUnexpectedAdditionsRawDate(raceKeysByRaw.get(r.rid) ?? []);
-    if (date) byHash.set(r.h, { rawDocumentId: r.rid, date, family: familyByRaw.get(r.rid) ?? "modern_seven_display" });
+    const family = resolveUnexpectedAdditionsSourceSchemaFamily(familiesByRaw.get(r.rid) ?? []) ?? "modern_seven_display";
+    if (date) byHash.set(r.h, { rawDocumentId: r.rid, date, family });
   }
   return { byHash, sourceDup };
 }
