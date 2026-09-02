@@ -201,6 +201,25 @@ function preflightActiveSettlementLineage(
       };
     }
 
+    const branchingSuperseders = db.prepare(`
+      SELECT prior.candidate_id AS candidateId
+      FROM settlement_candidates_v2 prior
+      JOIN settlement_candidates_v2 newer
+        ON newer.supersedes_candidate_id=prior.candidate_id
+      WHERE 1=1
+        ${supersessionRangeClause}
+      GROUP BY prior.candidate_id
+      HAVING COUNT(*) > 1
+      ORDER BY prior.candidate_id
+    `).all(...(bounds ? [bounds.fromRaceKey, bounds.toRaceKeyExclusive] : [])) as unknown as Array<{ candidateId: string }>;
+    if (branchingSuperseders.length > 0) {
+      return {
+        ok: false,
+        blocks: branchingSuperseders.map((row) => `${prefix}_SETTLEMENT_SUPERSESSION_BRANCHING_INVALID:${row.candidateId}`),
+        checkedCandidateCount: 0,
+      };
+    }
+
     const rangeClause = bounds
       ? "AND c.canonical_race_key >= ? AND c.canonical_race_key < ?"
       : "";
