@@ -16,6 +16,7 @@ import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { fileDate, listArchiveFiles } from "../src/research-replay/n1Backfill";
+import { settlementCandidateSemanticHashValid } from "../src/research-replay/n1SettlementCandidateSemanticHash";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import {
   ARCHIVE_RECONCILE_CHECKPOINT_VERSION,
@@ -258,6 +259,9 @@ function loadDbSide(): DbSide {
       if (sourceDup.has(row.observation_id)) continue;
       if (superseded.has(row.candidate_id)) continue;
       if (!BET_TYPE_SET.has(row.bet_type)) continue;
+      if (!settlementCandidateSemanticHashValid(db, row.candidate_id)) {
+        throw new Error(`N2_ARCHIVE_CANONICAL_SETTLEMENT_SEMANTIC_INVALID:${row.candidate_id}`);
+      }
       const betType = row.bet_type as SettlementBetType;
       const key = candidateKey(row.canonical_race_key, betType);
       const status = row.settlement_status as SettlementStatus;
