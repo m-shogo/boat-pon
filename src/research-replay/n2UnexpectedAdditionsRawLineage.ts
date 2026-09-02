@@ -17,10 +17,13 @@ export function resolveUnexpectedAdditionsRawDate(raceKeys: string[]): string | 
   return date;
 }
 
-export function resolveUnexpectedAdditionsSourceSchemaFamily(families: string[]): string | null {
+export function resolveUnexpectedAdditionsSourceSchemaFamily(families: string[]): string {
   const distinct = [...new Set(families)];
+  if (distinct.length === 0) {
+    throw new Error("N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_MISSING");
+  }
   if (distinct.length > 1) {
     throw new Error(`N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_AMBIGUOUS:${distinct.sort().join(":")}`);
   }
-  return distinct[0] ?? null;
+  return distinct[0];
 }
