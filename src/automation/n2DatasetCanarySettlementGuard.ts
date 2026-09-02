@@ -182,7 +182,7 @@ function preflightActiveSettlementLineage(
     }
 
     const supersessionRangeClause = bounds
-      ? "AND prior.canonical_race_key >= ? AND prior.canonical_race_key < ?"
+      ? "AND ((prior.canonical_race_key >= ?1 AND prior.canonical_race_key < ?2) OR (newer.canonical_race_key >= ?1 AND newer.canonical_race_key < ?2))"
       : "";
     const invalidSuperseders = db.prepare(`
       SELECT newer.candidate_id AS candidateId
