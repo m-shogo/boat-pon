@@ -11,7 +11,7 @@ test("edge discovery source fails closed on branching supersession before readin
   const root = mkdtempSync(join(tmpdir(), "boat-pon-edge-discovery-branching-"));
   const sidecarDbPath = join(root, "sidecar.sqlite");
   const db = new DatabaseSync(sidecarDbPath);
-  const raceKey = "2024-08-01:05:R1";
+  const raceKey = "2021-08-01:05:R1";
   try {
     db.exec(`
       CREATE TABLE raw_documents (
@@ -72,10 +72,10 @@ test("edge discovery source fails closed on branching supersession before readin
 
       INSERT INTO raw_documents VALUES ('raw-a','verified','passed',1);
       INSERT INTO parse_runs VALUES ('parse-a','raw-a','success');
-      INSERT INTO domain_observations VALUES ('obs-a','2024-08-01:05:R1','settlement_result','settlement_result','raw-a','parse-a');
-      INSERT INTO settlement_candidates_v2 VALUES ('ancestor','2024-08-01:05:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL);
-      INSERT INTO settlement_candidates_v2 VALUES ('branch-a','2024-08-01:05:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a','ancestor');
-      INSERT INTO settlement_candidates_v2 VALUES ('branch-b','2024-08-01:05:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a','ancestor');
+      INSERT INTO domain_observations VALUES ('obs-a','2021-08-01:05:R1','settlement_result','settlement_result','raw-a','parse-a');
+      INSERT INTO settlement_candidates_v2 VALUES ('ancestor','2021-08-01:05:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL);
+      INSERT INTO settlement_candidates_v2 VALUES ('branch-a','2021-08-01:05:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a','ancestor');
+      INSERT INTO settlement_candidates_v2 VALUES ('branch-b','2021-08-01:05:R1','trifecta','settled','normal','resolved','obs-a','parse-a','raw-a','ancestor');
     `);
     db.close();
 
