@@ -31,7 +31,7 @@ function rehash(catalog: N2TrifectaPrivateMarketReadinessCatalog): void {
   record.catalogDigest = canonicalHash(core);
 }
 
-function entry(latestCheckedAt: string): N2TrifectaPrivateMarketReadinessCatalogEntry {
+function entry(latestCheckedAt: string, scopeArtifactCount = 1): N2TrifectaPrivateMarketReadinessCatalogEntry {
   return {
     date: "2026-08-19",
     venueCode: "01",
@@ -52,7 +52,7 @@ function entry(latestCheckedAt: string): N2TrifectaPrivateMarketReadinessCatalog
     heartbeatAffectedCheckpointCount: 0,
     heartbeatCurrentGapOverThreshold: false,
     heartbeatPlanStatus: "PASS",
-    scopeArtifactCount: 1,
+    scopeArtifactCount,
   };
 }
 
@@ -146,13 +146,37 @@ test("rehashed producer with noncanonical scope timestamp fails closed before pe
   });
 });
 
+test("rehashed producer cannot detach source artifact count from scope totals", () => {
+  withRoot((root) => {
+    const catalog = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:00:00.000Z",
+    });
+    catalog.entries = [entry("2026-08-19T00:00:00.000Z", 2)];
+    catalog.sourceArtifactCount = 1;
+    catalog.entryCount = 1;
+    catalog.earliestDate = "2026-08-19";
+    catalog.latestDate = "2026-08-19";
+    rehash(catalog);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog }),
+      /READINESS_CATALOG_WRITE_SCOPE_AUTHORITY_INVALID/u,
+    );
+  });
+});
+
 test("digest-valid existing catalog cannot be replaced by lower append-only evidence count", () => {
   withRoot((root) => {
     const existing = buildN2TrifectaPrivateMarketReadinessCatalog({
       dataRoot: root,
       generatedAt: "2026-08-19T00:00:00.000Z",
     });
-    existing.sourceArtifactCount = 1;
+    existing.entries = [entry("2026-08-19T00:00:00.000Z", 2)];
+    existing.sourceArtifactCount = 2;
+    existing.entryCount = 1;
+    existing.earliestDate = "2026-08-19";
+    existing.latestDate = "2026-08-19";
     rehash(existing);
     const first = writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: existing });
     assert.equal(first.changed, true);
@@ -161,7 +185,12 @@ test("digest-valid existing catalog cannot be replaced by lower append-only evid
       dataRoot: root,
       generatedAt: "2026-08-19T00:10:00.000Z",
     });
-    assert.equal(regressed.sourceArtifactCount, 0);
+    regressed.entries = [entry("2026-08-19T00:05:00.000Z", 1)];
+    regressed.sourceArtifactCount = 1;
+    regressed.entryCount = 1;
+    regressed.earliestDate = "2026-08-19";
+    regressed.latestDate = "2026-08-19";
+    rehash(regressed);
     assert.throws(
       () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: regressed }),
       /READINESS_CATALOG_APPEND_ONLY_REGRESSION/u,
