@@ -140,6 +140,23 @@ test("classifyPair covers all pair classes", () => {
   assert.equal(classifyPair(null, canon("settled", "normal")), "canonical_only");
 });
 
+test("classifyPair rejects mismatched race or bet identity", () => {
+  assert.throws(
+    () => classifyPair(
+      arch("settled", "normal"),
+      { ...canon("settled", "normal"), raceKey: "2020-05-01:12:R2" },
+    ),
+    /ARCHIVE_RECONCILE_IDENTITY_MISMATCH/,
+  );
+  assert.throws(
+    () => classifyPair(
+      arch("settled", "normal"),
+      { ...canon("settled", "normal"), betType: "exacta" },
+    ),
+    /ARCHIVE_RECONCILE_IDENTITY_MISMATCH/,
+  );
+});
+
 test("isFalseRefundDirection: canonical refund vs archive settled", () => {
   assert.equal(isFalseRefundDirection(arch("settled", "normal"), canon("refunded", "normal")), true);
   assert.equal(isFalseRefundDirection(arch("settled", "normal"), canon("partially_refunded", "normal")), true);
