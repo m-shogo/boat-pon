@@ -55,6 +55,15 @@ test("reparse raw schema lineage rejects conflicting families", () => {
   );
 });
 
+test("reparse raw schema lineage rejects blank family authority", () => {
+  assert.throws(
+    () => resolveN2SettlementReparseRawSchemaFamilies([
+      { rid: "raw-blank", fam: "   " },
+    ]),
+    /REPARSE_RAW_SCHEMA_FAMILY_INVALID:raw-blank/,
+  );
+});
+
 test("reparse raw schema lineage fails closed when a raw has no candidate family authority", () => {
   const families = resolveN2SettlementReparseRawSchemaFamilies([
     { rid: "raw-1", fam: "modern_seven_display" },
