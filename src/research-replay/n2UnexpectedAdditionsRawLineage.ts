@@ -16,3 +16,11 @@ export function resolveUnexpectedAdditionsRawDate(raceKeys: string[]): string | 
   }
   return date;
 }
+
+export function resolveUnexpectedAdditionsSourceSchemaFamily(families: string[]): string | null {
+  const distinct = [...new Set(families)];
+  if (distinct.length > 1) {
+    throw new Error(`N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_AMBIGUOUS:${distinct.sort().join(":")}`);
+  }
+  return distinct[0] ?? null;
+}

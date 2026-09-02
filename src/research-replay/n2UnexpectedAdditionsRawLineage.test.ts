@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveUnexpectedAdditionsRawDate } from "./n2UnexpectedAdditionsRawLineage";
+import {
+  resolveUnexpectedAdditionsRawDate,
+  resolveUnexpectedAdditionsSourceSchemaFamily,
+} from "./n2UnexpectedAdditionsRawLineage";
 
 test("unexpected additions raw lineage requires canonical same-day race identities", () => {
   assert.equal(resolveUnexpectedAdditionsRawDate([
@@ -16,5 +19,18 @@ test("unexpected additions raw lineage requires canonical same-day race identiti
   assert.throws(
     () => resolveUnexpectedAdditionsRawDate(["2026-05-03:01:R1", "2026-05-04:01:R1"]),
     /N2_UNEXPECTED_ADDITIONS_RAW_DATE_AMBIGUOUS/,
+  );
+});
+
+test("unexpected additions raw lineage fails closed on ambiguous schema family", () => {
+  assert.equal(resolveUnexpectedAdditionsSourceSchemaFamily([]), null);
+  assert.equal(resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display"]), "modern_seven_display");
+  assert.equal(
+    resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display", "modern_seven_display"]),
+    "modern_seven_display",
+  );
+  assert.throws(
+    () => resolveUnexpectedAdditionsSourceSchemaFamily(["modern_seven_display", "legacy_six_display"]),
+    /N2_UNEXPECTED_ADDITIONS_RAW_SCHEMA_FAMILY_AMBIGUOUS:legacy_six_display:modern_seven_display/,
   );
 });
