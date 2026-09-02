@@ -186,6 +186,35 @@ test("historical winner reader fails closed when a same-race supersession cycle 
   });
 });
 
+test("historical winner reader fails closed when same-race supersession branches would hide training evidence", () => {
+  withDb((path, db) => {
+    const raceKey = "2026-08-01:05:R1";
+    db.prepare("INSERT INTO raw_documents VALUES ('raw-a','verified','passed',1)").run();
+    db.prepare("INSERT INTO parse_runs VALUES ('parse-a','raw-a','success')").run();
+    db.prepare(`INSERT INTO domain_observations
+      VALUES ('obs-a',?,'settlement_result','settlement_result','raw-a','parse-a')`).run(raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('a',?,'trifecta','settled','normal','resolved','obs-a','parse-a','raw-a',NULL)`).run(raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('b',?,'trifecta','pending','normal','unresolved','obs-a','parse-a','raw-a','a')`).run(raceKey);
+    db.prepare(`INSERT INTO settlement_candidates_v2
+      VALUES ('c',?,'trifecta','pending','normal','unresolved','obs-a','parse-a','raw-a','a')`).run(raceKey);
+    db.prepare(`INSERT INTO race_payout_lines_v2
+      VALUES ('normal-a','a',1,'trifecta','1-2-3','1-2-3','1-2-3','payout')`).run();
+    db.close();
+
+    const result = readCleanTrifectaWinners({
+      sidecarDbPath: path,
+      fromDate: "2026-08-01",
+      toDate: "2026-08-01",
+    });
+    assert.deepEqual(result.rows, []);
+    assert.deepEqual(result.blockers, [
+      `${raceKey}:SETTLEMENT_SUPERSESSION_BRANCHING_INVALID:a`,
+    ]);
+  });
+});
+
 test("historical winner reader fails closed when an in-range candidate points to a missing predecessor", () => {
   withDb((path, db) => {
     const raceKey = "2026-08-01:05:R1";
