@@ -62,7 +62,7 @@ function fixture(sourceKind: string, sourceSchemaVersion: string): DatabaseSync 
   return db;
 }
 
-test("source duplicate trust accepts nonblank current candidate source authority", () => {
+test("source duplicate trust accepts canonical current candidate source authority", () => {
   const db = fixture("official_archive", "legacy_six_display");
   try {
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), true);
@@ -86,5 +86,21 @@ test("source duplicate trust rejects blank current candidate source schema versi
     assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
   } finally {
     db.close();
+  }
+});
+
+test("source duplicate trust rejects noncanonical current candidate source authority whitespace", () => {
+  for (const [sourceKind, sourceSchemaVersion] of [
+    [" official_archive", "legacy_six_display"],
+    ["official_archive ", "legacy_six_display"],
+    ["official_archive", " legacy_six_display"],
+    ["official_archive", "legacy_six_display "],
+  ] as const) {
+    const db = fixture(sourceKind, sourceSchemaVersion);
+    try {
+      assert.equal(sourceDuplicateCandidateLineSemanticsValid(db, "candidate", "trifecta"), false);
+    } finally {
+      db.close();
+    }
   }
 });
