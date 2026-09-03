@@ -178,7 +178,12 @@ export function appendN2TrifectaPrivateHeartbeat(input: {
   verifyHeartbeatRecord(input.record);
   const relativePath = n2TrifectaPrivateHeartbeatRelativePath(input.record.recordedAt);
   const path = resolveInside(input.dataRoot, relativePath);
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  const parentPath = dirname(path);
+  mkdirSync(parentPath, { recursive: true, mode: 0o700 });
+  const parent = lstatSync(parentPath);
+  if (parent.isSymbolicLink() || !parent.isDirectory()) {
+    throw new Error("HEARTBEAT_PARENT_INVALID");
+  }
   if (existsSync(path)) {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink()) throw new Error("HEARTBEAT_SYMLINK_NOT_ALLOWED");
