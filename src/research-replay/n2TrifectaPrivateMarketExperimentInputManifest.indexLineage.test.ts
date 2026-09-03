@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { hardLinkSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { linkSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -115,7 +115,7 @@ test("experiment input rejects a hardlinked day index authority", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-experiment-index-hardlink-"));
   try {
     const path = writeValidDayIndex(root);
-    hardLinkSync(path, join(root, "day-index-alias.json"));
+    linkSync(path, join(root, "day-index-alias.json"));
 
     assert.throws(
       () => buildN2TrifectaPrivateMarketExperimentInputManifest({
