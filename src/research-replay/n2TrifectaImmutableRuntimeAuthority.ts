@@ -84,6 +84,11 @@ export type N2TrifectaImmutableRuntimeBlockReport = {
   outputDigest: string;
 };
 
+type VerifiedRuntimeBlockReport = {
+  eventDigest: string;
+  dateJst: string | null;
+};
+
 function parseInstant(value: string): number | null {
   try {
     return Date.parse(canonicalUtcTimestamp(value));
@@ -135,7 +140,7 @@ function exclusiveWrite(path: string, content: string): void {
   }
 }
 
-function readVerifiedEventDigest(path: string): string | null {
+function readVerifiedBlockReport(path: string): VerifiedRuntimeBlockReport | null {
   if (!existsSync(path)) return null;
   try {
     const stat = statSync(path);
@@ -150,12 +155,14 @@ function readVerifiedEventDigest(path: string): string | null {
       latestStatusRelativePath,
       ...eventCore
     } = parsed;
+    const dateJst = eventCore.dateJst;
     if (typeof outputDigest !== "string"
       || typeof now !== "string"
       || typeof eventDigest !== "string"
       || typeof eventChanged !== "boolean"
       || !(typeof reportRelativePath === "string" || reportRelativePath === null)
-      || typeof latestStatusRelativePath !== "string") return null;
+      || typeof latestStatusRelativePath !== "string"
+      || !(typeof dateJst === "string" || dateJst === null)) return null;
     if (eventDigest !== canonicalHash(eventCore)) return null;
     const core = {
       ...eventCore,
@@ -166,10 +173,19 @@ function readVerifiedEventDigest(path: string): string | null {
       latestStatusRelativePath,
     };
     if (outputDigest !== canonicalHash(core)) return null;
-    return eventDigest;
+    return { eventDigest, dateJst };
   } catch {
     return null;
   }
+}
+
+function readVerifiedEventDigest(dataRoot: string, latestPath: string): string | null {
+  const latest = readVerifiedBlockReport(latestPath);
+  if (!latest) return null;
+  const immutableRelativePath =
+    `data/private/trifecta-capture/reports/runtime-authority/${latest.dateJst ?? "unknown"}/${latest.eventDigest}.json`;
+  const immutable = readVerifiedBlockReport(resolveInside(dataRoot, immutableRelativePath));
+  return immutable?.eventDigest === latest.eventDigest ? latest.eventDigest : null;
 }
 
 export function buildN2TrifectaImmutableRuntimeAuthorityBinding(input: {
@@ -303,7 +319,7 @@ export function recordN2TrifectaImmutableRuntimeBlock(input: {
     productionApplyExecuted: false as const,
   };
   const eventDigest = canonicalHash(eventCore);
-  const previousDigest = readVerifiedEventDigest(latestPath);
+  const previousDigest = readVerifiedEventDigest(input.dataRoot, latestPath);
   const eventChanged = previousDigest !== eventDigest;
   const reportRelativePath = eventChanged
     ? `data/private/trifecta-capture/reports/runtime-authority/${date ?? "unknown"}/${eventDigest}.json`
@@ -324,6 +340,10 @@ export function recordN2TrifectaImmutableRuntimeBlock(input: {
     } catch (error) {
       if (!(typeof error === "object" && error !== null && "code" in error
         && (error as { code?: unknown }).code === "EEXIST")) throw error;
+      const existing = readVerifiedBlockReport(reportPath);
+      if (existing?.eventDigest !== eventDigest) {
+        throw new Error("RUNTIME_BLOCK_REPORT_CONFLICT");
+      }
     }
   }
   writeAtomic(latestPath, `${JSON.stringify(report, null, 2)}\n`);
