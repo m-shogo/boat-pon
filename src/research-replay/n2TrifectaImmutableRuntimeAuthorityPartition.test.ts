@@ -111,16 +111,16 @@ test("cross-day rehashed runtime blocker evidence cannot suppress the current JS
       "utf8",
     );
 
-    const recorded = recordN2TrifectaImmutableRuntimeBlock({
-      dataRoot: root,
-      now,
-      audit,
-      binding,
-      observed,
-    });
-
-    assert.equal(recorded.eventChanged, true);
-    assert.ok(recorded.reportRelativePath);
+    assert.throws(
+      () => recordN2TrifectaImmutableRuntimeBlock({
+        dataRoot: root,
+        now,
+        audit,
+        binding,
+        observed,
+      }),
+      /RUNTIME_BLOCK_REPORT_CONFLICT/,
+    );
   } finally {
     rmSync(probeRoot, { recursive: true, force: true });
     rmSync(root, { recursive: true, force: true });
