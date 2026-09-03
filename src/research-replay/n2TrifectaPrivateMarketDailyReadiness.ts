@@ -302,6 +302,7 @@ export function writeN2TrifectaPrivateMarketDailyReadiness(input: {
     const lst = lstatSync(path);
     if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("DAILY_READINESS_EXISTING_FILE_TYPE_INVALID");
     const stat = statSync(path);
+    if (stat.nlink !== 1) throw new Error("DAILY_READINESS_EXISTING_HARDLINK_NOT_ALLOWED");
     if ((stat.mode & 0o777) !== 0o600) throw new Error("DAILY_READINESS_EXISTING_FILE_MODE_INVALID");
     if (stat.size <= 0 || stat.size > MAX_READINESS_BYTES) throw new Error("DAILY_READINESS_EXISTING_SIZE_INVALID");
     let existing: unknown;
