@@ -10,7 +10,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, resolve, sep } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 import type { N2TrifectaLocalCaptureAuthorization } from "./n2TrifectaLocalCaptureService";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
@@ -120,8 +120,49 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
-function writeAtomic(path: string, content: string): void {
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+function privateParentComponents(rootDir: string, path: string): string[] {
+  const root = resolve(rootDir);
+  const target = resolve(path);
+  const parent = dirname(target);
+  const rel = relative(root, parent);
+  if (target === root || rel === ".." || rel.startsWith(`..${sep}`)) {
+    throw new Error("RUNTIME_BLOCK_PATH_OUTSIDE_DATA_ROOT");
+  }
+  const components = rel === "" ? [] : rel.split(sep).filter(Boolean);
+  const paths = [root];
+  let current = root;
+  for (const component of components) {
+    current = resolve(current, component);
+    paths.push(current);
+  }
+  return paths;
+}
+
+function assertPrivateParentAncestors(rootDir: string, path: string): void {
+  for (const parent of privateParentComponents(rootDir, path)) {
+    if (!existsSync(parent)) continue;
+    const stat = lstatSync(parent);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("RUNTIME_BLOCK_PARENT_INVALID");
+    }
+  }
+}
+
+function ensurePrivateParent(rootDir: string, path: string): void {
+  for (const parent of privateParentComponents(rootDir, path)) {
+    if (existsSync(parent)) {
+      const stat = lstatSync(parent);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("RUNTIME_BLOCK_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(parent, { mode: 0o700 });
+  }
+}
+
+function writeAtomic(rootDir: string, path: string, content: string): void {
+  ensurePrivateParent(rootDir, path);
   const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
   try {
     writeFileSync(temporary, content, { encoding: "utf8", mode: 0o600 });
@@ -131,8 +172,8 @@ function writeAtomic(path: string, content: string): void {
   }
 }
 
-function exclusiveWrite(path: string, content: string): void {
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+function exclusiveWrite(rootDir: string, path: string, content: string): void {
+  ensurePrivateParent(rootDir, path);
   const fd = openSync(path, "wx", 0o600);
   try {
     writeFileSync(fd, content, "utf8");
@@ -141,9 +182,10 @@ function exclusiveWrite(path: string, content: string): void {
   }
 }
 
-function readVerifiedBlockReport(path: string): VerifiedRuntimeBlockReport | null {
-  if (!existsSync(path)) return null;
+function readVerifiedBlockReport(dataRoot: string, path: string): VerifiedRuntimeBlockReport | null {
   try {
+    assertPrivateParentAncestors(dataRoot, path);
+    if (!existsSync(path)) return null;
     const lst = lstatSync(path);
     if (lst.isSymbolicLink() || !lst.isFile()) return null;
     const stat = statSync(path);
@@ -191,11 +233,11 @@ function readVerifiedBlockReport(path: string): VerifiedRuntimeBlockReport | nul
 }
 
 function readVerifiedEventDigest(dataRoot: string, latestPath: string): string | null {
-  const latest = readVerifiedBlockReport(latestPath);
+  const latest = readVerifiedBlockReport(dataRoot, latestPath);
   if (!latest) return null;
   const immutableRelativePath =
     `data/private/trifecta-capture/reports/runtime-authority/${latest.dateJst ?? "unknown"}/${latest.eventDigest}.json`;
-  const immutable = readVerifiedBlockReport(resolveInside(dataRoot, immutableRelativePath));
+  const immutable = readVerifiedBlockReport(dataRoot, resolveInside(dataRoot, immutableRelativePath));
   return immutable?.eventDigest === latest.eventDigest ? latest.eventDigest : null;
 }
 
@@ -347,16 +389,16 @@ export function recordN2TrifectaImmutableRuntimeBlock(input: {
   if (reportRelativePath) {
     const reportPath = resolveInside(input.dataRoot, reportRelativePath);
     try {
-      exclusiveWrite(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+      exclusiveWrite(input.dataRoot, reportPath, `${JSON.stringify(report, null, 2)}\n`);
     } catch (error) {
       if (!(typeof error === "object" && error !== null && "code" in error
         && (error as { code?: unknown }).code === "EEXIST")) throw error;
-      const existing = readVerifiedBlockReport(reportPath);
+      const existing = readVerifiedBlockReport(input.dataRoot, reportPath);
       if (existing?.eventDigest !== eventDigest) {
         throw new Error("RUNTIME_BLOCK_REPORT_CONFLICT");
       }
     }
   }
-  writeAtomic(latestPath, `${JSON.stringify(report, null, 2)}\n`);
+  writeAtomic(input.dataRoot, latestPath, `${JSON.stringify(report, null, 2)}\n`);
   return report;
 }
