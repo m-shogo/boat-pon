@@ -1,6 +1,10 @@
+import { existsSync, lstatSync, statSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { canonicalHash } from "./canonical";
 import {
   buildN2TrifectaPrivateMarketExplorationMatrix,
+  privateMarketExplorationMatrixRelativePath,
   writeN2TrifectaPrivateMarketExplorationMatrix,
   type N2TrifectaPrivateMarketExplorationMatrix,
 } from "./n2TrifectaPrivateMarketExplorationMatrix";
@@ -24,6 +28,14 @@ export function writeVerifiedN2TrifectaPrivateMarketExplorationMatrix(input: {
 
   if (canonicalHash(rebuilt) !== canonicalHash(input.matrix)) {
     throw new Error("EXPLORATION_MATRIX_WRITE_AUTHORITY_INVALID");
+  }
+
+  const path = resolve(input.rootDir, privateMarketExplorationMatrixRelativePath(input.matrix));
+  if (existsSync(path)) {
+    const lst = lstatSync(path);
+    if (!lst.isSymbolicLink() && lst.isFile() && statSync(path).nlink !== 1) {
+      throw new Error("EXPLORATION_MATRIX_EXISTING_HARDLINK_NOT_ALLOWED");
+    }
   }
 
   return writeN2TrifectaPrivateMarketExplorationMatrix(input);
