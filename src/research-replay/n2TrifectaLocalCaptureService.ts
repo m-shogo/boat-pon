@@ -208,9 +208,14 @@ function exclusiveWrite(path: string, content: string): void {
 }
 
 function readJsonFile<T>(path: string): T {
+  const lst = lstatSync(path);
+  if (lst.isSymbolicLink() || !lst.isFile()) {
+    throw new Error("PRIVATE_JSON_FILE_AUTHORITY_INVALID");
+  }
   const stat = statSync(path);
-  if (!stat.isFile() || stat.size <= 0 || stat.size > 2_000_000) {
-    throw new Error("PRIVATE_JSON_SIZE_OR_TYPE_INVALID");
+  if (!stat.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600
+    || stat.size <= 0 || stat.size > 2_000_000) {
+    throw new Error("PRIVATE_JSON_FILE_AUTHORITY_INVALID");
   }
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
