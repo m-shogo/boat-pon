@@ -1,6 +1,7 @@
 import {
   closeSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -152,6 +153,7 @@ type VenueRow = {
 
 const AUTHORIZATION_ID_RE = /^AUTH-N2-TRI-LOCAL-[A-Za-z0-9._-]{8,96}$/;
 const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/;
+const RESERVATION_FILE_RE = /^([0-9a-f]{64})\.json$/u;
 const EXPECTED_CHECKPOINTS = ["T-30", "T-20", "T-10", "T-5"] as const;
 
 function parseInstant(value: string): number | null {
@@ -211,6 +213,70 @@ function readJsonFile<T>(path: string): T {
     throw new Error("PRIVATE_JSON_SIZE_OR_TYPE_INVALID");
   }
   return JSON.parse(readFileSync(path, "utf8")) as T;
+}
+
+function readVerifiedReservation(input: {
+  path: string;
+  fileName: string;
+  expectedDate: string;
+  expectedAuthorizationId?: string;
+  expectedEntry?: N2TrifectaOddsCheckpointEntry;
+}): N2TrifectaLocalCaptureReservation {
+  try {
+    const fileMatch = RESERVATION_FILE_RE.exec(input.fileName);
+    if (!fileMatch) throw new Error("reservation filename invalid");
+    const lst = lstatSync(input.path);
+    if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("reservation file type invalid");
+    const stat = statSync(input.path);
+    if (!stat.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600
+      || stat.size <= 0 || stat.size > 200_000) {
+      throw new Error("reservation file authority invalid");
+    }
+    const reservation = JSON.parse(readFileSync(input.path, "utf8")) as Partial<N2TrifectaLocalCaptureReservation>;
+    if (reservation.reservationVersion !== N2_TRIFECTA_LOCAL_CAPTURE_RESERVATION_VERSION
+      || typeof reservation.authorizationId !== "string"
+      || !AUTHORIZATION_ID_RE.test(reservation.authorizationId)
+      || reservation.date !== input.expectedDate
+      || typeof reservation.venueCode !== "string"
+      || !VENUE_RE.test(reservation.venueCode)
+      || typeof reservation.raceIdentity !== "string"
+      || reservation.raceIdentity.length === 0
+      || typeof reservation.checkpointLabel !== "string"
+      || !(EXPECTED_CHECKPOINTS as readonly string[]).includes(reservation.checkpointLabel)
+      || typeof reservation.targetCaptureAt !== "string"
+      || canonicalUtcTimestamp(reservation.targetCaptureAt) !== reservation.targetCaptureAt
+      || typeof reservation.reservationKey !== "string"
+      || typeof reservation.reservedAt !== "string"
+      || canonicalUtcTimestamp(reservation.reservedAt) !== reservation.reservedAt
+      || jstDate(reservation.reservedAt) !== input.expectedDate
+      || reservation.networkRequestCeiling !== 1) {
+      throw new Error("reservation lineage invalid");
+    }
+    const expectedKey = canonicalHash({
+      authorizationId: reservation.authorizationId,
+      raceIdentity: reservation.raceIdentity,
+      checkpointLabel: reservation.checkpointLabel,
+      targetCaptureAt: reservation.targetCaptureAt,
+    });
+    if (reservation.reservationKey !== expectedKey || fileMatch[1] !== expectedKey) {
+      throw new Error("reservation key invalid");
+    }
+    if (input.expectedAuthorizationId != null
+      && reservation.authorizationId !== input.expectedAuthorizationId) {
+      throw new Error("reservation authorization mismatch");
+    }
+    if (input.expectedEntry && (
+      reservation.venueCode !== input.expectedEntry.venueCode
+      || reservation.raceIdentity !== input.expectedEntry.raceIdentity
+      || reservation.checkpointLabel !== input.expectedEntry.checkpointLabel
+      || reservation.targetCaptureAt !== input.expectedEntry.targetCaptureAt
+    )) {
+      throw new Error("reservation checkpoint mismatch");
+    }
+    return reservation as N2TrifectaLocalCaptureReservation;
+  } catch {
+    throw new Error("RESERVATION_AUTHORITY_INVALID");
+  }
 }
 
 function openImmutable(path: string): DatabaseSync {
@@ -671,9 +737,17 @@ export async function runN2TrifectaLocalCaptureTick(
           const budgetRelative = budgetDirectoryRelativePath(date);
           const budgetPath = resolveInside(input.dataRoot, budgetRelative);
           mkdirSync(budgetPath, { recursive: true, mode: 0o700 });
-          dailyReservationCountBefore = readdirSync(budgetPath)
+          const reservationFiles = readdirSync(budgetPath)
             .filter((name) => name.endsWith(".json"))
-            .length;
+            .sort();
+          for (const name of reservationFiles) {
+            readVerifiedReservation({
+              path: resolveInside(input.dataRoot, `${budgetRelative}/${name}`),
+              fileName: name,
+              expectedDate: date,
+            });
+          }
+          dailyReservationCountBefore = reservationFiles.length;
           dailyReservationCountAfter = dailyReservationCountBefore;
 
           let reservationCreated = false;
@@ -684,9 +758,19 @@ export async function runN2TrifectaLocalCaptureTick(
               checkpointLabel: candidate.checkpointLabel,
               targetCaptureAt: candidate.targetCaptureAt,
             });
-            const candidateReservationPath = `${budgetRelative}/${reservationKey}.json`;
+            const candidateFileName = `${reservationKey}.json`;
+            const candidateReservationPath = `${budgetRelative}/${candidateFileName}`;
             const reservationAbsolute = resolveInside(input.dataRoot, candidateReservationPath);
-            if (existsSync(reservationAbsolute)) continue;
+            if (existsSync(reservationAbsolute)) {
+              readVerifiedReservation({
+                path: reservationAbsolute,
+                fileName: candidateFileName,
+                expectedDate: date,
+                expectedAuthorizationId: input.authorization.authorizationId,
+                expectedEntry: candidate,
+              });
+              continue;
+            }
             if (dailyReservationCountBefore >= input.authorization.maxRequestsPerDay) {
               blockers.push("DAILY_REQUEST_BUDGET_EXHAUSTED");
               break;
@@ -715,6 +799,13 @@ export async function runN2TrifectaLocalCaptureTick(
               break;
             } catch (error) {
               if (!isAlreadyExistsError(error)) throw error;
+              readVerifiedReservation({
+                path: reservationAbsolute,
+                fileName: candidateFileName,
+                expectedDate: date,
+                expectedAuthorizationId: input.authorization.authorizationId,
+                expectedEntry: candidate,
+              });
             }
           }
 
