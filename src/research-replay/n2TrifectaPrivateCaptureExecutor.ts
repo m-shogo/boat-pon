@@ -158,6 +158,21 @@ type AttemptLedgerEvent = {
   blockers?: string[];
 };
 
+type AcceptedMarkerAuthority = {
+  markerVersion?: unknown;
+  manifestDigest?: unknown;
+  checkpointKey?: unknown;
+  raceIdentity?: unknown;
+  checkpointLabel?: unknown;
+  rawDocumentId?: unknown;
+  rawSha256?: unknown;
+  rawRelativePath?: unknown;
+  envelopeRelativePath?: unknown;
+  acceptedAt?: unknown;
+  databaseWriteAuthorized?: unknown;
+  productionApplyExecuted?: unknown;
+};
+
 const ALLOWED_HEADERS = new Set([
   "cache-control",
   "content-length",
@@ -166,6 +181,8 @@ const ALLOWED_HEADERS = new Set([
   "etag",
   "last-modified",
 ]);
+const SHA256_RE = /^[0-9a-f]{64}$/u;
+const RAW_DOCUMENT_ID_RE = /^raw-[0-9a-f]{40}$/u;
 
 function canonicalInstant(value: string): string | null {
   try {
@@ -275,6 +292,50 @@ function assertPrivateAttemptLedgerFile(path: string): void {
   const stat = statSync(path);
   if (!stat.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600) {
     throw new Error("ATTEMPT_LEDGER_FILE_AUTHORITY_INVALID");
+  }
+}
+
+function assertAcceptedMarkerAuthority(input: {
+  rootDir: string;
+  relativePath: string;
+  manifestDigest: string;
+  checkpointKey: string;
+  entry: N2TrifectaOddsCheckpointEntry;
+}): void {
+  const path = resolveInside(input.rootDir, input.relativePath);
+  try {
+    const lst = lstatSync(path);
+    if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("invalid marker file type");
+    const stat = statSync(path);
+    if (!stat.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600
+      || stat.size <= 0 || stat.size > 200_000) {
+      throw new Error("invalid marker file authority");
+    }
+    const marker = JSON.parse(readFileSync(path, "utf8")) as AcceptedMarkerAuthority;
+    const directory = checkpointDirectory(input.entry);
+    if (marker.markerVersion !== "n2-trifecta-private-capture-accepted-v1"
+      || marker.manifestDigest !== input.manifestDigest
+      || marker.checkpointKey !== input.checkpointKey
+      || marker.raceIdentity !== input.entry.raceIdentity
+      || marker.checkpointLabel !== input.entry.checkpointLabel
+      || typeof marker.rawDocumentId !== "string"
+      || !RAW_DOCUMENT_ID_RE.test(marker.rawDocumentId)
+      || typeof marker.rawSha256 !== "string"
+      || !SHA256_RE.test(marker.rawSha256)
+      || typeof marker.rawRelativePath !== "string"
+      || !marker.rawRelativePath.startsWith(`${directory}/`)
+      || !marker.rawRelativePath.endsWith(".html")
+      || typeof marker.envelopeRelativePath !== "string"
+      || !marker.envelopeRelativePath.startsWith(`${directory}/`)
+      || !marker.envelopeRelativePath.endsWith(".envelope.json")
+      || typeof marker.acceptedAt !== "string"
+      || canonicalInstant(marker.acceptedAt) !== marker.acceptedAt
+      || marker.databaseWriteAuthorized !== false
+      || marker.productionApplyExecuted !== false) {
+      throw new Error("invalid marker lineage");
+    }
+  } catch {
+    throw new Error("ACCEPTED_MARKER_AUTHORITY_INVALID");
   }
 }
 
@@ -702,6 +763,13 @@ export async function executeN2TrifectaPrivateCapture(
         continue;
       }
       if (existsSync(markerPath)) {
+        assertAcceptedMarkerAuthority({
+          rootDir: input.rootDir,
+          relativePath: markerRelative,
+          manifestDigest: input.plan.manifestDigest,
+          checkpointKey: key,
+          entry,
+        });
         entryResults.push({
           checkpointKey: key,
           raceIdentity: entry.raceIdentity,
