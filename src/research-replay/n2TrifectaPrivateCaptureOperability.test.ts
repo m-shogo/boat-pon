@@ -359,8 +359,14 @@ test("invalid accepted marker, forged reservation, and forged capture report can
     });
     assert.equal(report.status, "BLOCKED");
     assert.equal(report.coverage.acceptedCount, 0);
-    assert.equal(report.coverage.blockedEvidenceCount, 0);
+    assert.equal(report.coverage.blockedEvidenceCount, 1);
     assert.equal(report.coverage.reservedNoAcceptedEvidenceCount, 0);
+    const forgedReportCheckpoint = report.checkpoints.find(
+      (checkpoint) => checkpoint.raceIdentity === "20260807-10-04"
+        && checkpoint.checkpointLabel === "T-30",
+    );
+    assert.equal(forgedReportCheckpoint?.state, "MISSED_NO_RESERVATION");
+    assert.deepEqual(forgedReportCheckpoint?.blockerCodes, []);
     assert.ok(report.blockers.includes("RESERVATION_METADATA_INVALID"));
     assert.ok(report.blockers.includes("CAPTURE_REPORT_METADATA_INVALID"));
     assert.ok(report.blockers.includes("ACCEPTED_MARKER_CHECKPOINT_KEY_INVALID"));
