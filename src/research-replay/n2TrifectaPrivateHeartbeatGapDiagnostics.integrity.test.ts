@@ -77,6 +77,23 @@ test("rejects rehashed non-canonical heartbeat record times", () => {
   });
 });
 
+test("rejects rehashed heartbeat records whose canonical time belongs to another JST day", () => {
+  withRoot((root) => {
+    const record = heartbeatRecord();
+    record.recordedAt = "2026-08-06T14:59:59.000Z";
+    recomputeDigest(record);
+    writeRecord(root, record);
+
+    const report = buildN2TrifectaPrivateHeartbeatGapDiagnostics({
+      dataRoot: root,
+      date: "2026-08-07",
+      now: "2026-08-07T01:06:00.000Z",
+    });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("HEARTBEAT_RECORDED_AT_DATE_MISMATCH"));
+  });
+});
+
 test("rejects heartbeat records whose persisted body no longer matches its digest", () => {
   withRoot((root) => {
     const record = heartbeatRecord();
