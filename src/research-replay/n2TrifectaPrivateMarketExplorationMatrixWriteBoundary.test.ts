@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { linkSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -51,6 +51,21 @@ test("verified exploration-matrix writer accepts the canonical source-bound matr
     const result = writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, matrix });
     assert.equal(result.created, true);
     assert.equal(result.matrixDigest, matrix.matrixDigest);
+  });
+});
+
+test("verified exploration-matrix writer rejects hardlinked existing matrix reuse", () => {
+  withRoot((root) => {
+    const manifestDigest = createEmptyManifest(root);
+    const matrix = buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, manifestDigest });
+    const first = writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, matrix });
+    const path = join(root, first.relativePath);
+    linkSync(path, `${path}.alias`);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, matrix }),
+      /EXPLORATION_MATRIX_EXISTING_HARDLINK_NOT_ALLOWED/u,
+    );
   });
 });
 
