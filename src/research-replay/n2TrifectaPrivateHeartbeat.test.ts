@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   chmodSync,
   existsSync,
+  linkSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -148,6 +149,38 @@ test("private heartbeat append fails closed when existing history is not owner-o
     );
     assert.equal(readFileSync(path, "utf8"), before);
     assert.equal(statSync(path).mode & 0o777, 0o644);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("private heartbeat append rejects hardlinked existing history before mutation", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-private-heartbeat-hardlink-"));
+  try {
+    const first = buildN2TrifectaPrivateHeartbeatRecord({
+      recordedAt: "2026-08-07T01:13:00.000Z",
+      status: "NO_CHANGE",
+      runtimeAuthorityStatus: "PASS",
+    });
+    const second = buildN2TrifectaPrivateHeartbeatRecord({
+      recordedAt: "2026-08-07T01:13:30.000Z",
+      status: "NO_CHANGE",
+      runtimeAuthorityStatus: "PASS",
+    });
+    const relativePath = appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record: first });
+    const path = join(root, relativePath);
+    const alternatePath = join(root, "heartbeat-history-hardlink.jsonl");
+    linkSync(path, alternatePath);
+    const before = readFileSync(path, "utf8");
+    assert.equal(statSync(path).mode & 0o777, 0o600);
+    assert.equal(statSync(path).nlink, 2);
+
+    assert.throws(
+      () => appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record: second }),
+      /HEARTBEAT_HARDLINK_NOT_ALLOWED/,
+    );
+    assert.equal(readFileSync(path, "utf8"), before);
+    assert.equal(readFileSync(alternatePath, "utf8"), before);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
