@@ -132,6 +132,7 @@ function readVerifiedDayIndex(input: {
   if (!existsSync(path)) throw new Error("DAILY_READINESS_DAY_INDEX_MISSING");
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("DAILY_READINESS_DAY_INDEX_FILE_TYPE_INVALID");
+  if (lst.nlink !== 1) throw new Error("DAILY_READINESS_DAY_INDEX_HARDLINK_NOT_ALLOWED");
   const stat = statSync(path);
   if ((stat.mode & 0o777) !== 0o600) throw new Error("DAILY_READINESS_DAY_INDEX_FILE_MODE_INVALID");
   if (stat.size <= 0 || stat.size > MAX_DAY_INDEX_BYTES) throw new Error("DAILY_READINESS_DAY_INDEX_SIZE_INVALID");
