@@ -2,6 +2,8 @@ import { existsSync, lstatSync, statSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 
 import { canonicalHash } from "./canonical";
+import { assertN2TrifectaPrivateMarketExplorationInputSingleLinks } from
+  "./n2TrifectaPrivateMarketExplorationInputFileAuthority";
 import {
   buildN2TrifectaPrivateMarketExplorationMatrix,
   privateMarketExplorationMatrixRelativePath,
@@ -41,6 +43,10 @@ export function writeVerifiedN2TrifectaPrivateMarketExplorationMatrix(input: {
   rootDir: string;
   matrix: N2TrifectaPrivateMarketExplorationMatrix;
 }): ReturnType<typeof writeN2TrifectaPrivateMarketExplorationMatrix> {
+  assertN2TrifectaPrivateMarketExplorationInputSingleLinks(
+    input.rootDir,
+    input.matrix.manifestDigest,
+  );
   const rebuilt = buildN2TrifectaPrivateMarketExplorationMatrix({
     rootDir: input.rootDir,
     manifestDigest: input.matrix.manifestDigest,
