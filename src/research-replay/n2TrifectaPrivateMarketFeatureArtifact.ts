@@ -85,6 +85,24 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function ensurePrivateParent(rootDir: string, relativePath: string): void {
+  const root = resolve(rootDir);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  let current = root;
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("PRIVATE_FEATURE_PARENT_DIRECTORY_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 function canonicalRaceDate(date: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) return null;
   try {
@@ -278,6 +296,7 @@ export function writeN2TrifectaPrivateMarketFeatureArtifact(input: {
     raceNo: input.report.raceNo,
   });
   const path = resolveInside(input.rootDir, relativePath);
+  ensurePrivateParent(input.rootDir, relativePath);
   const existing = readExistingArtifact(path);
   const reusableDigest = existing == null ? null : reusableArtifactDigest({
     existing,
