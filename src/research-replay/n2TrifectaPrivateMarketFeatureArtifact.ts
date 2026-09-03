@@ -182,6 +182,7 @@ function readExistingArtifact(path: string): ExistingArtifactRead | null {
   if (!existsSync(path)) return null;
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("PRIVATE_FEATURE_EXISTING_FILE_TYPE_INVALID");
+  if (lst.nlink !== 1) throw new Error("PRIVATE_FEATURE_EXISTING_HARDLINK_NOT_ALLOWED");
   const stat = statSync(path);
   if (stat.size <= 0 || stat.size > MAX_EXISTING_ARTIFACT_BYTES) {
     throw new Error("PRIVATE_FEATURE_EXISTING_SIZE_INVALID");
