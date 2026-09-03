@@ -132,6 +132,24 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function ensurePrivateParent(rootDir: string, relativePath: string): void {
+  const root = resolve(rootDir);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  let current = root;
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("READINESS_CATALOG_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 function requirePrivateDirectory(path: string, code: string): void {
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isDirectory()) throw new Error(code);
@@ -444,6 +462,7 @@ export function writeN2TrifectaPrivateMarketReadinessCatalog(input: {
   }
   const relativePath = privateMarketReadinessCatalogRelativePath();
   const path = resolveInside(input.dataRoot, relativePath);
+  ensurePrivateParent(input.dataRoot, relativePath);
   const existed = existsSync(path);
   const reusable = reusableExistingCatalog({ path, next: input.catalog });
   if (reusable?.semanticEqual) {
