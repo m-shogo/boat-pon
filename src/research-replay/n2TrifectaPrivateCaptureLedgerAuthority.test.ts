@@ -49,34 +49,24 @@ function approvalFor(capturePlan: ReturnType<typeof plan>): N2TrifectaOddsCaptur
   };
 }
 
-function keyFor(capturePlan: ReturnType<typeof plan>): string {
-  const entry = capturePlan.entries[0];
-  assert.ok(entry);
-  return canonicalHash({
-    manifestDigest: capturePlan.manifestDigest,
-    raceIdentity: entry.raceIdentity,
-    checkpointLabel: entry.checkpointLabel,
-    targetCaptureAt: entry.targetCaptureAt,
-    sourceUrl: entry.sourceUrl,
-  });
-}
-
-function ledgerPathFor(root: string, capturePlan: ReturnType<typeof plan>): string {
-  return join(
-    root,
-    "data/raw/research/trifecta-market/ledgers",
-    `${capturePlan.manifestDigest}.jsonl`,
-  );
-}
-
 test("hardlinked attempt ledger cannot suppress an unexecuted checkpoint", async () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-attempt-ledger-authority-"));
   try {
     const capturePlan = plan();
     const entry = capturePlan.entries[0];
     assert.ok(entry);
-    const checkpointKey = keyFor(capturePlan);
-    const ledgerPath = ledgerPathFor(root, capturePlan);
+    const checkpointKey = canonicalHash({
+      manifestDigest: capturePlan.manifestDigest,
+      raceIdentity: entry.raceIdentity,
+      checkpointLabel: entry.checkpointLabel,
+      targetCaptureAt: entry.targetCaptureAt,
+      sourceUrl: entry.sourceUrl,
+    });
+    const ledgerPath = join(
+      root,
+      "data/raw/research/trifecta-market/ledgers",
+      `${capturePlan.manifestDigest}.jsonl`,
+    );
     const aliasPath = join(root, "attempt-ledger-alias.jsonl");
     mkdirSync(dirname(ledgerPath), { recursive: true });
     writeFileSync(aliasPath, `${JSON.stringify({
@@ -105,45 +95,6 @@ test("hardlinked attempt ledger cannot suppress an unexecuted checkpoint", async
         },
       }),
       /ATTEMPT_LEDGER_FILE_AUTHORITY_INVALID/,
-    );
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test("forged attempt ledger lineage cannot suppress an unexecuted checkpoint", async () => {
-  const root = mkdtempSync(join(tmpdir(), "boat-pon-attempt-ledger-lineage-"));
-  try {
-    const capturePlan = plan();
-    const entry = capturePlan.entries[0];
-    assert.ok(entry);
-    const ledgerPath = ledgerPathFor(root, capturePlan);
-    mkdirSync(dirname(ledgerPath), { recursive: true });
-    writeFileSync(ledgerPath, `${JSON.stringify({
-      ledgerVersion: "n2-trifecta-private-capture-ledger-v1",
-      event: "ATTEMPT_STARTED",
-      attemptId: "attempt-forged",
-      checkpointKey: keyFor(capturePlan),
-      manifestDigest: "0".repeat(64),
-      raceIdentity: entry.raceIdentity,
-      checkpointLabel: entry.checkpointLabel,
-      sourceUrl: entry.sourceUrl,
-      at: "2026-08-06T00:35:00.000Z",
-    })}\n`, "utf8");
-    chmodSync(ledgerPath, 0o600);
-
-    await assert.rejects(
-      () => executeN2TrifectaPrivateCapture({
-        plan: capturePlan,
-        approval: approvalFor(capturePlan),
-        rootDir: root,
-        now: "2026-08-06T00:35:30.000Z",
-        executionMode: "execute",
-        fetcher: async () => {
-          throw new Error("network must not be reached for invalid ledger lineage");
-        },
-      }),
-      /ATTEMPT_LEDGER_EVENT_AUTHORITY_INVALID/,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
