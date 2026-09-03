@@ -3,10 +3,12 @@ import {
   chmodSync,
   existsSync,
   linkSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -183,5 +185,29 @@ test("private heartbeat append rejects hardlinked existing history before mutati
     assert.equal(readFileSync(alternatePath, "utf8"), before);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("private heartbeat append rejects a symlinked heartbeat parent before writing outside data root", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-private-heartbeat-parent-"));
+  const external = mkdtempSync(join(tmpdir(), "boat-pon-private-heartbeat-external-"));
+  try {
+    const captureRoot = join(root, "data/private/trifecta-capture");
+    mkdirSync(captureRoot, { recursive: true, mode: 0o700 });
+    symlinkSync(external, join(captureRoot, "heartbeats"), "dir");
+    const record = buildN2TrifectaPrivateHeartbeatRecord({
+      recordedAt: "2026-08-07T01:13:00.000Z",
+      status: "NO_CHANGE",
+      runtimeAuthorityStatus: "PASS",
+    });
+
+    assert.throws(
+      () => appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record }),
+      /HEARTBEAT_PARENT_INVALID/,
+    );
+    assert.equal(existsSync(join(external, "2026-08-07.jsonl")), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(external, { recursive: true, force: true });
   }
 });
