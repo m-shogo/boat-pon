@@ -170,7 +170,13 @@ function readHeartbeatHistory(input: {
   if (lst.isSymbolicLink() || !lst.isFile()) {
     return { records: [], blockers: ["HEARTBEAT_HISTORY_FILE_TYPE_INVALID"], present: true };
   }
+  if (lst.nlink !== 1) {
+    return { records: [], blockers: ["HEARTBEAT_HISTORY_HARDLINK_NOT_ALLOWED"], present: true };
+  }
   const stat = statSync(path);
+  if ((stat.mode & 0o777) !== 0o600) {
+    return { records: [], blockers: ["HEARTBEAT_HISTORY_FILE_MODE_INVALID"], present: true };
+  }
   if (stat.size <= 0 || stat.size > MAX_HEARTBEAT_HISTORY_BYTES) {
     return { records: [], blockers: ["HEARTBEAT_HISTORY_SIZE_INVALID"], present: true };
   }
