@@ -14,10 +14,12 @@ import {
 import {
   readN2TrifectaPrivateDailyPlanCache,
 } from "./n2TrifectaPrivateDailyPlanCache";
-import type {
-  N2TrifectaLocalCaptureAuthorization,
-  N2TrifectaLocalCaptureReservation,
-  N2TrifectaLocalCaptureTickReport,
+import {
+  N2_TRIFECTA_LOCAL_CAPTURE_REPORT_VERSION,
+  N2_TRIFECTA_LOCAL_CAPTURE_SERVICE_VERSION,
+  type N2TrifectaLocalCaptureAuthorization,
+  type N2TrifectaLocalCaptureReservation,
+  type N2TrifectaLocalCaptureTickReport,
 } from "./n2TrifectaLocalCaptureService";
 
 export const N2_TRIFECTA_PRIVATE_CAPTURE_OPERABILITY_VERSION =
@@ -181,6 +183,67 @@ function safeReadPrivateJson<T>(rootDir: string, relativePath: string): T | null
   return readPrivateJson<T>(rootDir, relativePath);
 }
 
+function verifyCaptureReport(
+  rootDir: string,
+  relativePath: string,
+  expectedDate: string,
+): N2TrifectaLocalCaptureTickReport | null {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = readPrivateJson<Record<string, unknown>>(rootDir, relativePath);
+  } catch {
+    return null;
+  }
+  const { outputDigest, ...core } = parsed;
+  if (typeof outputDigest !== "string" || outputDigest !== canonicalHash(core)) return null;
+  if (parsed.reportVersion !== N2_TRIFECTA_LOCAL_CAPTURE_REPORT_VERSION
+    || parsed.serviceVersion !== N2_TRIFECTA_LOCAL_CAPTURE_SERVICE_VERSION
+    || !(["PASS", "NO_CHANGE", "BLOCKED"] as unknown[]).includes(parsed.status)
+    || !Array.isArray(parsed.blockers)
+    || parsed.blockers.some((blocker) => typeof blocker !== "string")
+    || typeof parsed.eventDigest !== "string" || !SHA256_RE.test(parsed.eventDigest)
+    || typeof parsed.eventChanged !== "boolean"
+    || parsed.dateJst !== expectedDate
+    || !(typeof parsed.selectedVenueCode === "string" || parsed.selectedVenueCode === null)
+    || typeof parsed.primaryDbMetadataUnchanged !== "boolean"
+    || parsed.latestStatusRelativePath !== "data/private/trifecta-capture/status/latest.json"
+    || parsed.reportRelativePath !== relativePath
+    || relativePath.slice(relativePath.lastIndexOf("/") + 1) !== `${parsed.eventDigest}.json`) {
+    return null;
+  }
+  const authorizationAudit = parsed.authorizationAudit as Record<string, unknown> | null;
+  if (!authorizationAudit || (authorizationAudit.status !== "PASS" && authorizationAudit.status !== "BLOCKED")) {
+    return null;
+  }
+  const selectedEntry = parsed.selectedEntry && typeof parsed.selectedEntry === "object"
+    ? parsed.selectedEntry as Record<string, unknown>
+    : null;
+  const executorReport = parsed.executorReport && typeof parsed.executorReport === "object"
+    ? parsed.executorReport as Record<string, unknown>
+    : null;
+  if (executorReport) {
+    const { outputDigest: executorOutputDigest, ...executorCore } = executorReport;
+    if (typeof executorOutputDigest !== "string" || executorOutputDigest !== canonicalHash(executorCore)
+      || !Array.isArray(executorReport.entryResults)) {
+      return null;
+    }
+  }
+  const eventDigest = canonicalHash({
+    status: parsed.status,
+    blockers: parsed.blockers,
+    dateJst: parsed.dateJst,
+    authorizationStatus: authorizationAudit.status,
+    selectedVenueCode: parsed.selectedVenueCode,
+    selectedRaceIdentity: selectedEntry?.raceIdentity ?? null,
+    selectedCheckpointLabel: selectedEntry?.checkpointLabel ?? null,
+    executorStatus: executorReport?.status ?? null,
+    executorOutputDigest: executorReport?.outputDigest ?? null,
+    primaryDbMetadataUnchanged: parsed.primaryDbMetadataUnchanged,
+  });
+  if (parsed.eventDigest !== eventDigest) return null;
+  return parsed as unknown as N2TrifectaLocalCaptureTickReport;
+}
+
 function listRegularJsonFiles(rootDir: string, relativeDir: string): string[] {
   const dir = resolveInside(rootDir, relativeDir);
   if (!existsSync(dir)) return [];
@@ -290,15 +353,20 @@ function captureEvidenceByCheckpoint(rootDir: string, date: string): CaptureEvid
     rootDir,
     `data/private/trifecta-capture/reports/${date}`,
   )) {
-    let report: N2TrifectaLocalCaptureTickReport;
-    try {
-      report = readPrivateJson<N2TrifectaLocalCaptureTickReport>(rootDir, relativePath);
-    } catch {
+    const report = verifyCaptureReport(rootDir, relativePath, date);
+    if (!report) {
       invalidReportCount += 1;
       continue;
     }
     for (const result of report.executorReport?.entryResults ?? []) {
       if (result.result !== "BLOCKED_EVIDENCE_SAVED") continue;
+      if (typeof result.raceIdentity !== "string"
+        || !CHECKPOINTS.includes(result.checkpointLabel as typeof CHECKPOINTS[number])
+        || !Array.isArray(result.blockers)
+        || result.blockers.some((blocker) => typeof blocker !== "string")) {
+        invalidReportCount += 1;
+        continue;
+      }
       const key = `${result.raceIdentity}|${result.checkpointLabel}`;
       const existing = blockersByCheckpoint.get(key) ?? [];
       blockersByCheckpoint.set(

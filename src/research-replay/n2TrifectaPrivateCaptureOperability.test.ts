@@ -25,6 +25,108 @@ function writeJson(root: string, relativePath: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
 }
 
+function writeVerifiedCaptureReport(input: {
+  root: string;
+  date: string;
+  status: "PASS" | "NO_CHANGE" | "BLOCKED";
+  completedAt: string;
+  selectedVenueCode?: string | null;
+  entryResults?: Array<{
+    raceIdentity: string;
+    checkpointLabel: string;
+    result: "BLOCKED_EVIDENCE_SAVED";
+    blockers: string[];
+  }>;
+}): string {
+  const entryResults = input.entryResults ?? [];
+  const selected = entryResults[0] ?? null;
+  const executorReport = entryResults.length === 0
+    ? null
+    : (() => {
+      const core = {
+        reportVersion: "n2-trifecta-private-capture-run-v1",
+        executorVersion: "n2-trifecta-private-capture-executor-test-fixture",
+        status: input.status === "BLOCKED" ? "BLOCKED" as const : "PASS" as const,
+        executionMode: "execute" as const,
+        startedAt: input.completedAt,
+        completedAt: input.completedAt,
+        manifestDigest: "d".repeat(64),
+        approvalId: null,
+        approvalAudit: { status: "PASS" },
+        dueEntryCount: entryResults.length,
+        networkRequestCount: 0,
+        capturedCount: 0,
+        blockedEvidenceCount: entryResults.length,
+        skippedCount: 0,
+        stoppedEarly: false,
+        blockers: [] as string[],
+        entryResults,
+        ledgerRelativePath: "data/private/trifecta-capture/attempts/test.jsonl",
+        databaseWriteCount: 0 as const,
+        primaryDbWriteCount: 0 as const,
+        sidecarWriteCount: 0 as const,
+        currentBuyChanged: false as const,
+        lineChanged: false as const,
+        publicPublished: false as const,
+        automatedBettingChanged: false as const,
+        productionApplyExecuted: false as const,
+      };
+      return { ...core, outputDigest: canonicalHash(core) };
+    })();
+  const authorizationAudit = { status: "PASS" as const };
+  const eventDigest = canonicalHash({
+    status: input.status,
+    blockers: [],
+    dateJst: input.date,
+    authorizationStatus: authorizationAudit.status,
+    selectedVenueCode: input.selectedVenueCode ?? "10",
+    selectedRaceIdentity: selected?.raceIdentity ?? null,
+    selectedCheckpointLabel: selected?.checkpointLabel ?? null,
+    executorStatus: executorReport?.status ?? null,
+    executorOutputDigest: executorReport?.outputDigest ?? null,
+    primaryDbMetadataUnchanged: true,
+  });
+  const relativePath = `data/private/trifecta-capture/reports/${input.date}/${eventDigest}.json`;
+  const core = {
+    reportVersion: "n2-trifecta-local-capture-report-v1.1",
+    serviceVersion: "n2-trifecta-local-capture-service-v1.1",
+    status: input.status,
+    blockers: [] as string[],
+    startedAt: input.completedAt,
+    completedAt: input.completedAt,
+    now: input.completedAt,
+    dateJst: input.date,
+    authorizationAudit,
+    selectedVenueCode: input.selectedVenueCode ?? "10",
+    selectedSourcePlanDigest: "d".repeat(64),
+    selectedRaceCount: 12,
+    dailyReservationCountBefore: 0,
+    dailyReservationCountAfter: 0,
+    dueEntryCount: entryResults.length,
+    selectedEntry: selected,
+    singleEntryPlanDigest: executorReport ? "d".repeat(64) : null,
+    ephemeralApprovalId: null,
+    executorReport,
+    selectionRelativePath: null,
+    reservationRelativePath: null,
+    reportRelativePath: relativePath,
+    latestStatusRelativePath: "data/private/trifecta-capture/status/latest.json",
+    eventDigest,
+    eventChanged: true,
+    primaryDbMetadataUnchanged: true,
+    databaseWriteCount: 0 as const,
+    primaryDbWriteCount: 0 as const,
+    sidecarWriteCount: 0 as const,
+    currentBuyChanged: false as const,
+    lineChanged: false as const,
+    publicPublished: false as const,
+    automatedBettingChanged: false as const,
+    productionApplyExecuted: false as const,
+  };
+  writeJson(input.root, relativePath, { ...core, outputDigest: canonicalHash(core) });
+  return relativePath;
+}
+
 test("operability report classifies mature checkpoint coverage without reading raw odds", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-operability-"));
   try {
@@ -74,21 +176,23 @@ test("operability report classifies mature checkpoint coverage without reading r
       checkedAt: "2026-08-07T00:37:30.000Z",
       report: { status: "NO_CHANGE" },
     });
-    writeJson(root, "data/private/trifecta-capture/reports/2026-08-07/pass.json", {
+    writeVerifiedCaptureReport({
+      root,
+      date: "2026-08-07",
       status: "PASS",
       completedAt: "2026-08-07T00:36:00.000Z",
     });
-    writeJson(root, "data/private/trifecta-capture/reports/2026-08-07/blocked.json", {
+    writeVerifiedCaptureReport({
+      root,
+      date: "2026-08-07",
       status: "BLOCKED",
       completedAt: "2026-08-07T00:35:30.000Z",
-      executorReport: {
-        entryResults: [{
-          raceIdentity: "20260807-10-02",
-          checkpointLabel: "T-30",
-          result: "BLOCKED_EVIDENCE_SAVED",
-          blockers: ["PARSED_SELECTION_COUNT_NOT_120"],
-        }],
-      },
+      entryResults: [{
+        raceIdentity: "20260807-10-02",
+        checkpointLabel: "T-30",
+        result: "BLOCKED_EVIDENCE_SAVED",
+        blockers: ["PARSED_SELECTION_COUNT_NOT_120"],
+      }],
     });
 
     const acceptedDirectory = "data/raw/research/trifecta-market/2026-08-07/10/01/T-30";
@@ -178,7 +282,7 @@ test("operability report classifies mature checkpoint coverage without reading r
   }
 });
 
-test("invalid accepted marker and forged reservation are blocked instead of inflating coverage", () => {
+test("invalid accepted marker, forged reservation, and forged capture report cannot inflate coverage", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-operability-invalid-marker-"));
   try {
     const plan = buildN2TrifectaOddsCheckpointPlan({
@@ -234,6 +338,18 @@ test("invalid accepted marker and forged reservation are blocked instead of infl
       reservedAt: "2026-08-07T00:35:00.000Z",
       networkRequestCeiling: 1,
     });
+    writeJson(root, "data/private/trifecta-capture/reports/2026-08-07/forged.json", {
+      status: "BLOCKED",
+      completedAt: "2026-08-07T00:35:30.000Z",
+      executorReport: {
+        entryResults: [{
+          raceIdentity: "20260807-10-04",
+          checkpointLabel: "T-30",
+          result: "BLOCKED_EVIDENCE_SAVED",
+          blockers: ["FORGED_BLOCKER"],
+        }],
+      },
+    });
 
     const report = buildN2TrifectaPrivateCaptureOperabilityReport({
       dataRoot: root,
@@ -243,8 +359,16 @@ test("invalid accepted marker and forged reservation are blocked instead of infl
     });
     assert.equal(report.status, "BLOCKED");
     assert.equal(report.coverage.acceptedCount, 0);
+    assert.equal(report.coverage.blockedEvidenceCount, 1);
     assert.equal(report.coverage.reservedNoAcceptedEvidenceCount, 0);
+    const forgedReportCheckpoint = report.checkpoints.find(
+      (checkpoint) => checkpoint.raceIdentity === "20260807-10-04"
+        && checkpoint.checkpointLabel === "T-30",
+    );
+    assert.equal(forgedReportCheckpoint?.state, "MISSED_NO_RESERVATION");
+    assert.deepEqual(forgedReportCheckpoint?.blockerCodes, []);
     assert.ok(report.blockers.includes("RESERVATION_METADATA_INVALID"));
+    assert.ok(report.blockers.includes("CAPTURE_REPORT_METADATA_INVALID"));
     assert.ok(report.blockers.includes("ACCEPTED_MARKER_CHECKPOINT_KEY_INVALID"));
     assert.ok(report.blockers.includes("ACCEPTED_MARKER_RACE_IDENTITY_MISMATCH"));
     assert.ok(report.blockers.includes("ACCEPTED_MARKER_RAW_SHA256_INVALID"));
