@@ -135,13 +135,38 @@ function exclusiveWrite(path: string, content: string): void {
   }
 }
 
-function readEventDigest(path: string): string | null {
+function readVerifiedEventDigest(path: string): string | null {
   if (!existsSync(path)) return null;
   try {
     const stat = statSync(path);
     if (!stat.isFile() || stat.size <= 0 || stat.size > 200_000) return null;
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as { eventDigest?: unknown };
-    return typeof parsed.eventDigest === "string" ? parsed.eventDigest : null;
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    const {
+      outputDigest,
+      now,
+      eventDigest,
+      eventChanged,
+      reportRelativePath,
+      latestStatusRelativePath,
+      ...eventCore
+    } = parsed;
+    if (typeof outputDigest !== "string"
+      || typeof now !== "string"
+      || typeof eventDigest !== "string"
+      || typeof eventChanged !== "boolean"
+      || !(typeof reportRelativePath === "string" || reportRelativePath === null)
+      || typeof latestStatusRelativePath !== "string") return null;
+    if (eventDigest !== canonicalHash(eventCore)) return null;
+    const core = {
+      ...eventCore,
+      now,
+      eventDigest,
+      eventChanged,
+      reportRelativePath,
+      latestStatusRelativePath,
+    };
+    if (outputDigest !== canonicalHash(core)) return null;
+    return eventDigest;
   } catch {
     return null;
   }
@@ -278,7 +303,7 @@ export function recordN2TrifectaImmutableRuntimeBlock(input: {
     productionApplyExecuted: false as const,
   };
   const eventDigest = canonicalHash(eventCore);
-  const previousDigest = readEventDigest(latestPath);
+  const previousDigest = readVerifiedEventDigest(latestPath);
   const eventChanged = previousDigest !== eventDigest;
   const reportRelativePath = eventChanged
     ? `data/private/trifecta-capture/reports/runtime-authority/${date ?? "unknown"}/${eventDigest}.json`
