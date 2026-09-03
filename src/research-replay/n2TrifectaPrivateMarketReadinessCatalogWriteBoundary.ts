@@ -130,7 +130,7 @@ function requireNoCatalogRegression(input: {
   if (!existsSync(path)) return;
   const lst = lstatSync(path);
   const stat = statSync(path);
-  if (lst.isSymbolicLink() || !lst.isFile() || (stat.mode & 0o777) !== 0o600) {
+  if (lst.isSymbolicLink() || !lst.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600) {
     throw new Error("READINESS_CATALOG_EXISTING_AUTHORITY_INVALID");
   }
   let existing: N2TrifectaPrivateMarketReadinessCatalog | null = null;
