@@ -1,14 +1,38 @@
 import { existsSync, lstatSync, readFileSync, statSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 const MAX_MANIFEST_BYTES = 5_000_000;
+
+function assertSafeExistingAncestors(
+  rootDir: string,
+  targetPath: string,
+  errorCode: string,
+): void {
+  const root = resolve(rootDir);
+  const parent = dirname(targetPath);
+  const rel = relative(root, parent);
+  if (rel === ".." || rel.startsWith(`..${sep}`)) {
+    throw new Error(errorCode);
+  }
+
+  let current = root;
+  const components = rel === "" ? [] : rel.split(sep).filter(Boolean);
+  for (const component of ["", ...components]) {
+    if (component !== "") current = resolve(current, component);
+    if (!existsSync(current)) break;
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error(errorCode);
+    }
+  }
+}
 
 /**
  * Preflight immutable private files that can influence exploration-matrix rows.
  *
  * Semantic/digest validation remains owned by the canonical matrix builder. This
- * boundary only rejects alternate hard-link identities before any manifest-bound
- * feature artifact is accepted as research authority.
+ * boundary rejects alternate file identities and ancestor redirects before any
+ * manifest-bound feature artifact is accepted as research authority.
  */
 export function assertN2TrifectaPrivateMarketExplorationInputSingleLinks(
   rootDir: string,
@@ -19,6 +43,11 @@ export function assertN2TrifectaPrivateMarketExplorationInputSingleLinks(
     root,
     "data/private/trifecta-market-experiments/manifests",
     `${manifestDigest}.json`,
+  );
+  assertSafeExistingAncestors(
+    root,
+    manifestPath,
+    "EXPLORATION_MATRIX_MANIFEST_PARENT_INVALID",
   );
   if (!existsSync(manifestPath)) return;
   const manifestLst = lstatSync(manifestPath);
@@ -45,6 +74,11 @@ export function assertN2TrifectaPrivateMarketExplorationInputSingleLinks(
     if (typeof relativePath !== "string" || relativePath.length === 0) continue;
     const featurePath = resolve(root, relativePath);
     if (featurePath === root || !featurePath.startsWith(`${root}${sep}`)) continue;
+    assertSafeExistingAncestors(
+      root,
+      featurePath,
+      "EXPLORATION_MATRIX_FEATURE_PARENT_INVALID",
+    );
     if (!existsSync(featurePath)) continue;
     const featureLst = lstatSync(featurePath);
     if (featureLst.isSymbolicLink() || !featureLst.isFile()) continue;
