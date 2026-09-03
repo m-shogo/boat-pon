@@ -1,10 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  lstatSync,
-  readFileSync,
-  statSync,
-} from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import {
@@ -18,6 +13,8 @@ import {
   runN2TrifectaLocalCaptureTick,
   type N2TrifectaLocalCaptureAuthorization,
 } from "../src/research-replay/n2TrifectaLocalCaptureService";
+import { readN2TrifectaPrivateAuthorityJson } from
+  "../src/research-replay/n2TrifectaPrivateAuthorityFile";
 import {
   appendN2TrifectaPrivateHeartbeat,
   buildN2TrifectaPrivateHeartbeatRecord,
@@ -48,25 +45,9 @@ const now = process.env.BOAT_PON_LOCAL_CAPTURE_NOW?.trim()
 const forceJson = process.argv.includes("--json")
   || process.env.BOAT_PON_LOCAL_CAPTURE_VERBOSE === "1";
 
-function readPrivateJson<T>(path: string, missingCode: string): T {
-  if (!existsSync(path)) throw new Error(missingCode);
-  if (lstatSync(path).isSymbolicLink()) {
-    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED");
-  }
-  const stat = statSync(path);
-  if (!stat.isFile() || stat.size <= 0 || stat.size > 100_000) {
-    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SIZE_OR_TYPE_INVALID");
-  }
-  try {
-    return JSON.parse(readFileSync(path, "utf8")) as T;
-  } catch {
-    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_INVALID_JSON");
-  }
-}
-
 function tryReadRuntimeAuthority(): N2TrifectaImmutableRuntimeAuthorityBinding | null {
   try {
-    return readPrivateJson<N2TrifectaImmutableRuntimeAuthorityBinding>(
+    return readN2TrifectaPrivateAuthorityJson<N2TrifectaImmutableRuntimeAuthorityBinding>(
       runtimeAuthorityPath,
       "LOCAL_CAPTURE_RUNTIME_AUTHORITY_NOT_FOUND",
     );
@@ -153,7 +134,7 @@ function recordHeartbeatSafely(input: Parameters<typeof buildN2TrifectaPrivateHe
   }
 }
 
-const authorization = readPrivateJson<N2TrifectaLocalCaptureAuthorization>(
+const authorization = readN2TrifectaPrivateAuthorityJson<N2TrifectaLocalCaptureAuthorization>(
   authorizationPath,
   "LOCAL_CAPTURE_AUTHORIZATION_NOT_FOUND",
 );
