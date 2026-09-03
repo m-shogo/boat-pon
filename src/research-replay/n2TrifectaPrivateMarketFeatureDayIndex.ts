@@ -290,6 +290,7 @@ function readRace(input: {
   }
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) throw new Error(`R${input.raceNo}_FEATURE_FILE_TYPE_INVALID`);
+  if (lst.nlink !== 1) throw new Error(`R${input.raceNo}_FEATURE_FILE_HARDLINK_NOT_ALLOWED`);
   const stat = statSync(path);
   if ((stat.mode & 0o777) !== 0o600) throw new Error(`R${input.raceNo}_FEATURE_FILE_MODE_INVALID`);
   if (stat.size <= 0 || stat.size > MAX_FEATURE_ARTIFACT_BYTES) throw new Error(`R${input.raceNo}_FEATURE_FILE_SIZE_INVALID`);
