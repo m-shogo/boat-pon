@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 
+import { canonicalHash } from "./canonical.js";
 import { buildN2TrifectaOddsCheckpointPlan } from "./n2TrifectaOddsCheckpointCollection.js";
 import {
   buildN2TrifectaPrivateDailyPlanCache,
@@ -48,9 +49,10 @@ test("operability report classifies mature checkpoint coverage without reading r
     });
     writeN2TrifectaPrivateDailyPlanCache({ dataRoot: root, cache });
 
+    const authorizationId = "AUTH-N2-TRI-LOCAL-operability-test";
     writeJson(root, "data/private/trifecta-capture/authorization.json", {
       authorizationVersion: "n2-trifecta-local-capture-authorization-v1",
-      authorizationId: "AUTH-N2-TRI-LOCAL-operability-test",
+      authorizationId,
       issuedAt: "2026-08-07T00:00:00.000Z",
       expiresAt: "2026-09-01T00:00:00.000Z",
       stage: "ONE_VENUE_REVIEW",
@@ -103,8 +105,6 @@ test("operability report classifies mature checkpoint coverage without reading r
       productionApplyExecuted: false,
     });
 
-    // Operability must not open envelope/raw market payloads. Invalid envelope JSON is harmless here
-    // because blocked taxonomy is derived from the sanitized local tick report metadata instead.
     const ignoredEnvelopePath = join(
       root,
       "data/raw/research/trifecta-market/2026-08-07/10/04/T-30/ignored.envelope.json",
@@ -112,17 +112,26 @@ test("operability report classifies mature checkpoint coverage without reading r
     mkdirSync(dirname(ignoredEnvelopePath), { recursive: true, mode: 0o700 });
     writeFileSync(ignoredEnvelopePath, "not-json-and-must-never-be-read", { encoding: "utf8", mode: 0o600 });
 
-    writeJson(root, "data/private/trifecta-capture/reservations/2026-08-07/reservation.json", {
+    const reservation = {
       reservationVersion: "n2-trifecta-local-capture-reservation-v1",
-      authorizationId: "AUTH-N2-TRI-LOCAL-operability-test",
+      authorizationId,
       date: "2026-08-07",
       venueCode: "10",
       raceIdentity: "20260807-10-03",
       checkpointLabel: "T-30",
       targetCaptureAt: "2026-08-07T00:35:00.000Z",
-      reservationKey: "c".repeat(64),
       reservedAt: "2026-08-07T00:35:00.000Z",
       networkRequestCeiling: 1,
+    };
+    const reservationKey = canonicalHash({
+      authorizationId: reservation.authorizationId,
+      raceIdentity: reservation.raceIdentity,
+      checkpointLabel: reservation.checkpointLabel,
+      targetCaptureAt: reservation.targetCaptureAt,
+    });
+    writeJson(root, `data/private/trifecta-capture/reservations/2026-08-07/${reservationKey}.json`, {
+      ...reservation,
+      reservationKey,
     });
 
     const report = buildN2TrifectaPrivateCaptureOperabilityReport({
@@ -169,7 +178,7 @@ test("operability report classifies mature checkpoint coverage without reading r
   }
 });
 
-test("invalid accepted marker is blocked instead of being counted as accepted", () => {
+test("invalid accepted marker and forged reservation are blocked instead of inflating coverage", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-operability-invalid-marker-"));
   try {
     const plan = buildN2TrifectaOddsCheckpointPlan({
@@ -193,6 +202,7 @@ test("invalid accepted marker is blocked instead of being counted as accepted", 
     });
     writeN2TrifectaPrivateDailyPlanCache({ dataRoot: root, cache });
     writeJson(root, "data/private/trifecta-capture/authorization.json", {
+      authorizationId: "AUTH-N2-TRI-LOCAL-operability-test",
       expiresAt: "2026-09-01T00:00:00.000Z",
       maxRequestsPerDay: 48,
     });
@@ -212,6 +222,18 @@ test("invalid accepted marker is blocked instead of being counted as accepted", 
       databaseWriteAuthorized: false,
       productionApplyExecuted: false,
     });
+    writeJson(root, "data/private/trifecta-capture/reservations/2026-08-07/forged.json", {
+      reservationVersion: "n2-trifecta-local-capture-reservation-v1",
+      authorizationId: "AUTH-N2-TRI-LOCAL-operability-test",
+      date: "2026-08-07",
+      venueCode: "10",
+      raceIdentity: "20260807-10-03",
+      checkpointLabel: "T-30",
+      targetCaptureAt: "2026-08-07T00:35:00.000Z",
+      reservationKey: "c".repeat(64),
+      reservedAt: "2026-08-07T00:35:00.000Z",
+      networkRequestCeiling: 1,
+    });
 
     const report = buildN2TrifectaPrivateCaptureOperabilityReport({
       dataRoot: root,
@@ -221,6 +243,8 @@ test("invalid accepted marker is blocked instead of being counted as accepted", 
     });
     assert.equal(report.status, "BLOCKED");
     assert.equal(report.coverage.acceptedCount, 0);
+    assert.equal(report.coverage.reservedNoAcceptedEvidenceCount, 0);
+    assert.ok(report.blockers.includes("RESERVATION_METADATA_INVALID"));
     assert.ok(report.blockers.includes("ACCEPTED_MARKER_CHECKPOINT_KEY_INVALID"));
     assert.ok(report.blockers.includes("ACCEPTED_MARKER_RACE_IDENTITY_MISMATCH"));
     assert.ok(report.blockers.includes("ACCEPTED_MARKER_RAW_SHA256_INVALID"));
