@@ -1,3 +1,4 @@
+import { existsSync, lstatSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
@@ -14,6 +15,20 @@ function argument(name: string): string | null {
   return index >= 0 ? process.argv[index + 1] ?? null : null;
 }
 
+function assertManifestSingleLink(rootDir: string, manifestDigest: string): void {
+  const manifestPath = resolve(
+    rootDir,
+    "data/private/trifecta-market-experiments/manifests",
+    `${manifestDigest}.json`,
+  );
+  if (!existsSync(manifestPath)) return;
+  const lst = lstatSync(manifestPath);
+  if (lst.isSymbolicLink() || !lst.isFile()) return;
+  if (statSync(manifestPath).nlink !== 1) {
+    throw new Error("EXPLORATION_MATRIX_MANIFEST_HARDLINK_NOT_ALLOWED");
+  }
+}
+
 const manifestDigest = argument("manifest");
 if (!manifestDigest || !/^[0-9a-f]{64}$/u.test(manifestDigest)) {
   console.error("usage: tsx scripts/build-n2-trifecta-private-market-exploration-matrix.ts --manifest <64-hex-digest> [--write-private]");
@@ -22,6 +37,7 @@ if (!manifestDigest || !/^[0-9a-f]{64}$/u.test(manifestDigest)) {
 
 const rootDir = resolve(process.env.BOAT_PON_DATA_ROOT?.trim() || process.cwd());
 const writePrivate = process.argv.includes("--write-private");
+assertManifestSingleLink(rootDir, manifestDigest);
 const matrix = buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest });
 const writeResult = writePrivate
   ? writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir, matrix })
