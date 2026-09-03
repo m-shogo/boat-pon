@@ -24,11 +24,21 @@ test("exploration matrix CLI has no network, database or label dependency", () =
 });
 
 test("exploration matrix CLI rejects hardlinked manifest authority before build", () => {
-  assert.match(cli, /assertManifestSingleLink\(rootDir, manifestDigest\)/u);
-  assert.match(cli, /statSync\(manifestPath\)\.nlink !== 1/u);
+  assert.match(cli, /assertPrivateInputSingleLinks\(rootDir, manifestDigest\)/u);
+  assert.match(cli, /manifestStat\.nlink !== 1/u);
   assert.match(cli, /EXPLORATION_MATRIX_MANIFEST_HARDLINK_NOT_ALLOWED/u);
   assert.ok(
-    cli.indexOf("assertManifestSingleLink(rootDir, manifestDigest)")
+    cli.indexOf("assertPrivateInputSingleLinks(rootDir, manifestDigest)")
+      < cli.indexOf("buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest })"),
+  );
+});
+
+test("exploration matrix CLI rejects hardlinked feature authority before build", () => {
+  assert.match(cli, /featureArtifactRelativePath/u);
+  assert.match(cli, /statSync\(featurePath\)\.nlink !== 1/u);
+  assert.match(cli, /EXPLORATION_MATRIX_FEATURE_HARDLINK_NOT_ALLOWED/u);
+  assert.ok(
+    cli.indexOf("statSync(featurePath).nlink !== 1")
       < cli.indexOf("buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest })"),
   );
 });
