@@ -119,6 +119,18 @@ function ensurePrivateParent(rootDir: string, relativePath: string): void {
   }
 }
 
+function privateParentIsInvalid(rootDir: string, relativePath: string): boolean {
+  let current = resolve(rootDir);
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (!existsSync(current)) return false;
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) return true;
+  }
+  return false;
+}
+
 export function n2TrifectaPrivateDailyPlanRelativePath(date: string): string {
   if (!isCalendarDate(date)) throw new Error("INVALID_DATE");
   return `data/private/trifecta-capture/plans/${date}.json`;
@@ -352,6 +364,16 @@ export function readN2TrifectaPrivateDailyPlanCache(input: {
 }): N2TrifectaPrivateDailyPlanCacheReadResult {
   const relativePath = n2TrifectaPrivateDailyPlanRelativePath(input.expectedDate);
   const path = resolveInside(input.dataRoot, relativePath);
+  if (privateParentIsInvalid(input.dataRoot, relativePath)) {
+    return {
+      status: "BLOCKED",
+      blockers: ["DAILY_PLAN_PARENT_INVALID"],
+      relativePath,
+      cache: null,
+      plan: null,
+      fallbackToPrimaryDbAllowed: false,
+    };
+  }
   if (!existsSync(path)) {
     return {
       status: "MISSING",
