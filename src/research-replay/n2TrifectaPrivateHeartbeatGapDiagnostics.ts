@@ -102,6 +102,10 @@ function parseInstant(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function jstDate(value: string): string {
+  return new Intl.DateTimeFormat("sv", { timeZone: "Asia/Tokyo" }).format(new Date(value));
+}
+
 function validCalendarDate(date: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) return false;
   try {
@@ -131,6 +135,7 @@ function validateHeartbeatRecord(record: HeartbeatRecordLike, date: string): str
   const canonicalRecordedAt = canonicalInstant(record.recordedAt);
   if (canonicalRecordedAt == null) blockers.push("HEARTBEAT_RECORDED_AT_INVALID");
   else if (canonicalRecordedAt !== record.recordedAt) blockers.push("HEARTBEAT_RECORDED_AT_NON_CANONICAL");
+  else if (jstDate(canonicalRecordedAt) !== date) blockers.push("HEARTBEAT_RECORDED_AT_DATE_MISMATCH");
   if (record.dateJst !== date) blockers.push("HEARTBEAT_DATE_MISMATCH");
   if (!["PASS", "NO_CHANGE", "BLOCKED"].includes(String(record.status))) {
     blockers.push("HEARTBEAT_STATUS_INVALID");
