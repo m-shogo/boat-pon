@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -87,4 +88,37 @@ test("private heartbeat rejects invalid timestamps and negative counters", () =>
     }),
     /HEARTBEAT_NETWORK_COUNT_INVALID/,
   );
+});
+
+test("private heartbeat append rejects a record mutated after canonical construction", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-private-heartbeat-integrity-"));
+  try {
+    const canonical = buildN2TrifectaPrivateHeartbeatRecord({
+      recordedAt: "2026-08-07T01:13:00.000Z",
+      status: "PASS",
+      runtimeAuthorityStatus: "PASS",
+      networkRequestCount: 1,
+      capturedCount: 1,
+    });
+    const tampered = {
+      ...canonical,
+      networkRequestCount: 99,
+    };
+    assert.throws(
+      () => appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record: tampered }),
+      /HEARTBEAT_APPEND_AUTHORITY_INVALID/,
+    );
+    assert.equal(existsSync(join(root, n2TrifectaPrivateHeartbeatRelativePath(canonical.recordedAt))), false);
+
+    const unsafe = {
+      ...canonical,
+      publicPublished: true,
+    } as unknown as typeof canonical;
+    assert.throws(
+      () => appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record: unsafe }),
+      /HEARTBEAT_APPEND_AUTHORITY_INVALID/,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
