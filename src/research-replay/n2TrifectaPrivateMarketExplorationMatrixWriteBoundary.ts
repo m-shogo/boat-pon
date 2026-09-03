@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 import { canonicalHash } from "./canonical";
 import {
@@ -8,6 +8,26 @@ import {
   writeN2TrifectaPrivateMarketExplorationMatrix,
   type N2TrifectaPrivateMarketExplorationMatrix,
 } from "./n2TrifectaPrivateMarketExplorationMatrix";
+
+function assertSafeExistingAncestors(rootDir: string, targetPath: string): void {
+  const root = resolve(rootDir);
+  const parent = dirname(targetPath);
+  const rel = relative(root, parent);
+  if (rel === ".." || rel.startsWith(`..${sep}`)) {
+    throw new Error("EXPLORATION_MATRIX_PARENT_INVALID");
+  }
+
+  let current = root;
+  const components = rel === "" ? [] : rel.split(sep).filter(Boolean);
+  for (const component of ["", ...components]) {
+    if (component !== "") current = resolve(current, component);
+    if (!existsSync(current)) break;
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("EXPLORATION_MATRIX_PARENT_INVALID");
+    }
+  }
+}
 
 /**
  * Verified creation boundary for immutable private exploration-matrix evidence.
@@ -31,6 +51,7 @@ export function writeVerifiedN2TrifectaPrivateMarketExplorationMatrix(input: {
   }
 
   const path = resolve(input.rootDir, privateMarketExplorationMatrixRelativePath(input.matrix));
+  assertSafeExistingAncestors(input.rootDir, path);
   if (existsSync(path)) {
     const lst = lstatSync(path);
     if (!lst.isSymbolicLink() && lst.isFile() && statSync(path).nlink !== 1) {
