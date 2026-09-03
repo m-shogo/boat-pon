@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, linkSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -34,6 +34,19 @@ test("local private authority reader rejects a permissive file before parsing it
     assert.throws(
       () => readN2TrifectaPrivateAuthorityJson(path, "AUTHORITY_MISSING"),
       /LOCAL_CAPTURE_PRIVATE_AUTHORITY_FILE_MODE_INVALID/,
+    );
+  });
+});
+
+test("local private authority reader rejects a hardlinked owner-only file", () => {
+  withRoot((root) => {
+    const sourcePath = join(root, "authority-source.json");
+    const authorityPath = join(root, "authority.json");
+    writeFileSync(sourcePath, "{\"ok\":true}\n", { encoding: "utf8", mode: 0o600 });
+    linkSync(sourcePath, authorityPath);
+    assert.throws(
+      () => readN2TrifectaPrivateAuthorityJson(authorityPath, "AUTHORITY_MISSING"),
+      /LOCAL_CAPTURE_PRIVATE_AUTHORITY_HARDLINK_NOT_ALLOWED/,
     );
   });
 });
