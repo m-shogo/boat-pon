@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   chmodSync,
+  linkSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -128,6 +129,32 @@ test("atomic private write is owner-only and reads back without database fallbac
     assert.equal(read.status, "PASS");
     assert.equal(read.fallbackToPrimaryDbAllowed, false);
     assert.equal(read.plan?.manifestDigest, cache.plan.manifestDigest);
+  });
+});
+
+test("hardlinked daily plan authority fails closed even with owner-only mode", () => {
+  withRoot((root) => {
+    const cache = buildN2TrifectaPrivateDailyPlanCache({
+      date: "2026-08-06",
+      generatedAt: "2026-08-06T00:00:00.000Z",
+      plans: [completePlan()],
+      source: sourceEvidence(),
+    });
+    const relativePath = writeN2TrifectaPrivateDailyPlanCache({ dataRoot: root, cache });
+    const absolutePath = join(root, relativePath);
+    const alternatePath = join(root, "daily-plan-hardlink.json");
+    linkSync(absolutePath, alternatePath);
+    assert.equal(statSync(absolutePath).mode & 0o777, 0o600);
+    assert.equal(statSync(absolutePath).nlink, 2);
+
+    const read = readN2TrifectaPrivateDailyPlanCache({
+      dataRoot: root,
+      expectedDate: "2026-08-06",
+      now: "2026-08-06T00:35:00.000Z",
+    });
+    assert.equal(read.status, "BLOCKED");
+    assert.equal(read.fallbackToPrimaryDbAllowed, false);
+    assert.ok(read.blockers.includes("DAILY_PLAN_HARDLINK_NOT_ALLOWED"));
   });
 });
 
