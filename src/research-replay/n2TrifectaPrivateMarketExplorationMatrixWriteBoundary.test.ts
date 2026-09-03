@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, mkdtempSync, rmSync } from "node:fs";
+import { linkSync, mkdtempSync, readdirSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -51,6 +51,25 @@ test("verified exploration-matrix writer accepts the canonical source-bound matr
     const result = writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, matrix });
     assert.equal(result.created, true);
     assert.equal(result.matrixDigest, matrix.matrixDigest);
+  });
+});
+
+test("verified exploration-matrix writer rejects symlinked matrix ancestors before persistence", () => {
+  withRoot((root) => {
+    const external = mkdtempSync(join(tmpdir(), "boat-pon-exploration-matrix-external-"));
+    try {
+      const manifestDigest = createEmptyManifest(root);
+      const matrix = buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, manifestDigest });
+      symlinkSync(external, join(root, "data/private/trifecta-market-experiments/matrices"), "dir");
+
+      assert.throws(
+        () => writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, matrix }),
+        /EXPLORATION_MATRIX_PARENT_INVALID/u,
+      );
+      assert.deepEqual(readdirSync(external), []);
+    } finally {
+      rmSync(external, { recursive: true, force: true });
+    }
   });
 });
 
