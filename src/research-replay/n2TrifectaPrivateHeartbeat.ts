@@ -75,6 +75,24 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function ensurePrivateParent(rootDir: string, relativePath: string): void {
+  const root = resolve(rootDir);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  let current = root;
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("HEARTBEAT_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 export function n2TrifectaPrivateHeartbeatRelativePath(recordedAt: string): string {
   const date = jstDate(recordedAt);
   if (!date) throw new Error("HEARTBEAT_RECORDED_AT_INVALID");
@@ -178,7 +196,7 @@ export function appendN2TrifectaPrivateHeartbeat(input: {
   verifyHeartbeatRecord(input.record);
   const relativePath = n2TrifectaPrivateHeartbeatRelativePath(input.record.recordedAt);
   const path = resolveInside(input.dataRoot, relativePath);
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  ensurePrivateParent(input.dataRoot, relativePath);
   if (existsSync(path)) {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink()) throw new Error("HEARTBEAT_SYMLINK_NOT_ALLOWED");
