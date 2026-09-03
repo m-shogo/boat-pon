@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { linkSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -57,22 +57,25 @@ function passReport(): N2TrifectaPrivateMarketFeatureLoadReport {
   return { ...reportCore, outputDigest: canonicalHash(reportCore) };
 }
 
+function writeValidDayIndex(root: string): string {
+  writeN2TrifectaPrivateMarketFeatureArtifact({
+    rootDir: root,
+    report: passReport(),
+    generatedAt: "2026-08-07T03:00:00.000Z",
+  });
+  const index = buildN2TrifectaPrivateMarketFeatureDayIndex({
+    rootDir: root,
+    date: "2026-08-07",
+    venueCode: "10",
+    generatedAt: "2026-08-07T03:05:00.000Z",
+  });
+  return join(root, writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index }).relativePath);
+}
+
 test("experiment input rejects a rehashed day index that invents a PASS race", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-experiment-index-lineage-"));
   try {
-    writeN2TrifectaPrivateMarketFeatureArtifact({
-      rootDir: root,
-      report: passReport(),
-      generatedAt: "2026-08-07T03:00:00.000Z",
-    });
-    const index = buildN2TrifectaPrivateMarketFeatureDayIndex({
-      rootDir: root,
-      date: "2026-08-07",
-      venueCode: "10",
-      generatedAt: "2026-08-07T03:05:00.000Z",
-    });
-    const written = writeN2TrifectaPrivateMarketFeatureDayIndex({ rootDir: root, index });
-    const path = join(root, written.relativePath);
+    const path = writeValidDayIndex(root);
     const tampered = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     const races = tampered.races as Record<string, unknown>[];
     races[1] = {
@@ -102,6 +105,24 @@ test("experiment input rejects a rehashed day index that invents a PASS race", (
         scopes: [{ date: "2026-08-07", venueCode: "10" }],
       }),
       /DAY_INDEX_SOURCE_LINEAGE_MISMATCH/u,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("experiment input rejects a hardlinked day index authority", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-experiment-index-hardlink-"));
+  try {
+    const path = writeValidDayIndex(root);
+    linkSync(path, join(root, "day-index-alias.json"));
+
+    assert.throws(
+      () => buildN2TrifectaPrivateMarketExperimentInputManifest({
+        rootDir: root,
+        scopes: [{ date: "2026-08-07", venueCode: "10" }],
+      }),
+      /DAY_INDEX_FILE_HARDLINK_NOT_ALLOWED/u,
     );
   } finally {
     rmSync(root, { recursive: true, force: true });

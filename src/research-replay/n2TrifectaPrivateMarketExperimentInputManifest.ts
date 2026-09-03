@@ -158,6 +158,7 @@ function readDayIndex(input: {
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("DAY_INDEX_FILE_TYPE_INVALID");
   const stat = statSync(path);
+  if (stat.nlink !== 1) throw new Error("DAY_INDEX_FILE_HARDLINK_NOT_ALLOWED");
   if ((stat.mode & 0o777) !== 0o600) throw new Error("DAY_INDEX_FILE_MODE_INVALID");
   if (stat.size <= 0 || stat.size > MAX_DAY_INDEX_BYTES) throw new Error("DAY_INDEX_FILE_SIZE_INVALID");
   let index: DayIndexLike;
