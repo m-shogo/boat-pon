@@ -324,6 +324,7 @@ function verifyExistingManifest(path: string, expected: N2TrifectaPrivateMarketE
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("EXPERIMENT_INPUT_MANIFEST_FILE_TYPE_INVALID");
   const stat = statSync(path);
+  if (stat.nlink !== 1) throw new Error("EXPERIMENT_INPUT_MANIFEST_FILE_HARDLINK_NOT_ALLOWED");
   if ((stat.mode & 0o777) !== 0o600) throw new Error("EXPERIMENT_INPUT_MANIFEST_FILE_MODE_INVALID");
   if (stat.size <= 0 || stat.size > MAX_MANIFEST_BYTES) throw new Error("EXPERIMENT_INPUT_MANIFEST_FILE_SIZE_INVALID");
   let value: unknown;
