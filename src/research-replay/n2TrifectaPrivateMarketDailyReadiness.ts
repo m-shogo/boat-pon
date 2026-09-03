@@ -113,6 +113,24 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function ensurePrivateParent(rootDir: string, relativePath: string): void {
+  const root = resolve(rootDir);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  let current = root;
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("DAILY_READINESS_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 function validateScope(date: string, venueCode: string): void {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) throw new Error("DAILY_READINESS_DATE_INVALID");
   if (!/^(0[1-9]|1\d|2[0-4])$/u.test(venueCode)) throw new Error("DAILY_READINESS_VENUE_INVALID");
@@ -291,9 +309,7 @@ export function writeN2TrifectaPrivateMarketDailyReadiness(input: {
 }): { relativePath: string; created: boolean; outputDigest: string; fileMode: 0o600 } {
   const relativePath = privateMarketDailyReadinessRelativePath(input.readiness);
   const path = resolveInside(input.dataRoot, relativePath);
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  const parent = lstatSync(dirname(path));
-  if (parent.isSymbolicLink() || !parent.isDirectory()) throw new Error("DAILY_READINESS_PARENT_INVALID");
+  ensurePrivateParent(input.dataRoot, relativePath);
 
   const { outputDigest, ...core } = input.readiness;
   if (canonicalHash(core) !== outputDigest) throw new Error("DAILY_READINESS_OUTPUT_DIGEST_MISMATCH");
