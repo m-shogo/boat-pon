@@ -2,8 +2,10 @@ import { resolve } from "node:path";
 
 import {
   buildN2TrifectaPrivateMarketExplorationMatrix,
-  writeN2TrifectaPrivateMarketExplorationMatrix,
 } from "../src/research-replay/n2TrifectaPrivateMarketExplorationMatrix";
+import {
+  writeVerifiedN2TrifectaPrivateMarketExplorationMatrix,
+} from "../src/research-replay/n2TrifectaPrivateMarketExplorationMatrixWriteBoundary";
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -22,7 +24,7 @@ const rootDir = resolve(process.env.BOAT_PON_DATA_ROOT?.trim() || process.cwd())
 const writePrivate = process.argv.includes("--write-private");
 const matrix = buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest });
 const writeResult = writePrivate
-  ? writeN2TrifectaPrivateMarketExplorationMatrix({ rootDir, matrix })
+  ? writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir, matrix })
   : null;
 
 // Stdout intentionally exposes schema and lineage metadata only; all 85 numeric values per race stay in the private matrix file.
