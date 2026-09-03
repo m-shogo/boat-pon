@@ -163,6 +163,13 @@ function readVerifiedBlockReport(path: string): VerifiedRuntimeBlockReport | nul
       || !(typeof reportRelativePath === "string" || reportRelativePath === null)
       || typeof latestStatusRelativePath !== "string"
       || !(typeof dateJst === "string" || dateJst === null)) return null;
+    let canonicalNow: string;
+    try {
+      canonicalNow = canonicalUtcTimestamp(now);
+    } catch {
+      return null;
+    }
+    if (canonicalNow !== now || jstDate(canonicalNow) !== dateJst) return null;
     if (eventDigest !== canonicalHash(eventCore)) return null;
     const core = {
       ...eventCore,
