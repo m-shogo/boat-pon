@@ -132,9 +132,19 @@ type CaptureEvidenceSummary = {
   invalidReportCount: number;
 };
 
+type ReservationCheckpoint = {
+  raceIdentity: string;
+  checkpointLabel: string;
+  venueCode: string;
+  targetCaptureAt: string;
+};
+
 const MAX_JSON_BYTES = 2_000_000;
 const SHA_RE = /^[0-9a-f]{40}$/u;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
+const AUTHORIZATION_ID_RE = /^AUTH-N2-TRI-LOCAL-[A-Za-z0-9._-]{8,96}$/u;
+const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/u;
+const CHECKPOINTS = ["T-30", "T-20", "T-10", "T-5"] as const;
 
 function parseInstant(value: string): number | null {
   const parsed = Date.parse(value);
@@ -158,6 +168,9 @@ function readPrivateJson<T>(rootDir: string, relativePath: string): T {
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
   const stat = statSync(path);
+  if (!stat.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600) {
+    throw new Error("PRIVATE_JSON_FILE_AUTHORITY_INVALID");
+  }
   if (stat.size <= 0 || stat.size > MAX_JSON_BYTES) throw new Error("PRIVATE_JSON_SIZE_INVALID");
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
@@ -219,15 +232,51 @@ function checkpointDirectory(input: {
   ].join("/");
 }
 
-function reservationsByCheckpoint(rootDir: string, date: string): Map<string, N2TrifectaLocalCaptureReservation> {
+function reservationsByCheckpoint(input: {
+  rootDir: string;
+  date: string;
+  authorizationId: string;
+  checkpoints: ReservationCheckpoint[];
+}): Map<string, N2TrifectaLocalCaptureReservation> {
   const map = new Map<string, N2TrifectaLocalCaptureReservation>();
+  const expected = new Map(
+    input.checkpoints.map((entry) => [`${entry.raceIdentity}|${entry.checkpointLabel}`, entry]),
+  );
   for (const relativePath of listRegularJsonFiles(
-    rootDir,
-    `data/private/trifecta-capture/reservations/${date}`,
+    input.rootDir,
+    `data/private/trifecta-capture/reservations/${input.date}`,
   )) {
-    const reservation = readPrivateJson<N2TrifectaLocalCaptureReservation>(rootDir, relativePath);
-    if (reservation.date !== date) throw new Error("RESERVATION_DATE_MISMATCH");
+    const reservation = readPrivateJson<N2TrifectaLocalCaptureReservation>(input.rootDir, relativePath);
     const key = `${reservation.raceIdentity}|${reservation.checkpointLabel}`;
+    const checkpoint = expected.get(key);
+    const reservedAtMs = typeof reservation.reservedAt === "string" ? parseInstant(reservation.reservedAt) : null;
+    const expectedReservationKey = canonicalHash({
+      authorizationId: reservation.authorizationId,
+      raceIdentity: reservation.raceIdentity,
+      checkpointLabel: reservation.checkpointLabel,
+      targetCaptureAt: reservation.targetCaptureAt,
+    });
+    const fileName = relativePath.slice(relativePath.lastIndexOf("/") + 1);
+    const reservedDate = reservedAtMs == null
+      ? null
+      : new Date(reservedAtMs + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+    if (reservation.reservationVersion !== "n2-trifecta-local-capture-reservation-v1"
+      || reservation.authorizationId !== input.authorizationId
+      || !AUTHORIZATION_ID_RE.test(reservation.authorizationId)
+      || reservation.date !== input.date
+      || !VENUE_RE.test(reservation.venueCode)
+      || !CHECKPOINTS.includes(reservation.checkpointLabel as typeof CHECKPOINTS[number])
+      || reservedAtMs == null
+      || new Date(reservedAtMs).toISOString() !== reservation.reservedAt
+      || reservedDate !== input.date
+      || reservation.networkRequestCeiling !== 1
+      || !checkpoint
+      || reservation.venueCode !== checkpoint.venueCode
+      || reservation.targetCaptureAt !== checkpoint.targetCaptureAt
+      || reservation.reservationKey !== expectedReservationKey
+      || fileName !== `${expectedReservationKey}.json`) {
+      throw new Error("RESERVATION_AUTHORITY_INVALID");
+    }
     if (map.has(key)) throw new Error("RESERVATION_CHECKPOINT_DUPLICATE");
     map.set(key, reservation);
   }
@@ -429,7 +478,14 @@ export function buildN2TrifectaPrivateCaptureOperabilityReport(input: {
 
   let reservations = new Map<string, N2TrifectaLocalCaptureReservation>();
   try {
-    reservations = plan ? reservationsByCheckpoint(input.dataRoot, input.date) : new Map();
+    reservations = plan && authorization && typeof authorization.authorizationId === "string"
+      ? reservationsByCheckpoint({
+        rootDir: input.dataRoot,
+        date: input.date,
+        authorizationId: authorization.authorizationId,
+        checkpoints: plan.entries,
+      })
+      : new Map();
   } catch {
     blockers.push("RESERVATION_METADATA_INVALID");
   }
