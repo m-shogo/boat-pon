@@ -134,10 +134,47 @@ export function buildN2TrifectaPrivateHeartbeatRecord(input: {
   return { ...core, recordDigest: canonicalHash(core) };
 }
 
+function verifyHeartbeatRecord(record: N2TrifectaPrivateHeartbeatRecord): void {
+  const recordedAt = canonicalInstant(record.recordedAt);
+  if (!recordedAt || recordedAt !== record.recordedAt || jstDate(recordedAt) !== record.dateJst) {
+    throw new Error("HEARTBEAT_APPEND_AUTHORITY_INVALID");
+  }
+  if (record.heartbeatVersion !== N2_TRIFECTA_PRIVATE_HEARTBEAT_VERSION
+    || !(["PASS", "NO_CHANGE", "BLOCKED"] as unknown[]).includes(record.status)
+    || !(["PASS", "BLOCKED"] as unknown[]).includes(record.runtimeAuthorityStatus)
+    || !Array.isArray(record.blockers)
+    || record.databaseWriteCount !== 0
+    || record.primaryDbWriteCount !== 0
+    || record.sidecarWriteCount !== 0
+    || record.rawOddsValuesRecorded !== false
+    || record.currentBuyChanged !== false
+    || record.lineChanged !== false
+    || record.publicPublished !== false
+    || record.automatedBettingChanged !== false
+    || record.productionApplyExecuted !== false) {
+    throw new Error("HEARTBEAT_APPEND_AUTHORITY_INVALID");
+  }
+  for (const count of [
+    record.dueEntryCount,
+    record.networkRequestCount,
+    record.capturedCount,
+    record.blockedEvidenceCount,
+  ]) {
+    if (!Number.isSafeInteger(count) || count < 0) {
+      throw new Error("HEARTBEAT_APPEND_AUTHORITY_INVALID");
+    }
+  }
+  const { recordDigest, ...core } = record;
+  if (typeof recordDigest !== "string" || recordDigest !== canonicalHash(core)) {
+    throw new Error("HEARTBEAT_APPEND_AUTHORITY_INVALID");
+  }
+}
+
 export function appendN2TrifectaPrivateHeartbeat(input: {
   dataRoot: string;
   record: N2TrifectaPrivateHeartbeatRecord;
 }): string {
+  verifyHeartbeatRecord(input.record);
   const relativePath = n2TrifectaPrivateHeartbeatRelativePath(input.record.recordedAt);
   const path = resolveInside(input.dataRoot, relativePath);
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
