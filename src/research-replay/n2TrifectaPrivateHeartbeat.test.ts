@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  chmodSync,
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -118,6 +119,35 @@ test("private heartbeat append rejects a record mutated after canonical construc
       () => appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record: unsafe }),
       /HEARTBEAT_APPEND_AUTHORITY_INVALID/,
     );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("private heartbeat append fails closed when existing history is not owner-only", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-private-heartbeat-mode-"));
+  try {
+    const first = buildN2TrifectaPrivateHeartbeatRecord({
+      recordedAt: "2026-08-07T01:13:00.000Z",
+      status: "NO_CHANGE",
+      runtimeAuthorityStatus: "PASS",
+    });
+    const second = buildN2TrifectaPrivateHeartbeatRecord({
+      recordedAt: "2026-08-07T01:13:30.000Z",
+      status: "NO_CHANGE",
+      runtimeAuthorityStatus: "PASS",
+    });
+    const relativePath = appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record: first });
+    const path = join(root, relativePath);
+    chmodSync(path, 0o644);
+    const before = readFileSync(path, "utf8");
+
+    assert.throws(
+      () => appendN2TrifectaPrivateHeartbeat({ dataRoot: root, record: second }),
+      /HEARTBEAT_FILE_MODE_INVALID/,
+    );
+    assert.equal(readFileSync(path, "utf8"), before);
+    assert.equal(statSync(path).mode & 0o777, 0o644);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
