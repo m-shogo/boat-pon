@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { chmodSync, linkSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -48,5 +56,43 @@ test("local private authority reader rejects a hardlinked owner-only file", () =
       () => readN2TrifectaPrivateAuthorityJson(authorityPath, "AUTHORITY_MISSING"),
       /LOCAL_CAPTURE_PRIVATE_AUTHORITY_HARDLINK_NOT_ALLOWED/,
     );
+  });
+});
+
+test("local private authority reader rejects a symlinked ancestor under the trusted root", () => {
+  withRoot((root) => {
+    const external = mkdtempSync(join(tmpdir(), "boat-pon-private-authority-external-"));
+    try {
+      mkdirSync(join(root, "data/private"), { recursive: true, mode: 0o700 });
+      writeFileSync(join(external, "authorization.json"), "{\"ok\":true}\n", {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+      symlinkSync(external, join(root, "data/private/trifecta-capture"), "dir");
+      const authorityPath = join(root, "data/private/trifecta-capture/authorization.json");
+
+      assert.throws(
+        () => readN2TrifectaPrivateAuthorityJson(authorityPath, "AUTHORITY_MISSING", root),
+        /LOCAL_CAPTURE_PRIVATE_AUTHORITY_PARENT_INVALID/,
+      );
+    } finally {
+      rmSync(external, { recursive: true, force: true });
+    }
+  });
+});
+
+test("local private authority reader rejects paths outside the trusted root", () => {
+  withRoot((root) => {
+    const external = mkdtempSync(join(tmpdir(), "boat-pon-private-authority-outside-"));
+    try {
+      const authorityPath = join(external, "authorization.json");
+      writeFileSync(authorityPath, "{\"ok\":true}\n", { encoding: "utf8", mode: 0o600 });
+      assert.throws(
+        () => readN2TrifectaPrivateAuthorityJson(authorityPath, "AUTHORITY_MISSING", root),
+        /LOCAL_CAPTURE_PRIVATE_AUTHORITY_PATH_OUTSIDE_TRUSTED_ROOT/,
+      );
+    } finally {
+      rmSync(external, { recursive: true, force: true });
+    }
   });
 });

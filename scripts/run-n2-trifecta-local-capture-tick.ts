@@ -50,6 +50,7 @@ function tryReadRuntimeAuthority(): N2TrifectaImmutableRuntimeAuthorityBinding |
     return readN2TrifectaPrivateAuthorityJson<N2TrifectaImmutableRuntimeAuthorityBinding>(
       runtimeAuthorityPath,
       "LOCAL_CAPTURE_RUNTIME_AUTHORITY_NOT_FOUND",
+      dataRoot,
     );
   } catch (error) {
     if (error instanceof Error && error.message === "LOCAL_CAPTURE_RUNTIME_AUTHORITY_NOT_FOUND") {
@@ -137,6 +138,7 @@ function recordHeartbeatSafely(input: Parameters<typeof buildN2TrifectaPrivateHe
 const authorization = readN2TrifectaPrivateAuthorityJson<N2TrifectaLocalCaptureAuthorization>(
   authorizationPath,
   "LOCAL_CAPTURE_AUTHORIZATION_NOT_FOUND",
+  dataRoot,
 );
 const binding = tryReadRuntimeAuthority();
 const observed = probeRuntimeAuthority();
