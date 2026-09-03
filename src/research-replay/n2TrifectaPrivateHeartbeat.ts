@@ -6,6 +6,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
+  statSync,
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 
@@ -178,8 +179,13 @@ export function appendN2TrifectaPrivateHeartbeat(input: {
   const relativePath = n2TrifectaPrivateHeartbeatRelativePath(input.record.recordedAt);
   const path = resolveInside(input.dataRoot, relativePath);
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
-    throw new Error("HEARTBEAT_SYMLINK_NOT_ALLOWED");
+  if (existsSync(path)) {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) throw new Error("HEARTBEAT_SYMLINK_NOT_ALLOWED");
+    if (!stat.isFile()) throw new Error("HEARTBEAT_FILE_TYPE_INVALID");
+    if ((statSync(path).mode & 0o777) !== 0o600) {
+      throw new Error("HEARTBEAT_FILE_MODE_INVALID");
+    }
   }
   const fd = openSync(path, "a", 0o600);
   try {
