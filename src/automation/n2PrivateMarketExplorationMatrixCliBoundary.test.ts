@@ -23,6 +23,16 @@ test("exploration matrix CLI has no network, database or label dependency", () =
   assert.match(cli, /databaseWriteCount:\s*matrix\.databaseWriteCount/u);
 });
 
+test("exploration matrix CLI rejects hardlinked manifest authority before build", () => {
+  assert.match(cli, /assertManifestSingleLink\(rootDir, manifestDigest\)/u);
+  assert.match(cli, /statSync\(manifestPath\)\.nlink !== 1/u);
+  assert.match(cli, /EXPLORATION_MATRIX_MANIFEST_HARDLINK_NOT_ALLOWED/u);
+  assert.ok(
+    cli.indexOf("assertManifestSingleLink(rootDir, manifestDigest)")
+      < cli.indexOf("buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest })"),
+  );
+});
+
 test("exploration matrix stdout exposes schema and lineage but never numeric row values", () => {
   assert.match(cli, /columnCount:\s*matrix\.columns\.length/u);
   assert.match(cli, /columns:\s*matrix\.columns/u);
