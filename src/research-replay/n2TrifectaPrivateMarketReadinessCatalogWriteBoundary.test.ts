@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  linkSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -7,6 +14,7 @@ import test from "node:test";
 import { canonicalHash } from "./canonical";
 import {
   buildN2TrifectaPrivateMarketReadinessCatalog,
+  privateMarketReadinessCatalogRelativePath,
   writeN2TrifectaPrivateMarketReadinessCatalog,
   type N2TrifectaPrivateMarketReadinessCatalog,
   type N2TrifectaPrivateMarketReadinessCatalogEntry,
@@ -262,6 +270,52 @@ test("digest-valid existing catalog with noncanonical scope timestamp is not tru
       generatedAt: "2026-08-19T00:10:00.000Z",
     });
     next.entries = [entry("2026-08-19T00:05:00.000Z")];
+    next.sourceArtifactCount = 1;
+    next.entryCount = 1;
+    next.earliestDate = "2026-08-19";
+    next.latestDate = "2026-08-19";
+    rehash(next);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: next }),
+      /READINESS_CATALOG_EXISTING_AUTHORITY_INVALID/u,
+    );
+  });
+});
+
+test("hardlink alias cannot rewrite append-only readiness catalog authority", () => {
+  withRoot((root) => {
+    const existing = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:00:00.000Z",
+    });
+    existing.entries = [entry("2026-08-19T00:05:00.000Z", 2)];
+    existing.sourceArtifactCount = 2;
+    existing.entryCount = 1;
+    existing.earliestDate = "2026-08-19";
+    existing.latestDate = "2026-08-19";
+    rehash(existing);
+    writeVerifiedN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, catalog: existing });
+
+    const path = join(root, privateMarketReadinessCatalogRelativePath());
+    const alias = join(root, "catalog-hardlink.json");
+    linkSync(path, alias);
+
+    const downgraded = JSON.parse(readFileSync(alias, "utf8")) as N2TrifectaPrivateMarketReadinessCatalog;
+    downgraded.entries = [entry("2026-08-19T00:04:00.000Z", 1)];
+    downgraded.sourceArtifactCount = 1;
+    downgraded.entryCount = 1;
+    downgraded.earliestDate = "2026-08-19";
+    downgraded.latestDate = "2026-08-19";
+    rehash(downgraded);
+    writeFileSync(alias, `${JSON.stringify(downgraded, null, 2)}\n`, "utf8");
+    chmodSync(alias, 0o600);
+
+    const next = buildN2TrifectaPrivateMarketReadinessCatalog({
+      dataRoot: root,
+      generatedAt: "2026-08-19T00:10:00.000Z",
+    });
+    next.entries = [entry("2026-08-19T00:05:00.000Z", 1)];
     next.sourceArtifactCount = 1;
     next.entryCount = 1;
     next.earliestDate = "2026-08-19";
