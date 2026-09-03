@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -218,6 +220,44 @@ test("runtime blocker evidence is private, zero-network and event-deduplicated",
     )) as { eventDigest: string };
     assert.equal(latest.eventDigest, first.eventDigest);
   } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("unverified latest status cannot suppress immutable blocker evidence", () => {
+  const probeRoot = mkdtempSync(join(tmpdir(), "boat-pon-runtime-authority-probe-"));
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-runtime-authority-forged-latest-"));
+  try {
+    const audit = auditN2TrifectaImmutableRuntimeAuthority({
+      authorization: authorization(),
+      binding: binding(),
+      observed: observed({ detachedHead: false }),
+      now: "2026-08-06T00:35:00.000Z",
+    });
+    const probe = recordN2TrifectaImmutableRuntimeBlock({
+      dataRoot: probeRoot,
+      now: "2026-08-06T00:35:00.000Z",
+      audit,
+      binding: binding(),
+      observed: observed({ detachedHead: false }),
+    });
+    const forgedLatest = join(root, probe.latestStatusRelativePath);
+    mkdirSync(join(root, "data/private/trifecta-capture/status"), { recursive: true });
+    writeFileSync(forgedLatest, `${JSON.stringify({ eventDigest: probe.eventDigest })}\n`, "utf8");
+
+    const recorded = recordN2TrifectaImmutableRuntimeBlock({
+      dataRoot: root,
+      now: "2026-08-06T00:35:00.000Z",
+      audit,
+      binding: binding(),
+      observed: observed({ detachedHead: false }),
+    });
+
+    assert.equal(recorded.eventChanged, true);
+    assert.ok(recorded.reportRelativePath);
+    assert.equal(existsSync(join(root, recorded.reportRelativePath!)), true);
+  } finally {
+    rmSync(probeRoot, { recursive: true, force: true });
     rmSync(root, { recursive: true, force: true });
   }
 });
