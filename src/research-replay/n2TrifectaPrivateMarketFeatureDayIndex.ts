@@ -109,6 +109,36 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function privateParentIsInvalid(rootDir: string, relativePath: string): boolean {
+  let current = resolve(rootDir);
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (!existsSync(current)) return false;
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) return true;
+  }
+  return false;
+}
+
+function ensurePrivateParent(rootDir: string, relativePath: string): void {
+  const root = resolve(rootDir);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  let current = root;
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("PRIVATE_FEATURE_DAY_INDEX_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 function validateScope(date: string, venueCode: string): void {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(date)) throw new Error("PRIVATE_FEATURE_DAY_INDEX_DATE_INVALID");
   let canonicalDate: string;
@@ -273,6 +303,9 @@ function readRace(input: {
   const relativePath = featureRelativePath(input.date, input.venueCode, input.raceNo);
   const path = resolveInside(input.rootDir, relativePath);
   const expectedRaceIdentity = `${input.date.replaceAll("-", "")}-${input.venueCode}-${String(input.raceNo).padStart(2, "0")}`;
+  if (privateParentIsInvalid(input.rootDir, relativePath)) {
+    throw new Error(`R${input.raceNo}_FEATURE_PARENT_INVALID`);
+  }
   if (!existsSync(path)) {
     return {
       raceNo: input.raceNo,
@@ -393,6 +426,7 @@ export function writeN2TrifectaPrivateMarketFeatureDayIndex(input: {
 }): { relativePath: string; changed: boolean; indexDigest: string; fileMode: 0o600 } {
   const relativePath = privateMarketFeatureDayIndexRelativePath(input.index);
   const path = resolveInside(input.rootDir, relativePath);
+  ensurePrivateParent(input.rootDir, relativePath);
   if (existsSync(path)) {
     const lst = lstatSync(path);
     if (lst.isSymbolicLink() || !lst.isFile()) throw new Error("PRIVATE_FEATURE_DAY_INDEX_TARGET_INVALID");
