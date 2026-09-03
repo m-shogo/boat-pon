@@ -1,6 +1,7 @@
 import {
   closeSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -143,8 +144,11 @@ function exclusiveWrite(path: string, content: string): void {
 function readVerifiedBlockReport(path: string): VerifiedRuntimeBlockReport | null {
   if (!existsSync(path)) return null;
   try {
+    const lst = lstatSync(path);
+    if (lst.isSymbolicLink() || !lst.isFile()) return null;
     const stat = statSync(path);
-    if (!stat.isFile() || stat.size <= 0 || stat.size > 200_000) return null;
+    if (!stat.isFile() || (stat.mode & 0o777) !== 0o600
+      || stat.size <= 0 || stat.size > 200_000) return null;
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     const {
       outputDigest,
