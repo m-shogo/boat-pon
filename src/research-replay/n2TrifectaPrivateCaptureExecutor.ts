@@ -3,10 +3,12 @@ import {
   appendFileSync,
   closeSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
@@ -265,6 +267,17 @@ function exclusiveWrite(path: string, content: Uint8Array | string): void {
   }
 }
 
+function assertPrivateAttemptLedgerFile(path: string): void {
+  const lst = lstatSync(path);
+  if (lst.isSymbolicLink() || !lst.isFile()) {
+    throw new Error("ATTEMPT_LEDGER_FILE_AUTHORITY_INVALID");
+  }
+  const stat = statSync(path);
+  if (!stat.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600) {
+    throw new Error("ATTEMPT_LEDGER_FILE_AUTHORITY_INVALID");
+  }
+}
+
 function appendLedger(
   rootDir: string,
   relativePath: string,
@@ -272,7 +285,9 @@ function appendLedger(
 ): void {
   const path = resolveInside(rootDir, relativePath);
   mkdirSync(dirname(path), { recursive: true });
+  if (existsSync(path)) assertPrivateAttemptLedgerFile(path);
   appendFileSync(path, `${JSON.stringify(event)}\n`, { encoding: "utf8", mode: 0o600 });
+  assertPrivateAttemptLedgerFile(path);
 }
 
 function readAttemptedCheckpointKeys(
@@ -281,6 +296,7 @@ function readAttemptedCheckpointKeys(
 ): Set<string> {
   const path = resolveInside(rootDir, relativePath);
   if (!existsSync(path)) return new Set();
+  assertPrivateAttemptLedgerFile(path);
   const content = readFileSync(path, "utf8");
   const keys = new Set<string>();
   for (const line of content.split("\n")) {
