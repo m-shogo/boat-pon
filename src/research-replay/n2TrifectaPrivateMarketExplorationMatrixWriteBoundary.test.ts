@@ -54,6 +54,24 @@ test("verified exploration-matrix writer accepts the canonical source-bound matr
   });
 });
 
+test("verified exploration-matrix writer rejects hardlinked source manifest before rebuild", () => {
+  withRoot((root) => {
+    const manifestDigest = createEmptyManifest(root);
+    const matrix = buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, manifestDigest });
+    const manifestPath = join(
+      root,
+      "data/private/trifecta-market-experiments/manifests",
+      `${manifestDigest}.json`,
+    );
+    linkSync(manifestPath, `${manifestPath}.alias`);
+
+    assert.throws(
+      () => writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir: root, matrix }),
+      /EXPLORATION_MATRIX_MANIFEST_HARDLINK_NOT_ALLOWED/u,
+    );
+  });
+});
+
 test("verified exploration-matrix writer rejects symlinked matrix ancestors before persistence", () => {
   withRoot((root) => {
     const external = mkdtempSync(join(tmpdir(), "boat-pon-exploration-matrix-external-"));

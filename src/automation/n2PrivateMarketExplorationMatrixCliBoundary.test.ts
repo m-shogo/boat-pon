@@ -7,6 +7,10 @@ const cli = readFileSync(
   resolve(process.cwd(), "scripts/build-n2-trifecta-private-market-exploration-matrix.ts"),
   "utf8",
 );
+const inputAuthoritySource = readFileSync(
+  resolve(process.cwd(), "src/research-replay/n2TrifectaPrivateMarketExplorationInputFileAuthority.ts"),
+  "utf8",
+);
 const matrixSource = readFileSync(
   resolve(process.cwd(), "src/research-replay/n2TrifectaPrivateMarketExplorationMatrix.ts"),
   "utf8",
@@ -23,24 +27,18 @@ test("exploration matrix CLI has no network, database or label dependency", () =
   assert.match(cli, /databaseWriteCount:\s*matrix\.databaseWriteCount/u);
 });
 
-test("exploration matrix CLI rejects hardlinked manifest authority before build", () => {
-  assert.match(cli, /assertPrivateInputSingleLinks\(rootDir, manifestDigest\)/u);
-  assert.match(cli, /manifestStat\.nlink !== 1/u);
-  assert.match(cli, /EXPLORATION_MATRIX_MANIFEST_HARDLINK_NOT_ALLOWED/u);
+test("exploration matrix CLI applies shared single-link authority before build", () => {
+  const guard = "assertN2TrifectaPrivateMarketExplorationInputSingleLinks(rootDir, manifestDigest)";
+  assert.match(cli, /assertN2TrifectaPrivateMarketExplorationInputSingleLinks\(rootDir, manifestDigest\)/u);
   assert.ok(
-    cli.indexOf("assertPrivateInputSingleLinks(rootDir, manifestDigest)")
+    cli.indexOf(guard)
       < cli.indexOf("buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest })"),
   );
-});
-
-test("exploration matrix CLI rejects hardlinked feature authority before build", () => {
-  assert.match(cli, /featureArtifactRelativePath/u);
-  assert.match(cli, /statSync\(featurePath\)\.nlink !== 1/u);
-  assert.match(cli, /EXPLORATION_MATRIX_FEATURE_HARDLINK_NOT_ALLOWED/u);
-  assert.ok(
-    cli.indexOf("statSync(featurePath).nlink !== 1")
-      < cli.indexOf("buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest })"),
-  );
+  assert.match(inputAuthoritySource, /manifestStat\.nlink !== 1/u);
+  assert.match(inputAuthoritySource, /EXPLORATION_MATRIX_MANIFEST_HARDLINK_NOT_ALLOWED/u);
+  assert.match(inputAuthoritySource, /featureArtifactRelativePath/u);
+  assert.match(inputAuthoritySource, /statSync\(featurePath\)\.nlink !== 1/u);
+  assert.match(inputAuthoritySource, /EXPLORATION_MATRIX_FEATURE_HARDLINK_NOT_ALLOWED/u);
 });
 
 test("exploration matrix stdout exposes schema and lineage but never numeric row values", () => {
