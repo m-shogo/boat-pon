@@ -430,14 +430,10 @@ function findLastSuccessfulTick(rootDir: string, date: string): string | null {
   const paths = listRegularJsonFiles(rootDir, `data/private/trifecta-capture/reports/${date}`);
   let latest: number | null = null;
   for (const path of paths) {
-    try {
-      const report = readPrivateJson<N2TrifectaLocalCaptureTickReport>(rootDir, path);
-      if (report.status !== "PASS") continue;
-      const parsed = parseInstant(report.completedAt);
-      if (parsed != null && (latest == null || parsed > latest)) latest = parsed;
-    } catch {
-      // The main report audit records malformed metadata separately.
-    }
+    const report = verifyCaptureReport(rootDir, path, date);
+    if (!report || report.status !== "PASS") continue;
+    const parsed = parseInstant(report.completedAt);
+    if (parsed != null && (latest == null || parsed > latest)) latest = parsed;
   }
   return latest == null ? null : new Date(latest).toISOString();
 }
