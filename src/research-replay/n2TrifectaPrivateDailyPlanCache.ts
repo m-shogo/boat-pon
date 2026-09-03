@@ -101,6 +101,24 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function ensurePrivateParent(rootDir: string, relativePath: string): void {
+  const root = resolve(rootDir);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  let current = root;
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("DAILY_PLAN_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 export function n2TrifectaPrivateDailyPlanRelativePath(date: string): string {
   if (!isCalendarDate(date)) throw new Error("INVALID_DATE");
   return `data/private/trifecta-capture/plans/${date}.json`;
@@ -308,10 +326,10 @@ export function writeN2TrifectaPrivateDailyPlanCache(input: {
 }): string {
   const relativePath = n2TrifectaPrivateDailyPlanRelativePath(input.cache.date);
   const path = resolveInside(input.dataRoot, relativePath);
+  ensurePrivateParent(input.dataRoot, relativePath);
   if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
     throw new Error("DAILY_PLAN_SYMLINK_NOT_ALLOWED");
   }
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
   try {
     writeFileSync(temporary, `${JSON.stringify(input.cache, null, 2)}\n`, {
