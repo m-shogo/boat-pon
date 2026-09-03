@@ -282,7 +282,7 @@ test("operability report classifies mature checkpoint coverage without reading r
   }
 });
 
-test("invalid accepted marker, forged reservation, and forged capture report cannot inflate coverage", () => {
+test("invalid accepted marker, forged reservation, and forged capture report cannot inflate coverage or heartbeat", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-operability-invalid-marker-"));
   try {
     const plan = buildN2TrifectaOddsCheckpointPlan({
@@ -339,8 +339,8 @@ test("invalid accepted marker, forged reservation, and forged capture report can
       networkRequestCeiling: 1,
     });
     writeJson(root, "data/private/trifecta-capture/reports/2026-08-07/forged.json", {
-      status: "BLOCKED",
-      completedAt: "2026-08-07T00:35:30.000Z",
+      status: "PASS",
+      completedAt: "2026-08-07T00:37:00.000Z",
       executorReport: {
         entryResults: [{
           raceIdentity: "20260807-10-04",
@@ -358,6 +358,7 @@ test("invalid accepted marker, forged reservation, and forged capture report can
       launchdRegistered: true,
     });
     assert.equal(report.status, "BLOCKED");
+    assert.equal(report.heartbeat.lastSuccessfulTickAt, null);
     assert.equal(report.coverage.acceptedCount, 0);
     assert.equal(report.coverage.blockedEvidenceCount, 1);
     assert.equal(report.coverage.reservedNoAcceptedEvidenceCount, 0);
