@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {
+  chmodSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -23,8 +25,12 @@ function withRoot(run: (root: string) => void): void {
   }
 }
 
+function heartbeatPath(root: string): string {
+  return join(root, "data/private/trifecta-capture/heartbeats/2026-08-07.jsonl");
+}
+
 function writeRecord(root: string, record: Record<string, unknown>): void {
-  const path = join(root, "data/private/trifecta-capture/heartbeats/2026-08-07.jsonl");
+  const path = heartbeatPath(root);
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   writeFileSync(path, `${JSON.stringify(record)}\n`, { encoding: "utf8", mode: 0o600 });
 }
@@ -107,5 +113,37 @@ test("rejects heartbeat records whose persisted body no longer matches its diges
     });
     assert.equal(report.status, "BLOCKED");
     assert.ok(report.blockers.includes("HEARTBEAT_RECORD_DIGEST_MISMATCH"));
+  });
+});
+
+test("rejects heartbeat history whose file mode is broader than owner-only", () => {
+  withRoot((root) => {
+    writeRecord(root, heartbeatRecord());
+    chmodSync(heartbeatPath(root), 0o644);
+
+    const report = buildN2TrifectaPrivateHeartbeatGapDiagnostics({
+      dataRoot: root,
+      date: "2026-08-07",
+      now: "2026-08-07T01:06:00.000Z",
+    });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("HEARTBEAT_HISTORY_FILE_MODE_INVALID"));
+    assert.equal(report.historyRecordCount, 0);
+  });
+});
+
+test("rejects hardlinked heartbeat history as read authority", () => {
+  withRoot((root) => {
+    writeRecord(root, heartbeatRecord());
+    linkSync(heartbeatPath(root), join(root, "heartbeat-history-hardlink.jsonl"));
+
+    const report = buildN2TrifectaPrivateHeartbeatGapDiagnostics({
+      dataRoot: root,
+      date: "2026-08-07",
+      now: "2026-08-07T01:06:00.000Z",
+    });
+    assert.equal(report.status, "BLOCKED");
+    assert.ok(report.blockers.includes("HEARTBEAT_HISTORY_HARDLINK_NOT_ALLOWED"));
+    assert.equal(report.historyRecordCount, 0);
   });
 });
