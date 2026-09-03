@@ -183,6 +183,7 @@ export function appendN2TrifectaPrivateHeartbeat(input: {
     const stat = lstatSync(path);
     if (stat.isSymbolicLink()) throw new Error("HEARTBEAT_SYMLINK_NOT_ALLOWED");
     if (!stat.isFile()) throw new Error("HEARTBEAT_FILE_TYPE_INVALID");
+    if (stat.nlink !== 1) throw new Error("HEARTBEAT_HARDLINK_NOT_ALLOWED");
     if ((statSync(path).mode & 0o777) !== 0o600) {
       throw new Error("HEARTBEAT_FILE_MODE_INVALID");
     }
