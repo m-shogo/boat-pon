@@ -100,3 +100,53 @@ test("hardlinked attempt ledger cannot suppress an unexecuted checkpoint", async
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("forged attempt ledger lineage cannot suppress an unexecuted checkpoint", async () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-attempt-ledger-lineage-"));
+  try {
+    const capturePlan = plan();
+    const entry = capturePlan.entries[0];
+    assert.ok(entry);
+    const checkpointKey = canonicalHash({
+      manifestDigest: capturePlan.manifestDigest,
+      raceIdentity: entry.raceIdentity,
+      checkpointLabel: entry.checkpointLabel,
+      targetCaptureAt: entry.targetCaptureAt,
+      sourceUrl: entry.sourceUrl,
+    });
+    const ledgerPath = join(
+      root,
+      "data/raw/research/trifecta-market/ledgers",
+      `${capturePlan.manifestDigest}.jsonl`,
+    );
+    mkdirSync(dirname(ledgerPath), { recursive: true });
+    writeFileSync(ledgerPath, `${JSON.stringify({
+      ledgerVersion: "n2-trifecta-private-capture-ledger-v1",
+      event: "ATTEMPT_STARTED",
+      attemptId: "attempt-forged",
+      checkpointKey,
+      manifestDigest: "0".repeat(64),
+      raceIdentity: entry.raceIdentity,
+      checkpointLabel: entry.checkpointLabel,
+      sourceUrl: entry.sourceUrl,
+      at: "2026-08-06T00:35:00.000Z",
+    })}\n`, "utf8");
+    chmodSync(ledgerPath, 0o600);
+
+    await assert.rejects(
+      () => executeN2TrifectaPrivateCapture({
+        plan: capturePlan,
+        approval: approvalFor(capturePlan),
+        rootDir: root,
+        now: "2026-08-06T00:35:30.000Z",
+        executionMode: "execute",
+        fetcher: async () => {
+          throw new Error("network must not be reached for invalid ledger event authority");
+        },
+      }),
+      /ATTEMPT_LEDGER_EVENT_AUTHORITY_INVALID/,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
