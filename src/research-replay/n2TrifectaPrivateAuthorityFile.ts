@@ -14,6 +14,9 @@ export function readN2TrifectaPrivateAuthorityJson<T>(
   if (!lst.isFile()) {
     throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SIZE_OR_TYPE_INVALID");
   }
+  if (lst.nlink !== 1) {
+    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_HARDLINK_NOT_ALLOWED");
+  }
   const stat = statSync(path);
   if (!stat.isFile() || stat.size <= 0 || stat.size > N2_TRIFECTA_PRIVATE_AUTHORITY_MAX_BYTES) {
     throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SIZE_OR_TYPE_INVALID");
