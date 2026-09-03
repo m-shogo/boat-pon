@@ -354,11 +354,15 @@ function appendLedger(
 function readAttemptedCheckpointKeys(
   rootDir: string,
   relativePath: string,
+  plan: N2TrifectaOddsCheckpointPlan,
 ): Set<string> {
   const path = resolveInside(rootDir, relativePath);
   if (!existsSync(path)) return new Set();
   assertPrivateAttemptLedgerFile(path);
   const content = readFileSync(path, "utf8");
+  const expectedByKey = new Map(
+    plan.entries.map((entry) => [checkpointKey(plan.manifestDigest, entry), entry] as const),
+  );
   const keys = new Set<string>();
   for (const line of content.split("\n")) {
     if (!line.trim()) continue;
@@ -368,8 +372,25 @@ function readAttemptedCheckpointKeys(
     } catch {
       throw new Error("ATTEMPT_LEDGER_INVALID_JSON");
     }
-    if (parsed.event === "ATTEMPT_STARTED" && typeof parsed.checkpointKey === "string") {
-      keys.add(parsed.checkpointKey);
+    if (parsed.event === "ATTEMPT_STARTED") {
+      const expectedEntry = typeof parsed.checkpointKey === "string"
+        ? expectedByKey.get(parsed.checkpointKey)
+        : undefined;
+      if (
+        parsed.ledgerVersion !== "n2-trifecta-private-capture-ledger-v1"
+        || typeof parsed.attemptId !== "string"
+        || !parsed.attemptId.startsWith("attempt-")
+        || !expectedEntry
+        || parsed.manifestDigest !== plan.manifestDigest
+        || parsed.raceIdentity !== expectedEntry.raceIdentity
+        || parsed.checkpointLabel !== expectedEntry.checkpointLabel
+        || parsed.sourceUrl !== expectedEntry.sourceUrl
+        || typeof parsed.at !== "string"
+        || canonicalInstant(parsed.at) !== parsed.at
+      ) {
+        throw new Error("ATTEMPT_LEDGER_EVENT_AUTHORITY_INVALID");
+      }
+      keys.add(parsed.checkpointKey!);
     }
   }
   return keys;
@@ -742,7 +763,7 @@ export async function executeN2TrifectaPrivateCapture(
   const sleep = input.sleep ?? sleepDefault;
 
   try {
-    const attemptedKeys = readAttemptedCheckpointKeys(input.rootDir, ledgerPath);
+    const attemptedKeys = readAttemptedCheckpointKeys(input.rootDir, ledgerPath, input.plan);
     for (let index = 0; index < input.plan.entries.length; index += 1) {
       const entry = input.plan.entries[index];
       const key = checkpointKey(input.plan.manifestDigest, entry);
