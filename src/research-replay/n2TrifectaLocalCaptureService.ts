@@ -291,12 +291,84 @@ function writeAtomic(path: string, content: string): void {
   }
 }
 
+function readVerifiedTickReport(path: string): N2TrifectaLocalCaptureTickReport | null {
+  if (!existsSync(path)) return null;
+  try {
+    const parsed = readJsonFile<Record<string, unknown>>(path);
+    const {
+      outputDigest,
+      ...core
+    } = parsed;
+    if (typeof outputDigest !== "string" || outputDigest !== canonicalHash(core)) return null;
+    if (parsed.reportVersion !== N2_TRIFECTA_LOCAL_CAPTURE_REPORT_VERSION
+      || parsed.serviceVersion !== N2_TRIFECTA_LOCAL_CAPTURE_SERVICE_VERSION
+      || !(["PASS", "NO_CHANGE", "BLOCKED"] as unknown[]).includes(parsed.status)
+      || !Array.isArray(parsed.blockers)
+      || typeof parsed.eventDigest !== "string"
+      || typeof parsed.eventChanged !== "boolean"
+      || !(typeof parsed.dateJst === "string" || parsed.dateJst === null)
+      || !(typeof parsed.selectedVenueCode === "string" || parsed.selectedVenueCode === null)
+      || typeof parsed.primaryDbMetadataUnchanged !== "boolean"
+      || typeof parsed.latestStatusRelativePath !== "string"
+      || !(typeof parsed.reportRelativePath === "string" || parsed.reportRelativePath === null)) {
+      return null;
+    }
+    const authorizationAudit = parsed.authorizationAudit as Record<string, unknown> | null;
+    if (!authorizationAudit || (authorizationAudit.status !== "PASS" && authorizationAudit.status !== "BLOCKED")) {
+      return null;
+    }
+    const selectedEntry = parsed.selectedEntry && typeof parsed.selectedEntry === "object"
+      ? parsed.selectedEntry as Record<string, unknown>
+      : null;
+    const executorReport = parsed.executorReport && typeof parsed.executorReport === "object"
+      ? parsed.executorReport as Record<string, unknown>
+      : null;
+    const eventDigest = canonicalHash({
+      status: parsed.status,
+      blockers: parsed.blockers,
+      dateJst: parsed.dateJst,
+      authorizationStatus: authorizationAudit.status,
+      selectedVenueCode: parsed.selectedVenueCode,
+      selectedRaceIdentity: selectedEntry?.raceIdentity ?? null,
+      selectedCheckpointLabel: selectedEntry?.checkpointLabel ?? null,
+      executorStatus: executorReport?.status ?? null,
+      executorOutputDigest: executorReport?.outputDigest ?? null,
+      primaryDbMetadataUnchanged: parsed.primaryDbMetadataUnchanged,
+    });
+    if (parsed.eventDigest !== eventDigest) return null;
+    return parsed as unknown as N2TrifectaLocalCaptureTickReport;
+  } catch {
+    return null;
+  }
+}
+
 function readLatestEventDigest(dataRoot: string): string | null {
   const path = resolveInside(dataRoot, latestStatusRelativePath());
   if (!existsSync(path)) return null;
   try {
-    const latest = readJsonFile<{ eventDigest?: unknown }>(path);
-    return typeof latest.eventDigest === "string" ? latest.eventDigest : null;
+    const latest = readJsonFile<{
+      latestStatusVersion?: unknown;
+      eventDigest?: unknown;
+      checkedAt?: unknown;
+      report?: unknown;
+    }>(path);
+    if (latest.latestStatusVersion !== "n2-trifecta-local-capture-latest-v1"
+      || typeof latest.eventDigest !== "string"
+      || typeof latest.checkedAt !== "string"
+      || !latest.report || typeof latest.report !== "object") return null;
+    const latestReport = latest.report as N2TrifectaLocalCaptureTickReport;
+    const latestCore = { ...latestReport } as Record<string, unknown>;
+    delete latestCore.outputDigest;
+    if (typeof latestReport.outputDigest !== "string"
+      || latestReport.outputDigest !== canonicalHash(latestCore)
+      || latestReport.eventDigest !== latest.eventDigest) return null;
+    const immutableRelativePath = reportRelativePath(latestReport.dateJst, latest.eventDigest);
+    const immutable = readVerifiedTickReport(resolveInside(dataRoot, immutableRelativePath));
+    if (!immutable
+      || immutable.eventDigest !== latest.eventDigest
+      || immutable.reportRelativePath !== immutableRelativePath
+      || immutable.latestStatusRelativePath !== latestStatusRelativePath()) return null;
+    return latest.eventDigest;
   } catch {
     return null;
   }
@@ -750,13 +822,20 @@ export async function runN2TrifectaLocalCaptureTick(
   };
   const final = finalizeReport(preliminary);
   if (eventReportPath) {
+    const absoluteReportPath = resolveInside(input.dataRoot, eventReportPath);
     try {
       exclusiveWrite(
-        resolveInside(input.dataRoot, eventReportPath),
+        absoluteReportPath,
         `${JSON.stringify(final, null, 2)}\n`,
       );
     } catch (error) {
       if (!isAlreadyExistsError(error)) throw error;
+      const existing = readVerifiedTickReport(absoluteReportPath);
+      if (!existing
+        || existing.eventDigest !== eventDigest
+        || existing.reportRelativePath !== eventReportPath) {
+        throw new Error("LOCAL_CAPTURE_REPORT_CONFLICT");
+      }
     }
   }
   writeAtomic(
