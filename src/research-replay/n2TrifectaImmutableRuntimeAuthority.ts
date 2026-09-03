@@ -147,7 +147,7 @@ function readVerifiedBlockReport(path: string): VerifiedRuntimeBlockReport | nul
     const lst = lstatSync(path);
     if (lst.isSymbolicLink() || !lst.isFile()) return null;
     const stat = statSync(path);
-    if (!stat.isFile() || (stat.mode & 0o777) !== 0o600
+    if (!stat.isFile() || stat.nlink !== 1 || (stat.mode & 0o777) !== 0o600
       || stat.size <= 0 || stat.size > 200_000) return null;
     const parsed = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
     const {

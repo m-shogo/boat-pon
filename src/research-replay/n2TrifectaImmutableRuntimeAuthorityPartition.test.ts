@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   chmodSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -159,6 +160,50 @@ test("symlinked immutable blocker evidence cannot act as dedup authority", () =>
     writeFileSync(latestTarget, readFileSync(latestSource, "utf8"), "utf8");
     chmodSync(latestTarget, 0o600);
     symlinkSync(reportSource, reportTarget);
+
+    assert.throws(
+      () => recordN2TrifectaImmutableRuntimeBlock({
+        dataRoot: root,
+        now,
+        audit,
+        binding,
+        observed,
+      }),
+      /RUNTIME_BLOCK_REPORT_CONFLICT/,
+    );
+  } finally {
+    rmSync(probeRoot, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("hardlinked immutable blocker evidence cannot act as dedup authority", () => {
+  const probeRoot = mkdtempSync(join(tmpdir(), "boat-pon-runtime-block-hardlink-probe-"));
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-runtime-block-hardlink-forged-"));
+  try {
+    const now = "2026-08-06T00:35:00.000Z";
+    const audit = auditAt(now);
+    const probe = recordN2TrifectaImmutableRuntimeBlock({
+      dataRoot: probeRoot,
+      now,
+      audit,
+      binding,
+      observed,
+    });
+    assert.ok(probe.reportRelativePath);
+
+    const latestSource = join(probeRoot, probe.latestStatusRelativePath);
+    const reportSource = join(probeRoot, probe.reportRelativePath!);
+    const latestTarget = join(root, probe.latestStatusRelativePath);
+    const reportTarget = join(root, probe.reportRelativePath!);
+    const aliasTarget = join(root, "runtime-block-hardlink-alias.json");
+    mkdirSync(dirname(latestTarget), { recursive: true });
+    mkdirSync(dirname(reportTarget), { recursive: true });
+    writeFileSync(latestTarget, readFileSync(latestSource, "utf8"), "utf8");
+    chmodSync(latestTarget, 0o600);
+    writeFileSync(reportTarget, readFileSync(reportSource, "utf8"), "utf8");
+    chmodSync(reportTarget, 0o600);
+    linkSync(reportTarget, aliasTarget);
 
     assert.throws(
       () => recordN2TrifectaImmutableRuntimeBlock({
