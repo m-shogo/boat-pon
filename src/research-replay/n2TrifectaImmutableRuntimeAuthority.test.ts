@@ -261,3 +261,42 @@ test("unverified latest status cannot suppress immutable blocker evidence", () =
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("verified latest without immutable report cannot suppress blocker evidence", () => {
+  const probeRoot = mkdtempSync(join(tmpdir(), "boat-pon-runtime-authority-probe-"));
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-runtime-authority-orphan-latest-"));
+  try {
+    const audit = auditN2TrifectaImmutableRuntimeAuthority({
+      authorization: authorization(),
+      binding: binding(),
+      observed: observed({ detachedHead: false }),
+      now: "2026-08-06T00:35:00.000Z",
+    });
+    const probe = recordN2TrifectaImmutableRuntimeBlock({
+      dataRoot: probeRoot,
+      now: "2026-08-06T00:35:00.000Z",
+      audit,
+      binding: binding(),
+      observed: observed({ detachedHead: false }),
+    });
+    const sourceLatest = join(probeRoot, probe.latestStatusRelativePath);
+    const orphanLatest = join(root, probe.latestStatusRelativePath);
+    mkdirSync(join(root, "data/private/trifecta-capture/status"), { recursive: true });
+    writeFileSync(orphanLatest, readFileSync(sourceLatest, "utf8"), "utf8");
+
+    const recorded = recordN2TrifectaImmutableRuntimeBlock({
+      dataRoot: root,
+      now: "2026-08-06T00:35:00.000Z",
+      audit,
+      binding: binding(),
+      observed: observed({ detachedHead: false }),
+    });
+
+    assert.equal(recorded.eventChanged, true);
+    assert.ok(recorded.reportRelativePath);
+    assert.equal(existsSync(join(root, recorded.reportRelativePath!)), true);
+  } finally {
+    rmSync(probeRoot, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
+  }
+});
