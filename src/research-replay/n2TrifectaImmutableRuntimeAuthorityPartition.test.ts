@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,6 +67,15 @@ const observed: N2TrifectaObservedRuntimeAuthority = {
   trackedWorktreeClean: true,
 };
 
+function auditAt(now: string) {
+  return auditN2TrifectaImmutableRuntimeAuthority({
+    authorization,
+    binding,
+    observed,
+    now,
+  });
+}
+
 function rehashWithNow(content: string, now: string): string {
   const parsed = JSON.parse(content) as Record<string, unknown>;
   parsed.now = now;
@@ -78,12 +89,7 @@ test("cross-day rehashed runtime blocker evidence cannot suppress the current JS
   const root = mkdtempSync(join(tmpdir(), "boat-pon-runtime-block-partition-forged-"));
   try {
     const now = "2026-08-06T00:35:00.000Z";
-    const audit = auditN2TrifectaImmutableRuntimeAuthority({
-      authorization,
-      binding,
-      observed,
-      now,
-    });
+    const audit = auditAt(now);
     const probe = recordN2TrifectaImmutableRuntimeBlock({
       dataRoot: probeRoot,
       now,
@@ -105,11 +111,54 @@ test("cross-day rehashed runtime blocker evidence cannot suppress the current JS
       rehashWithNow(readFileSync(latestSource, "utf8"), forgedNow),
       "utf8",
     );
+    chmodSync(latestTarget, 0o600);
     writeFileSync(
       reportTarget,
       rehashWithNow(readFileSync(reportSource, "utf8"), forgedNow),
       "utf8",
     );
+    chmodSync(reportTarget, 0o600);
+
+    assert.throws(
+      () => recordN2TrifectaImmutableRuntimeBlock({
+        dataRoot: root,
+        now,
+        audit,
+        binding,
+        observed,
+      }),
+      /RUNTIME_BLOCK_REPORT_CONFLICT/,
+    );
+  } finally {
+    rmSync(probeRoot, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("symlinked immutable blocker evidence cannot act as dedup authority", () => {
+  const probeRoot = mkdtempSync(join(tmpdir(), "boat-pon-runtime-block-symlink-probe-"));
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-runtime-block-symlink-forged-"));
+  try {
+    const now = "2026-08-06T00:35:00.000Z";
+    const audit = auditAt(now);
+    const probe = recordN2TrifectaImmutableRuntimeBlock({
+      dataRoot: probeRoot,
+      now,
+      audit,
+      binding,
+      observed,
+    });
+    assert.ok(probe.reportRelativePath);
+
+    const latestSource = join(probeRoot, probe.latestStatusRelativePath);
+    const reportSource = join(probeRoot, probe.reportRelativePath!);
+    const latestTarget = join(root, probe.latestStatusRelativePath);
+    const reportTarget = join(root, probe.reportRelativePath!);
+    mkdirSync(dirname(latestTarget), { recursive: true });
+    mkdirSync(dirname(reportTarget), { recursive: true });
+    writeFileSync(latestTarget, readFileSync(latestSource, "utf8"), "utf8");
+    chmodSync(latestTarget, 0o600);
+    symlinkSync(reportSource, reportTarget);
 
     assert.throws(
       () => recordN2TrifectaImmutableRuntimeBlock({
