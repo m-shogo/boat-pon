@@ -365,6 +365,16 @@ export function readN2TrifectaPrivateDailyPlanCache(input: {
       fallbackToPrimaryDbAllowed: false,
     };
   }
+  if ((stat.mode & 0o777) !== 0o600) {
+    return {
+      status: "BLOCKED",
+      blockers: ["DAILY_PLAN_FILE_MODE_INVALID"],
+      relativePath,
+      cache: null,
+      plan: null,
+      fallbackToPrimaryDbAllowed: false,
+    };
+  }
   let cache: N2TrifectaPrivateDailyPlanCache;
   try {
     cache = JSON.parse(readFileSync(path, "utf8")) as N2TrifectaPrivateDailyPlanCache;

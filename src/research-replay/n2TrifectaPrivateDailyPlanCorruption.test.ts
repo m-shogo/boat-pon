@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -30,6 +30,29 @@ test("structurally malformed private daily plan fails closed without primary DB 
     });
     assert.equal(result.status, "BLOCKED");
     assert.deepEqual(result.blockers, ["DAILY_PLAN_STRUCTURE_INVALID"]);
+    assert.equal(result.plan, null);
+    assert.equal(result.fallbackToPrimaryDbAllowed, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("world-readable private daily plan fails closed before it can become research authority", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-daily-plan-mode-"));
+  try {
+    const relativePath = n2TrifectaPrivateDailyPlanRelativePath("2026-08-06");
+    const path = join(root, relativePath);
+    mkdirSync(join(path, ".."), { recursive: true, mode: 0o700 });
+    writeFileSync(path, "{}\n", { encoding: "utf8", mode: 0o600 });
+    chmodSync(path, 0o644);
+
+    const result = readN2TrifectaPrivateDailyPlanCache({
+      dataRoot: root,
+      expectedDate: "2026-08-06",
+      now: "2026-08-06T00:35:00.000Z",
+    });
+    assert.equal(result.status, "BLOCKED");
+    assert.deepEqual(result.blockers, ["DAILY_PLAN_FILE_MODE_INVALID"]);
     assert.equal(result.plan, null);
     assert.equal(result.fallbackToPrimaryDbAllowed, false);
   } finally {
