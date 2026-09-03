@@ -131,6 +131,24 @@ function resolveInside(rootDir: string, relativePath: string): string {
   return target;
 }
 
+function ensurePrivateParent(rootDir: string, relativePath: string): void {
+  const root = resolve(rootDir);
+  mkdirSync(root, { recursive: true, mode: 0o700 });
+  let current = root;
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error("EXPERIMENT_INPUT_MANIFEST_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 function validateScope(scope: N2TrifectaExperimentInputScope): void {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(scope.date)) throw new Error("EXPERIMENT_INPUT_DATE_INVALID");
   try {
@@ -342,9 +360,7 @@ export function writeN2TrifectaPrivateMarketExperimentInputManifest(input: {
 }): { relativePath: string; created: boolean; manifestDigest: string; fileMode: 0o600 } {
   const relativePath = privateMarketExperimentInputManifestRelativePath(input.manifest.manifestDigest);
   const path = resolveInside(input.rootDir, relativePath);
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  const parent = lstatSync(dirname(path));
-  if (parent.isSymbolicLink() || !parent.isDirectory()) throw new Error("EXPERIMENT_INPUT_MANIFEST_PARENT_INVALID");
+  ensurePrivateParent(input.rootDir, relativePath);
   if (existsSync(path)) {
     if (!verifyExistingManifest(path, input.manifest)) throw new Error("EXPERIMENT_INPUT_MANIFEST_COLLISION");
     return { relativePath, created: false, manifestDigest: input.manifest.manifestDigest, fileMode: 0o600 };
