@@ -8,7 +8,10 @@ export function readN2TrifectaPrivateAuthorityJson<T>(
 ): T {
   if (!existsSync(path)) throw new Error(missingCode);
   const lst = lstatSync(path);
-  if (lst.isSymbolicLink() || !lst.isFile()) {
+  if (lst.isSymbolicLink()) {
+    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED");
+  }
+  if (!lst.isFile()) {
     throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SIZE_OR_TYPE_INVALID");
   }
   const stat = statSync(path);
