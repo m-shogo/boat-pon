@@ -1,6 +1,7 @@
-import { existsSync, lstatSync, readFileSync, statSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { resolve } from "node:path";
 
+import { assertN2TrifectaPrivateMarketExplorationInputSingleLinks } from
+  "../src/research-replay/n2TrifectaPrivateMarketExplorationInputFileAuthority";
 import {
   buildN2TrifectaPrivateMarketExplorationMatrix,
 } from "../src/research-replay/n2TrifectaPrivateMarketExplorationMatrix";
@@ -15,47 +16,6 @@ function argument(name: string): string | null {
   return index >= 0 ? process.argv[index + 1] ?? null : null;
 }
 
-function assertPrivateInputSingleLinks(rootDir: string, manifestDigest: string): void {
-  const root = resolve(rootDir);
-  const manifestPath = resolve(
-    root,
-    "data/private/trifecta-market-experiments/manifests",
-    `${manifestDigest}.json`,
-  );
-  if (!existsSync(manifestPath)) return;
-  const manifestLst = lstatSync(manifestPath);
-  if (manifestLst.isSymbolicLink() || !manifestLst.isFile()) return;
-  const manifestStat = statSync(manifestPath);
-  if (manifestStat.nlink !== 1) {
-    throw new Error("EXPLORATION_MATRIX_MANIFEST_HARDLINK_NOT_ALLOWED");
-  }
-  if (manifestStat.size <= 0 || manifestStat.size > 5_000_000) return;
-
-  let manifest: unknown;
-  try {
-    manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as unknown;
-  } catch {
-    return;
-  }
-  if (typeof manifest !== "object" || manifest == null || Array.isArray(manifest)) return;
-  const races = (manifest as { races?: unknown }).races;
-  if (!Array.isArray(races)) return;
-
-  for (const race of races) {
-    if (typeof race !== "object" || race == null || Array.isArray(race)) continue;
-    const relativePath = (race as { featureArtifactRelativePath?: unknown }).featureArtifactRelativePath;
-    if (typeof relativePath !== "string" || relativePath.length === 0) continue;
-    const featurePath = resolve(root, relativePath);
-    if (featurePath === root || !featurePath.startsWith(`${root}${sep}`)) continue;
-    if (!existsSync(featurePath)) continue;
-    const featureLst = lstatSync(featurePath);
-    if (featureLst.isSymbolicLink() || !featureLst.isFile()) continue;
-    if (statSync(featurePath).nlink !== 1) {
-      throw new Error("EXPLORATION_MATRIX_FEATURE_HARDLINK_NOT_ALLOWED");
-    }
-  }
-}
-
 const manifestDigest = argument("manifest");
 if (!manifestDigest || !/^[0-9a-f]{64}$/u.test(manifestDigest)) {
   console.error("usage: tsx scripts/build-n2-trifecta-private-market-exploration-matrix.ts --manifest <64-hex-digest> [--write-private]");
@@ -64,7 +24,7 @@ if (!manifestDigest || !/^[0-9a-f]{64}$/u.test(manifestDigest)) {
 
 const rootDir = resolve(process.env.BOAT_PON_DATA_ROOT?.trim() || process.cwd());
 const writePrivate = process.argv.includes("--write-private");
-assertPrivateInputSingleLinks(rootDir, manifestDigest);
+assertN2TrifectaPrivateMarketExplorationInputSingleLinks(rootDir, manifestDigest);
 const matrix = buildN2TrifectaPrivateMarketExplorationMatrix({ rootDir, manifestDigest });
 const writeResult = writePrivate
   ? writeVerifiedN2TrifectaPrivateMarketExplorationMatrix({ rootDir, matrix })
