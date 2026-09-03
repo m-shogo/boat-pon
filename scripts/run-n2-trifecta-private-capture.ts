@@ -41,11 +41,17 @@ function requiredArgument(name: string): string {
   return value;
 }
 
-function readJsonFile<T>(path: string, label: string): T {
+function readJsonFile<T>(
+  path: string,
+  label: string,
+  options: { privateAuthority?: boolean } = {},
+): T {
   if (!existsSync(path)) throw new Error(`${label}_NOT_FOUND`);
   if (lstatSync(path).isSymbolicLink()) throw new Error(`${label}_SYMLINK_NOT_ALLOWED`);
   const stat = statSync(path);
   if (!stat.isFile()) throw new Error(`${label}_NOT_REGULAR_FILE`);
+  if (options.privateAuthority && stat.nlink !== 1) throw new Error(`${label}_HARDLINK_NOT_ALLOWED`);
+  if (options.privateAuthority && (stat.mode & 0o777) !== 0o600) throw new Error(`${label}_MODE_INVALID`);
   if (stat.size <= 0 || stat.size > MAX_JSON_BYTES) throw new Error(`${label}_SIZE_INVALID`);
   let parsed: unknown;
   try {
@@ -72,7 +78,7 @@ if (reportPath) {
 
 const plan = readJsonFile<N2TrifectaOddsCheckpointPlan>(planPath, "PLAN");
 const approval = approvalPath
-  ? readJsonFile<N2TrifectaOddsCaptureApproval>(approvalPath, "APPROVAL")
+  ? readJsonFile<N2TrifectaOddsCaptureApproval>(approvalPath, "APPROVAL", { privateAuthority: true })
   : null;
 
 if (executionMode === "execute" && approval === null) {
