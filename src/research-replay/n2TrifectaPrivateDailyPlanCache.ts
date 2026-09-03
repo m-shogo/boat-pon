@@ -365,6 +365,16 @@ export function readN2TrifectaPrivateDailyPlanCache(input: {
       fallbackToPrimaryDbAllowed: false,
     };
   }
+  if (stat.nlink !== 1) {
+    return {
+      status: "BLOCKED",
+      blockers: ["DAILY_PLAN_HARDLINK_NOT_ALLOWED"],
+      relativePath,
+      cache: null,
+      plan: null,
+      fallbackToPrimaryDbAllowed: false,
+    };
+  }
   if ((stat.mode & 0o777) !== 0o600) {
     return {
       status: "BLOCKED",
