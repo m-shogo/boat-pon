@@ -4,8 +4,10 @@ import { readN2TrifectaPrivateDailyPlanCache } from
   "../src/research-replay/n2TrifectaPrivateDailyPlanCache";
 import {
   buildN2TrifectaPrivateMarketDailyReadiness,
-  writeN2TrifectaPrivateMarketDailyReadiness,
 } from "../src/research-replay/n2TrifectaPrivateMarketDailyReadiness";
+import {
+  writeVerifiedN2TrifectaPrivateMarketDailyReadiness,
+} from "../src/research-replay/n2TrifectaPrivateMarketDailyReadinessWriteBoundary";
 
 function argument(name: string): string | null {
   const inline = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -60,7 +62,7 @@ const readiness = buildN2TrifectaPrivateMarketDailyReadiness({
 });
 const writePrivate = process.argv.includes("--write-private");
 const writeResult = writePrivate
-  ? writeN2TrifectaPrivateMarketDailyReadiness({ dataRoot, readiness })
+  ? writeVerifiedN2TrifectaPrivateMarketDailyReadiness({ dataRoot, readiness })
   : null;
 
 const sanitized = {
