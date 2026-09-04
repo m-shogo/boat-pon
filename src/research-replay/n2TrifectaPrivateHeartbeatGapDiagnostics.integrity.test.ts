@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -145,5 +146,32 @@ test("rejects hardlinked heartbeat history as read authority", () => {
     assert.equal(report.status, "BLOCKED");
     assert.ok(report.blockers.includes("HEARTBEAT_HISTORY_HARDLINK_NOT_ALLOWED"));
     assert.equal(report.historyRecordCount, 0);
+  });
+});
+
+test("rejects redirected heartbeat history ancestors as read authority", () => {
+  withRoot((root) => {
+    const external = mkdtempSync(join(tmpdir(), "boat-pon-heartbeat-gap-external-"));
+    try {
+      writeRecord(external, heartbeatRecord());
+      mkdirSync(join(root, "data/private/trifecta-capture"), { recursive: true, mode: 0o700 });
+      symlinkSync(
+        join(external, "data/private/trifecta-capture/heartbeats"),
+        join(root, "data/private/trifecta-capture/heartbeats"),
+        "dir",
+      );
+
+      const report = buildN2TrifectaPrivateHeartbeatGapDiagnostics({
+        dataRoot: root,
+        date: "2026-08-07",
+        now: "2026-08-07T01:06:00.000Z",
+      });
+      assert.equal(report.status, "BLOCKED");
+      assert.ok(report.blockers.includes("HEARTBEAT_HISTORY_PARENT_INVALID"));
+      assert.equal(report.historyRecordCount, 0);
+      assert.equal(report.historyPresent, false);
+    } finally {
+      rmSync(external, { recursive: true, force: true });
+    }
   });
 });
