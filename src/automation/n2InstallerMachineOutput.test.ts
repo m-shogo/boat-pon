@@ -28,6 +28,8 @@ test("installer keeps explicit JSON dispositions and isolated print-only plist o
 });
 
 test("installer existing private authorities require canonical single-link 0600 regular files", () => {
+  assert.match(installer, /leaf = lstatSync\(path\)/u);
+  assert.match(installer, /\(error as NodeJS\.ErrnoException\)\.code === "ENOENT"/u);
   assert.match(installer, /PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED/u);
   assert.match(installer, /PRIVATE_AUTHORITY_REGULAR_FILE_REQUIRED/u);
   assert.match(installer, /stat\.nlink !== 1/u);
