@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -56,4 +56,11 @@ test("official program canary reader rejects a hardlinked primary database", () 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("official program canary reader opens the verified lexical primary path", () => {
+  const source = readFileSync(new URL("./n2OfficialProgramCanaryReader.ts", import.meta.url), "utf8");
+  assert.match(source, /const primaryPath = assertQuiescent\(input\.primaryDbPath\);/u);
+  assert.match(source, /const primary = openImmutable\(primaryPath\);/u);
+  assert.doesNotMatch(source, /openImmutable\(input\.primaryDbPath\)/u);
 });
