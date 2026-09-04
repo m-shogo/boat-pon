@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { officialVenueCode } from "../domain/officialLinks";
@@ -39,10 +40,18 @@ export type N2ObservationIngestReadinessReadResult = {
   };
 };
 
-function assertQuiescent(path: string, label: string): void {
+function assertQuiescent(path: string, label: string): string {
   if (!existsSync(path)) throw new Error(`${label}_NOT_FOUND`);
-  const wal = `${path}-wal`;
+  const lexicalPath = resolve(path);
+  const lstat = lstatSync(lexicalPath);
+  if (lstat.isSymbolicLink() || !lstat.isFile()) throw new Error(`${label}_IDENTITY_INVALID`);
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error(`${label}_IDENTITY_INVALID`);
+  }
+  const wal = `${lexicalPath}-wal`;
   if (existsSync(wal) && statSync(wal).size > 0) throw new Error(`${label}_ACTIVE_WAL`);
+  return lexicalPath;
 }
 
 function openImmutable(path: string): DatabaseSync {
@@ -499,10 +508,10 @@ export function readN2ObservationIngestReadiness(input: {
   primaryDbPath: string;
   sidecarDbPath: string;
 }): N2ObservationIngestReadinessReadResult {
-  assertQuiescent(input.primaryDbPath, "PRIMARY_DB");
-  assertQuiescent(input.sidecarDbPath, "SIDECAR");
-  const primary = openImmutable(input.primaryDbPath);
-  const sidecar = openImmutable(input.sidecarDbPath);
+  const primaryDbPath = assertQuiescent(input.primaryDbPath, "PRIMARY_DB");
+  const sidecarDbPath = assertQuiescent(input.sidecarDbPath, "SIDECAR");
+  const primary = openImmutable(primaryDbPath);
+  const sidecar = openImmutable(sidecarDbPath);
   try {
     const dateTo = latestProgramDate(primary);
     const dateFrom = subtractUtcDays(dateTo, CANARY_DAY_COUNT - 1);
