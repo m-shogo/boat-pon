@@ -1,4 +1,5 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -76,12 +77,25 @@ function preflightActiveSettlementLineage(
   if (!existsSync(sidecarPath)) {
     return { ok: false, blocks: [`${prefix}_SIDECAR_NOT_FOUND`], checkedCandidateCount: 0 };
   }
-  const walPath = `${sidecarPath}-wal`;
+  const lexicalSidecarPath = resolve(sidecarPath);
+  try {
+    const lstat = lstatSync(lexicalSidecarPath);
+    if (lstat.isSymbolicLink() || !lstat.isFile()) {
+      return { ok: false, blocks: [`${prefix}_SIDECAR_IDENTITY_INVALID`], checkedCandidateCount: 0 };
+    }
+    const stat = statSync(lexicalSidecarPath);
+    if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalSidecarPath) !== lexicalSidecarPath) {
+      return { ok: false, blocks: [`${prefix}_SIDECAR_IDENTITY_INVALID`], checkedCandidateCount: 0 };
+    }
+  } catch {
+    return { ok: false, blocks: [`${prefix}_SIDECAR_IDENTITY_INVALID`], checkedCandidateCount: 0 };
+  }
+  const walPath = `${lexicalSidecarPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) {
     return { ok: false, blocks: [`${prefix}_SIDECAR_ACTIVE_WAL`], checkedCandidateCount: 0 };
   }
 
-  const db = new DatabaseSync(`${pathToFileURL(sidecarPath).href}?immutable=1`, { readOnly: true } as never);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalSidecarPath).href}?immutable=1`, { readOnly: true } as never);
   try {
     db.exec("PRAGMA query_only=ON");
     for (const table of [
