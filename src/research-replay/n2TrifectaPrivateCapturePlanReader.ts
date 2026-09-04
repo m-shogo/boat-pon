@@ -1,4 +1,5 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -63,7 +64,12 @@ function dbMeta(path: string): {
   walBytes: number;
 } {
   if (!existsSync(path)) throw new Error("PRIMARY_DB_NOT_FOUND");
+  const lst = lstatSync(path);
+  if (lst.isSymbolicLink() || !lst.isFile() || realpathSync.native(path) !== resolve(path)) {
+    throw new Error("PRIMARY_DB_FILE_AUTHORITY_INVALID");
+  }
   const stat = statSync(path);
+  if (!stat.isFile() || stat.nlink !== 1) throw new Error("PRIMARY_DB_FILE_AUTHORITY_INVALID");
   const walPath = `${path}-wal`;
   return {
     bytes: stat.size,

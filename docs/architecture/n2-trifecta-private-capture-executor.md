@@ -35,6 +35,8 @@ readOnly=true
 PRAGMA query_only=ON
 ```
 
+Before immutable access, the primary database must be a canonical single-link regular file. Leaf symlinks, ancestor path aliases and hardlinks fail closed instead of becoming plan authority.
+
 It stops when an active primary WAL exists. It reads only `official_programs`, resolves one exact date and venue code, validates label-form and code-form race identities, and builds:
 
 ```text
