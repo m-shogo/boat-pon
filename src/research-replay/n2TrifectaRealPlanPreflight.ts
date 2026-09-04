@@ -1,4 +1,5 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -149,6 +150,18 @@ function duplicateRaceNumbers(rows: ProgramInventoryRow[]): string[] {
   return [...duplicates].sort();
 }
 
+function verifiedPrimaryDbPath(path: string): string | null {
+  if (!existsSync(path)) return null;
+  const lexicalPath = resolve(path);
+  const leaf = lstatSync(lexicalPath);
+  if (leaf.isSymbolicLink() || !leaf.isFile()) throw new Error("PRIMARY_DB_IDENTITY_INVALID");
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error("PRIMARY_DB_IDENTITY_INVALID");
+  }
+  return lexicalPath;
+}
+
 function dbMeta(path: string): DbMeta {
   const walPath = `${path}-wal`;
   return {
@@ -276,7 +289,9 @@ export function readN2TrifectaRealPlanPreflight(input: {
 }): N2TrifectaRealPlanPreflightReport {
   const generatedAt = new Date().toISOString();
   const blockers: string[] = [];
-  const before = dbMeta(input.primaryDbPath);
+  const verifiedDbPath = verifiedPrimaryDbPath(input.primaryDbPath);
+  const dbPath = verifiedDbPath ?? resolve(input.primaryDbPath);
+  const before = dbMeta(dbPath);
   const requestedDateFrom = jstDateFromInstant(input.now) ?? "INVALID";
   if (!before.exists) blockers.push("PRIMARY_DB_NOT_FOUND");
   if (before.walBytes > 0) blockers.push("PRIMARY_DB_ACTIVE_WAL");
@@ -284,7 +299,7 @@ export function readN2TrifectaRealPlanPreflight(input: {
 
   const discovered = new Map<string, { date: string; venueCode: string }>();
   if (blockers.length === 0) {
-    const db = openImmutable(input.primaryDbPath);
+    const db = openImmutable(dbPath);
     try {
       const table = db.prepare(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='official_programs'",
@@ -359,7 +374,7 @@ export function readN2TrifectaRealPlanPreflight(input: {
     return date !== 0 ? date : left.venueCode.localeCompare(right.venueCode);
   })) {
     const read = readN2TrifectaPrivateCapturePlan({
-      primaryDbPath: input.primaryDbPath,
+      primaryDbPath: dbPath,
       date: item.date,
       venueCode: item.venueCode,
     });
@@ -383,7 +398,7 @@ export function readN2TrifectaRealPlanPreflight(input: {
   });
   blockers.push(...selection.blockers);
 
-  const after = dbMeta(input.primaryDbPath);
+  const after = dbMeta(dbPath);
   const metadataUnchanged = JSON.stringify(before) === JSON.stringify(after);
   if (!metadataUnchanged) blockers.push("PRIMARY_DB_METADATA_CHANGED");
   const normalizedBlockers = uniqueSorted(blockers);
