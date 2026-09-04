@@ -4,10 +4,12 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { settlementCandidateSemanticHashValid } from "../src/research-replay/n1SettlementCandidateSemanticHash";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
 import { classifyEligibility, N2_DATASET_CONTRACT_VERSION } from "../src/research-replay/n2DatasetContract";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import {
   N1_SETTLEMENT_MIGRATION_CHECKSUM,
   N1_BACKFILL_MIGRATION_CHECKSUM,
@@ -22,7 +24,11 @@ const REPORT_DIR = join(root, "reports", "n2");
 const PROTO_MONTH = process.argv.find((a) => a.startsWith("--month="))?.slice("--month=".length) ?? "2026-05";
 
 function main(): void {
-  const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
+  const sidecarPath = assertCanonicalSingleLinkRegularFile(
+    SIDECAR,
+    "N2_DATASET_SIDECAR_IDENTITY_INVALID",
+  );
+  const db = new DatabaseSync(`${pathToFileURL(sidecarPath).href}?immutable=1`, { readOnly: true } as never);
   // Fail closed before any profile/query output if append-only duplicate-resolution evidence is stale or forged.
   readCurrentlyValidSourceDuplicateObservationIds(db);
 
