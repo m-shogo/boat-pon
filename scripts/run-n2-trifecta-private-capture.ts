@@ -5,6 +5,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -48,6 +49,9 @@ function readJsonFile<T>(
 ): T {
   if (!existsSync(path)) throw new Error(`${label}_NOT_FOUND`);
   if (lstatSync(path).isSymbolicLink()) throw new Error(`${label}_SYMLINK_NOT_ALLOWED`);
+  if (options.privateAuthority && realpathSync.native(path) !== resolve(path)) {
+    throw new Error(`${label}_PATH_ALIAS_NOT_ALLOWED`);
+  }
   const stat = statSync(path);
   if (!stat.isFile()) throw new Error(`${label}_NOT_REGULAR_FILE`);
   if (options.privateAuthority && stat.nlink !== 1) throw new Error(`${label}_HARDLINK_NOT_ALLOWED`);
