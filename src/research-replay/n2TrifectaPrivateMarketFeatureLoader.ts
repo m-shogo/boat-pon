@@ -102,6 +102,7 @@ function readJsonBounded<T>(path: string): T {
     throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
   }
   const stat = statSync(path);
+  if (stat.nlink !== 1) throw new Error("PRIVATE_JSON_HARDLINK_NOT_ALLOWED");
   if (stat.size <= 0 || stat.size > MAX_PRIVATE_JSON_BYTES) {
     throw new Error("PRIVATE_JSON_SIZE_INVALID");
   }
@@ -233,6 +234,7 @@ function loadCheckpoint(
 
   const rawStat = lstatSync(rawPath);
   if (rawStat.isSymbolicLink() || !rawStat.isFile()) blockers.push("PRIVATE_RAW_FILE_TYPE_INVALID");
+  if (rawStat.nlink !== 1) blockers.push("PRIVATE_RAW_HARDLINK_NOT_ALLOWED");
   if (rawStat.size <= 0 || rawStat.size > MAX_PRIVATE_RAW_BYTES) blockers.push("PRIVATE_RAW_SIZE_INVALID");
   if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
 
