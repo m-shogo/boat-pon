@@ -72,7 +72,7 @@ function assertLatestRolloutTimestampUnambiguous(timeline: readonly RolloutRow[]
   }
 }
 
-function assertSidecarIdentity(sidecarDbPath: string): void {
+function assertSidecarIdentity(sidecarDbPath: string): string {
   if (!existsSync(sidecarDbPath)) throw new Error("N2_READINESS_SIDECAR_IDENTITY_INVALID");
   const lexicalPath = resolve(sidecarDbPath);
   const lstat = lstatSync(lexicalPath);
@@ -83,11 +83,12 @@ function assertSidecarIdentity(sidecarDbPath: string): void {
   if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
     throw new Error("N2_READINESS_SIDECAR_IDENTITY_INVALID");
   }
+  return lexicalPath;
 }
 
 export function readCanonicalRolloutState(sidecarDbPath: string): N2ObservationIngestRolloutState {
-  assertSidecarIdentity(sidecarDbPath);
-  const db = new DatabaseSync(`${pathToFileURL(sidecarDbPath).href}?immutable=1`, { readOnly: true } as never);
+  const lexicalPath = assertSidecarIdentity(sidecarDbPath);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
   try {
     if (!tableExists(db, "rollout_config_events")) {
