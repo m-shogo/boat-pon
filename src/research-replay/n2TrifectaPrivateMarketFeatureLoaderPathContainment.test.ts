@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -42,5 +42,33 @@ test("private market loader rejects normalized raw traversal before private raw 
     assert.equal(read.rawValuesPublished, false);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("private market loader rejects a symlinked checkpoint directory before marker or raw reads", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-private-market-checkpoint-root-"));
+  const external = mkdtempSync(join(tmpdir(), "boat-pon-private-market-checkpoint-external-"));
+  try {
+    const raceDir = join(root, "data/raw/research/trifecta-market/2026-08-07/05/01");
+    mkdirSync(raceDir, { recursive: true });
+    writeFileSync(join(external, "accepted.json"), "{}\n", "utf8");
+    symlinkSync(external, join(raceDir, "T-5"), "dir");
+
+    const read = loadN2TrifectaPrivateMarketFeatures({
+      rootDir: root,
+      date: "2026-08-07",
+      venueCode: "05",
+      raceNo: 1,
+    });
+
+    assert.equal(read.status, "BLOCKED");
+    assert.ok(read.blockers.includes("T-5_CHECKPOINT_DIRECTORY_IDENTITY_INVALID"));
+    assert.equal(read.acceptedMarkerCount, 0);
+    assert.equal(read.loadedSnapshotCount, 0);
+    assert.equal(read.rawValuesReadPrivately, false);
+    assert.equal(read.rawValuesPublished, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(external, { recursive: true, force: true });
   }
 });

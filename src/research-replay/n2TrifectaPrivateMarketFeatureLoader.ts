@@ -96,6 +96,24 @@ function resolveInsideExpectedDirectory(
   return target.startsWith(`${expectedDirectory}${sep}`) ? target : null;
 }
 
+function validatePrivateDirectoryChain(
+  rootDir: string,
+  relativeDirectory: string,
+): "PASS" | "MISSING" | "INVALID" {
+  let current = resolve(rootDir);
+  for (const segment of relativeDirectory.split("/")) {
+    current = resolve(current, segment);
+    try {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) return "INVALID";
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return "MISSING";
+      return "INVALID";
+    }
+  }
+  return "PASS";
+}
+
 function readJsonBounded<T>(path: string): T {
   const lstat = lstatSync(path);
   if (lstat.isSymbolicLink() || !lstat.isFile()) {
@@ -175,6 +193,11 @@ function loadCheckpoint(
   const blockers: string[] = [];
   const expectedRaceIdentity = raceIdentity(input);
   const directory = checkpointDirectory(input, checkpointLabel);
+  const directoryStatus = validatePrivateDirectoryChain(input.rootDir, directory);
+  if (directoryStatus === "MISSING") return { status: "MISSING", blockers: [], snapshot: null };
+  if (directoryStatus === "INVALID") {
+    return { status: "BLOCKED", blockers: ["CHECKPOINT_DIRECTORY_IDENTITY_INVALID"], snapshot: null };
+  }
   const markerRelativePath = `${directory}/accepted.json`;
   const markerPath = resolveInside(input.rootDir, markerRelativePath);
   if (!existsSync(markerPath)) return { status: "MISSING", blockers: [], snapshot: null };
@@ -338,11 +361,14 @@ export function loadN2TrifectaPrivateMarketFeatures(
   const snapshots: N2TrifectaMarketSnapshotInput[] = [];
   let acceptedMarkerCount = 0;
   for (const checkpointLabel of N2_TRIFECTA_MARKET_CHECKPOINTS) {
+    const directory = checkpointDirectory(input, checkpointLabel);
     const markerPath = resolveInside(
       input.rootDir,
-      `${checkpointDirectory(input, checkpointLabel)}/accepted.json`,
+      `${directory}/accepted.json`,
     );
-    if (existsSync(markerPath)) acceptedMarkerCount += 1;
+    if (validatePrivateDirectoryChain(input.rootDir, directory) === "PASS" && existsSync(markerPath)) {
+      acceptedMarkerCount += 1;
+    }
     const loaded = loadCheckpoint(input, checkpointLabel);
     if (loaded.status === "BLOCKED") {
       blockers.push(...loaded.blockers.map((blocker) => `${checkpointLabel}_${blocker}`));
