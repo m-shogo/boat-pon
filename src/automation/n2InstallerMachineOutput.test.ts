@@ -26,3 +26,14 @@ test("installer keeps explicit JSON dispositions and isolated print-only plist o
   assert.equal(structuredLogs.length, 2);
   assert.match(installer, /if \(printOnly\) console\.log\(plist\)/u);
 });
+
+test("installer existing private authorities require canonical single-link 0600 regular files", () => {
+  assert.match(installer, /PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED/u);
+  assert.match(installer, /PRIVATE_AUTHORITY_REGULAR_FILE_REQUIRED/u);
+  assert.match(installer, /stat\.nlink !== 1/u);
+  assert.match(installer, /PRIVATE_AUTHORITY_HARDLINK_NOT_ALLOWED/u);
+  assert.match(installer, /\(stat\.mode & 0o777\) !== 0o600/u);
+  assert.match(installer, /PRIVATE_AUTHORITY_MODE_INVALID/u);
+  assert.match(installer, /realpathSync\.native\(path\) !== resolve\(path\)/u);
+  assert.match(installer, /PRIVATE_AUTHORITY_PATH_ALIAS_NOT_ALLOWED/u);
+});
