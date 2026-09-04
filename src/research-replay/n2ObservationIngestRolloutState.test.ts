@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -33,6 +33,62 @@ test("readiness rollout state uses the latest canonical event", () => {
       operationalGcEnabled: true,
       killSwitchEngaged: false,
     });
+  } finally {
+    try { db.close(); } catch {}
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rollout sidecar symlinks fail closed before sqlite open", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-symlink-"));
+  const realPath = join(root, "real.sqlite");
+  const aliasPath = join(root, "alias.sqlite");
+  const db = createRolloutTable(realPath);
+  try {
+    db.close();
+    symlinkSync(realPath, aliasPath);
+    assert.throws(
+      () => readCanonicalRolloutState(aliasPath),
+      /N2_READINESS_SIDECAR_IDENTITY_INVALID/,
+    );
+  } finally {
+    try { db.close(); } catch {}
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rollout sidecar ancestor aliases fail closed before sqlite open", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-ancestor-alias-"));
+  const realDir = join(root, "real");
+  const aliasDir = join(root, "alias");
+  mkdirSync(realDir);
+  const realPath = join(realDir, "research-replay.sqlite");
+  const db = createRolloutTable(realPath);
+  try {
+    db.close();
+    symlinkSync(realDir, aliasDir);
+    assert.throws(
+      () => readCanonicalRolloutState(join(aliasDir, "research-replay.sqlite")),
+      /N2_READINESS_SIDECAR_IDENTITY_INVALID/,
+    );
+  } finally {
+    try { db.close(); } catch {}
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rollout sidecar hardlinks fail closed before sqlite open", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-hardlink-"));
+  const path = join(root, "research-replay.sqlite");
+  const linkedPath = join(root, "linked.sqlite");
+  const db = createRolloutTable(path);
+  try {
+    db.close();
+    linkSync(path, linkedPath);
+    assert.throws(
+      () => readCanonicalRolloutState(path),
+      /N2_READINESS_SIDECAR_IDENTITY_INVALID/,
+    );
   } finally {
     try { db.close(); } catch {}
     rmSync(root, { recursive: true, force: true });
