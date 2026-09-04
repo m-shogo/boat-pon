@@ -124,13 +124,23 @@ function resolveInsideExpectedDirectory(
   return target.startsWith(`${expectedDirectory}${sep}`) ? target : null;
 }
 
-function safeDirectoryNames(rootDir: string, relativeDir: string): string[] {
-  const path = resolveInside(rootDir, relativeDir);
-  if (!existsSync(path)) return [];
-  const rootStat = lstatSync(path);
-  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
-    throw new Error("PRIVATE_DIRECTORY_TYPE_INVALID");
+function verifyExistingDirectoryAncestors(rootDir: string, relativeDir: string): boolean {
+  let current = resolve(rootDir);
+  for (const component of relativeDir.split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (!existsSync(current)) return false;
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("PRIVATE_DIRECTORY_TYPE_INVALID");
+    }
   }
+  return true;
+}
+
+function safeDirectoryNames(rootDir: string, relativeDir: string): string[] {
+  if (!verifyExistingDirectoryAncestors(rootDir, relativeDir)) return [];
+  const path = resolveInside(rootDir, relativeDir);
   return readdirSync(path).sort();
 }
 
