@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
+  openSync,
   readFileSync,
-  statSync,
 } from "node:fs";
 import { resolve, sep } from "node:path";
 
@@ -119,12 +122,23 @@ function readJsonBounded<T>(path: string): T {
   if (lstat.isSymbolicLink() || !lstat.isFile()) {
     throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
   }
-  const stat = statSync(path);
-  if (stat.nlink !== 1) throw new Error("PRIVATE_JSON_HARDLINK_NOT_ALLOWED");
-  if (stat.size <= 0 || stat.size > MAX_PRIVATE_JSON_BYTES) {
-    throw new Error("PRIVATE_JSON_SIZE_INVALID");
+  let fd: number;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
   }
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
+    if (stat.nlink !== 1) throw new Error("PRIVATE_JSON_HARDLINK_NOT_ALLOWED");
+    if (stat.size <= 0 || stat.size > MAX_PRIVATE_JSON_BYTES) {
+      throw new Error("PRIVATE_JSON_SIZE_INVALID");
+    }
+    return JSON.parse(readFileSync(fd, "utf8")) as T;
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function sha256(bytes: Uint8Array): string {
@@ -255,77 +269,95 @@ function loadCheckpoint(
   if (!existsSync(envelopePath)) blockers.push("PRIVATE_ENVELOPE_FILE_MISSING");
   if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
 
-  const rawStat = lstatSync(rawPath);
-  if (rawStat.isSymbolicLink() || !rawStat.isFile()) blockers.push("PRIVATE_RAW_FILE_TYPE_INVALID");
-  if (rawStat.nlink !== 1) blockers.push("PRIVATE_RAW_HARDLINK_NOT_ALLOWED");
-  if (rawStat.size <= 0 || rawStat.size > MAX_PRIVATE_RAW_BYTES) blockers.push("PRIVATE_RAW_SIZE_INVALID");
-  if (blockers.length > 0) return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
-
-  let envelope: N2TrifectaPrivateCaptureEnvelope;
+  let rawFd: number | null = null;
   try {
-    envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath);
-  } catch (error) {
-    blockers.push(`PRIVATE_ENVELOPE_${error instanceof Error ? error.message : "INVALID"}`);
-    return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
-  }
-  if (envelope.envelopeVersion !== "n2-trifecta-private-capture-envelope-v1") {
-    blockers.push("PRIVATE_ENVELOPE_VERSION_MISMATCH");
-  }
-  if (envelope.status !== "PASS" || envelope.blockers.length > 0) blockers.push("PRIVATE_ENVELOPE_NOT_PASS");
-  if (envelope.manifestDigest !== marker.manifestDigest) blockers.push("PRIVATE_ENVELOPE_MANIFEST_DIGEST_MISMATCH");
-  if (envelope.checkpointKey !== marker.checkpointKey) blockers.push("PRIVATE_ENVELOPE_CHECKPOINT_KEY_MISMATCH");
-  if (envelope.rawDocumentId !== marker.rawDocumentId) blockers.push("PRIVATE_ENVELOPE_RAW_DOCUMENT_ID_MISMATCH");
-  if (envelope.entry.raceIdentity !== expectedRaceIdentity) blockers.push("PRIVATE_ENVELOPE_RACE_MISMATCH");
-  if (envelope.entry.checkpointLabel !== checkpointLabel) blockers.push("PRIVATE_ENVELOPE_CHECKPOINT_MISMATCH");
-  if (envelope.response.rawSha256 !== marker.rawSha256) blockers.push("PRIVATE_ENVELOPE_SHA_MISMATCH");
-  if (envelope.rawRelativePath !== marker.rawRelativePath) blockers.push("PRIVATE_ENVELOPE_RAW_PATH_MISMATCH");
-  if (envelope.envelopeRelativePath !== marker.envelopeRelativePath) blockers.push("PRIVATE_ENVELOPE_PATH_MISMATCH");
-  if (envelope.parsedSelectionCount !== 120 || envelope.unavailableSelectionCount !== 0) {
-    blockers.push("PRIVATE_ENVELOPE_SELECTION_AUDIT_INVALID");
-  }
-  if (envelope.snapshotAudit?.status !== "PASS") blockers.push("PRIVATE_SNAPSHOT_AUDIT_NOT_PASS");
-  if (envelope.databaseWriteAuthorized !== false
-    || envelope.currentBuyConnectionAuthorized !== false
-    || envelope.lineConnectionAuthorized !== false
-    || envelope.publicPublishAuthorized !== false
-    || envelope.productionApplyExecuted !== false) {
-    blockers.push("PRIVATE_ENVELOPE_BOUNDARY_WIDENED");
-  }
-  const fetchedAt = envelope.response.fetchedAt;
-  const availableAt = envelope.sourceDisplayedUpdate.availableAt;
-  const fetchedAtValid = isValidExplicitIsoInstant(fetchedAt);
-  const availableAtValid = isValidExplicitIsoInstant(availableAt);
-  if (!fetchedAtValid) blockers.push("PRIVATE_FETCHED_AT_INVALID");
-  if (!availableAtValid) blockers.push("PRIVATE_AVAILABLE_AT_INVALID");
-  if (fetchedAtValid && availableAtValid && Date.parse(availableAt) > Date.parse(fetchedAt)) {
-    blockers.push("PRIVATE_AVAILABLE_AT_AFTER_FETCHED_AT");
-  }
-  if (blockers.length > 0 || !fetchedAtValid || !availableAtValid) {
-    return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
-  }
-  const validatedFetchedAt = canonicalUtcTimestamp(fetchedAt);
-  const validatedAvailableAt = canonicalUtcTimestamp(availableAt);
+    const rawLstat = lstatSync(rawPath);
+    if (rawLstat.isSymbolicLink() || !rawLstat.isFile()) blockers.push("PRIVATE_RAW_FILE_TYPE_INVALID");
+    if (blockers.length === 0) {
+      try {
+        rawFd = openSync(rawPath, constants.O_RDONLY | constants.O_NOFOLLOW);
+      } catch {
+        blockers.push("PRIVATE_RAW_FILE_TYPE_INVALID");
+      }
+    }
+    if (rawFd !== null) {
+      const rawStat = fstatSync(rawFd);
+      if (!rawStat.isFile()) blockers.push("PRIVATE_RAW_FILE_TYPE_INVALID");
+      if (rawStat.nlink !== 1) blockers.push("PRIVATE_RAW_HARDLINK_NOT_ALLOWED");
+      if (rawStat.size <= 0 || rawStat.size > MAX_PRIVATE_RAW_BYTES) blockers.push("PRIVATE_RAW_SIZE_INVALID");
+    }
+    if (blockers.length > 0 || rawFd === null) {
+      return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
+    }
 
-  const rawBytes = readFileSync(rawPath);
-  const actualSha256 = sha256(rawBytes);
-  if (actualSha256 !== marker.rawSha256) {
-    return { status: "BLOCKED", blockers: ["PRIVATE_RAW_SHA256_MISMATCH"], snapshot: null };
+    let envelope: N2TrifectaPrivateCaptureEnvelope;
+    try {
+      envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath);
+    } catch (error) {
+      blockers.push(`PRIVATE_ENVELOPE_${error instanceof Error ? error.message : "INVALID"}`);
+      return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
+    }
+    if (envelope.envelopeVersion !== "n2-trifecta-private-capture-envelope-v1") {
+      blockers.push("PRIVATE_ENVELOPE_VERSION_MISMATCH");
+    }
+    if (envelope.status !== "PASS" || envelope.blockers.length > 0) blockers.push("PRIVATE_ENVELOPE_NOT_PASS");
+    if (envelope.manifestDigest !== marker.manifestDigest) blockers.push("PRIVATE_ENVELOPE_MANIFEST_DIGEST_MISMATCH");
+    if (envelope.checkpointKey !== marker.checkpointKey) blockers.push("PRIVATE_ENVELOPE_CHECKPOINT_KEY_MISMATCH");
+    if (envelope.rawDocumentId !== marker.rawDocumentId) blockers.push("PRIVATE_ENVELOPE_RAW_DOCUMENT_ID_MISMATCH");
+    if (envelope.entry.raceIdentity !== expectedRaceIdentity) blockers.push("PRIVATE_ENVELOPE_RACE_MISMATCH");
+    if (envelope.entry.checkpointLabel !== checkpointLabel) blockers.push("PRIVATE_ENVELOPE_CHECKPOINT_MISMATCH");
+    if (envelope.response.rawSha256 !== marker.rawSha256) blockers.push("PRIVATE_ENVELOPE_SHA_MISMATCH");
+    if (envelope.rawRelativePath !== marker.rawRelativePath) blockers.push("PRIVATE_ENVELOPE_RAW_PATH_MISMATCH");
+    if (envelope.envelopeRelativePath !== marker.envelopeRelativePath) blockers.push("PRIVATE_ENVELOPE_PATH_MISMATCH");
+    if (envelope.parsedSelectionCount !== 120 || envelope.unavailableSelectionCount !== 0) {
+      blockers.push("PRIVATE_ENVELOPE_SELECTION_AUDIT_INVALID");
+    }
+    if (envelope.snapshotAudit?.status !== "PASS") blockers.push("PRIVATE_SNAPSHOT_AUDIT_NOT_PASS");
+    if (envelope.databaseWriteAuthorized !== false
+      || envelope.currentBuyConnectionAuthorized !== false
+      || envelope.lineConnectionAuthorized !== false
+      || envelope.publicPublishAuthorized !== false
+      || envelope.productionApplyExecuted !== false) {
+      blockers.push("PRIVATE_ENVELOPE_BOUNDARY_WIDENED");
+    }
+    const fetchedAt = envelope.response.fetchedAt;
+    const availableAt = envelope.sourceDisplayedUpdate.availableAt;
+    const fetchedAtValid = isValidExplicitIsoInstant(fetchedAt);
+    const availableAtValid = isValidExplicitIsoInstant(availableAt);
+    if (!fetchedAtValid) blockers.push("PRIVATE_FETCHED_AT_INVALID");
+    if (!availableAtValid) blockers.push("PRIVATE_AVAILABLE_AT_INVALID");
+    if (fetchedAtValid && availableAtValid && Date.parse(availableAt) > Date.parse(fetchedAt)) {
+      blockers.push("PRIVATE_AVAILABLE_AT_AFTER_FETCHED_AT");
+    }
+    if (blockers.length > 0 || !fetchedAtValid || !availableAtValid) {
+      return { status: "BLOCKED", blockers: unique(blockers), snapshot: null };
+    }
+    const validatedFetchedAt = canonicalUtcTimestamp(fetchedAt);
+    const validatedAvailableAt = canonicalUtcTimestamp(availableAt);
+
+    const rawBytes = readFileSync(rawFd);
+    const actualSha256 = sha256(rawBytes);
+    if (actualSha256 !== marker.rawSha256) {
+      return { status: "BLOCKED", blockers: ["PRIVATE_RAW_SHA256_MISMATCH"], snapshot: null };
+    }
+    const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
+    if (odds.size !== 120) {
+      return { status: "BLOCKED", blockers: ["PRIVATE_REPARSE_SELECTION_COUNT_NOT_120"], snapshot: null };
+    }
+    return {
+      status: "PASS",
+      blockers: [],
+      snapshot: {
+        raceIdentity: expectedRaceIdentity,
+        checkpointLabel,
+        capturedAt: validatedFetchedAt,
+        availableAt: validatedAvailableAt,
+        odds,
+      },
+    };
+  } finally {
+    if (rawFd !== null) closeSync(rawFd);
   }
-  const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
-  if (odds.size !== 120) {
-    return { status: "BLOCKED", blockers: ["PRIVATE_REPARSE_SELECTION_COUNT_NOT_120"], snapshot: null };
-  }
-  return {
-    status: "PASS",
-    blockers: [],
-    snapshot: {
-      raceIdentity: expectedRaceIdentity,
-      checkpointLabel,
-      capturedAt: validatedFetchedAt,
-      availableAt: validatedAvailableAt,
-      odds,
-    },
-  };
 }
 
 export function loadN2TrifectaPrivateMarketFeatures(
