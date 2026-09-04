@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { closeSync, linkSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { closeSync, linkSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -46,7 +46,6 @@ test("edge holdout source rejects a sidecar ancestor symlink before any database
     const realDir = join(root, "real");
     const aliasDir = join(root, "alias");
     const real = join(realDir, "sidecar.sqlite");
-    const { mkdirSync } = require("node:fs") as typeof import("node:fs");
     mkdirSync(realDir);
     touch(real);
     symlinkSync(realDir, aliasDir);
