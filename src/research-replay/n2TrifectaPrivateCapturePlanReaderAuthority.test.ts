@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -79,4 +79,11 @@ test("private capture plan rejects a hardlinked primary database authority", () 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("private capture plan opens and rechecks the verified lexical primary path", () => {
+  const source = readFileSync(new URL("./n2TrifectaPrivateCapturePlanReader.ts", import.meta.url), "utf8");
+  assert.match(source, /const db = openImmutable\(before\.path\);/u);
+  assert.match(source, /const after = dbMeta\(before\.path\);/u);
+  assert.doesNotMatch(source, /openImmutable\(input\.primaryDbPath\)/u);
 });
