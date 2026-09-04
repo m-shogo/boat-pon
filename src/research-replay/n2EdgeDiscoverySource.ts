@@ -1,4 +1,5 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -188,17 +189,40 @@ function tableHasColumn(db: DatabaseSync, table: string, column: string): boolea
   return rows.some((row) => row.name === column);
 }
 
+function verifiedDatabasePath(path: string, blocker: string): string {
+  const lexicalPath = resolve(path);
+  let leaf;
+  try {
+    leaf = lstatSync(lexicalPath);
+  } catch {
+    throw new Error(blocker);
+  }
+  if (leaf.isSymbolicLink() || !leaf.isFile()) throw new Error(blocker);
+  try {
+    const stat = statSync(lexicalPath);
+    if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+      throw new Error(blocker);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === blocker) throw error;
+    throw new Error(blocker);
+  }
+  return lexicalPath;
+}
+
 function openReadOnlyPrimary(path: string): DatabaseSync {
-  const db = new DatabaseSync(path, { readOnly: true } as never);
+  const lexicalPath = verifiedDatabasePath(path, "PRIMARY_DISCOVERY_DB_IDENTITY_INVALID");
+  const db = new DatabaseSync(lexicalPath, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
   db.exec("PRAGMA busy_timeout=5000");
   return db;
 }
 
 function openImmutableSidecar(path: string): DatabaseSync {
-  const walPath = `${path}-wal`;
+  const lexicalPath = verifiedDatabasePath(path, "SIDECAR_DISCOVERY_DB_IDENTITY_INVALID");
+  const walPath = `${lexicalPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) throw new Error("SIDECAR_ACTIVE_WAL");
-  const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true } as never);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
   return db;
 }
