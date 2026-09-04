@@ -59,6 +59,19 @@ test("local private authority reader rejects a hardlinked owner-only file", () =
   });
 });
 
+test("local private authority reader rejects a symlinked leaf", () => {
+  withRoot((root) => {
+    const sourcePath = join(root, "authority-source.json");
+    const authorityPath = join(root, "authority.json");
+    writeFileSync(sourcePath, "{\"ok\":true}\n", { encoding: "utf8", mode: 0o600 });
+    symlinkSync(sourcePath, authorityPath, "file");
+    assert.throws(
+      () => readN2TrifectaPrivateAuthorityJson(authorityPath, "AUTHORITY_MISSING"),
+      /LOCAL_CAPTURE_PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED/,
+    );
+  });
+});
+
 test("local private authority reader rejects a symlinked ancestor under the trusted root", () => {
   withRoot((root) => {
     const external = mkdtempSync(join(tmpdir(), "boat-pon-private-authority-external-"));
