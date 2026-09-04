@@ -4,7 +4,7 @@ import {
   readFileSync,
   statSync,
 } from "node:fs";
-import { resolve, sep } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
 import { N2_TRIFECTA_PRIVATE_CAPTURE_LATE_WINDOW_SECONDS } from "./n2TrifectaPrivateCaptureExecutor";
@@ -127,6 +127,20 @@ function heartbeatRelativePath(date: string): string {
   return `data/private/trifecta-capture/heartbeats/${date}.jsonl`;
 }
 
+function verifyHeartbeatHistoryAncestors(rootDir: string, relativePath: string): boolean {
+  let current = resolve(rootDir);
+  for (const component of dirname(relativePath).split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (!existsSync(current)) return false;
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("HEARTBEAT_HISTORY_PARENT_INVALID");
+    }
+  }
+  return true;
+}
+
 function validateHeartbeatRecord(record: HeartbeatRecordLike, date: string): string[] {
   const blockers: string[] = [];
   if (record.heartbeatVersion !== N2_TRIFECTA_PRIVATE_HEARTBEAT_VERSION) {
@@ -165,6 +179,9 @@ function readHeartbeatHistory(input: {
 }): { records: HeartbeatRecordLike[]; blockers: string[]; present: boolean } {
   const relativePath = heartbeatRelativePath(input.date);
   const path = resolveInside(input.dataRoot, relativePath);
+  if (!verifyHeartbeatHistoryAncestors(input.dataRoot, relativePath)) {
+    return { records: [], blockers: ["HEARTBEAT_HISTORY_MISSING"], present: false };
+  }
   if (!existsSync(path)) return { records: [], blockers: ["HEARTBEAT_HISTORY_MISSING"], present: false };
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isFile()) {
