@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { chmodSync, linkSync, mkdtempSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -56,4 +64,26 @@ test("private capture CLI rejects a non-private execution approval before execut
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /APPROVAL_MODE_INVALID/u);
+});
+
+test("private capture CLI rejects an execution approval reached through a symlinked ancestor", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-private-capture-approval-parent-"));
+  const external = mkdtempSync(join(tmpdir(), "boat-pon-private-capture-approval-external-"));
+  try {
+    const externalDir = join(external, "authority");
+    mkdirSync(externalDir, { mode: 0o700 });
+    const realApprovalPath = join(externalDir, "approval.json");
+    writeFileSync(realApprovalPath, "{}\n", "utf8");
+    chmodSync(realApprovalPath, 0o600);
+
+    const aliasDir = join(root, "authority");
+    symlinkSync(externalDir, aliasDir, "dir");
+    const result = runWithApproval(join(aliasDir, "approval.json"));
+
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /APPROVAL_PATH_ALIAS_NOT_ALLOWED/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(external, { recursive: true, force: true });
+  }
 });
