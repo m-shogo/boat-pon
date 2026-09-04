@@ -1,5 +1,7 @@
 import {
   existsSync,
+  lstatSync,
+  realpathSync,
   statSync,
 } from "node:fs";
 import { resolve } from "node:path";
@@ -18,6 +20,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VENUE_RE = /^(0[1-9]|1\d|2[0-4])$/;
 
 type DbMeta = {
+  path: string;
   bytes: number;
   modifiedMs: number;
   walBytes: number;
@@ -29,11 +32,29 @@ function jstDate(value: Date): string {
   return new Date(value.getTime() + 9 * 60 * 60 * 1_000).toISOString().slice(0, 10);
 }
 
+function verifiedPrimaryDbPath(path: string): string {
+  const lexicalPath = resolve(path);
+  if (!existsSync(lexicalPath)) throw new Error("PRIMARY_DB_NOT_FOUND");
+  try {
+    const leaf = lstatSync(lexicalPath);
+    if (leaf.isSymbolicLink() || !leaf.isFile()) throw new Error("PRIMARY_DB_IDENTITY_INVALID");
+    const stat = statSync(lexicalPath);
+    if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+      throw new Error("PRIMARY_DB_IDENTITY_INVALID");
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "PRIMARY_DB_IDENTITY_INVALID") throw error;
+    throw new Error("PRIMARY_DB_IDENTITY_INVALID");
+  }
+  return lexicalPath;
+}
+
 function dbMeta(path: string): DbMeta {
-  if (!existsSync(path)) throw new Error("PRIMARY_DB_NOT_FOUND");
-  const stat = statSync(path);
-  const walPath = `${path}-wal`;
+  const lexicalPath = verifiedPrimaryDbPath(path);
+  const stat = statSync(lexicalPath);
+  const walPath = `${lexicalPath}-wal`;
   return {
+    path: lexicalPath,
     bytes: stat.size,
     modifiedMs: stat.mtimeMs,
     walBytes: existsSync(walPath) ? statSync(walPath).size : 0,
@@ -108,11 +129,11 @@ try {
     primaryDbModifiedMs: before.modifiedMs,
     primaryDbWalBytes: before.walBytes,
   });
-  const venueCodes = discoverVenueCodes(primaryDbPath, requestedDate);
+  const venueCodes = discoverVenueCodes(before.path, requestedDate);
   if (venueCodes.length === 0) throw new Error("CURRENT_DAY_VENUE_INVENTORY_EMPTY");
 
   const planResults = venueCodes.map((venueCode) => readN2TrifectaPrivateCapturePlan({
-    primaryDbPath,
+    primaryDbPath: before.path,
     date: requestedDate,
     venueCode,
   }));
@@ -132,7 +153,7 @@ try {
   });
   const relativePath = writeN2TrifectaPrivateDailyPlanCache({ dataRoot, cache });
 
-  const after = dbMeta(primaryDbPath);
+  const after = dbMeta(before.path);
   const primaryDbMetadataUnchanged = before.bytes === after.bytes
     && before.modifiedMs === after.modifiedMs
     && before.walBytes === after.walBytes;
