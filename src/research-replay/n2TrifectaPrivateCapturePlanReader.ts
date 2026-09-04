@@ -59,19 +59,22 @@ function isCanonicalCalendarDate(value: string): boolean {
 }
 
 function dbMeta(path: string): {
+  path: string;
   bytes: number;
   modifiedMs: number;
   walBytes: number;
 } {
   if (!existsSync(path)) throw new Error("PRIMARY_DB_NOT_FOUND");
-  const lst = lstatSync(path);
-  if (lst.isSymbolicLink() || !lst.isFile() || realpathSync.native(path) !== resolve(path)) {
+  const lexicalPath = resolve(path);
+  const lst = lstatSync(lexicalPath);
+  if (lst.isSymbolicLink() || !lst.isFile() || realpathSync.native(lexicalPath) !== lexicalPath) {
     throw new Error("PRIMARY_DB_FILE_AUTHORITY_INVALID");
   }
-  const stat = statSync(path);
+  const stat = statSync(lexicalPath);
   if (!stat.isFile() || stat.nlink !== 1) throw new Error("PRIMARY_DB_FILE_AUTHORITY_INVALID");
-  const walPath = `${path}-wal`;
+  const walPath = `${lexicalPath}-wal`;
   return {
+    path: lexicalPath,
     bytes: stat.size,
     modifiedMs: stat.mtimeMs,
     walBytes: existsSync(walPath) ? statSync(walPath).size : 0,
@@ -142,7 +145,7 @@ export function readN2TrifectaPrivateCapturePlan(input: {
     };
   }
 
-  const db = openImmutable(input.primaryDbPath);
+  const db = openImmutable(before.path);
   let rows: ProgramRow[] = [];
   try {
     const table = db.prepare(
@@ -217,7 +220,7 @@ export function readN2TrifectaPrivateCapturePlan(input: {
     normalizedBlockers.push(...plan.blockers.map((blocker) => `PLAN_${blocker}`));
   }
 
-  const after = dbMeta(input.primaryDbPath);
+  const after = dbMeta(before.path);
   const metadataUnchanged = before.bytes === after.bytes
     && before.modifiedMs === after.modifiedMs
     && before.walBytes === after.walBytes;
