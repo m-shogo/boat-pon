@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -125,11 +125,19 @@ function tableHasColumn(db: DatabaseSync, table: string, column: string): boolea
 }
 
 function openImmutableSidecar(path: string): DatabaseSync {
-  const walPath = `${path}-wal`;
+  if (!existsSync(path)) throw new Error("SIDECAR_NOT_FOUND");
+  const lexicalPath = resolve(path);
+  const lstat = lstatSync(lexicalPath);
+  if (lstat.isSymbolicLink() || !lstat.isFile()) throw new Error("SIDECAR_IDENTITY_INVALID");
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error("SIDECAR_IDENTITY_INVALID");
+  }
+  const walPath = `${lexicalPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) {
     throw new Error("SIDECAR_ACTIVE_WAL");
   }
-  const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true } as never);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
   return db;
 }
