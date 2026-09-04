@@ -149,7 +149,7 @@ function regularBounded(path: string, maxBytes: number): boolean {
   const lstat = lstatSync(path);
   if (lstat.isSymbolicLink() || !lstat.isFile()) return false;
   const stat = statSync(path);
-  return stat.size > 0 && stat.size <= maxBytes;
+  return stat.nlink === 1 && stat.size > 0 && stat.size <= maxBytes;
 }
 
 function parseIso(value: unknown): boolean {
