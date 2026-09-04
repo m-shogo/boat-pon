@@ -1,3 +1,5 @@
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalHash, canonicalUtcTimestamp } from "./canonical";
@@ -132,7 +134,21 @@ function validLifecycle(row: LifecycleRow): boolean {
   return row.content_hash === expected;
 }
 
+function assertSidecarIdentity(sidecarDbPath: string): void {
+  if (!existsSync(sidecarDbPath)) throw new Error("N2_READINESS_APPROVAL_SIDECAR_IDENTITY_INVALID");
+  const lexicalPath = resolve(sidecarDbPath);
+  const lstat = lstatSync(lexicalPath);
+  if (lstat.isSymbolicLink() || !lstat.isFile()) {
+    throw new Error("N2_READINESS_APPROVAL_SIDECAR_IDENTITY_INVALID");
+  }
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error("N2_READINESS_APPROVAL_SIDECAR_IDENTITY_INVALID");
+  }
+}
+
 export function readLifecycleValidApprovalScopes(sidecarDbPath: string): string[] {
+  assertSidecarIdentity(sidecarDbPath);
   const db = new DatabaseSync(`${pathToFileURL(sidecarDbPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
   try {
