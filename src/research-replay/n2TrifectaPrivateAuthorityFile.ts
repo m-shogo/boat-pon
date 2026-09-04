@@ -1,4 +1,12 @@
-import { existsSync, lstatSync, readFileSync, statSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+} from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 
 export const N2_TRIFECTA_PRIVATE_AUTHORITY_MAX_BYTES = 100_000;
@@ -38,19 +46,30 @@ export function readN2TrifectaPrivateAuthorityJson<T>(
   if (!lst.isFile()) {
     throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SIZE_OR_TYPE_INVALID");
   }
-  if (lst.nlink !== 1) {
-    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_HARDLINK_NOT_ALLOWED");
-  }
-  const stat = statSync(path);
-  if (!stat.isFile() || stat.size <= 0 || stat.size > N2_TRIFECTA_PRIVATE_AUTHORITY_MAX_BYTES) {
-    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SIZE_OR_TYPE_INVALID");
-  }
-  if ((stat.mode & 0o777) !== 0o600) {
-    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_FILE_MODE_INVALID");
+
+  let fd: number;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_OPEN_FAILED");
   }
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as T;
-  } catch {
-    throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_INVALID_JSON");
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size <= 0 || stat.size > N2_TRIFECTA_PRIVATE_AUTHORITY_MAX_BYTES) {
+      throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_SIZE_OR_TYPE_INVALID");
+    }
+    if (stat.nlink !== 1) {
+      throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_HARDLINK_NOT_ALLOWED");
+    }
+    if ((stat.mode & 0o777) !== 0o600) {
+      throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_FILE_MODE_INVALID");
+    }
+    try {
+      return JSON.parse(readFileSync(fd, "utf8")) as T;
+    } catch {
+      throw new Error("LOCAL_CAPTURE_PRIVATE_AUTHORITY_INVALID_JSON");
+    }
+  } finally {
+    closeSync(fd);
   }
 }
