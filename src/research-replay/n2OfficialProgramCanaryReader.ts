@@ -1,4 +1,5 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { officialVenueCode } from "../domain/officialLinks";
@@ -35,7 +36,14 @@ type CanonicalIdentityRow = OfficialProgramIdentityRow & {
 
 function assertQuiescent(path: string): void {
   if (!existsSync(path)) throw new Error("PRIMARY_DB_NOT_FOUND");
-  const wal = `${path}-wal`;
+  const lexicalPath = resolve(path);
+  const lstat = lstatSync(lexicalPath);
+  if (lstat.isSymbolicLink() || !lstat.isFile()) throw new Error("PRIMARY_DB_IDENTITY_INVALID");
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error("PRIMARY_DB_IDENTITY_INVALID");
+  }
+  const wal = `${lexicalPath}-wal`;
   if (existsSync(wal) && statSync(wal).size > 0) throw new Error("PRIMARY_DB_ACTIVE_WAL");
 }
 
