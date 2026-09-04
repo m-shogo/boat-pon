@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -49,6 +49,26 @@ test("rollout sidecar symlinks fail closed before sqlite open", () => {
     symlinkSync(realPath, aliasPath);
     assert.throws(
       () => readCanonicalRolloutState(aliasPath),
+      /N2_READINESS_SIDECAR_IDENTITY_INVALID/,
+    );
+  } finally {
+    try { db.close(); } catch {}
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rollout sidecar ancestor aliases fail closed before sqlite open", () => {
+  const root = mkdtempSync(join(tmpdir(), "n2-readiness-rollout-ancestor-alias-"));
+  const realDir = join(root, "real");
+  const aliasDir = join(root, "alias");
+  mkdirSync(realDir);
+  const realPath = join(realDir, "research-replay.sqlite");
+  const db = createRolloutTable(realPath);
+  try {
+    db.close();
+    symlinkSync(realDir, aliasDir);
+    assert.throws(
+      () => readCanonicalRolloutState(join(aliasDir, "research-replay.sqlite")),
       /N2_READINESS_SIDECAR_IDENTITY_INVALID/,
     );
   } finally {
