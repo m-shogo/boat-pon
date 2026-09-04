@@ -150,6 +150,20 @@ function ensurePrivateParent(rootDir: string, relativePath: string): void {
   }
 }
 
+function verifyExistingPrivateAncestors(rootDir: string, relativePath: string): boolean {
+  let current = resolve(rootDir);
+  for (const component of relativePath.split("/")) {
+    if (!component || component === ".") continue;
+    current = resolve(current, component);
+    if (!existsSync(current)) return false;
+    const stat = lstatSync(current);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error("READINESS_CATALOG_PARENT_INVALID");
+    }
+  }
+  return true;
+}
+
 function requirePrivateDirectory(path: string, code: string): void {
   const lst = lstatSync(path);
   if (lst.isSymbolicLink() || !lst.isDirectory()) throw new Error(code);
@@ -275,8 +289,8 @@ function validateReadinessArtifact(input: {
 }
 
 function scanVerifiedArtifacts(rootDir: string): VerifiedReadinessArtifact[] {
+  if (!verifyExistingPrivateAncestors(rootDir, READINESS_ROOT_RELATIVE)) return [];
   const rootPath = resolveInside(rootDir, READINESS_ROOT_RELATIVE);
-  if (!existsSync(rootPath)) return [];
   requirePrivateDirectory(rootPath, "READINESS_CATALOG_ROOT_INVALID");
   const artifacts: VerifiedReadinessArtifact[] = [];
 
