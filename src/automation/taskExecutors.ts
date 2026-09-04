@@ -3,7 +3,8 @@
 // The original executor implementations remain byte-for-byte preserved in
 // taskExecutorsCore.ts. This facade extends only the allowlisted resolution
 // path with separately reviewed N2 executors.
-import { existsSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -36,31 +37,46 @@ import {
 
 export const EXECUTOR_REGISTRY_VERSION = "n2-task-executor-registry-v5";
 
+function sourceDuplicateEvidenceInvalid(): ExecutorResult {
+  const blocks = ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"];
+  return {
+    result: "BLOCKED",
+    executorVersion: EXECUTOR_REGISTRY_VERSION,
+    summary: { blocks },
+    outputs: [],
+    outputDigest: canonicalHash({ blocks }),
+    blocks,
+  };
+}
+
 function withCurrentSourceDuplicateEvidence(executor: Executor): Executor {
   return (ctx) => {
     if (!existsSync(ctx.sidecarPath)) return executor(ctx);
-    const walPath = `${ctx.sidecarPath}-wal`;
+    const lexicalSidecarPath = resolve(ctx.sidecarPath);
+    try {
+      const lstat = lstatSync(lexicalSidecarPath);
+      if (lstat.isSymbolicLink() || !lstat.isFile()) return sourceDuplicateEvidenceInvalid();
+      const stat = statSync(lexicalSidecarPath);
+      if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalSidecarPath) !== lexicalSidecarPath) {
+        return sourceDuplicateEvidenceInvalid();
+      }
+    } catch {
+      return sourceDuplicateEvidenceInvalid();
+    }
+    const walPath = `${lexicalSidecarPath}-wal`;
     if (existsSync(walPath) && statSync(walPath).size > 0) return executor(ctx);
 
     let db: DatabaseSync | null = null;
     let hasResolutionTable = false;
     try {
-      db = new DatabaseSync(`${pathToFileURL(ctx.sidecarPath).href}?immutable=1`, { readOnly: true } as never);
+      db = new DatabaseSync(`${pathToFileURL(lexicalSidecarPath).href}?immutable=1`, { readOnly: true } as never);
       db.exec("PRAGMA query_only=ON");
       hasResolutionTable = Boolean(db.prepare(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='settlement_source_duplicate_resolutions_v2'",
       ).get());
       if (hasResolutionTable) readCurrentlyValidSourceDuplicateObservationIds(db);
     } catch {
-      const blocks = ["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"];
-      return {
-        result: "BLOCKED",
-        executorVersion: EXECUTOR_REGISTRY_VERSION,
-        summary: { blocks },
-        outputs: [],
-        outputDigest: canonicalHash({ blocks }),
-        blocks,
-      };
+      return sourceDuplicateEvidenceInvalid();
     } finally {
       db?.close();
     }
