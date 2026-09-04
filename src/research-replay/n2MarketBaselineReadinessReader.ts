@@ -1,6 +1,10 @@
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
+  openSync,
   readdirSync,
   readFileSync,
   statSync,
@@ -152,6 +156,25 @@ function regularBounded(path: string, maxBytes: number): boolean {
   return stat.nlink === 1 && stat.size > 0 && stat.size <= maxBytes;
 }
 
+function readBoundedTextNoFollow(path: string, maxBytes: number): string | null {
+  if (!existsSync(path)) return null;
+  const lstat = lstatSync(path);
+  if (lstat.isSymbolicLink() || !lstat.isFile()) return null;
+  let fd: number;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    return null;
+  }
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1 || stat.size <= 0 || stat.size > maxBytes) return null;
+    return readFileSync(fd, "utf8");
+  } finally {
+    closeSync(fd);
+  }
+}
+
 function parseIso(value: unknown): boolean {
   if (typeof value !== "string") return false;
   if (!/^\d{4}-\d{2}-\d{2}T/u.test(value) || !/(?:Z|[+-]\d{2}:\d{2})$/u.test(value)) return false;
@@ -209,13 +232,14 @@ function validateAcceptedMarker(input: {
   const markerRelativePath = `${directory}/accepted.json`;
   const markerPath = resolveInside(input.dataRoot, markerRelativePath);
   if (!existsSync(markerPath)) return { valid: false, raceKey, blockers: [] };
-  if (!regularBounded(markerPath, MAX_MARKER_BYTES)) {
+  const markerText = readBoundedTextNoFollow(markerPath, MAX_MARKER_BYTES);
+  if (markerText === null) {
     return { valid: false, raceKey, blockers: ["ACCEPTED_MARKER_FILE_INVALID"] };
   }
 
   let marker: AcceptedMarker;
   try {
-    marker = JSON.parse(readFileSync(markerPath, "utf8")) as AcceptedMarker;
+    marker = JSON.parse(markerText) as AcceptedMarker;
   } catch {
     return { valid: false, raceKey, blockers: ["ACCEPTED_MARKER_JSON_INVALID"] };
   }
