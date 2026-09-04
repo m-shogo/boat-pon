@@ -3,8 +3,10 @@
 // parser v1 archive semanticsを含む現sidecarはSTALE扱いのため、学習truthへ昇格させない。
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { readCurrentlyValidSourceDuplicateObservationIds } from "../src/research-replay/n1SourceDuplicateResolutionValidation";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { readN2SelectionProfileSource } from "../src/research-replay/n2SelectionProfileSource";
 import type { N2SelectionProfile } from "../src/research-replay/n2SelectionProfile";
 
@@ -15,7 +17,11 @@ const PROTO_MONTH = process.argv.find((arg) => arg.startsWith("--month="))
   ?.slice("--month=".length) ?? "2026-05";
 
 function readProfileFromFreshConnection(): N2SelectionProfile {
-  const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
+  const sidecarPath = assertCanonicalSingleLinkRegularFile(
+    SIDECAR,
+    "N2_SELECTION_LABEL_SIDECAR_IDENTITY_INVALID",
+  );
+  const db = new DatabaseSync(`${pathToFileURL(sidecarPath).href}?immutable=1`, { readOnly: true } as never);
   try {
     // Each independent rebuild must fail closed if append-only duplicate-resolution evidence is stale or forged.
     readCurrentlyValidSourceDuplicateObservationIds(db);
