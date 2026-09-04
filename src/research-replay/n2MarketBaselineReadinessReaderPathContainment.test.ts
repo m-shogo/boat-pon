@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -43,5 +43,26 @@ test("readiness rejects normalized T-5 evidence traversal instead of counting th
     assert.equal(read.rawOddsValuesRead, false);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("readiness rejects redirected private capture directory ancestors", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-readiness-ancestor-"));
+  const external = mkdtempSync(join(tmpdir(), "boat-pon-readiness-ancestor-external-"));
+  try {
+    mkdirSync(join(external, "raw/research/trifecta-market/2026-08-07"), { recursive: true });
+    mkdirSync(join(root, "data"), { recursive: true });
+    symlinkSync(join(external, "raw"), join(root, "data/raw"), "dir");
+
+    const read = readN2MarketBaselineReadiness({ dataRoot: root });
+
+    assert.deepEqual(read.acceptedT5RaceKeys, []);
+    assert.equal(read.acceptedMarkerCount, 0);
+    assert.deepEqual(read.sourceBlockers, ["PRIVATE_DIRECTORY_TYPE_INVALID"]);
+    assert.equal(read.databaseReadCount, 0);
+    assert.equal(read.rawOddsValuesRead, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(external, { recursive: true, force: true });
   }
 });
