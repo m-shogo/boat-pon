@@ -7,6 +7,7 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   statSync,
 } from "node:fs";
 import { resolve, sep } from "node:path";
@@ -389,12 +390,26 @@ function readSettlements(sidecarDbPath: string, raceKeys: string[]): {
   if (!existsSync(sidecarDbPath)) {
     return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SIDECAR_NOT_FOUND"] };
   }
-  const walPath = `${sidecarDbPath}-wal`;
+  const lexicalSidecarPath = resolve(sidecarDbPath);
+  try {
+    const lstat = lstatSync(lexicalSidecarPath);
+    const stat = statSync(lexicalSidecarPath);
+    if (lstat.isSymbolicLink()
+      || !lstat.isFile()
+      || !stat.isFile()
+      || stat.nlink !== 1
+      || realpathSync(lexicalSidecarPath) !== lexicalSidecarPath) {
+      return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SIDECAR_IDENTITY_INVALID"] };
+    }
+  } catch {
+    return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SIDECAR_IDENTITY_INVALID"] };
+  }
+  const walPath = `${lexicalSidecarPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) {
     return { settledRaceKeys: [], integrityBlockedRaceKeys: [], eligibleRaceCount: 0, ineligibleRaceCount: 0, blockers: ["SIDECAR_ACTIVE_WAL"] };
   }
 
-  const db = new DatabaseSync(`${pathToFileURL(sidecarDbPath).href}?immutable=1`, { readOnly: true } as never);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalSidecarPath).href}?immutable=1`, { readOnly: true } as never);
   try {
     db.exec("PRAGMA query_only=ON");
     for (const table of [
