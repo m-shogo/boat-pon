@@ -23,6 +23,10 @@ import {
   buildN2TrifectaLocalCaptureLaunchAgentPlist,
 } from "../src/research-replay/n2TrifectaLocalCaptureLaunchAgent";
 import type { N2TrifectaLocalCaptureAuthorization } from "../src/research-replay/n2TrifectaLocalCaptureService";
+import {
+  assertN2TrifectaPrivateAuthorityParents,
+  ensureN2TrifectaPrivateAuthorityDirectory,
+} from "../src/research-replay/n2TrifectaPrivateAuthorityPath";
 
 const repoRoot = resolve(process.cwd());
 const policy = JSON.parse(
@@ -92,6 +96,7 @@ function runLaunchctl(args: string[], allowFailure = false): void {
 }
 
 function readPrivateJson<T>(path: string): T | null {
+  assertN2TrifectaPrivateAuthorityParents({ dataRoot, targetPath: path });
   if (!existsSync(path)) return null;
   if (lstatSync(path).isSymbolicLink()) {
     throw new Error("PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED");
@@ -100,7 +105,7 @@ function readPrivateJson<T>(path: string): T | null {
 }
 
 function writePrivate(path: string, content: string): void {
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  ensureN2TrifectaPrivateAuthorityDirectory({ dataRoot, directoryPath: dirname(path) });
   writeFileSync(path, content, { encoding: "utf8", mode: 0o600 });
   chmodSync(path, 0o600);
 }
@@ -210,8 +215,8 @@ const runtimeAuthority = buildN2TrifectaImmutableRuntimeAuthorityBinding({
   runtimeRoot,
 });
 
-mkdirSync(privateRoot, { recursive: true, mode: 0o700 });
-mkdirSync(logsPath, { recursive: true, mode: 0o700 });
+ensureN2TrifectaPrivateAuthorityDirectory({ dataRoot, directoryPath: privateRoot });
+ensureN2TrifectaPrivateAuthorityDirectory({ dataRoot, directoryPath: logsPath });
 const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
   nodePath: process.execPath,
   tsxCliPath: runtimeTsxCliPath,
