@@ -1,3 +1,5 @@
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalUtcTimestamp } from "./canonical";
@@ -70,7 +72,21 @@ function assertLatestRolloutTimestampUnambiguous(timeline: readonly RolloutRow[]
   }
 }
 
+function assertSidecarIdentity(sidecarDbPath: string): void {
+  if (!existsSync(sidecarDbPath)) throw new Error("N2_READINESS_SIDECAR_IDENTITY_INVALID");
+  const lexicalPath = resolve(sidecarDbPath);
+  const lstat = lstatSync(lexicalPath);
+  if (lstat.isSymbolicLink() || !lstat.isFile()) {
+    throw new Error("N2_READINESS_SIDECAR_IDENTITY_INVALID");
+  }
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error("N2_READINESS_SIDECAR_IDENTITY_INVALID");
+  }
+}
+
 export function readCanonicalRolloutState(sidecarDbPath: string): N2ObservationIngestRolloutState {
+  assertSidecarIdentity(sidecarDbPath);
   const db = new DatabaseSync(`${pathToFileURL(sidecarDbPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
   try {
