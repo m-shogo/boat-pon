@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
+  openSync,
   readFileSync,
-  statSync,
 } from "node:fs";
 import { resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -132,10 +135,21 @@ function resolveInsideExpectedDirectory(
 function readJsonBounded<T>(path: string): T {
   const lstat = lstatSync(path);
   if (lstat.isSymbolicLink() || !lstat.isFile()) throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
-  const stat = statSync(path);
-  if (stat.nlink !== 1) throw new Error("PRIVATE_JSON_HARDLINK_NOT_ALLOWED");
-  if (stat.size <= 0 || stat.size > MAX_JSON_BYTES) throw new Error("PRIVATE_JSON_SIZE_INVALID");
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  let fd: number;
+  try {
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
+  }
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
+    if (stat.nlink !== 1) throw new Error("PRIVATE_JSON_HARDLINK_NOT_ALLOWED");
+    if (stat.size <= 0 || stat.size > MAX_JSON_BYTES) throw new Error("PRIVATE_JSON_SIZE_INVALID");
+    return JSON.parse(readFileSync(fd, "utf8")) as T;
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function sha256(bytes: Uint8Array): string {
@@ -219,76 +233,92 @@ function loadT5Source(input: {
   if (!existsSync(envelopePath!)) blockers.push("T5_ENVELOPE_FILE_MISSING");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
-  const rawStat = lstatSync(rawPath!);
-  if (rawStat.isSymbolicLink() || !rawStat.isFile()) blockers.push("T5_RAW_FILE_TYPE_INVALID");
-  if (rawStat.nlink !== 1) blockers.push("T5_RAW_HARDLINK_NOT_ALLOWED");
-  if (rawStat.size <= 0 || rawStat.size > MAX_RAW_BYTES) blockers.push("T5_RAW_SIZE_INVALID");
-  if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
-
-  let envelope: N2TrifectaPrivateCaptureEnvelope;
+  let rawFd: number | null = null;
   try {
-    input.audit.privateEnvelopeReadCount += 1;
-    envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath!);
-  } catch (error) {
-    blockers.push(`T5_ENVELOPE_${error instanceof Error ? error.message : "INVALID"}`);
-    return { source: null, blockers: unique(blockers) };
+    const rawLstat = lstatSync(rawPath!);
+    if (rawLstat.isSymbolicLink() || !rawLstat.isFile()) blockers.push("T5_RAW_FILE_TYPE_INVALID");
+    if (blockers.length === 0) {
+      try {
+        rawFd = openSync(rawPath!, constants.O_RDONLY | constants.O_NOFOLLOW);
+      } catch {
+        blockers.push("T5_RAW_FILE_TYPE_INVALID");
+      }
+    }
+    if (rawFd !== null) {
+      const rawStat = fstatSync(rawFd);
+      if (!rawStat.isFile()) blockers.push("T5_RAW_FILE_TYPE_INVALID");
+      if (rawStat.nlink !== 1) blockers.push("T5_RAW_HARDLINK_NOT_ALLOWED");
+      if (rawStat.size <= 0 || rawStat.size > MAX_RAW_BYTES) blockers.push("T5_RAW_SIZE_INVALID");
+    }
+    if (blockers.length > 0 || rawFd === null) return { source: null, blockers: unique(blockers) };
+
+    let envelope: N2TrifectaPrivateCaptureEnvelope;
+    try {
+      input.audit.privateEnvelopeReadCount += 1;
+      envelope = readJsonBounded<N2TrifectaPrivateCaptureEnvelope>(envelopePath!);
+    } catch (error) {
+      blockers.push(`T5_ENVELOPE_${error instanceof Error ? error.message : "INVALID"}`);
+      return { source: null, blockers: unique(blockers) };
+    }
+    if (envelope.envelopeVersion !== "n2-trifecta-private-capture-envelope-v1") blockers.push("T5_ENVELOPE_VERSION_INVALID");
+    if (envelope.status !== "PASS" || envelope.blockers.length > 0) blockers.push("T5_ENVELOPE_NOT_PASS");
+    if (envelope.manifestDigest !== marker.manifestDigest) blockers.push("T5_ENVELOPE_MANIFEST_MISMATCH");
+    if (envelope.checkpointKey !== marker.checkpointKey) blockers.push("T5_ENVELOPE_CHECKPOINT_KEY_MISMATCH");
+    if (envelope.entry.raceIdentity !== parsed.raceIdentity) blockers.push("T5_ENVELOPE_RACE_MISMATCH");
+    if (envelope.entry.checkpointLabel !== "T-5") blockers.push("T5_ENVELOPE_CHECKPOINT_MISMATCH");
+    if (envelope.response.rawSha256 !== marker.rawSha256) blockers.push("T5_ENVELOPE_RAW_SHA_MISMATCH");
+    if (envelope.rawDocumentId !== marker.rawDocumentId) blockers.push("T5_ENVELOPE_RAW_DOCUMENT_MISMATCH");
+    if (envelope.rawRelativePath !== marker.rawRelativePath) blockers.push("T5_ENVELOPE_RAW_PATH_MISMATCH");
+    if (envelope.envelopeRelativePath !== marker.envelopeRelativePath) blockers.push("T5_ENVELOPE_PATH_MISMATCH");
+    if (envelope.parsedSelectionCount !== 120 || envelope.unavailableSelectionCount !== 0) blockers.push("T5_SELECTION_AUDIT_INVALID");
+    if (envelope.snapshotAudit?.status !== "PASS") blockers.push("T5_SNAPSHOT_AUDIT_NOT_PASS");
+    if (envelope.databaseWriteAuthorized !== false
+      || envelope.currentBuyConnectionAuthorized !== false
+      || envelope.lineConnectionAuthorized !== false
+      || envelope.publicPublishAuthorized !== false
+      || envelope.productionApplyExecuted !== false) blockers.push("T5_ENVELOPE_BOUNDARY_WIDENED");
+
+    const decisionCutoff = canonicalInstant(envelope.entry.decisionCutoff);
+    const capturedAt = canonicalInstant(envelope.response.fetchedAt);
+    const availableAt = canonicalInstant(envelope.sourceDisplayedUpdate.availableAt);
+    const decisionMs = decisionCutoff == null ? null : Date.parse(decisionCutoff);
+    const capturedMs = capturedAt == null ? null : Date.parse(capturedAt);
+    const availableMs = availableAt == null ? null : Date.parse(availableAt);
+    if (decisionMs == null) blockers.push("T5_DECISION_CUTOFF_INVALID");
+    else if (!instantWithinRaceDateJst(parsed.date, decisionCutoff)) blockers.push("T5_DECISION_CUTOFF_OUTSIDE_RACE_DATE");
+    if (capturedMs == null) blockers.push("T5_CAPTURED_AT_INVALID");
+    if (availableMs == null) blockers.push("T5_AVAILABLE_AT_INVALID");
+    if (decisionMs != null && capturedMs != null && capturedMs > decisionMs) blockers.push("T5_CAPTURE_AFTER_DECISION_CUTOFF");
+    if (decisionMs != null && availableMs != null && availableMs > decisionMs) blockers.push("T5_AVAILABLE_AFTER_DECISION_CUTOFF");
+    if (capturedMs != null && availableMs != null && availableMs > capturedMs) blockers.push("T5_AVAILABLE_AFTER_CAPTURE");
+    if (typeof envelope.proposedObservationId !== "string" || !envelope.proposedObservationId.trim()) blockers.push("T5_OBSERVATION_ID_INVALID");
+    if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
+
+    input.audit.privateRawFileReadCount += 1;
+    const rawBytes = readFileSync(rawFd);
+    if (sha256(rawBytes) !== marker.rawSha256) return { source: null, blockers: ["T5_RAW_SHA256_MISMATCH"] };
+    const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
+    input.audit.rawValuesReadPrivately = true;
+    if (odds.size !== 120) return { source: null, blockers: ["T5_REPARSE_SELECTION_COUNT_NOT_120"] };
+    const selections = [...odds.entries()]
+      .map(([selection, value]) => ({ selection, odds: value }))
+      .sort((left, right) => left.selection.localeCompare(right.selection));
+    return {
+      source: {
+        canonicalRaceKey: input.canonicalRaceKey,
+        decisionCutoff: decisionCutoff!,
+        capturedAt: capturedAt!,
+        availableAt: availableAt!,
+        observationId: envelope.proposedObservationId!,
+        rawDocumentId: marker.rawDocumentId as string,
+        winningSelection: input.winningSelection,
+        selections,
+      },
+      blockers: [],
+    };
+  } finally {
+    if (rawFd !== null) closeSync(rawFd);
   }
-  if (envelope.envelopeVersion !== "n2-trifecta-private-capture-envelope-v1") blockers.push("T5_ENVELOPE_VERSION_INVALID");
-  if (envelope.status !== "PASS" || envelope.blockers.length > 0) blockers.push("T5_ENVELOPE_NOT_PASS");
-  if (envelope.manifestDigest !== marker.manifestDigest) blockers.push("T5_ENVELOPE_MANIFEST_MISMATCH");
-  if (envelope.checkpointKey !== marker.checkpointKey) blockers.push("T5_ENVELOPE_CHECKPOINT_KEY_MISMATCH");
-  if (envelope.entry.raceIdentity !== parsed.raceIdentity) blockers.push("T5_ENVELOPE_RACE_MISMATCH");
-  if (envelope.entry.checkpointLabel !== "T-5") blockers.push("T5_ENVELOPE_CHECKPOINT_MISMATCH");
-  if (envelope.response.rawSha256 !== marker.rawSha256) blockers.push("T5_ENVELOPE_RAW_SHA_MISMATCH");
-  if (envelope.rawDocumentId !== marker.rawDocumentId) blockers.push("T5_ENVELOPE_RAW_DOCUMENT_MISMATCH");
-  if (envelope.rawRelativePath !== marker.rawRelativePath) blockers.push("T5_ENVELOPE_RAW_PATH_MISMATCH");
-  if (envelope.envelopeRelativePath !== marker.envelopeRelativePath) blockers.push("T5_ENVELOPE_PATH_MISMATCH");
-  if (envelope.parsedSelectionCount !== 120 || envelope.unavailableSelectionCount !== 0) blockers.push("T5_SELECTION_AUDIT_INVALID");
-  if (envelope.snapshotAudit?.status !== "PASS") blockers.push("T5_SNAPSHOT_AUDIT_NOT_PASS");
-  if (envelope.databaseWriteAuthorized !== false
-    || envelope.currentBuyConnectionAuthorized !== false
-    || envelope.lineConnectionAuthorized !== false
-    || envelope.publicPublishAuthorized !== false
-    || envelope.productionApplyExecuted !== false) blockers.push("T5_ENVELOPE_BOUNDARY_WIDENED");
-
-  const decisionCutoff = canonicalInstant(envelope.entry.decisionCutoff);
-  const capturedAt = canonicalInstant(envelope.response.fetchedAt);
-  const availableAt = canonicalInstant(envelope.sourceDisplayedUpdate.availableAt);
-  const decisionMs = decisionCutoff == null ? null : Date.parse(decisionCutoff);
-  const capturedMs = capturedAt == null ? null : Date.parse(capturedAt);
-  const availableMs = availableAt == null ? null : Date.parse(availableAt);
-  if (decisionMs == null) blockers.push("T5_DECISION_CUTOFF_INVALID");
-  else if (!instantWithinRaceDateJst(parsed.date, decisionCutoff)) blockers.push("T5_DECISION_CUTOFF_OUTSIDE_RACE_DATE");
-  if (capturedMs == null) blockers.push("T5_CAPTURED_AT_INVALID");
-  if (availableMs == null) blockers.push("T5_AVAILABLE_AT_INVALID");
-  if (decisionMs != null && capturedMs != null && capturedMs > decisionMs) blockers.push("T5_CAPTURE_AFTER_DECISION_CUTOFF");
-  if (decisionMs != null && availableMs != null && availableMs > decisionMs) blockers.push("T5_AVAILABLE_AFTER_DECISION_CUTOFF");
-  if (capturedMs != null && availableMs != null && availableMs > capturedMs) blockers.push("T5_AVAILABLE_AFTER_CAPTURE");
-  if (typeof envelope.proposedObservationId !== "string" || !envelope.proposedObservationId.trim()) blockers.push("T5_OBSERVATION_ID_INVALID");
-  if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
-
-  input.audit.privateRawFileReadCount += 1;
-  const rawBytes = readFileSync(rawPath!);
-  if (sha256(rawBytes) !== marker.rawSha256) return { source: null, blockers: ["T5_RAW_SHA256_MISMATCH"] };
-  const odds = parseAllTrifectaOdds(rawBytes.toString("utf8"));
-  input.audit.rawValuesReadPrivately = true;
-  if (odds.size !== 120) return { source: null, blockers: ["T5_REPARSE_SELECTION_COUNT_NOT_120"] };
-  const selections = [...odds.entries()]
-    .map(([selection, value]) => ({ selection, odds: value }))
-    .sort((left, right) => left.selection.localeCompare(right.selection));
-  return {
-    source: {
-      canonicalRaceKey: input.canonicalRaceKey,
-      decisionCutoff: decisionCutoff!,
-      capturedAt: capturedAt!,
-      availableAt: availableAt!,
-      observationId: envelope.proposedObservationId!,
-      rawDocumentId: marker.rawDocumentId as string,
-      winningSelection: input.winningSelection,
-      selections,
-    },
-    blockers: [],
-  };
 }
 
 function openReadOnly(path: string): DatabaseSync {
