@@ -39,3 +39,18 @@ test("installer existing private authorities require canonical single-link 0600 
   assert.match(installer, /realpathSync\.native\(path\) !== resolve\(path\)/u);
   assert.match(installer, /PRIVATE_AUTHORITY_PATH_ALIAS_NOT_ALLOWED/u);
 });
+
+test("installer private authority writes reject aliased parent directories", () => {
+  assert.match(installer, /function ensurePrivateDirectory\(path: string\): void/u);
+  assert.match(installer, /PRIVATE_WRITE_PATH_ESCAPES_DATA_ROOT/u);
+  assert.match(installer, /rootStat\.isSymbolicLink\(\) \|\| !rootStat\.isDirectory\(\)/u);
+  assert.match(installer, /realpathSync\.native\(root\) !== root/u);
+  assert.match(installer, /stat\.isSymbolicLink\(\) \|\| !stat\.isDirectory\(\)/u);
+  assert.match(installer, /realpathSync\.native\(current\) !== resolve\(current\)/u);
+  assert.match(installer, /PRIVATE_WRITE_PARENT_INVALID/u);
+  assert.match(installer, /ensurePrivateDirectory\(dirname\(path\)\)/u);
+  assert.match(installer, /ensurePrivateDirectory\(privateRoot\)/u);
+  assert.match(installer, /ensurePrivateDirectory\(logsPath\)/u);
+  assert.doesNotMatch(installer, /mkdirSync\(privateRoot, \{ recursive: true/u);
+  assert.doesNotMatch(installer, /mkdirSync\(logsPath, \{ recursive: true/u);
+});

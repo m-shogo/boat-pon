@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 import {
   buildN2TrifectaImmutableRuntimeAuthorityBinding,
@@ -120,8 +120,39 @@ function readPrivateJson<T>(path: string): T | null {
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
+function ensurePrivateDirectory(path: string): void {
+  const root = resolve(dataRoot);
+  const target = resolve(path);
+  const fromRoot = relative(root, target);
+  if (fromRoot === ".." || fromRoot.startsWith(`..${sep}`)) {
+    throw new Error("PRIVATE_WRITE_PATH_ESCAPES_DATA_ROOT");
+  }
+
+  if (!existsSync(root)) {
+    mkdirSync(root, { recursive: true, mode: 0o700 });
+  }
+  const rootStat = lstatSync(root);
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory() || realpathSync.native(root) !== root) {
+    throw new Error("PRIVATE_WRITE_PARENT_INVALID");
+  }
+
+  let current = root;
+  for (const component of fromRoot.split(sep)) {
+    if (!component || component === ".") continue;
+    current = join(current, component);
+    if (existsSync(current)) {
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory() || realpathSync.native(current) !== resolve(current)) {
+        throw new Error("PRIVATE_WRITE_PARENT_INVALID");
+      }
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+  }
+}
+
 function writePrivate(path: string, content: string): void {
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  ensurePrivateDirectory(dirname(path));
   writeFileSync(path, content, { encoding: "utf8", mode: 0o600 });
   chmodSync(path, 0o600);
 }
@@ -231,8 +262,8 @@ const runtimeAuthority = buildN2TrifectaImmutableRuntimeAuthorityBinding({
   runtimeRoot,
 });
 
-mkdirSync(privateRoot, { recursive: true, mode: 0o700 });
-mkdirSync(logsPath, { recursive: true, mode: 0o700 });
+ensurePrivateDirectory(privateRoot);
+ensurePrivateDirectory(logsPath);
 const plist = buildN2TrifectaLocalCaptureLaunchAgentPlist({
   nodePath: process.execPath,
   tsxCliPath: runtimeTsxCliPath,
