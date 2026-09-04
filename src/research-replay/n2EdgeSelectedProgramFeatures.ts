@@ -1,3 +1,5 @@
+import { lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { officialVenueCode } from "../domain/officialLinks";
@@ -137,7 +139,21 @@ function blocked(input: {
 }
 
 function openReadOnlyPrimary(path: string): DatabaseSync {
-  const db = new DatabaseSync(path, { readOnly: true } as never);
+  const lexicalPath = resolve(path);
+  let leaf;
+  try {
+    leaf = lstatSync(lexicalPath);
+  } catch {
+    throw new Error("PRIMARY_SELECTED_PROGRAM_DB_IDENTITY_INVALID");
+  }
+  if (leaf.isSymbolicLink() || !leaf.isFile()) {
+    throw new Error("PRIMARY_SELECTED_PROGRAM_DB_IDENTITY_INVALID");
+  }
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error("PRIMARY_SELECTED_PROGRAM_DB_IDENTITY_INVALID");
+  }
+  const db = new DatabaseSync(lexicalPath, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
   db.exec("PRAGMA busy_timeout=5000");
   return db;
