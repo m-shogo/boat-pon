@@ -134,7 +134,7 @@ function validLifecycle(row: LifecycleRow): boolean {
   return row.content_hash === expected;
 }
 
-function assertSidecarIdentity(sidecarDbPath: string): void {
+function assertSidecarIdentity(sidecarDbPath: string): string {
   if (!existsSync(sidecarDbPath)) throw new Error("N2_READINESS_APPROVAL_SIDECAR_IDENTITY_INVALID");
   const lexicalPath = resolve(sidecarDbPath);
   const lstat = lstatSync(lexicalPath);
@@ -145,11 +145,12 @@ function assertSidecarIdentity(sidecarDbPath: string): void {
   if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
     throw new Error("N2_READINESS_APPROVAL_SIDECAR_IDENTITY_INVALID");
   }
+  return lexicalPath;
 }
 
 export function readLifecycleValidApprovalScopes(sidecarDbPath: string): string[] {
-  assertSidecarIdentity(sidecarDbPath);
-  const db = new DatabaseSync(`${pathToFileURL(sidecarDbPath).href}?immutable=1`, { readOnly: true } as never);
+  const lexicalPath = assertSidecarIdentity(sidecarDbPath);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
   try {
     if (!tableExists(db, "rollout_approval_grants_v2")) return [];
