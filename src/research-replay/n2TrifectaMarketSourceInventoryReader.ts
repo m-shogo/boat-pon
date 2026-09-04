@@ -58,7 +58,7 @@ function validCompleteSnapshotLineage(raceId: string, capturedAt: string): boole
   );
 }
 
-function assertQuiescent(path: string): void {
+function assertQuiescent(path: string): string {
   if (!existsSync(path)) throw new Error("PRIMARY_DB_NOT_FOUND");
   const lexicalPath = resolve(path);
   const lstat = lstatSync(lexicalPath);
@@ -69,6 +69,7 @@ function assertQuiescent(path: string): void {
   }
   const walPath = `${lexicalPath}-wal`;
   if (existsSync(walPath) && statSync(walPath).size > 0) throw new Error("PRIMARY_DB_ACTIVE_WAL");
+  return lexicalPath;
 }
 
 function openImmutable(path: string): DatabaseSync {
@@ -152,8 +153,8 @@ function emptyInventory(dateFrom: string, dateTo: string): N2TrifectaMarketSourc
 export function readN2TrifectaMarketSourceInventory(input: {
   primaryDbPath: string;
 }): N2TrifectaMarketSourceInventory {
-  assertQuiescent(input.primaryDbPath);
-  const db = openImmutable(input.primaryDbPath);
+  const primaryPath = assertQuiescent(input.primaryDbPath);
+  const db = openImmutable(primaryPath);
   try {
     const dateTo = latestProgramDate(db);
     const dateFrom = subtractUtcDays(dateTo, COHORT_DAY_COUNT - 1);
