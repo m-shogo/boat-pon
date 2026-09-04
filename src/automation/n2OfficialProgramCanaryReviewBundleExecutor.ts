@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalHash } from "../research-replay/canonical";
@@ -28,13 +28,27 @@ const REPORT_RELATIVE_PATH = "reports/n2/n2-official-program-canary-review-bundl
 const PRIMARY_DB_FILENAME = "boat.sqlite";
 
 function databaseBlocks(path: string, code: string): string[] {
-  if (!existsSync(path)) return [`${code}_NOT_FOUND`];
-  const wal = `${path}-wal`;
+  const lexicalPath = resolve(path);
+  if (!existsSync(lexicalPath)) return [`${code}_NOT_FOUND`];
+  try {
+    const leaf = lstatSync(lexicalPath);
+    if (leaf.isSymbolicLink() || !leaf.isFile()) return [`${code}_IDENTITY_INVALID`];
+    const stat = statSync(lexicalPath);
+    if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+      return [`${code}_IDENTITY_INVALID`];
+    }
+  } catch {
+    return [`${code}_IDENTITY_INVALID`];
+  }
+  const wal = `${lexicalPath}-wal`;
   return existsSync(wal) && statSync(wal).size > 0 ? [`${code}_ACTIVE_WAL`] : [];
 }
 
-function openImmutable(path: string): DatabaseSync {
-  const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true } as never);
+function openImmutableSidecar(path: string): DatabaseSync {
+  const blocks = databaseBlocks(path, "SIDECAR");
+  if (blocks.length > 0) throw new Error(blocks[0]);
+  const lexicalPath = resolve(path);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000");
   return db;
 }
@@ -93,7 +107,7 @@ export const runN2OfficialProgramCanaryReviewBundleExecutor: Executor = (ctx) =>
           ...rolloutState,
         },
       });
-      const sidecar = openImmutable(ctx.sidecarPath);
+      const sidecar = openImmutableSidecar(ctx.sidecarPath);
       try {
         const gatePreview = resolveOfficialProgramCanaryGate(sidecar, {
           manifest,
