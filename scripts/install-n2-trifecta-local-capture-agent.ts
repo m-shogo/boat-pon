@@ -94,8 +94,13 @@ function runLaunchctl(args: string[], allowFailure = false): void {
 }
 
 function readPrivateJson<T>(path: string): T | null {
-  if (!existsSync(path)) return null;
-  const leaf = lstatSync(path);
+  let leaf;
+  try {
+    leaf = lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
   if (leaf.isSymbolicLink()) {
     throw new Error("PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED");
   }
