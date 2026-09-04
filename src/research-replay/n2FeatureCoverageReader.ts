@@ -1,3 +1,5 @@
+import { lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import type { N2FeatureCoverageEvent } from "./n2FeatureCoverage";
@@ -94,7 +96,24 @@ WHERE race_id = ?
 `;
 
 export function openN2CoverageDbImmutable(path: string): DatabaseSync {
-  const uri = `${pathToFileURL(path).href}?immutable=1`;
+  const lexicalPath = resolve(path);
+  let leaf;
+  try {
+    leaf = lstatSync(lexicalPath);
+  } catch {
+    throw new Error("N2_COVERAGE_DB_IDENTITY_INVALID");
+  }
+  if (leaf.isSymbolicLink() || !leaf.isFile()) throw new Error("N2_COVERAGE_DB_IDENTITY_INVALID");
+  try {
+    const stat = statSync(lexicalPath);
+    if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+      throw new Error("N2_COVERAGE_DB_IDENTITY_INVALID");
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "N2_COVERAGE_DB_IDENTITY_INVALID") throw error;
+    throw new Error("N2_COVERAGE_DB_IDENTITY_INVALID");
+  }
+  const uri = `${pathToFileURL(lexicalPath).href}?immutable=1`;
   return new DatabaseSync(uri, { readOnly: true } as never);
 }
 
