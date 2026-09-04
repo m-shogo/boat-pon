@@ -15,6 +15,7 @@ import { validateIntentSupersession, type IntentSupersession } from "../src/auto
 import { checkSupersessionLedgerIsolation } from "../src/automation/supersessionLedger";
 import { computeStateDigest, reconcileCatalogState, validateCatalog, validateQueueState } from "../src/automation/taskCatalog";
 import { sha256Text } from "../src/research/governance/executorSdk";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const root = resolve(process.cwd());
 const BRANCH = "automation/boat-pon-research";
@@ -127,27 +128,35 @@ const walPath = `${sidecar}-wal`;
 if (!existsSync(sidecar)) {
   add("sidecarExists", "BLOCKED", "P0", "missing");
 } else {
-  add("sidecarExists", "PASS", "P0", `${(statSync(sidecar).size / 1024 ** 3).toFixed(2)}GB`);
-  const walActive = existsSync(walPath) && statSync(walPath).size > 0;
-  add("walQuiescent", walActive ? "BLOCKED" : "PASS", "P0", walActive ? `ACTIVE ${statSync(walPath).size}B` : "quiescent");
   try {
-    const db = new DatabaseSync(`${pathToFileURL(sidecar).href}?immutable=1`, { readOnly: true } as never);
-    db.exec("PRAGMA query_only=ON");
-    add("sidecarReadOnlyOpen", "PASS", "P0", "immutable=1 + query_only");
-    let writeRejected = false;
-    try { db.exec("CREATE TABLE _readiness_probe(x)"); } catch { writeRejected = true; }
-    add("sidecarWriteRejected", writeRejected ? "PASS" : "BLOCKED", "P0", writeRejected ? "write blocked" : "WRITE SUCCEEDED (unsafe)");
-    const have = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r: any) => r.name));
-    const needTables = ["settlement_candidates_v2", "race_payout_lines_v2", "race_refund_lines_v2", "settlement_source_duplicate_resolutions_v2", "parse_runs"];
-    const missing = needTables.filter((t) => !have.has(t));
-    add("sidecarSchemaExpectedTables", missing.length === 0 ? "PASS" : "BLOCKED", "P0", missing.length ? `missing: ${missing.join(",")}` : "all present");
-    const schemaVer = (db.prepare("PRAGMA schema_version").get() as any)?.schema_version ?? null;
-    const oneRow = db.prepare("SELECT canonical_race_key FROM settlement_candidates_v2 LIMIT 1").get() as any;
-    add("sidecarReadSmoke", schemaVer != null && oneRow?.canonical_race_key ? "PASS" : "CONDITIONAL", "P1", `schema_version=${schemaVer}, read 1 row ok`);
-    const plan = db.prepare("EXPLAIN QUERY PLAN SELECT substr(canonical_race_key,1,4) y, COUNT(*) FROM settlement_candidates_v2 GROUP BY 1").all();
-    add("inventoryQueryPlanOk", plan.length > 0 ? "PASS" : "CONDITIONAL", "P2", `${plan.length} plan rows (not executed)`);
-    db.close();
-  } catch (e) { add("sidecarReadOnlyOpen", "BLOCKED", "P0", e instanceof Error ? e.message : String(e)); }
+    assertCanonicalSingleLinkRegularFile(sidecar, "READINESS_SIDECAR_IDENTITY_INVALID");
+    add("sidecarIdentity", "PASS", "P0", "canonical regular single-link file");
+  } catch (e) {
+    add("sidecarIdentity", "BLOCKED", "P0", e instanceof Error ? e.message : String(e));
+  }
+  if (checks.at(-1)?.name === "sidecarIdentity" && checks.at(-1)?.status === "PASS") {
+    add("sidecarExists", "PASS", "P0", `${(statSync(sidecar).size / 1024 ** 3).toFixed(2)}GB`);
+    const walActive = existsSync(walPath) && statSync(walPath).size > 0;
+    add("walQuiescent", walActive ? "BLOCKED" : "PASS", "P0", walActive ? `ACTIVE ${statSync(walPath).size}B` : "quiescent");
+    try {
+      const db = new DatabaseSync(`${pathToFileURL(sidecar).href}?immutable=1`, { readOnly: true } as never);
+      db.exec("PRAGMA query_only=ON");
+      add("sidecarReadOnlyOpen", "PASS", "P0", "immutable=1 + query_only");
+      let writeRejected = false;
+      try { db.exec("CREATE TABLE _readiness_probe(x)"); } catch { writeRejected = true; }
+      add("sidecarWriteRejected", writeRejected ? "PASS" : "BLOCKED", "P0", writeRejected ? "write blocked" : "WRITE SUCCEEDED (unsafe)");
+      const have = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((r: any) => r.name));
+      const needTables = ["settlement_candidates_v2", "race_payout_lines_v2", "race_refund_lines_v2", "settlement_source_duplicate_resolutions_v2", "parse_runs"];
+      const missing = needTables.filter((t) => !have.has(t));
+      add("sidecarSchemaExpectedTables", missing.length === 0 ? "PASS" : "BLOCKED", "P0", missing.length ? `missing: ${missing.join(",")}` : "all present");
+      const schemaVer = (db.prepare("PRAGMA schema_version").get() as any)?.schema_version ?? null;
+      const oneRow = db.prepare("SELECT canonical_race_key FROM settlement_candidates_v2 LIMIT 1").get() as any;
+      add("sidecarReadSmoke", schemaVer != null && oneRow?.canonical_race_key ? "PASS" : "CONDITIONAL", "P1", `schema_version=${schemaVer}, read 1 row ok`);
+      const plan = db.prepare("EXPLAIN QUERY PLAN SELECT substr(canonical_race_key,1,4) y, COUNT(*) FROM settlement_candidates_v2 GROUP BY 1").all();
+      add("inventoryQueryPlanOk", plan.length > 0 ? "PASS" : "CONDITIONAL", "P2", `${plan.length} plan rows (not executed)`);
+      db.close();
+    } catch (e) { add("sidecarReadOnlyOpen", "BLOCKED", "P0", e instanceof Error ? e.message : String(e)); }
+  }
 }
 
 // ---- 7. freeze identities ----
