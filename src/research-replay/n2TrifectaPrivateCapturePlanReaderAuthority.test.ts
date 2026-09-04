@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -45,6 +45,25 @@ test("private capture plan rejects a symlinked primary database authority", () =
     assert.throws(() => read(alias), /PRIMARY_DB_FILE_AUTHORITY_INVALID/);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("private capture plan rejects a primary database reached through a symlinked ancestor", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-plan-db-ancestor-"));
+  const external = mkdtempSync(join(tmpdir(), "boat-pon-plan-db-ancestor-external-"));
+  try {
+    const sourceDir = join(external, "authority");
+    mkdirSync(sourceDir, { recursive: true });
+    createPrimaryDb(join(sourceDir, "primary.sqlite"));
+    symlinkSync(sourceDir, join(root, "authority"), "dir");
+
+    assert.throws(
+      () => read(join(root, "authority", "primary.sqlite")),
+      /PRIMARY_DB_FILE_AUTHORITY_INVALID/,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(external, { recursive: true, force: true });
   }
 });
 
