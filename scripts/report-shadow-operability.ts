@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -23,6 +23,29 @@ if (mode !== "simulated" && mode !== "production") {
 }
 const policyPath = resolve(values.get("policy")!);
 const sidecarPath = resolve(values.get("sidecar")!);
+
+function assertSidecarIdentity(path: string): void {
+  let leaf;
+  try {
+    leaf = lstatSync(path);
+  } catch {
+    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+  }
+  if (leaf.isSymbolicLink() || !leaf.isFile() || leaf.nlink !== 1) {
+    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+  }
+  let canonicalPath: string;
+  try {
+    canonicalPath = realpathSync(path);
+  } catch {
+    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+  }
+  if (canonicalPath !== path) {
+    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+  }
+}
+
+assertSidecarIdentity(sidecarPath);
 const walPath = `${sidecarPath}-wal`;
 if (existsSync(walPath) && statSync(walPath).size > 0) {
   throw new Error("SHADOW_OPERABILITY_ACTIVE_WAL_REJECTED_USE_QUIESCENT_SNAPSHOT");
