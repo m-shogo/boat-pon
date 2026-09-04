@@ -66,3 +66,28 @@ test("readiness rejects redirected private capture directory ancestors", () => {
     rmSync(external, { recursive: true, force: true });
   }
 });
+
+test("readiness rejects a redirected T-5 evidence directory", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-readiness-t5-ancestor-"));
+  const external = mkdtempSync(join(tmpdir(), "boat-pon-readiness-t5-ancestor-external-"));
+  try {
+    const raceDir = join(root, "data/raw/research/trifecta-market/2026-08-07/05/01");
+    mkdirSync(raceDir, { recursive: true });
+    writeFileSync(join(raceDir, "placeholder"), "fixture\n", "utf8");
+    mkdirSync(join(external, "T-5"), { recursive: true });
+    writeFileSync(join(external, "T-5/accepted.json"), "{}\n", "utf8");
+    symlinkSync(join(external, "T-5"), join(raceDir, "T-5"), "dir");
+
+    const read = readN2MarketBaselineReadiness({ dataRoot: root });
+
+    assert.deepEqual(read.acceptedT5RaceKeys, []);
+    assert.equal(read.acceptedMarkerCount, 0);
+    assert.equal(read.invalidAcceptedMarkerCount, 1);
+    assert.deepEqual(read.integrityBlockedRaceKeys, ["2026-08-07:05:R1"]);
+    assert.equal(read.databaseReadCount, 0);
+    assert.equal(read.rawOddsValuesRead, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(external, { recursive: true, force: true });
+  }
+});

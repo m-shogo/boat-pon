@@ -199,6 +199,13 @@ function validateAcceptedMarker(input: {
     input.raceDir,
     "T-5",
   ].join("/");
+  try {
+    if (!verifyExistingDirectoryAncestors(input.dataRoot, directory)) {
+      return { valid: false, raceKey, blockers: [] };
+    }
+  } catch {
+    return { valid: false, raceKey, blockers: ["ACCEPTED_MARKER_DIRECTORY_INVALID"] };
+  }
   const markerRelativePath = `${directory}/accepted.json`;
   const markerPath = resolveInside(input.dataRoot, markerRelativePath);
   if (!existsSync(markerPath)) return { valid: false, raceKey, blockers: [] };
