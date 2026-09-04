@@ -133,6 +133,7 @@ function readJsonBounded<T>(path: string): T {
   const lstat = lstatSync(path);
   if (lstat.isSymbolicLink() || !lstat.isFile()) throw new Error("PRIVATE_JSON_FILE_TYPE_INVALID");
   const stat = statSync(path);
+  if (stat.nlink !== 1) throw new Error("PRIVATE_JSON_HARDLINK_NOT_ALLOWED");
   if (stat.size <= 0 || stat.size > MAX_JSON_BYTES) throw new Error("PRIVATE_JSON_SIZE_INVALID");
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
@@ -220,6 +221,7 @@ function loadT5Source(input: {
 
   const rawStat = lstatSync(rawPath!);
   if (rawStat.isSymbolicLink() || !rawStat.isFile()) blockers.push("T5_RAW_FILE_TYPE_INVALID");
+  if (rawStat.nlink !== 1) blockers.push("T5_RAW_HARDLINK_NOT_ALLOWED");
   if (rawStat.size <= 0 || rawStat.size > MAX_RAW_BYTES) blockers.push("T5_RAW_SIZE_INVALID");
   if (blockers.length > 0) return { source: null, blockers: unique(blockers) };
 
