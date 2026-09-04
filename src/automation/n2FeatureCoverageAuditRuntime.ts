@@ -1,5 +1,5 @@
-import { existsSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -22,17 +22,33 @@ function blocked(blocks: string[]): ExecutorResult {
   };
 }
 
+function sidecarIdentityBlocks(path: string): string[] {
+  if (!existsSync(path)) return ["SIDECAR_NOT_FOUND"];
+  const lexicalPath = resolve(path);
+  try {
+    const lstat = lstatSync(lexicalPath);
+    if (lstat.isSymbolicLink() || !lstat.isFile()) return ["SIDECAR_IDENTITY_INVALID"];
+    const stat = statSync(lexicalPath);
+    if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+      return ["SIDECAR_IDENTITY_INVALID"];
+    }
+  } catch {
+    return ["SIDECAR_IDENTITY_INVALID"];
+  }
+  return [];
+}
+
 export const runN2ActiveFeatureCoverageAudit: Executor = (ctx) => {
-  const blocks: string[] = [];
-  if (!existsSync(ctx.sidecarPath)) blocks.push("SIDECAR_NOT_FOUND");
-  const wal = `${ctx.sidecarPath}-wal`;
+  const blocks: string[] = sidecarIdentityBlocks(ctx.sidecarPath);
+  const lexicalSidecarPath = resolve(ctx.sidecarPath);
+  const wal = `${lexicalSidecarPath}-wal`;
   if (existsSync(wal) && statSync(wal).size > 0) blocks.push("ACTIVE_WAL");
   if (ctx.taskStatuses["TASK-N2-004"] !== "PASS") {
     blocks.push(`DEPENDENCY_NOT_SATISFIED:TASK-N2-004=${ctx.taskStatuses["TASK-N2-004"] ?? "UNKNOWN"}`);
   }
   if (blocks.length) return blocked(blocks);
 
-  const db = new DatabaseSync(`${pathToFileURL(ctx.sidecarPath).href}?immutable=1`, { readOnly: true } as never);
+  const db = new DatabaseSync(`${pathToFileURL(lexicalSidecarPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
   try {
     try {
@@ -40,7 +56,7 @@ export const runN2ActiveFeatureCoverageAudit: Executor = (ctx) => {
     } catch {
       return blocked(["SOURCE_DUPLICATE_RESOLUTION_EVIDENCE_INVALID"]);
     }
-    const settlementPreflight = preflightN2AllActiveSettlementLineage(ctx.sidecarPath);
+    const settlementPreflight = preflightN2AllActiveSettlementLineage(lexicalSidecarPath);
     if (!settlementPreflight.ok) return blocked(settlementPreflight.blocks);
 
     const active = `
