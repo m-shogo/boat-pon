@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -89,5 +89,29 @@ test("readiness rejects a redirected T-5 evidence directory", () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(external, { recursive: true, force: true });
+  }
+});
+
+test("readiness rejects hardlinked accepted marker authority", () => {
+  const root = mkdtempSync(join(tmpdir(), "boat-pon-readiness-hardlink-"));
+  try {
+    const markerDir = join(root, "data/raw/research/trifecta-market/2026-08-07/05/01/T-5");
+    const sourceDir = join(root, "private-fixture-source");
+    mkdirSync(markerDir, { recursive: true });
+    mkdirSync(sourceDir, { recursive: true });
+    const sourceMarker = join(sourceDir, "accepted-source.json");
+    writeFileSync(sourceMarker, "{}\n", "utf8");
+    linkSync(sourceMarker, join(markerDir, "accepted.json"));
+
+    const read = readN2MarketBaselineReadiness({ dataRoot: root });
+
+    assert.deepEqual(read.acceptedT5RaceKeys, []);
+    assert.equal(read.acceptedMarkerCount, 0);
+    assert.equal(read.invalidAcceptedMarkerCount, 1);
+    assert.deepEqual(read.integrityBlockedRaceKeys, ["2026-08-07:05:R1"]);
+    assert.equal(read.databaseReadCount, 0);
+    assert.equal(read.rawOddsValuesRead, false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
   }
 });
