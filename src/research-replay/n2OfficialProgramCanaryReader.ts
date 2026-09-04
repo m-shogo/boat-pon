@@ -34,7 +34,7 @@ type CanonicalIdentityRow = OfficialProgramIdentityRow & {
   canonicalRaceKey: string;
 };
 
-function assertQuiescent(path: string): void {
+function assertQuiescent(path: string): string {
   if (!existsSync(path)) throw new Error("PRIMARY_DB_NOT_FOUND");
   const lexicalPath = resolve(path);
   const lstat = lstatSync(lexicalPath);
@@ -45,6 +45,7 @@ function assertQuiescent(path: string): void {
   }
   const wal = `${lexicalPath}-wal`;
   if (existsSync(wal) && statSync(wal).size > 0) throw new Error("PRIMARY_DB_ACTIVE_WAL");
+  return lexicalPath;
 }
 
 function openImmutable(path: string): DatabaseSync {
@@ -134,8 +135,8 @@ export function readOfficialProgramCanarySource(input: {
   if (!Number.isInteger(limit) || limit < 1 || limit > N2_OFFICIAL_PROGRAM_CANARY_SOURCE_READ_LIMIT) {
     throw new Error(`INVALID_CANARY_SOURCE_LIMIT:${limit}`);
   }
-  assertQuiescent(input.primaryDbPath);
-  const primary = openImmutable(input.primaryDbPath);
+  const primaryPath = assertQuiescent(input.primaryDbPath);
+  const primary = openImmutable(primaryPath);
   try {
     if (!tableExists(primary, "official_programs")) throw new Error("OFFICIAL_PROGRAMS_TABLE_MISSING");
     if (!requiredColumnsPresent(primary)) throw new Error("OFFICIAL_PROGRAMS_SCHEMA_MISMATCH");
