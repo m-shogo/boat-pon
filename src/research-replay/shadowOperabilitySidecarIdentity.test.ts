@@ -71,3 +71,56 @@ test("shadow operability rejects a hardlinked sidecar before SQLite open", () =>
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("shadow operability rejects a leaf-symlink policy before policy read", () => {
+  const { root } = fixture();
+  try {
+    const sidecarPath = join(root, "sidecar.sqlite");
+    const realPolicy = join(root, "real-policy.json");
+    const aliasPolicy = join(root, "alias-policy.json");
+    writeFileSync(sidecarPath, "not-a-database", "utf8");
+    writeFileSync(realPolicy, "{}\n", "utf8");
+    symlinkSync(realPolicy, aliasPolicy);
+    const result = run(sidecarPath, aliasPolicy);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /SHADOW_OPERABILITY_POLICY_IDENTITY_INVALID/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("shadow operability rejects an ancestor-symlink policy before policy read", () => {
+  const { root } = fixture();
+  try {
+    const sidecarPath = join(root, "sidecar.sqlite");
+    const realDir = join(root, "real-policy-dir");
+    const aliasDir = join(root, "alias-policy-dir");
+    mkdirSync(realDir);
+    const realPolicy = join(realDir, "policy.json");
+    writeFileSync(sidecarPath, "not-a-database", "utf8");
+    writeFileSync(realPolicy, "{}\n", "utf8");
+    symlinkSync(realDir, aliasDir, "dir");
+    const result = run(sidecarPath, join(aliasDir, "policy.json"));
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /SHADOW_OPERABILITY_POLICY_IDENTITY_INVALID/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("shadow operability rejects a hardlinked policy before policy read", () => {
+  const { root } = fixture();
+  try {
+    const sidecarPath = join(root, "sidecar.sqlite");
+    const realPolicy = join(root, "real-policy.json");
+    const hardlinkPolicy = join(root, "hardlink-policy.json");
+    writeFileSync(sidecarPath, "not-a-database", "utf8");
+    writeFileSync(realPolicy, "{}\n", "utf8");
+    linkSync(realPolicy, hardlinkPolicy);
+    const result = run(sidecarPath, hardlinkPolicy);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /SHADOW_OPERABILITY_POLICY_IDENTITY_INVALID/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
