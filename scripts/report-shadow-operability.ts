@@ -24,32 +24,33 @@ if (mode !== "simulated" && mode !== "production") {
 const policyPath = resolve(values.get("policy")!);
 const sidecarPath = resolve(values.get("sidecar")!);
 
-function assertSidecarIdentity(path: string): void {
+function assertFileIdentity(path: string, errorCode: string): void {
   let leaf;
   try {
     leaf = lstatSync(path);
   } catch {
-    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+    throw new Error(errorCode);
   }
   if (leaf.isSymbolicLink() || !leaf.isFile() || leaf.nlink !== 1) {
-    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+    throw new Error(errorCode);
   }
   let canonicalPath: string;
   try {
     canonicalPath = realpathSync(path);
   } catch {
-    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+    throw new Error(errorCode);
   }
   if (canonicalPath !== path) {
-    throw new Error("SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
+    throw new Error(errorCode);
   }
 }
 
-assertSidecarIdentity(sidecarPath);
+assertFileIdentity(sidecarPath, "SHADOW_OPERABILITY_SIDECAR_IDENTITY_INVALID");
 const walPath = `${sidecarPath}-wal`;
 if (existsSync(walPath) && statSync(walPath).size > 0) {
   throw new Error("SHADOW_OPERABILITY_ACTIVE_WAL_REJECTED_USE_QUIESCENT_SNAPSHOT");
 }
+assertFileIdentity(policyPath, "SHADOW_OPERABILITY_POLICY_IDENTITY_INVALID");
 const policy = JSON.parse(readFileSync(policyPath, "utf8")) as unknown;
 const uri = `${pathToFileURL(sidecarPath).href}?immutable=1`;
 const db = new DatabaseSync(uri, { readOnly: true } as never);
