@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, statSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { resolve } from "node:path";
 
@@ -13,8 +13,13 @@ if (!Number.isFinite(maxAgeMinutes) || maxAgeMinutes <= 0 || maxAgeMinutes > 24 
   throw new Error("INVALID_READINESS_MAX_AGE_MINUTES");
 }
 if (!existsSync(dbPath)) throw new Error("PROGRAM_READINESS_DB_NOT_FOUND");
-if (lstatSync(dbPath).isSymbolicLink() || !statSync(dbPath).isFile()) {
+const dbLeaf = lstatSync(dbPath);
+const dbStat = statSync(dbPath);
+if (dbLeaf.isSymbolicLink() || !dbLeaf.isFile() || !dbStat.isFile()) {
   throw new Error("PROGRAM_READINESS_DB_TYPE_INVALID");
+}
+if (dbStat.nlink !== 1 || realpathSync(dbPath) !== dbPath) {
+  throw new Error("PROGRAM_READINESS_DB_IDENTITY_INVALID");
 }
 
 const db = new DatabaseSync(dbPath, { readOnly: true });
