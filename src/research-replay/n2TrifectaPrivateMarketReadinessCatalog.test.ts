@@ -6,6 +6,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -246,5 +247,29 @@ test("permission-widened readiness artifact fails closed", () => {
       () => buildN2TrifectaPrivateMarketReadinessCatalog({ dataRoot: root, generatedAt: "2026-08-07T05:10:00.000Z" }),
       /READINESS_CATALOG_ARTIFACT_FILE_MODE_INVALID/u,
     );
+  });
+});
+
+test("readiness catalog rejects redirected private input ancestors", () => {
+  withRoot((root) => {
+    const external = mkdtempSync(join(tmpdir(), "boat-pon-readiness-catalog-external-"));
+    try {
+      writeReadiness(external, readiness({
+        date: "2026-08-07", venueCode: "10", checkedAt: "2026-08-07T05:00:00.000Z",
+        complete: 7, partial: 4, noData: 1, snapshots: 38, transitions: 27,
+      }));
+      mkdirSync(join(root, "data"), { recursive: true, mode: 0o700 });
+      symlinkSync(join(external, "data/private"), join(root, "data/private"), "dir");
+
+      assert.throws(
+        () => buildN2TrifectaPrivateMarketReadinessCatalog({
+          dataRoot: root,
+          generatedAt: "2026-08-07T05:10:00.000Z",
+        }),
+        /READINESS_CATALOG_PARENT_INVALID/u,
+      );
+    } finally {
+      rmSync(external, { recursive: true, force: true });
+    }
   });
 });
