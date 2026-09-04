@@ -5,7 +5,9 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
@@ -92,9 +94,28 @@ function runLaunchctl(args: string[], allowFailure = false): void {
 }
 
 function readPrivateJson<T>(path: string): T | null {
-  if (!existsSync(path)) return null;
-  if (lstatSync(path).isSymbolicLink()) {
+  let leaf;
+  try {
+    leaf = lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+  if (leaf.isSymbolicLink()) {
     throw new Error("PRIVATE_AUTHORITY_SYMLINK_NOT_ALLOWED");
+  }
+  const stat = statSync(path);
+  if (!stat.isFile()) {
+    throw new Error("PRIVATE_AUTHORITY_REGULAR_FILE_REQUIRED");
+  }
+  if (stat.nlink !== 1) {
+    throw new Error("PRIVATE_AUTHORITY_HARDLINK_NOT_ALLOWED");
+  }
+  if ((stat.mode & 0o777) !== 0o600) {
+    throw new Error("PRIVATE_AUTHORITY_MODE_INVALID");
+  }
+  if (realpathSync.native(path) !== resolve(path)) {
+    throw new Error("PRIVATE_AUTHORITY_PATH_ALIAS_NOT_ALLOWED");
   }
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
