@@ -1,3 +1,5 @@
+import { lstatSync, realpathSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { officialVenueCode } from "../domain/officialLinks";
@@ -96,8 +98,22 @@ ORDER BY
 LIMIT ?
 `;
 
-function openImmutable(path: string): DatabaseSync {
-  const db = new DatabaseSync(`${pathToFileURL(path).href}?immutable=1`, { readOnly: true } as never);
+function openImmutable(path: string, source: "PRIMARY" | "SIDECAR"): DatabaseSync {
+  const lexicalPath = resolve(path);
+  let leaf;
+  try {
+    leaf = lstatSync(lexicalPath);
+  } catch {
+    throw new Error(`N2_PIT_AUDIT_${source}_DB_IDENTITY_INVALID`);
+  }
+  if (leaf.isSymbolicLink() || !leaf.isFile()) {
+    throw new Error(`N2_PIT_AUDIT_${source}_DB_IDENTITY_INVALID`);
+  }
+  const stat = statSync(lexicalPath);
+  if (!stat.isFile() || stat.nlink !== 1 || realpathSync(lexicalPath) !== lexicalPath) {
+    throw new Error(`N2_PIT_AUDIT_${source}_DB_IDENTITY_INVALID`);
+  }
+  const db = new DatabaseSync(`${pathToFileURL(lexicalPath).href}?immutable=1`, { readOnly: true } as never);
   db.exec("PRAGMA query_only = ON;");
   db.exec("PRAGMA busy_timeout = 5000;");
   return db;
@@ -292,8 +308,8 @@ export function readN2PitAuditObservations(input: {
     throw new Error(`N2_PIT_AUDIT_INVALID_LIMIT:${limit}`);
   }
 
-  const primary = openImmutable(input.primaryDbPath);
-  const sidecar = openImmutable(input.sidecarDbPath);
+  const primary = openImmutable(input.primaryDbPath, "PRIMARY");
+  const sidecar = openImmutable(input.sidecarDbPath, "SIDECAR");
   try {
     const sourceRows = sidecar.prepare(FEATURE_OBSERVATION_SQL).all(limit + 1) as unknown as SourceObservationRow[];
     for (const row of sourceRows) {
