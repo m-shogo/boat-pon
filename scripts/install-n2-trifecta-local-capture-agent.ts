@@ -157,10 +157,43 @@ function writePrivate(path: string, content: string): void {
   chmodSync(path, 0o600);
 }
 
+function ensureCanonicalRuntimeDirectory(path: string): void {
+  const target = resolve(path);
+  const directories: string[] = [];
+  let current = target;
+  while (true) {
+    directories.push(current);
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+
+  for (const directory of directories.reverse()) {
+    let stat;
+    try {
+      stat = lstatSync(directory);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      mkdirSync(directory, { mode: 0o700 });
+      stat = lstatSync(directory);
+    }
+    if (stat.isSymbolicLink() || !stat.isDirectory() || realpathSync.native(directory) !== directory) {
+      throw new Error("IMMUTABLE_RUNTIME_PARENT_INVALID");
+    }
+  }
+}
+
 function verifyImmutableRuntime(runtimeRoot: string, authoritySha: string): void {
   if (!existsSync(runtimeRoot)) throw new Error("IMMUTABLE_RUNTIME_NOT_FOUND");
-  if (lstatSync(runtimeRoot).isSymbolicLink()) {
+  const runtimeStat = lstatSync(runtimeRoot);
+  if (runtimeStat.isSymbolicLink()) {
     throw new Error("IMMUTABLE_RUNTIME_SYMLINK_NOT_ALLOWED");
+  }
+  if (!runtimeStat.isDirectory()) {
+    throw new Error("IMMUTABLE_RUNTIME_DIRECTORY_REQUIRED");
+  }
+  if (realpathSync.native(runtimeRoot) !== resolve(runtimeRoot)) {
+    throw new Error("IMMUTABLE_RUNTIME_PATH_ALIAS_NOT_ALLOWED");
   }
   const head = git(["rev-parse", "HEAD"], { cwd: runtimeRoot });
   if (head.stdout !== authoritySha) throw new Error("IMMUTABLE_RUNTIME_SHA_MISMATCH");
@@ -230,7 +263,7 @@ if (existingAuthorization && !renew) {
 }
 
 if (!printOnly) {
-  mkdirSync(releasesRoot, { recursive: true, mode: 0o700 });
+  ensureCanonicalRuntimeDirectory(releasesRoot);
   if (!existsSync(runtimeRoot)) {
     git(["worktree", "add", "--detach", runtimeRoot, authoritySha], { cwd: repoRoot });
   }

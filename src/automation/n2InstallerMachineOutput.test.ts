@@ -54,3 +54,14 @@ test("installer private authority writes reject aliased parent directories", () 
   assert.doesNotMatch(installer, /mkdirSync\(privateRoot, \{ recursive: true/u);
   assert.doesNotMatch(installer, /mkdirSync\(logsPath, \{ recursive: true/u);
 });
+
+test("installer immutable runtime rejects aliased release ancestors and runtime roots", () => {
+  assert.match(installer, /function ensureCanonicalRuntimeDirectory\(path: string\): void/u);
+  assert.match(installer, /realpathSync\.native\(directory\) !== directory/u);
+  assert.match(installer, /IMMUTABLE_RUNTIME_PARENT_INVALID/u);
+  assert.match(installer, /ensureCanonicalRuntimeDirectory\(releasesRoot\)/u);
+  assert.doesNotMatch(installer, /mkdirSync\(releasesRoot, \{ recursive: true/u);
+  assert.match(installer, /IMMUTABLE_RUNTIME_DIRECTORY_REQUIRED/u);
+  assert.match(installer, /realpathSync\.native\(runtimeRoot\) !== resolve\(runtimeRoot\)/u);
+  assert.match(installer, /IMMUTABLE_RUNTIME_PATH_ALIAS_NOT_ALLOWED/u);
+});
