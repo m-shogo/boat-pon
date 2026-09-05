@@ -18,6 +18,7 @@ type EvalLike = {
   warnings?: string[];
 };
 type GenericReport = {
+  safety?: { metricBasis?: string };
   baseline?: Metric;
   counts?: Record<string, number>;
   rankings?: Record<string, EvalLike[]>;
@@ -51,6 +52,7 @@ for (const [bin, args] of commands) {
 const allFeature = readOptional<GenericReport>("reports/roi-all-feature-search.json");
 const autopilot = readOptional<GenericReport>("reports/roi-autopilot-decision.json");
 const matrix = readOptional<GenericReport>("reports/roi-search-matrix.json");
+assertOfficialPayoutReport(allFeature);
 
 const baseline = allFeature?.baseline ?? autopilot?.baseline ?? matrix?.baseline ?? {};
 const allFeatureStable = allFeature?.rankings?.stability ?? [];
@@ -94,11 +96,18 @@ function assertRealizedPayoutMetricBasis() {
   const source = readFileSync(ALL_FEATURE_SOURCE, "utf8");
   const usesQuoteReturn = source.includes("hitOdds.reduce((s, o) => s + o * STAKE_YEN, 0)");
   const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
-  if (usesQuoteReturn || !usesOfficialPayout) {
+  const declaresOfficialPayoutBasis = source.includes('metricBasis: "official_payout_yen"');
+  if (usesQuoteReturn || !usesOfficialPayout || !declaresOfficialPayoutBasis) {
     throw new Error(
-      "ROI_FULL_REVIEW_METRIC_BASIS_UNSAFE: all-feature search still derives return from current_odds quotes. " +
+      "ROI_FULL_REVIEW_METRIC_BASIS_UNSAFE: all-feature search still derives return from current_odds quotes or lacks official payout metadata. " +
       "GO/PAPER review is disabled until the search uses official race_payouts.payout_yen with fail-closed settlement coverage.",
     );
+  }
+}
+
+function assertOfficialPayoutReport(report: GenericReport | null) {
+  if (!report || report.safety?.metricBasis !== "official_payout_yen") {
+    throw new Error("ROI_FULL_REVIEW_REPORT_METRIC_BASIS_UNSAFE: all-feature report is missing verified official_payout_yen metadata");
   }
 }
 
