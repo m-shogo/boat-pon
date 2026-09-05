@@ -21,6 +21,7 @@ const EXCL_R = EXCLUDED_RACE_NOS.join(",");
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000;");
+db.exec("PRAGMA query_only = ON;");
 
 const WIND24 = `EXISTS (SELECT 1 FROM race_weather rw WHERE rw.race_id=dh.race_id AND rw.wind_speed_mps >= 2 AND rw.wind_speed_mps < 4)`;
 const EXH1 = `EXISTS (SELECT 1 FROM race_entries re JOIN exhibition_data ed ON ed.race_id=re.race_id AND ed.course=re.entry_course WHERE re.race_id=dh.race_id AND re.boat=1 AND ed.exhibition_time IS NOT NULL AND ed.exhibition_time=(SELECT MIN(ed2.exhibition_time) FROM exhibition_data ed2 WHERE ed2.race_id=dh.race_id))`;
@@ -70,9 +71,9 @@ const CANDIDATES: Candidate[] = [
 ];
 
 type Stat = {
-  n: number; covered: number; hits: number;
-  returnYen: number; stakeYen: number; roi: number;
-  top2ExclRoi: number; maxLosingStreak: number;
+  n: number; covered: number; missingPayoutRaces: number; hits: number;
+  returnYen: number; stakeYen: number; roi: number | null;
+  top2ExclRoi: number | null; maxLosingStreak: number;
 };
 function round(v: number) { return Math.round(v * 100) / 100; }
 function stat(items: RawRow[], payout: (r: RawRow) => number, include: (r: RawRow) => boolean = () => true): Stat {
@@ -81,14 +82,20 @@ function stat(items: RawRow[], payout: (r: RawRow) => number, include: (r: RawRo
   const stake = rs.length * STAKE;
   const total = returns.reduce((a, b) => a + b, 0);
   const sorted = [...returns].sort((a, b) => b - a);
+  const covered = rs.filter(r => r.hasTrifecta === 1).length;
+  const missingPayoutRaces = rs.length - covered;
+  const payoutComplete = missingPayoutRaces === 0;
   let losing = 0, maxLosing = 0;
   for (const v of returns) { if (v > 0) losing = 0; else { losing++; maxLosing = Math.max(maxLosing, losing); } }
   return {
     n: rs.length,
-    covered: rs.filter(r => r.hasTrifecta).length,
+    covered,
+    missingPayoutRaces,
     hits: returns.filter(v => v > 0).length,
-    returnYen: total, stakeYen: stake, roi: stake ? round(total / stake * 100) : 0,
-    top2ExclRoi: stake ? round((total - (sorted[0] ?? 0) - (sorted[1] ?? 0)) / stake * 100) : 0,
+    returnYen: total,
+    stakeYen: stake,
+    roi: payoutComplete && stake ? round(total / stake * 100) : null,
+    top2ExclRoi: payoutComplete && stake ? round((total - (sorted[0] ?? 0) - (sorted[1] ?? 0)) / stake * 100) : null,
     maxLosingStreak: maxLosing,
   };
 }
@@ -106,23 +113,26 @@ for (const p of PERIODS) {
   candidateResults[p.id] = Object.fromEntries(CANDIDATES.map(c => [c.id, evaluate(c, items)]));
 }
 
+const isCompletePositive = (v: number | null, threshold: number) => v !== null && v >= threshold;
 const verdicts = CANDIDATES.map(c => {
   const d = candidateResults.discovery[c.id], v = candidateResults.validation[c.id], t = candidateResults.test[c.id];
-  const enough = [d, v, t].every(x => x.n >= 100);
-  const passes = enough && d.roi >= 100 && v.roi >= 100 && t.roi >= 100 && t.top2ExclRoi >= 90;
-  return { id: c.id, label: c.label, kind: c.kind, enough, passes, discovery: d, validation: v, test: t };
+  const complete = [d, v, t].every(x => x.missingPayoutRaces === 0);
+  const enough = complete && [d, v, t].every(x => x.n >= 100);
+  const passes = enough && isCompletePositive(d.roi, 100) && isCompletePositive(v.roi, 100) && isCompletePositive(t.roi, 100) && isCompletePositive(t.top2ExclRoi, 90);
+  return { id: c.id, label: c.label, kind: c.kind, complete, enough, passes, discovery: d, validation: v, test: t };
 });
 
+const fmtPct = (v: number | null) => v === null ? "N/A" : `${v}%`;
 const now = new Date().toISOString();
-const json = { generatedAt: now, db: DB_PATH, population: { rows: rows.length, dateMin: rows[0]?.date ?? null, dateMax: rows.at(-1)?.date ?? null }, periods: PERIODS.map(p => ({ id: p.id, label: p.label })), baselineByPeriod, candidates: verdicts, rules: { stakeYen: STAKE, pass: "探索・検証・未使用テストの各ROI>=100%、テスト最大2件除外ROI>=90%、各n>=100。合格しても本番採用ではなく紙運用追加検証。" } };
-let md = `# ROI改善候補の時系列・頑健性検証\n\n生成日時: ${now}\nDB: ${DB_PATH}\n\n> 実払戻し（race_payouts）を主指標に固定。current_oddsは使わず、結果を見た後の条件追加を避けるため探索・検証・未使用テストを分離。購入推奨ではない。\n\n## 基準\n\n- 対象: historical-backfillのBUY、現行1-2-3、除外会場/10〜12Rを除外\n- 探索: 2024-01〜06、検証: 2024-07〜12、未使用テスト: 2025年\n- 合格目安: 各期間n>=100、各ROI>=100%、テスト最大2件除外ROI>=90%。合格しても本番変更せず紙運用へ。\n\n## 現行1-2-3ベースライン\n\n|期間|n|払戻カバレッジ|ROI|最大2件除外ROI|最大連敗|\n|---|---:|---:|---:|---:|---:|\n`;
-for (const p of PERIODS) { const s = baselineByPeriod[p.id]; md += `|${p.label}|${s.n}|${round(s.covered / Math.max(1, s.n) * 100)}%|${s.roi}%|${s.top2ExclRoi}%|${s.maxLosingStreak}|\n`; }
-md += `\n## 候補結果（ハイブリッド戦略）\n\n|候補|種別|探索ROI|検証ROI|テストROI|テスト最大2件除外|テストn|判定|\n|---|---|---:|---:|---:|---:|---:|---|\n`;
-for (const x of verdicts) md += `|${x.label}|${x.kind}|${x.discovery.roi}%|${x.validation.roi}%|${x.test.roi}%|${x.test.top2ExclRoi}%|${x.test.n}|${x.passes ? "条件上は通過（紙運用のみ）" : x.enough ? "不採用" : "n不足・未判定"}|\n`;
-md += `\n## 読み方\n\nこの表でROIが100%を超えても、標本数・市場変化・払戻しの裾に依存する可能性が残る。特に探索で見つけた候補は、検証と未使用テストを同時に満たさない限り本番ロジックへ昇格させない。\n`;
+const json = { generatedAt: now, db: DB_PATH, population: { rows: rows.length, dateMin: rows[0]?.date ?? null, dateMax: rows.at(-1)?.date ?? null }, periods: PERIODS.map(p => ({ id: p.id, label: p.label })), baselineByPeriod, candidates: verdicts, rules: { stakeYen: STAKE, pass: "探索・検証・未使用テストで払戻カバレッジ100%、各ROI>=100%、テスト最大2件除外ROI>=90%、各n>=100。払戻欠落時はROIをN/Aとしてfail-closed。合格しても本番採用ではなく紙運用追加検証。" } };
+let md = `# ROI改善候補の時系列・頑健性検証\n\n生成日時: ${now}\nDB: ${DB_PATH}\n\n> 実払戻し（race_payouts）を主指標に固定。current_oddsは使わず、結果を見た後の条件追加を避けるため探索・検証・未使用テストを分離。購入推奨ではない。\n> **払戻カバレッジが100%でない区間はROIをN/Aとしてfail-closedにし、0円扱いで判定しない。**\n\n## 基準\n\n- 対象: historical-backfillのBUY、現行1-2-3、除外会場/10〜12Rを除外\n- 探索: 2024-01〜06、検証: 2024-07〜12、未使用テスト: 2025年\n- 合格目安: 各期間の払戻カバレッジ100%、n>=100、各ROI>=100%、テスト最大2件除外ROI>=90%。合格しても本番変更せず紙運用へ。\n\n## 現行1-2-3ベースライン\n\n|期間|n|払戻カバレッジ|欠落race|ROI|最大2件除外ROI|最大連敗|\n|---|---:|---:|---:|---:|---:|---:|\n`;
+for (const p of PERIODS) { const s = baselineByPeriod[p.id]; md += `|${p.label}|${s.n}|${round(s.covered / Math.max(1, s.n) * 100)}%|${s.missingPayoutRaces}|${fmtPct(s.roi)}|${fmtPct(s.top2ExclRoi)}|${s.maxLosingStreak}|\n`; }
+md += `\n## 候補結果（ハイブリッド戦略）\n\n|候補|種別|探索ROI|検証ROI|テストROI|テスト最大2件除外|テスト欠落race|テストn|判定|\n|---|---|---:|---:|---:|---:|---:|---:|---|\n`;
+for (const x of verdicts) md += `|${x.label}|${x.kind}|${fmtPct(x.discovery.roi)}|${fmtPct(x.validation.roi)}|${fmtPct(x.test.roi)}|${fmtPct(x.test.top2ExclRoi)}|${x.test.missingPayoutRaces}|${x.test.n}|${!x.complete ? "払戻欠落・未判定" : x.passes ? "条件上は通過（紙運用のみ）" : x.enough ? "不採用" : "n不足・未判定"}|\n`;
+md += `\n## 読み方\n\n払戻カバレッジが100%に満たない区間は、欠落を0円としてROIへ混ぜずN/Aにする。この表でROIが100%を超えても、標本数・市場変化・払戻しの裾に依存する可能性が残る。特に探索で見つけた候補は、検証と未使用テストを同時に満たさない限り本番ロジックへ昇格させない。\n`;
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
 writeFileSync(OUT_MD, md, "utf8");
 writeFileSync(OUT_JSON, JSON.stringify(json, null, 2), "utf8");
 console.log(`[roi-validation] rows=${rows.length}`);
-for (const x of verdicts) console.log(`${x.id}: discovery=${x.discovery.roi}% validation=${x.validation.roi}% test=${x.test.roi}% testTop2=${x.test.top2ExclRoi}% n=${x.test.n} => ${x.passes ? "PASS (paper only)" : x.enough ? "REJECT" : "INSUFFICIENT"}`);
+for (const x of verdicts) console.log(`${x.id}: discovery=${fmtPct(x.discovery.roi)} validation=${fmtPct(x.validation.roi)} test=${fmtPct(x.test.roi)} testTop2=${fmtPct(x.test.top2ExclRoi)} missing=${x.test.missingPayoutRaces} n=${x.test.n} => ${!x.complete ? "INCOMPLETE_PAYOUT_DATA" : x.passes ? "PASS (paper only)" : x.enough ? "REJECT" : "INSUFFICIENT"}`);
 console.log(`[roi-validation] 完了 → ${OUT_MD}`);
