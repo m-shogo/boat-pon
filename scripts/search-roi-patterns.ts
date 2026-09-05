@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
+import { evaluatePaperForwardPayoutCompleteness } from "../src/research-replay/paperForwardPayoutCompleteness";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/roi-pattern-search.md";
 const OUT_JSON = "reports/roi-pattern-search.json";
@@ -18,6 +21,7 @@ type Row = {
   selection: string;
   result: string;
   currentOdds: number;
+  payoutYen: number;
   estimatedHitRate: number | null;
   conservativeHitRate: number | null;
   ev: number | null;
@@ -41,6 +45,7 @@ type Metric = {
   returnYen: number;
   roi: number;
   maxHitOdds: number;
+  maxHitPayoutYen: number;
   roiExMaxHit: number;
 };
 
@@ -70,68 +75,115 @@ if (!existsSync(DB_PATH)) {
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "roi-pattern-search primary database identity mismatch");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 
 try {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA query_only = ON;");
 
-  const rows = sortRows(loadRows());
-  const baseline = metric(rows);
-  const baselineSplit = splitMetric(rows, () => true);
-  console.log(`[search-roi-patterns] baseline n=${baseline.n} roi=${pct(baseline.roi)}`);
+  const payoutCompleteness = verifyOfficialPayoutCompleteness();
+  if (!payoutCompleteness.complete) {
+    console.error(
+      `[search-roi-patterns] FAIL CLOSED: official payout settlement coverage is incomplete (${payoutCompleteness.coveredRaces}/${payoutCompleteness.totalRaces}); ROI judgements were not generated`,
+    );
+    process.exitCode = 2;
+  } else {
+    const rows = sortRows(loadRows());
+    const baseline = metric(rows);
+    const baselineSplit = splitMetric(rows, () => true);
+    console.log(`[search-roi-patterns] baseline n=${baseline.n} roi=${pct(baseline.roi)}`);
 
-  const singleRules = buildRules(rows);
-  const singles = evaluate(rows, singleRules, baseline, baselineSplit);
+    const singleRules = buildRules(rows);
+    const singles = evaluate(rows, singleRules, baseline, baselineSplit);
 
-  const seeds = singles
-    .filter((x) => x.removed.n >= MIN_REMOVED && x.remaining.n >= MIN_REMAINING && x.removed.roi < baseline.roi)
-    .sort(compareEval)
-    .slice(0, 32)
-    .map((x) => singleRules.find((r) => r.label === x.label))
-    .filter((x): x is Rule => Boolean(x));
+    const seeds = singles
+      .filter((x) => x.removed.n >= MIN_REMOVED && x.remaining.n >= MIN_REMAINING && x.removed.roi < baseline.roi)
+      .sort(compareEval)
+      .slice(0, 32)
+      .map((x) => singleRules.find((r) => r.label === x.label))
+      .filter((x): x is Rule => Boolean(x));
 
-  const combos = evaluate(rows, buildCombos(seeds), baseline, baselineSplit);
-  const all = [...singles, ...combos].sort(compareEval);
+    const combos = evaluate(rows, buildCombos(seeds), baseline, baselineSplit);
+    const all = [...singles, ...combos].sort(compareEval);
 
-  const report = {
-    generatedAt: new Date().toISOString(),
-    dbPath: DB_PATH,
-    safety: { readOnly: true, queryOnly: true, writesDb: false, changesSettings: false },
-    baseline,
-    baselineSplit,
-    counts: {
-      rows: rows.length,
-      singleRules: singleRules.length,
-      singleEvaluations: singles.length,
-      comboEvaluations: combos.length,
-      total: all.length,
-      s: all.filter((x) => x.judgement === "S").length,
-      a: all.filter((x) => x.judgement === "A").length,
-      d: all.filter((x) => x.judgement === "D").length,
-    },
-    rankings: {
-      stability: all.filter((x) => x.judgement === "S" || x.judgement === "A").slice(0, 40),
-      improvement: [...all].sort((a, b) => b.improvement - a.improvement).slice(0, 40),
-      noBuyEffect: [...all].sort((a, b) => effect(b, baseline) - effect(a, baseline)).slice(0, 40),
-      risky: all.filter((x) => x.judgement === "D" || x.warnings.length >= 2).slice(0, 40),
-    },
-  };
+    const report = {
+      generatedAt: new Date().toISOString(),
+      dbPath: "verified-primary-database",
+      safety: {
+        readOnly: true,
+        queryOnly: true,
+        writesDb: false,
+        changesSettings: false,
+        metricBasis: "official_payout_yen",
+        unitStakeYen: STAKE_YEN,
+      },
+      payoutCompleteness,
+      baseline,
+      baselineSplit,
+      counts: {
+        rows: rows.length,
+        singleRules: singleRules.length,
+        singleEvaluations: singles.length,
+        comboEvaluations: combos.length,
+        total: all.length,
+        s: all.filter((x) => x.judgement === "S").length,
+        a: all.filter((x) => x.judgement === "A").length,
+        d: all.filter((x) => x.judgement === "D").length,
+      },
+      rankings: {
+        stability: all.filter((x) => x.judgement === "S" || x.judgement === "A").slice(0, 40),
+        improvement: [...all].sort((a, b) => b.improvement - a.improvement).slice(0, 40),
+        noBuyEffect: [...all].sort((a, b) => effect(b, baseline) - effect(a, baseline)).slice(0, 40),
+        risky: all.filter((x) => x.judgement === "D" || x.warnings.length >= 2).slice(0, 40),
+      },
+    };
 
-  mkdirSync("reports", { recursive: true });
-  writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, renderMd(report));
-  console.log(`[search-roi-patterns] wrote ${OUT_MD}`);
-  console.log(`[search-roi-patterns] wrote ${OUT_JSON}`);
+    mkdirSync("reports", { recursive: true });
+    writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
+    writeFileSync(OUT_MD, renderMd(report));
+    console.log(`[search-roi-patterns] wrote ${OUT_MD}`);
+    console.log(`[search-roi-patterns] wrote ${OUT_JSON}`);
+  }
 } finally {
   db.close();
 }
 
+function verifyOfficialPayoutCompleteness() {
+  const coverage = db.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN EXISTS (
+        SELECT 1
+        FROM race_payouts rp
+        WHERE rp.race_id = dh.race_id
+          AND rp.bet_type = dh.bet_type
+          AND rp.returned = 0
+      ) THEN 1 ELSE 0 END) AS covered
+    FROM decision_history dh
+    WHERE dh.run_kind = 'historical-backfill'
+      AND dh.decision = 'BUY'
+      AND dh.current_odds IS NOT NULL
+      AND dh.result IS NOT NULL
+      AND dh.result != ''
+      AND dh.returned = 0
+  `).get() as { total: number; covered: number | null };
+
+  return evaluatePaperForwardPayoutCompleteness(coverage.total ?? 0, coverage.covered ?? 0);
+}
+
 function loadRows(): Row[] {
   const base = db.prepare(`
-    SELECT dh.id, dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, dh.result,
+    SELECT dh.id, dh.race_id, dh.date, dh.venue, dh.race_no, dh.bet_type, dh.selection, dh.result,
            dh.current_odds, dh.estimated_hit_rate, dh.conservative_hit_rate, dh.ev,
-           rw.wind_speed_mps, rw.wave_height_cm, rw.weather, op.raw_json
+           rw.wind_speed_mps, rw.wave_height_cm, rw.weather, op.raw_json,
+           (SELECT rp.payout_yen
+              FROM race_payouts rp
+             WHERE rp.race_id = dh.race_id
+               AND rp.bet_type = dh.bet_type
+               AND rp.combination = dh.selection
+               AND rp.returned = 0
+             LIMIT 1) AS hit_payout_yen
     FROM decision_history dh
     LEFT JOIN race_weather rw ON rw.race_id = dh.race_id
     LEFT JOIN official_programs op ON op.race_id = dh.race_id
@@ -139,12 +191,20 @@ function loadRows(): Row[] {
       AND dh.decision = 'BUY'
       AND dh.current_odds IS NOT NULL
       AND dh.result IS NOT NULL
+      AND dh.result != ''
+      AND dh.returned = 0
     ORDER BY dh.date, dh.id
   `).all() as Array<Record<string, unknown>>;
 
   const venueMb = loadVenueMotorBoat();
   return base.map((row) => {
     const selection = String(row.selection);
+    const result = String(row.result);
+    const hit = result === selection;
+    const matchedPayout = numOrNull(row.hit_payout_yen);
+    if (hit && (matchedPayout == null || matchedPayout <= 0)) {
+      throw new Error("ROI_PATTERN_MATCHING_PAYOUT_MISSING: winning research row lacks a positive official payout");
+    }
     const head = Number(selection.split("-")[0]);
     const key = `${String(row.race_id)}:${head}`;
     const national = extractNational(row.raw_json, head);
@@ -157,13 +217,14 @@ function loadRows(): Row[] {
       venue: String(row.venue),
       raceNo: Number(row.race_no),
       selection,
-      result: String(row.result),
+      result,
       currentOdds: Number(row.current_odds),
+      payoutYen: hit ? Number(matchedPayout) : 0,
       estimatedHitRate: numOrNull(row.estimated_hit_rate),
       conservativeHitRate: numOrNull(row.conservative_hit_rate),
       ev: numOrNull(row.ev),
       head,
-      hit: String(row.result) === selection,
+      hit,
       windMps: numOrNull(row.wind_speed_mps),
       waveCm: numOrNull(row.wave_height_cm),
       weatherPresent: row.weather != null || row.wind_speed_mps != null || row.wave_height_cm != null,
@@ -265,10 +326,23 @@ function evaluate(rows: Row[], rules: Rule[], baseline: Metric, baselineSplit: R
 function metric(rows: Row[]): Metric {
   const hits = rows.filter((x) => x.hit);
   const hitOdds = hits.map((x) => x.currentOdds).sort((a, b) => b - a);
-  const returnYen = hitOdds.reduce((sum, odds) => sum + odds * STAKE_YEN, 0);
+  const hitPayouts = hits.map((x) => x.payoutYen).sort((a, b) => b - a);
+  const returnYen = rows.reduce((sum, row) => sum + row.payoutYen, 0);
   const stakeYen = rows.length * STAKE_YEN;
   const maxHitOdds = hitOdds[0] ?? 0;
-  return { n: rows.length, hits: hits.length, hitRate: rows.length ? hits.length / rows.length : 0, avgOdds: avg(rows.map((x) => x.currentOdds)), stakeYen, returnYen, roi: stakeYen ? returnYen / stakeYen : 0, maxHitOdds, roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitOdds * STAKE_YEN) / stakeYen : 0 };
+  const maxHitPayoutYen = hitPayouts[0] ?? 0;
+  return {
+    n: rows.length,
+    hits: hits.length,
+    hitRate: rows.length ? hits.length / rows.length : 0,
+    avgOdds: avg(rows.map((x) => x.currentOdds)),
+    stakeYen,
+    returnYen,
+    roi: stakeYen ? returnYen / stakeYen : 0,
+    maxHitOdds,
+    maxHitPayoutYen,
+    roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitPayoutYen) / stakeYen : 0,
+  };
 }
 
 function splitMetric(rows: Row[], keep: (row: Row) => boolean) {
@@ -279,7 +353,7 @@ function splitMetric(rows: Row[], keep: (row: Row) => boolean) {
 }
 
 function renderMd(report: { generatedAt: string; dbPath: string; baseline: Metric; baselineSplit: ReturnType<typeof splitMetric>; counts: Record<string, number>; rankings: Record<string, Eval[]> }) {
-  return `# ROI Pattern Search\n\nGenerated: ${report.generatedAt}\nDB: \`${report.dbPath}\`\n\n## Baseline\n\n| n | hits | hitRate | avgOdds | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${fixed(report.baseline.avgOdds)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Counts\n\n${Object.entries(report.counts).map(([k, v]) => `- ${k}: ${v}`).join("\n")}\n\n## Stability Candidates\n\n${table(report.rankings.stability)}\n\n## ROI Improvement\n\n${table(report.rankings.improvement)}\n\n## No Buy Effect\n\n${table(report.rankings.noBuyEffect)}\n\n## Risky / Do Not Ship\n\n${table(report.rankings.risky)}\n`;
+  return `# ROI Pattern Search\n\nGenerated: ${report.generatedAt}\nDB: \`${report.dbPath}\`\nMetric basis: official payout yen / ¥${STAKE_YEN} unit stake\n\n## Baseline\n\n| n | hits | hitRate | avgOdds | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${fixed(report.baseline.avgOdds)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Counts\n\n${Object.entries(report.counts).map(([k, v]) => `- ${k}: ${v}`).join("\n")}\n\n## Stability Candidates\n\n${table(report.rankings.stability)}\n\n## ROI Improvement\n\n${table(report.rankings.improvement)}\n\n## No Buy Effect\n\n${table(report.rankings.noBuyEffect)}\n\n## Risky / Do Not Ship\n\n${table(report.rankings.risky)}\n`;
 }
 
 function table(items: Eval[]) {
