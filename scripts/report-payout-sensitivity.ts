@@ -9,6 +9,7 @@
  * - 読み取り専用
  * - 外部アクセスなし
  * - 自動購入・投票操作なし
+ * - ROI主評価は race_payouts.payout_yen の実払戻。current_odds は払戻計算に使わない
  */
 
 import { existsSync } from "node:fs";
@@ -41,6 +42,7 @@ type ReportRow = {
   n: number;
   settled: number;
   hits: number;
+  missingPayoutHits: number;
   hitRate: number | null;
   totalPayoutOdds: number | null;
   roi: number | null;
@@ -73,7 +75,17 @@ WITH base AS (
     result,
     returned,
     current_odds,
-    CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END AS payout_odds
+    CASE
+      WHEN selection = result AND returned = 0 THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = decision_history.race_id
+          AND rp.bet_type = decision_history.bet_type
+          AND rp.combination = decision_history.selection
+        LIMIT 1
+      )
+      ELSE 0
+    END AS payout_odds
   FROM decision_history
   WHERE ${where.join(" AND ")}
 ), ranked_hits AS (
@@ -89,6 +101,7 @@ WITH base AS (
     COUNT(*) AS n,
     SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
     SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN selection = result AND returned = 0 AND payout_odds IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
     SUM(payout_odds) AS total_payout_odds
   FROM base
   GROUP BY groupKey
@@ -109,15 +122,16 @@ SELECT
   g.n,
   g.settled,
   g.hits,
+  g.missing_payout_hits AS missingPayoutHits,
   ROUND(g.hits * 1.0 / NULLIF(g.settled, 0), 4) AS hitRate,
-  ROUND(g.total_payout_odds, 2) AS totalPayoutOdds,
-  ROUND(g.total_payout_odds * 1.0 / NULLIF(g.settled, 0), 3) AS roi,
-  ROUND((g.total_payout_odds - COALESCE(t.top1_payout_odds, 0)) * 1.0 / NULLIF(g.settled - COALESCE(t.top1_hits, 0), 0), 3) AS roiExTop1,
-  ROUND((g.total_payout_odds - COALESCE(t.top3_payout_odds, 0)) * 1.0 / NULLIF(g.settled - COALESCE(t.top3_hits, 0), 0), 3) AS roiExTop3,
-  ROUND((g.total_payout_odds - COALESCE(t.top5_payout_odds, 0)) * 1.0 / NULLIF(g.settled - COALESCE(t.top5_hits, 0), 0), 3) AS roiExTop5,
-  ROUND(COALESCE(t.top1_payout_odds, 0), 2) AS top1PayoutOdds,
-  ROUND(COALESCE(t.top3_payout_odds, 0), 2) AS top3PayoutOdds,
-  ROUND(COALESCE(t.top5_payout_odds, 0), 2) AS top5PayoutOdds
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND(g.total_payout_odds, 2) END AS totalPayoutOdds,
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND(g.total_payout_odds * 1.0 / NULLIF(g.settled, 0), 3) END AS roi,
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND((g.total_payout_odds - COALESCE(t.top1_payout_odds, 0)) * 1.0 / NULLIF(g.settled - COALESCE(t.top1_hits, 0), 0), 3) END AS roiExTop1,
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND((g.total_payout_odds - COALESCE(t.top3_payout_odds, 0)) * 1.0 / NULLIF(g.settled - COALESCE(t.top3_hits, 0), 0), 3) END AS roiExTop3,
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND((g.total_payout_odds - COALESCE(t.top5_payout_odds, 0)) * 1.0 / NULLIF(g.settled - COALESCE(t.top5_hits, 0), 0), 3) END AS roiExTop5,
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND(COALESCE(t.top1_payout_odds, 0), 2) END AS top1PayoutOdds,
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND(COALESCE(t.top3_payout_odds, 0), 2) END AS top3PayoutOdds,
+  CASE WHEN g.missing_payout_hits > 0 THEN NULL ELSE ROUND(COALESCE(t.top5_payout_odds, 0), 2) END AS top5PayoutOdds
 FROM grouped g
 LEFT JOIN top t ON t.groupKey = g.groupKey
 ORDER BY g.groupKey
@@ -138,14 +152,16 @@ function printRows(rows: ReportRow[]) {
   console.log("=== payout sensitivity report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} groupBy=${args.groupBy}`);
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
   console.log("");
-  console.log("group             n      settled  hits   hitRate  roi     exTop1  exTop3  exTop5  top1    top3    top5");
+  console.log("group             n      settled  hits   missing  hitRate  roi     exTop1  exTop3  exTop5  top1    top3    top5");
   for (const row of rows) {
     console.log([
       row.groupKey.padEnd(16),
       String(row.n).padStart(6),
       String(row.settled).padStart(7),
       String(row.hits).padStart(5),
+      String(row.missingPayoutHits).padStart(7),
       fmt(row.hitRate).padStart(7),
       fmt(row.roi).padStart(7),
       fmt(row.roiExTop1).padStart(7),
@@ -206,5 +222,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-payout-sensitivity.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--group-by decision|venue|month|venue-month|all] [--json]
 
-Read-only. No external access.`);
+Read-only. No external access. ROI uses official race_payouts.payout_yen; groups with missing hit payout data return null payout-derived metrics fail-closed.`);
 }
