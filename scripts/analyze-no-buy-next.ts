@@ -6,11 +6,15 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/no-buy-next-candidates.md";
 
 if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "no-buy-next primary database");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 type Row = {
