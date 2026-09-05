@@ -4,13 +4,19 @@
  * DB/app_settings/production decision は変更しない。closing odds は診断専用で、
  * 実運用可能な T-5 odds として扱わない。
  */
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  resolve("data/boat.sqlite"),
+  "PROFIT_FEASIBILITY_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 30000;");
 
 type Row = {
