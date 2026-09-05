@@ -5,6 +5,8 @@
  *
  * 見ること:
  * - 月別 / 会場別 / decision 別の n, hits, ROI, ROI excluding max payout
+ * - ROI は race_payouts.payout_yen の公式払戻を主評価にする
+ * - hit の公式払戻が欠けるgroupは ROI / roiExMax を N/A にして fail-closed にする
  * - 最大払い戻し1本依存を避けるため roiExMax も出す
  */
 
@@ -44,6 +46,7 @@ type ReportRow = {
   n: number;
   settled: number;
   hits: number;
+  missingPayoutHits: number;
   hitRate: number | null;
   avgEstimatedHitRate: number | null;
   avgCurrentOdds: number | null;
@@ -75,7 +78,17 @@ WITH base AS (
     returned,
     estimated_hit_rate,
     current_odds,
-    CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END AS payout_odds
+    CASE
+      WHEN selection = result AND returned = 0 THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = decision_history.race_id
+          AND rp.bet_type = decision_history.bet_type
+          AND rp.combination = decision_history.selection
+        LIMIT 1
+      )
+      ELSE 0
+    END AS payout_units
   FROM decision_history
   WHERE ${where.join(" AND ")}
 ), grouped AS (
@@ -86,10 +99,11 @@ WITH base AS (
     COUNT(*) AS n,
     SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
     SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN selection = result AND returned = 0 AND payout_units IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
     AVG(estimated_hit_rate) AS avg_estimated_hit_rate,
     AVG(current_odds) AS avg_current_odds,
-    SUM(payout_odds) AS total_payout_odds,
-    MAX(payout_odds) AS max_payout_odds
+    SUM(COALESCE(payout_units, 0)) AS total_payout_units,
+    MAX(COALESCE(payout_units, 0)) AS max_payout_units
   FROM base
   GROUP BY ym, venue, decision
 )
@@ -100,12 +114,19 @@ SELECT
   n,
   settled,
   hits,
+  missing_payout_hits AS missingPayoutHits,
   ROUND(hits * 1.0 / NULLIF(settled, 0), 4) AS hitRate,
   ROUND(avg_estimated_hit_rate, 4) AS avgEstimatedHitRate,
   ROUND(avg_current_odds, 2) AS avgCurrentOdds,
-  ROUND(total_payout_odds * 1.0 / NULLIF(settled, 0), 3) AS roi,
-  ROUND((total_payout_odds - max_payout_odds) * 1.0 / NULLIF(settled - CASE WHEN max_payout_odds > 0 THEN 1 ELSE 0 END, 0), 3) AS roiExMax,
-  ROUND(max_payout_odds, 2) AS maxPayoutOdds
+  CASE WHEN missing_payout_hits = 0
+    THEN ROUND(total_payout_units * 1.0 / NULLIF(settled, 0), 3)
+    ELSE NULL
+  END AS roi,
+  CASE WHEN missing_payout_hits = 0
+    THEN ROUND((total_payout_units - max_payout_units) * 1.0 / NULLIF(settled - CASE WHEN max_payout_units > 0 THEN 1 ELSE 0 END, 0), 3)
+    ELSE NULL
+  END AS roiExMax,
+  ROUND(max_payout_units, 2) AS maxPayoutOdds
 FROM grouped
 ORDER BY ym DESC, venue ASC, decision ASC
 LIMIT ?
@@ -119,7 +140,7 @@ function printRows(rows: ReportRow[]) {
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
   console.log("");
-  console.log("ym       venue      decision  n      settled  hits   hitRate  estAvg  oddsAvg  roi     roiExMax  maxOdds");
+  console.log("ym       venue      decision  n      settled  hits   missPay  hitRate  estAvg  oddsAvg  roi     roiExMax  maxOdds");
   for (const row of rows) {
     console.log([
       row.ym.padEnd(8),
@@ -128,6 +149,7 @@ function printRows(rows: ReportRow[]) {
       String(row.n).padStart(6),
       String(row.settled).padStart(7),
       String(row.hits).padStart(5),
+      String(row.missingPayoutHits).padStart(7),
       format(row.hitRate).padStart(7),
       format(row.avgEstimatedHitRate).padStart(7),
       format(row.avgCurrentOdds).padStart(7),
