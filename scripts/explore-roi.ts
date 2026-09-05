@@ -16,6 +16,7 @@ import type { DecisionStatus } from "../src/domain/types";
 import type { ResearchRule } from "../src/domain/researchRule";
 import { applyCondition, buildRuleEvaluationResult } from "../src/domain/researchEvaluation";
 import { parseRoiExplorerOptions } from "../src/research-replay/roiExplorerOptions";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { buildResearchSummaryViewModel, buildRuleCardViewModel } from "../src/view-models/researchViewModel.adapters";
 import type { ResearchSummaryViewModel } from "../src/view-models/researchViewModel";
 import { buildResearchPresentation } from "../src/presentation/presentationBuilder";
@@ -86,8 +87,12 @@ function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourc
     return { rows: [], sourceWarnings: [`db not found at ${DB_PATH}; produced empty evaluation`] };
   }
 
-  const db = new DatabaseSync(DB_PATH, { readOnly: true });
-  db.exec("PRAGMA busy_timeout = 5000");
+  const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+    DB_PATH,
+    "ROI_EXPLORER_PRIMARY_DB_IDENTITY_INVALID",
+  );
+  const db = new DatabaseSync(primaryDbPath, { readOnly: true });
+  db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
   try {
     const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='decision_history'").get() != null;
     if (!hasTable) {
