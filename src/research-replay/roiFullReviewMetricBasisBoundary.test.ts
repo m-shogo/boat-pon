@@ -18,12 +18,12 @@ test("ROI full review fails closed while all-feature search uses quote-based ret
 
 test("ROI full review checks metric basis before running all-feature search or producing GO/PAPER", () => {
   const gate = reviewSource.indexOf("assertRealizedPayoutMetricBasis();");
-  const execute = reviewSource.indexOf('"scripts/search-roi-all-features-lite.ts"');
+  const command = reviewSource.indexOf('["pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"]]');
   const reportGate = reviewSource.indexOf("assertOfficialPayoutReport(allFeature);");
   const finalDecision = reviewSource.indexOf("const finalDecision = decide(");
   assert.ok(gate >= 0);
-  assert.ok(execute > gate);
-  assert.ok(reportGate > gate);
+  assert.ok(command > gate);
+  assert.ok(reportGate > command);
   assert.ok(finalDecision > reportGate);
 });
 
