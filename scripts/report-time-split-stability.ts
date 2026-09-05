@@ -10,6 +10,7 @@
  * - 読み取り専用
  * - 外部アクセスなし
  * - 自動購入・投票操作なし
+ * - ROI主評価は race_payouts.payout_yen の実払戻。current_odds はband分割用の補助特徴のみ
  */
 
 import { existsSync } from "node:fs";
@@ -58,6 +59,7 @@ type PeriodRow = {
   n: number;
   settled: number;
   hits: number;
+  missingPayoutHits: number;
   roi: number | null;
   roiExMax: number | null;
 };
@@ -68,10 +70,12 @@ type StabilityRow = {
   decision: string;
   beforeSettled: number;
   beforeHits: number;
+  beforeMissingPayoutHits: number;
   beforeRoi: number | null;
   beforeRoiExMax: number | null;
   afterSettled: number;
   afterHits: number;
+  afterMissingPayoutHits: number;
   afterRoi: number | null;
   afterRoiExMax: number | null;
   stability: "stable-good" | "stable-bad" | "reversed" | "insufficient" | "mixed";
@@ -106,7 +110,17 @@ WITH base AS (
     result,
     returned,
     current_odds,
-    CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END AS payout_odds
+    CASE
+      WHEN selection = result AND returned = 0 THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = decision_history.race_id
+          AND rp.bet_type = decision_history.bet_type
+          AND rp.combination = decision_history.selection
+        LIMIT 1
+      )
+      ELSE 0
+    END AS payout_odds
   FROM decision_history
   WHERE ${where.join(" AND ")}
 ), grouped AS (
@@ -116,6 +130,7 @@ WITH base AS (
     COUNT(*) AS n,
     SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
     SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN selection = result AND returned = 0 AND payout_odds IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
     SUM(payout_odds) AS total_payout_odds,
     MAX(payout_odds) AS max_payout_odds
   FROM base
@@ -129,8 +144,9 @@ SELECT
   n,
   settled,
   hits,
-  ROUND(total_payout_odds * 1.0 / NULLIF(settled, 0), 3) AS roi,
-  ROUND((total_payout_odds - max_payout_odds) * 1.0 / NULLIF(settled - CASE WHEN max_payout_odds > 0 THEN 1 ELSE 0 END, 0), 3) AS roiExMax
+  missing_payout_hits AS missingPayoutHits,
+  CASE WHEN missing_payout_hits > 0 THEN NULL ELSE ROUND(total_payout_odds * 1.0 / NULLIF(settled, 0), 3) END AS roi,
+  CASE WHEN missing_payout_hits > 0 THEN NULL ELSE ROUND((total_payout_odds - max_payout_odds) * 1.0 / NULLIF(settled - CASE WHEN max_payout_odds > 0 THEN 1 ELSE 0 END, 0), 3) END AS roiExMax
 FROM grouped
 `;
   return db.prepare(sql).all(...params, period, metric) as PeriodRow[];
@@ -146,10 +162,12 @@ function mergeRows(before: PeriodRow[], after: PeriodRow[]): StabilityRow[] {
       decision: row.decision,
       beforeSettled: row.settled,
       beforeHits: row.hits,
+      beforeMissingPayoutHits: row.missingPayoutHits,
       beforeRoi: row.roi,
       beforeRoiExMax: row.roiExMax,
       afterSettled: 0,
       afterHits: 0,
+      afterMissingPayoutHits: 0,
       afterRoi: null,
       afterRoiExMax: null,
       stability: "insufficient",
@@ -163,16 +181,19 @@ function mergeRows(before: PeriodRow[], after: PeriodRow[]): StabilityRow[] {
       decision: row.decision,
       beforeSettled: 0,
       beforeHits: 0,
+      beforeMissingPayoutHits: 0,
       beforeRoi: null,
       beforeRoiExMax: null,
       afterSettled: 0,
       afterHits: 0,
+      afterMissingPayoutHits: 0,
       afterRoi: null,
       afterRoiExMax: null,
       stability: "insufficient" as const,
     };
     existing.afterSettled = row.settled;
     existing.afterHits = row.hits;
+    existing.afterMissingPayoutHits = row.missingPayoutHits;
     existing.afterRoi = row.roi;
     existing.afterRoiExMax = row.roiExMax;
     map.set(key, existing);
@@ -188,10 +209,12 @@ function makeKey(row: Pick<PeriodRow, "metric" | "band" | "decision">) {
 
 function classify(row: StabilityRow): StabilityRow["stability"] {
   if (row.beforeSettled < args.minSettled || row.afterSettled < args.minSettled) return "insufficient";
-  const beforeGood = (row.beforeRoi ?? 0) >= args.goodRoi && (row.beforeRoiExMax ?? 0) >= args.goodRoiExMax;
-  const afterGood = (row.afterRoi ?? 0) >= args.goodRoi && (row.afterRoiExMax ?? 0) >= args.goodRoiExMax;
-  const beforeBad = (row.beforeRoi ?? 0) <= args.badRoi && (row.beforeRoiExMax ?? 0) <= args.badRoiExMax;
-  const afterBad = (row.afterRoi ?? 0) <= args.badRoi && (row.afterRoiExMax ?? 0) <= args.badRoiExMax;
+  if (row.beforeMissingPayoutHits > 0 || row.afterMissingPayoutHits > 0) return "insufficient";
+  if (row.beforeRoi == null || row.beforeRoiExMax == null || row.afterRoi == null || row.afterRoiExMax == null) return "insufficient";
+  const beforeGood = row.beforeRoi >= args.goodRoi && row.beforeRoiExMax >= args.goodRoiExMax;
+  const afterGood = row.afterRoi >= args.goodRoi && row.afterRoiExMax >= args.goodRoiExMax;
+  const beforeBad = row.beforeRoi <= args.badRoi && row.beforeRoiExMax <= args.badRoiExMax;
+  const afterBad = row.afterRoi <= args.badRoi && row.afterRoiExMax <= args.badRoiExMax;
   if (beforeGood && afterGood) return "stable-good";
   if (beforeBad && afterBad) return "stable-bad";
   if ((beforeGood && afterBad) || (beforeBad && afterGood)) return "reversed";
@@ -249,8 +272,9 @@ function printRows(rows: StabilityRow[]) {
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} split=${args.splitDate} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"}`);
   console.log(`thresholds: minSettled=${args.minSettled} good=${args.goodRoi}/${args.goodRoiExMax} bad=${args.badRoi}/${args.badRoiExMax}`);
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
   console.log("");
-  console.log("stability      metric         band        decision  beforeN  beforeROI exMax    afterN   afterROI  exMax");
+  console.log("stability      metric         band        decision  beforeN missing  beforeROI exMax    afterN  missing  afterROI  exMax");
   for (const row of rows) {
     console.log([
       row.stability.padEnd(14),
@@ -258,9 +282,11 @@ function printRows(rows: StabilityRow[]) {
       row.band.padEnd(10),
       row.decision.padEnd(8),
       String(row.beforeSettled).padStart(7),
+      String(row.beforeMissingPayoutHits).padStart(7),
       fmt(row.beforeRoi).padStart(9),
       fmt(row.beforeRoiExMax).padStart(7),
       String(row.afterSettled).padStart(7),
+      String(row.afterMissingPayoutHits).padStart(7),
       fmt(row.afterRoi).padStart(9),
       fmt(row.afterRoiExMax).padStart(7),
     ].join("  "));
@@ -327,5 +353,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-time-split-stability.ts -- --from YYYY-MM-DD --split-date YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--min-settled 30] [--json]
 
-Read-only. No external access.`);
+Read-only. No external access. ROI uses official race_payouts.payout_yen; windows with missing hit payout data are classified insufficient fail-closed.`);
 }
