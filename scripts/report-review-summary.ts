@@ -8,6 +8,7 @@
  * 注意:
  * - 読み取り専用
  * - 外部アクセスなし
+ * - decision別ROI主評価は race_payouts.payout_yen の実払戻。current_odds は詳細確認用のみ
  */
 
 import { existsSync } from "node:fs";
@@ -59,6 +60,7 @@ type DecisionRow = {
   n: number;
   settled: number;
   hits: number;
+  missingPayoutHits: number;
   hitRate: number | null;
   roi: number | null;
   roiExMax: number | null;
@@ -111,7 +113,17 @@ WITH base AS (
     result,
     returned,
     current_odds,
-    CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END AS payout_odds
+    CASE
+      WHEN selection = result AND returned = 0 THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = decision_history.race_id
+          AND rp.bet_type = decision_history.bet_type
+          AND rp.combination = decision_history.selection
+        LIMIT 1
+      )
+      ELSE 0
+    END AS payout_odds
   FROM decision_history
   WHERE ${where.sql}
 ), grouped AS (
@@ -120,6 +132,7 @@ WITH base AS (
     COUNT(*) AS n,
     SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
     SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN selection = result AND returned = 0 AND payout_odds IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
     SUM(payout_odds) AS total_payout_odds,
     MAX(payout_odds) AS max_payout_odds
   FROM base
@@ -130,10 +143,11 @@ SELECT
   n,
   settled,
   hits,
+  missing_payout_hits AS missingPayoutHits,
   ROUND(hits * 1.0 / NULLIF(settled, 0), 4) AS hitRate,
-  ROUND(total_payout_odds * 1.0 / NULLIF(settled, 0), 3) AS roi,
-  ROUND((total_payout_odds - max_payout_odds) * 1.0 / NULLIF(settled - CASE WHEN max_payout_odds > 0 THEN 1 ELSE 0 END, 0), 3) AS roiExMax,
-  ROUND(max_payout_odds, 2) AS maxPayoutOdds
+  CASE WHEN missing_payout_hits > 0 THEN NULL ELSE ROUND(total_payout_odds * 1.0 / NULLIF(settled, 0), 3) END AS roi,
+  CASE WHEN missing_payout_hits > 0 THEN NULL ELSE ROUND((total_payout_odds - max_payout_odds) * 1.0 / NULLIF(settled - CASE WHEN max_payout_odds > 0 THEN 1 ELSE 0 END, 0), 3) END AS roiExMax,
+  CASE WHEN missing_payout_hits > 0 THEN NULL ELSE ROUND(max_payout_odds, 2) END AS maxPayoutOdds
 FROM grouped
 ORDER BY CASE decision WHEN 'BUY' THEN 1 WHEN 'WATCH' THEN 2 WHEN 'SKIP' THEN 3 ELSE 4 END
 `).all(...where.params) as DecisionRow[];
@@ -205,23 +219,25 @@ function printSummary(summary: {
   console.log("=== boat-pon review summary ===");
   console.log(`generated: ${summary.generatedAt}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
   console.log("");
   console.log(`decisions=${summary.totals.decisions} settled=${summary.totals.settled} BUY=${summary.totals.buy} WATCH=${summary.totals.watch} SKIP=${summary.totals.skip}`);
   console.log(`buyMisses=${summary.totals.buyMisses} missedHits(WATCH/SKIP)=${summary.totals.missedHits}`);
   console.log(`auditCoverage reasons=${pct(summary.auditCoverage.reasonCoverage)} features=${pct(summary.auditCoverage.featureCoverage)}`);
   console.log("");
   console.log("decision outcomes");
-  console.log("decision  n      settled  hits   hitRate  roi     roiExMax  maxOdds");
+  console.log("decision  n      settled  hits   missing  hitRate  roi     roiExMax  maxPayout");
   for (const row of summary.byDecision) {
     console.log([
       row.decision.padEnd(8),
       String(row.n).padStart(6),
       String(row.settled).padStart(7),
       String(row.hits).padStart(5),
+      String(row.missingPayoutHits).padStart(7),
       format(row.hitRate).padStart(7),
       format(row.roi).padStart(7),
       format(row.roiExMax).padStart(8),
-      format(row.maxPayoutOdds).padStart(7),
+      format(row.maxPayoutOdds).padStart(9),
     ].join("  "));
   }
 
@@ -299,5 +315,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-review-summary.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--limit 10] [--json]
 
-Read-only. No external access.`);
+Read-only. No external access. Decision ROI uses official race_payouts.payout_yen; decision groups with missing hit payout data return null payout-derived metrics fail-closed.`);
 }
