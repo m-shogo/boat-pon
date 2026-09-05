@@ -18,6 +18,9 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
+import { evaluatePaperForwardPayoutCompleteness } from "../src/research-replay/paperForwardPayoutCompleteness";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD  = "reports/payout-rebase.md";
 const OUT_JSON = "reports/payout-rebase.json";
@@ -27,7 +30,9 @@ const EXCLUDED_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川
 const EXCLUDED_RACE_NOS = [10, 11, 12];
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "payout-rebase primary database");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 const BASE_WHERE = `
@@ -36,6 +41,31 @@ const BASE_WHERE = `
   AND venue NOT IN (${EXCLUDED_VENUES.map(v => `'${v}'`).join(",")})
   AND race_no NOT IN (${EXCLUDED_RACE_NOS.join(",")})
 `;
+
+const coverageRow = db.prepare(`
+  SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN EXISTS (
+      SELECT 1
+      FROM race_payouts rp
+      WHERE rp.race_id = dh.race_id
+        AND rp.bet_type = 'trifecta'
+    ) THEN 1 ELSE 0 END) AS covered
+  FROM decision_history dh
+  WHERE ${BASE_WHERE}
+`).get() as { total: number; covered: number };
+
+const payoutCompleteness = evaluatePaperForwardPayoutCompleteness(
+  coverageRow.total ?? 0,
+  coverageRow.covered ?? 0,
+);
+if (!payoutCompleteness.complete) {
+  db.close();
+  console.error(
+    `[payout-rebase] FAIL CLOSED: official trifecta settlement coverage is incomplete (${payoutCompleteness.coveredRaces}/${payoutCompleteness.totalRaces}); payout ROI/switch/exclusion verdicts were not generated`,
+  );
+  process.exit(2);
+}
 
 // ─── WHERE スニペット ──────────────────────────────────────────────────────────
 
