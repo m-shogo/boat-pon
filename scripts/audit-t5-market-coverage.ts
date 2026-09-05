@@ -1,8 +1,10 @@
 /** T-5全120通りの収集率を公式番組母数で測るread-only監査。 */
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { evaluateT5MarketCoverage } from "../src/domain/t5MarketCoverage";
 import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorSelectionSql";
 import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { parseT5MarketCoverageAuditOptions } from "../src/research-replay/t5MarketCoverageAuditOptions";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 import { isCanonicalT5MarketCoverageSettlement } from "../src/research-replay/t5MarketCoverageSettlement";
@@ -13,7 +15,11 @@ const options = parseT5MarketCoverageAuditOptions(argv, {
   to: todayJst(),
 });
 const { from, to, json, strict } = options;
-const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  resolve("data/boat.sqlite"),
+  "T5_MARKET_COVERAGE_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 30000;");
 
 try {
