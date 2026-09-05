@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
+import { evaluatePaperForwardPayoutCompleteness } from "../src/research-replay/paperForwardPayoutCompleteness";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/roi-hypothesis-sets.md";
 const OUT_JSON = "reports/roi-hypothesis-sets.json";
@@ -15,6 +18,7 @@ type Row = {
   selection: string;
   result: string;
   currentOdds: number;
+  payoutYen: number;
   head: number;
   hit: boolean;
   venueMotorTop2Rate: number | null;
@@ -32,6 +36,7 @@ type Metric = {
   returnYen: number;
   roi: number;
   maxHitOdds: number;
+  maxHitPayoutYen: number;
   roiExMaxHit: number;
 };
 
@@ -46,50 +51,96 @@ if (!existsSync(DB_PATH)) {
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "roi-hypothesis-sets primary database identity mismatch");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 
 try {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA query_only = ON;");
 
-  const rows = loadRows().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
-  const baseline = metric(rows);
-  const scenarios = buildScenarios();
-  const results = scenarios.map((scenario) => evaluateScenario(rows, scenario, baseline));
+  const payoutCompleteness = verifyOfficialPayoutCompleteness();
+  if (!payoutCompleteness.complete) {
+    console.error(
+      `[analyze-roi-hypothesis-sets] FAIL CLOSED: official payout settlement coverage is incomplete (${payoutCompleteness.coveredRaces}/${payoutCompleteness.totalRaces}); scenario ROI was not generated`,
+    );
+    process.exitCode = 2;
+  } else {
+    const rows = loadRows().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+    const baseline = metric(rows);
+    const scenarios = buildScenarios();
+    const results = scenarios.map((scenario) => evaluateScenario(rows, scenario, baseline));
 
-  const report = {
-    generatedAt: new Date().toISOString(),
-    dbPath: DB_PATH,
-    safety: { readOnly: true, queryOnly: true, writesDb: false, changesSettings: false },
-    baseline,
-    results: results.sort((a, b) => b.remaining.roi - a.remaining.roi),
-  };
+    const report = {
+      generatedAt: new Date().toISOString(),
+      dbPath: "verified-primary-database",
+      safety: { readOnly: true, queryOnly: true, writesDb: false, changesSettings: false, metricBasis: "official_payout_yen", unitStakeYen: STAKE_YEN },
+      payoutCompleteness,
+      baseline,
+      results: results.sort((a, b) => b.remaining.roi - a.remaining.roi),
+    };
 
-  mkdirSync("reports", { recursive: true });
-  writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, renderMd(report));
-  console.log(`[analyze-roi-hypothesis-sets] baseline n=${baseline.n} roi=${pct(baseline.roi)}`);
-  console.log(`[analyze-roi-hypothesis-sets] wrote ${OUT_MD}`);
-  console.log(`[analyze-roi-hypothesis-sets] wrote ${OUT_JSON}`);
+    mkdirSync("reports", { recursive: true });
+    writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
+    writeFileSync(OUT_MD, renderMd(report));
+    console.log(`[analyze-roi-hypothesis-sets] baseline n=${baseline.n} roi=${pct(baseline.roi)}`);
+    console.log(`[analyze-roi-hypothesis-sets] wrote ${OUT_MD}`);
+    console.log(`[analyze-roi-hypothesis-sets] wrote ${OUT_JSON}`);
+  }
 } finally {
   db.close();
+}
+
+function verifyOfficialPayoutCompleteness() {
+  const coverage = db.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN EXISTS (
+        SELECT 1
+        FROM race_payouts rp
+        WHERE rp.race_id = dh.race_id
+          AND rp.bet_type = dh.bet_type
+          AND rp.returned = 0
+      ) THEN 1 ELSE 0 END) AS covered
+    FROM decision_history dh
+    WHERE dh.run_kind = 'historical-backfill'
+      AND dh.decision = 'BUY'
+      AND dh.current_odds IS NOT NULL
+      AND dh.result IS NOT NULL
+      AND dh.result != ''
+      AND dh.returned = 0
+  `).get() as { total: number; covered: number | null };
+  return evaluatePaperForwardPayoutCompleteness(coverage.total ?? 0, coverage.covered ?? 0);
 }
 
 function loadRows(): Row[] {
   const base = db.prepare(`
     SELECT dh.id, dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, dh.result,
-           dh.current_odds, op.raw_json
+           dh.current_odds, op.raw_json,
+           (SELECT rp.payout_yen
+              FROM race_payouts rp
+             WHERE rp.race_id = dh.race_id
+               AND rp.bet_type = dh.bet_type
+               AND rp.combination = dh.selection
+               AND rp.returned = 0
+             LIMIT 1) AS hit_payout_yen
     FROM decision_history dh
     LEFT JOIN official_programs op ON op.race_id = dh.race_id
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
       AND dh.current_odds IS NOT NULL
       AND dh.result IS NOT NULL
+      AND dh.result != ''
+      AND dh.returned = 0
     ORDER BY dh.date, dh.id
   `).all() as Array<Record<string, unknown>>;
   const venueMb = loadVenueMotorBoat();
   return base.map((row) => {
     const selection = String(row.selection);
+    const hit = String(row.result) === selection;
+    const matchedPayout = numOrNull(row.hit_payout_yen);
+    if (hit && (matchedPayout == null || matchedPayout <= 0)) {
+      throw new Error("ROI_HYPOTHESIS_MATCHING_PAYOUT_MISSING: winning research row lacks a positive official payout");
+    }
     const head = Number(selection.split("-")[0]);
     const key = `${String(row.race_id)}:${head}`;
     const venue = venueMb.get(key) ?? { motor: null, boat: null };
@@ -103,8 +154,9 @@ function loadRows(): Row[] {
       selection,
       result: String(row.result),
       currentOdds: Number(row.current_odds),
+      payoutYen: hit ? Number(matchedPayout) : 0,
       head,
-      hit: String(row.result) === selection,
+      hit,
       venueMotorTop2Rate: venue.motor,
       venueBoatTop2Rate: venue.boat,
       nationalMotorTop2Rate: national.motor,
@@ -189,9 +241,11 @@ function evaluateScenario(rows: Row[], scenario: Scenario, baseline: Metric) {
 function metric(rows: Row[]): Metric {
   const hits = rows.filter((row) => row.hit);
   const hitOdds = hits.map((row) => row.currentOdds).sort((a, b) => b - a);
-  const returnYen = hitOdds.reduce((sum, odds) => sum + odds * STAKE_YEN, 0);
+  const hitPayouts = hits.map((row) => row.payoutYen).sort((a, b) => b - a);
+  const returnYen = rows.reduce((sum, row) => sum + row.payoutYen, 0);
   const stakeYen = rows.length * STAKE_YEN;
   const maxHitOdds = hitOdds[0] ?? 0;
+  const maxHitPayoutYen = hitPayouts[0] ?? 0;
   return {
     n: rows.length,
     hits: hits.length,
@@ -201,7 +255,8 @@ function metric(rows: Row[]): Metric {
     returnYen,
     roi: stakeYen ? returnYen / stakeYen : 0,
     maxHitOdds,
-    roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitOdds * STAKE_YEN) / stakeYen : 0,
+    maxHitPayoutYen,
+    roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitPayoutYen) / stakeYen : 0,
   };
 }
 
@@ -217,7 +272,7 @@ function splitMetric(rows: Row[], keep: (row: Row) => boolean) {
 }
 
 function renderMd(report: { generatedAt: string; dbPath: string; baseline: Metric; results: Array<ReturnType<typeof evaluateScenario>> }) {
-  return `# ROI Hypothesis Sets\n\nGenerated: ${report.generatedAt}\nDB: \`${report.dbPath}\`\n\n## Baseline\n\n| n | hits | hitRate | avgOdds | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${fixed(report.baseline.avgOdds)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Scenario Ranking\n\n| scenario | remainN | remainROI | improvement | removedN | removedROI | train | validation | test | roiExMaxHit | warnings |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n${report.results.map((r) => `| ${md(r.name)} | ${r.remaining.n} | ${pct(r.remaining.roi)} | ${pct(r.improvement)} | ${r.removed.n} | ${pct(r.removed.roi)} | ${pct(r.split.train.roi)} | ${pct(r.split.validation.roi)} | ${pct(r.split.test.roi)} | ${pct(r.remaining.roiExMaxHit)} | ${md(r.warnings.join(", ") || "-")} |`).join("\n")}\n\n## Notes\n\n- This is a read-only historical audit.\n- High ROI with tiny remainN is not enough. Validation/test and roiExMaxHit must survive.\n- F-count based scenarios are handled in search-roi-patterns when racer profile coverage is available.\n`;
+  return `# ROI Hypothesis Sets\n\nGenerated: ${report.generatedAt}\nDB: \`${report.dbPath}\`\nMetric basis: official payout yen / ¥${STAKE_YEN} unit stake\n\n## Baseline\n\n| n | hits | hitRate | avgOdds | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${fixed(report.baseline.avgOdds)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Scenario Ranking\n\n| scenario | remainN | remainROI | improvement | removedN | removedROI | train | validation | test | roiExMaxHit | warnings |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n${report.results.map((r) => `| ${md(r.name)} | ${r.remaining.n} | ${pct(r.remaining.roi)} | ${pct(r.improvement)} | ${r.removed.n} | ${pct(r.removed.roi)} | ${pct(r.split.train.roi)} | ${pct(r.split.validation.roi)} | ${pct(r.split.test.roi)} | ${pct(r.remaining.roiExMaxHit)} | ${md(r.warnings.join(", ") || "-")} |`).join("\n")}\n\n## Notes\n\n- This is a read-only historical audit.\n- ROI uses official settlement payout yen; incomplete settlement coverage fails closed before scenario ranking.\n- High ROI with tiny remainN is not enough. Validation/test and roiExMaxHit must survive.\n- F-count based scenarios are handled in search-roi-patterns when racer profile coverage is available.\n`;
 }
 
 function loadVenueMotorBoat() {
