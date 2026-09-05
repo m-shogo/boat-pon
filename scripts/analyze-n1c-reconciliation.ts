@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import { canonicalHash } from "../src/research-replay/canonical";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import {
@@ -21,6 +22,7 @@ import {
   type SettlementBetType,
 } from "../src/research-replay/settlement";
 import { auditCanonicalDuplicates } from "../src/research-replay/n1CanonicalResolution";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import type { RacePayout } from "../src/domain/officialResultDetailParser";
 
 const root = resolve(process.cwd());
@@ -154,7 +156,11 @@ async function main(): Promise<void> {
   const s8167 = subsetTotals(metrics, (f) => f <= RUNTIME_LAST_FILE);
 
   // DB actual（immutable read、post-dedup）。
-  const db = new DatabaseSync(`file:${SIDECAR}?immutable=1`, { readOnly: true } as never);
+  const sidecarPath = assertCanonicalSingleLinkRegularFile(
+    SIDECAR,
+    "N1C_RECONCILIATION_SIDECAR_IDENTITY_INVALID",
+  );
+  const db = new DatabaseSync(`${pathToFileURL(sidecarPath).href}?immutable=1`, { readOnly: true } as never);
   const dbPayout = Number((db.prepare("SELECT COUNT(*) c FROM race_payout_lines_v2").get() as { c: number }).c);
   const dbRefund = Number((db.prepare("SELECT COUNT(*) c FROM race_refund_lines_v2").get() as { c: number }).c);
   // canonical audit（source_duplicate resolution 適用済みなら active counts を取得）。
