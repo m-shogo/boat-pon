@@ -11,6 +11,7 @@ import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import { listArchiveFiles } from "../src/research-replay/n1Backfill";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import {
   parseUnexpectedAdditionsLimit,
   selectUnexpectedAdditionsArchives,
@@ -88,7 +89,11 @@ type Finding = {
 
 async function main(): Promise<void> {
   if (!existsSync(sourcePath)) throw new Error(`source not found: ${sourcePath}`);
-  const uri = `${pathToFileURL(sourcePath).href}?immutable=1`;
+  const verifiedSourcePath = assertCanonicalSingleLinkRegularFile(
+    sourcePath,
+    "N2_UNEXPECTED_ADDITIONS_SOURCE_IDENTITY_INVALID",
+  );
+  const uri = `${pathToFileURL(verifiedSourcePath).href}?immutable=1`;
   const db = new DatabaseSync(uri, { readOnly: true } as never);
   db.exec("PRAGMA query_only=ON");
   const startedAt = new Date().toISOString();
