@@ -12,6 +12,7 @@ import { execFileSync } from "node:child_process";
  * - does not change app_settings
  * - does not touch production decision logic
  * - does not perform betting/login/site operations
+ * - excludes quote-based roi-commit review from decision inputs until it is rebased to official payouts
  */
 
 const OUT_JSON = "reports/roi-autopilot-decision.json";
@@ -55,6 +56,7 @@ type MatrixReport = {
 };
 
 type HypothesisReport = {
+  safety?: { metricBasis?: string };
   baseline?: Metric;
   results?: Array<{
     name: string;
@@ -67,17 +69,10 @@ type HypothesisReport = {
   }>;
 };
 
-type CommitReview = {
-  overall?: Metric;
-  finalJudgement?: unknown;
-  reportedRoi?: Record<string, number>;
-};
-
 type Decision = "GO" | "PAPER" | "NO-GO";
 
 const commands = [
   ["pnpm", ["typecheck:scripts"]],
-  ["pnpm", ["analyze:roi-commit"]],
   ["pnpm", ["analyze:bet-strategies"]],
   ["pnpm", ["analyze:roi-hypotheses"]],
   ["pnpm", ["search:roi-matrix"]],
@@ -98,9 +93,9 @@ for (const [bin, args] of commands) {
 
 const matrix = readJson<MatrixReport>("reports/roi-search-matrix.json");
 const hypotheses = readOptionalJson<HypothesisReport>("reports/roi-hypothesis-sets.json");
-const commitReview = readOptionalJson<CommitReview>("reports/roi-commit-review.json");
+assertOfficialPayoutHypotheses(hypotheses);
 
-const baseline = matrix.results[0]?.baseline ?? hypotheses?.baseline ?? commitReview?.overall ?? {};
+const baseline = matrix.results[0]?.baseline ?? hypotheses?.baseline ?? {};
 const consensus = matrix.consensus ?? [];
 const topConsensus = consensus[0];
 const stableConsensus = consensus.filter((x) => isStableConsensus(x));
@@ -121,6 +116,8 @@ const report = {
     changesSettings: false,
     changesProductionDecisionLogic: false,
     autoBetting: false,
+    metricBasis: "official_payout_yen",
+    quoteBasedCommitReviewExcluded: true,
   },
   executed,
   baseline,
@@ -140,6 +137,13 @@ writeFileSync(OUT_MD, renderMarkdown(report));
 console.log(`[roi-autopilot] decision=${decision}`);
 console.log(`[roi-autopilot] wrote ${OUT_JSON}`);
 console.log(`[roi-autopilot] wrote ${OUT_MD}`);
+
+function assertOfficialPayoutHypotheses(report: HypothesisReport | null) {
+  if (!report) return;
+  if (report.safety?.metricBasis !== "official_payout_yen") {
+    throw new Error("ROI_AUTOPILOT_HYPOTHESIS_METRIC_BASIS_UNSAFE: hypothesis report is not based on official payouts");
+  }
+}
 
 function decide(stable: Candidate[], paper: Candidate[], risky: string[], base: Metric): Decision {
   const baselineRoi = Number(base.roi ?? 0);
@@ -262,6 +266,8 @@ ${report.reasons.map((x) => `- ${x}`).join("\n")}
 - app_settings change: no
 - production decision logic change: no
 - auto betting/login/site operation: no
+- ROI metric basis: official payout yen
+- quote-based roi-commit review: excluded from decision inputs until rebased
 
 ## Executed Commands
 
