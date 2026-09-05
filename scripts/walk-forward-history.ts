@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { parseWalkForwardHistoryOptions, type WalkForwardHistoryOptions } from "../src/research-replay/walkForwardHistoryOptions";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type Args = WalkForwardHistoryOptions;
 type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; ev: number | null; payoutOdds: number | null };
@@ -19,7 +20,9 @@ if (!existsSync(DB_PATH)) {
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "walk-forward primary database");
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000");
 try {
   const range = resolveRange(db, args.from, args.to);
@@ -141,7 +144,7 @@ function printReport(payload: { generatedAt: string; range: { from: string; to: 
   console.log("\n| from | to | status | rows | BUY | settledBUY | hits | missingPayoutHits | hitRate | ROI | avgEV |");
   console.log("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const row of payload.windows) {
-    console.log(`| ${row.from} | ${row.to} | ${row.status} | ${row.rows} | ${row.buy} | ${row.settledBuy} | ${row.hits} | ${row.missingPayoutHits} | ${pct(row.hitRate)} | ${fmt(row.roi)} | ${fmt(row.avgEv)} |`);
+    console.log(`| ${row.from} | ${row.to} | ${row.status} | ${row.rows} | ${row.buy} | ${row.settledBuy} | ${row.hits} | ${pct(row.hitRate)} | ${fmt(row.roi)} | ${fmt(row.avgEv)} |`);
   }
 }
 
