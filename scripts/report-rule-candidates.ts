@@ -104,7 +104,7 @@ WITH base AS (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
-          AND rp.bet_type = 'trifecta'
+          AND rp.bet_type = decision_history.bet_type
           AND rp.combination = decision_history.selection
         LIMIT 1
       )
@@ -220,7 +220,7 @@ function printRows(rows: SuggestionRow[]) {
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
   console.log(`thresholds: minSettled=${args.minSettled} badRoi=${args.badRoi} badRoiExMax=${args.badRoiExMax} goodRoi=${args.goodRoi} goodRoiExMax=${args.goodRoiExMax}`);
-  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen)");
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
   console.log("");
   console.log("suggestion        metric         band        decision  n      settled  hits   hitRate  roi     roiExMax  reason");
   for (const row of rows) {
@@ -296,5 +296,5 @@ function printHelp() {
   pnpm exec tsx scripts/report-rule-candidates.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--min-settled 30] [--json]
 
 Read-only. No external access. Suggestions are for review only.
-ROI uses official race_payouts.payout_yen; groups with missing hit payout data are skipped fail-closed.`);
+ROI uses official race_payouts.payout_yen matching each decision ticket; groups with missing hit payout data are skipped fail-closed.`);
 }
