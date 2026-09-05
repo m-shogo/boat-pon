@@ -28,7 +28,6 @@ import {
   buildArchiveReconcileSelection,
   type ArchiveReconcileCheckpointContract,
 } from "../src/research-replay/n2ArchiveReconcileInput";
-import { BET_TYPES, type SettlementBetType, type SettlementStatus } from "../src/research-replay/settlement";
 import {
   EVENT_CLASSIFICATION_VERSION,
   EXPECTED_SETTLEMENT_SCHEMA_VERSION,
@@ -48,6 +47,8 @@ import {
   type ReconcileClass,
   type ResultKind,
 } from "../src/research-replay/n2ArchiveCanonicalReconcile";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+import { BET_TYPES, type SettlementBetType, type SettlementStatus } from "../src/research-replay/settlement";
 
 const root = resolve(process.cwd());
 
@@ -217,8 +218,8 @@ type DbSide = {
   schemaVersion: string;
 };
 
-function loadDbSide(): DbSide {
-  const uri = `${pathToFileURL(sidecarPath).href}?immutable=1`;
+function loadDbSide(verifiedSidecarPath: string): DbSide {
+  const uri = `${pathToFileURL(verifiedSidecarPath).href}?immutable=1`;
   const db = new DatabaseSync(uri, { readOnly: true } as never);
   try {
     db.exec("PRAGMA query_only=ON");
@@ -333,11 +334,15 @@ async function main(): Promise<void> {
   if (!existsSync(archiveRoot)) throw new Error(`archive root not found: ${archiveRoot}`);
   if (!existsSync(sidecarPath)) throw new Error(`sidecar not found: ${sidecarPath}`);
 
+  const verifiedSidecarPath = assertCanonicalSingleLinkRegularFile(
+    sidecarPath,
+    "N2_ARCHIVE_CANONICAL_SIDECAR_IDENTITY_INVALID",
+  );
   const startedAt = new Date().toISOString();
   const startedMs = Date.now();
-  const sourceSidecarSha256 = sha256File(sidecarPath);
+  const sourceSidecarSha256 = sha256File(verifiedSidecarPath);
   process.stderr.write(`[reconcile] loading canonical DB side from ${sidecarPath} ...\n`);
-  const db = loadDbSide();
+  const db = loadDbSide(verifiedSidecarPath);
   process.stderr.write(
     `[reconcile] canonical active=${db.activeCandidateCount} total=${db.totalCandidateCount} ` +
     `sourceDup=${db.sourceDuplicateCount} superseded=${db.supersededCount} ambiguousKeys=${db.ambiguousKeys.size} ` +
