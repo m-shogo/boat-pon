@@ -3,8 +3,8 @@ import { DatabaseSync } from "node:sqlite";
 import { parseWalkForwardHistoryOptions, type WalkForwardHistoryOptions } from "../src/research-replay/walkForwardHistoryOptions";
 
 type Args = WalkForwardHistoryOptions;
-type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; ev: number | null };
-type WindowSummary = { from: string; to: string; rows: number; buy: number; settledBuy: number; hits: number; hitRate: number | null; roi: number | null; avgEv: number | null; status: "pass" | "watch" | "fail" | "no_sample" };
+type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; ev: number | null; payoutOdds: number | null };
+type WindowSummary = { from: string; to: string; rows: number; buy: number; settledBuy: number; hits: number; missingPayoutHits: number; hitRate: number | null; roi: number | null; avgEv: number | null; status: "pass" | "watch" | "fail" | "no_sample" | "incomplete" };
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const rawArgs = process.argv.slice(2);
@@ -42,7 +42,27 @@ function resolveRange(db: DatabaseSync, from: string | null, to: string | null) 
 function listRows(db: DatabaseSync, from: string, to: string): Row[] {
   if (!tableExists(db, "decision_history")) return [];
   return db.prepare(`
-SELECT date, venue, race_no, decision, selection, result, returned, current_odds, ev
+SELECT
+  date,
+  venue,
+  race_no,
+  decision,
+  selection,
+  result,
+  returned,
+  current_odds,
+  ev,
+  CASE
+    WHEN selection = result AND returned = 0 THEN (
+      SELECT rp.payout_yen / 100.0
+      FROM race_payouts rp
+      WHERE rp.race_id = decision_history.race_id
+        AND rp.bet_type = decision_history.bet_type
+        AND rp.combination = decision_history.selection
+      LIMIT 1
+    )
+    ELSE 0
+  END AS payoutOdds
 FROM decision_history
 WHERE date >= ? AND date <= ?
 ORDER BY date, venue, race_no
@@ -64,44 +84,64 @@ function summarizeWindow(from: string, to: string, rows: Row[], minBuys: number)
   const buyRows = rows.filter((row) => row.decision === "BUY");
   const settled = buyRows.filter((row) => row.returned === 0 && row.result != null);
   const hits = settled.filter((row) => row.selection === row.result);
-  const payoutOdds = hits.reduce((sum, row) => sum + (row.current_odds ?? 0), 0);
-  const roi = settled.length ? payoutOdds / settled.length : null;
+  const missingPayoutHits = hits.filter((row) => row.payoutOdds == null).length;
+  const totalPayoutOdds = hits.reduce((sum, row) => sum + (row.payoutOdds ?? 0), 0);
+  const roi = settled.length && missingPayoutHits === 0 ? totalPayoutOdds / settled.length : null;
   const hitRate = settled.length ? hits.length / settled.length : null;
   const avgEv = average(buyRows.map((row) => row.ev));
-  return { from, to, rows: rows.length, buy: buyRows.length, settledBuy: settled.length, hits: hits.length, hitRate, roi, avgEv, status: classify(settled.length, roi, hitRate, minBuys) };
+  return {
+    from,
+    to,
+    rows: rows.length,
+    buy: buyRows.length,
+    settledBuy: settled.length,
+    hits: hits.length,
+    missingPayoutHits,
+    hitRate,
+    roi,
+    avgEv,
+    status: classify(settled.length, roi, hitRate, minBuys, missingPayoutHits),
+  };
 }
 
-function classify(settledBuy: number, roi: number | null, hitRate: number | null, minBuys: number): WindowSummary["status"] {
+function classify(settledBuy: number, roi: number | null, hitRate: number | null, minBuys: number, missingPayoutHits: number): WindowSummary["status"] {
   if (settledBuy < minBuys) return "no_sample";
-  if ((roi ?? 0) >= 1.05 && (hitRate ?? 0) > 0) return "pass";
-  if ((roi ?? 0) >= 0.85) return "watch";
+  if (missingPayoutHits > 0 || roi == null) return "incomplete";
+  if (roi >= 1.05 && (hitRate ?? 0) > 0) return "pass";
+  if (roi >= 0.85) return "watch";
   return "fail";
 }
 
 function verdict(windows: WindowSummary[]) {
-  const evaluated = windows.filter((row) => row.status !== "no_sample");
+  const evaluated = windows.filter((row) => row.status !== "no_sample" && row.status !== "incomplete");
+  const incomplete = windows.filter((row) => row.status === "incomplete").length;
   const fail = evaluated.filter((row) => row.status === "fail").length;
   const pass = evaluated.filter((row) => row.status === "pass").length;
   const watch = evaluated.filter((row) => row.status === "watch").length;
   const avgRoi = average(evaluated.map((row) => row.roi));
   const message = evaluated.length === 0
-    ? "サンプル不足。まず紙上観察を継続。"
-    : fail > pass
-      ? "期間別に崩れている。BUY条件を強めるか、弱い会場/レース番号をSKIP寄せ。"
-      : "大きな崩れは限定的。弱いwindowだけ追加確認。";
-  return { evaluatedWindows: evaluated.length, pass, watch, fail, avgRoi, message };
+    ? incomplete > 0
+      ? "公式払戻データが不足しているwindowがある。欠損を補完してから再評価。"
+      : "サンプル不足。まず紙上観察を継続。"
+    : incomplete > 0
+      ? "公式払戻欠損windowを評価から除外。欠損補完後に全期間を再確認。"
+      : fail > pass
+        ? "期間別に崩れている。BUY条件を強めるか、弱い会場/レース番号をSKIP寄せ。"
+        : "大きな崩れは限定的。弱いwindowだけ追加確認。";
+  return { evaluatedWindows: evaluated.length, incompleteWindows: incomplete, pass, watch, fail, avgRoi, message };
 }
 
 function printReport(payload: { generatedAt: string; range: { from: string; to: string }; args: Args; windows: WindowSummary[]; verdict: ReturnType<typeof verdict> }) {
   console.log("# Boat Pon walk-forward history report");
   console.log(`period: ${payload.range.from}..${payload.range.to}`);
   console.log(`windowDays=${payload.args.windowDays} stepDays=${payload.args.stepDays} minBuys=${payload.args.minBuys}`);
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
   console.log(`verdict: ${payload.verdict.message}`);
-  console.log(`evaluated=${payload.verdict.evaluatedWindows} pass=${payload.verdict.pass} watch=${payload.verdict.watch} fail=${payload.verdict.fail} avgRoi=${fmt(payload.verdict.avgRoi)}`);
-  console.log("\n| from | to | status | rows | BUY | settledBUY | hits | hitRate | ROI | avgEV |");
-  console.log("|---|---|---|---:|---:|---:|---:|---:|---:|---:|");
+  console.log(`evaluated=${payload.verdict.evaluatedWindows} incomplete=${payload.verdict.incompleteWindows} pass=${payload.verdict.pass} watch=${payload.verdict.watch} fail=${payload.verdict.fail} avgRoi=${fmt(payload.verdict.avgRoi)}`);
+  console.log("\n| from | to | status | rows | BUY | settledBUY | hits | missingPayoutHits | hitRate | ROI | avgEV |");
+  console.log("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const row of payload.windows) {
-    console.log(`| ${row.from} | ${row.to} | ${row.status} | ${row.rows} | ${row.buy} | ${row.settledBuy} | ${row.hits} | ${pct(row.hitRate)} | ${fmt(row.roi)} | ${fmt(row.avgEv)} |`);
+    console.log(`| ${row.from} | ${row.to} | ${row.status} | ${row.rows} | ${row.buy} | ${row.settledBuy} | ${row.hits} | ${row.missingPayoutHits} | ${pct(row.hitRate)} | ${fmt(row.roi)} | ${fmt(row.avgEv)} |`);
   }
 }
 
@@ -112,4 +152,4 @@ function minDate(a: string, b: string) { return a < b ? a : b; }
 function todayTokyo() { return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 function fmt(value: number | null) { return value == null ? "-" : value.toFixed(3); }
 function pct(value: number | null) { return value == null ? "-" : `${(value * 100).toFixed(1)}%`; }
-function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]"); }
+function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]\n\nRead-only. ROI uses official race_payouts.payout_yen; windows with missing hit payout data are incomplete and excluded from verdicts fail-closed."); }
