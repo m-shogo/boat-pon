@@ -10,16 +10,23 @@ const repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const script = join(repoRoot, "scripts", "research-replay-rollout.ts");
 const errorCode = "F0R_PRIMARY_SOURCE_IDENTITY_INVALID";
 
-function run(cwd: string): ReturnType<typeof spawnSync> {
+function run(primarySource: string, deploymentRoot: string): ReturnType<typeof spawnSync> {
   return spawnSync(
     process.execPath,
-    ["--import", "tsx", script, "--dry-run", `--root=${cwd}`],
-    { cwd, encoding: "utf8" },
+    [
+      "--import",
+      "tsx",
+      script,
+      "--dry-run",
+      `--root=${deploymentRoot}`,
+      `--primary-source=${primarySource}`,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
   );
 }
 
-function assertIdentityRejected(root: string): void {
-  const result = run(root);
+function assertIdentityRejected(primarySource: string, deploymentRoot: string): void {
+  const result = run(primarySource, deploymentRoot);
   assert.notEqual(result.status, 0);
   assert.match(`${result.stdout}\n${result.stderr}`, new RegExp(errorCode));
 }
@@ -27,12 +34,11 @@ function assertIdentityRejected(root: string): void {
 test("F0-R rollout rejects a symlinked primary source before fingerprinting", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-f0r-primary-leaf-"));
   try {
-    const data = join(root, "data");
-    mkdirSync(data);
     const target = join(root, "target.sqlite");
+    const primarySource = join(root, "boat.sqlite");
     writeFileSync(target, "not a database", "utf8");
-    symlinkSync(target, join(data, "boat.sqlite"));
-    assertIdentityRejected(root);
+    symlinkSync(target, primarySource);
+    assertIdentityRejected(primarySource, root);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -42,10 +48,11 @@ test("F0-R rollout rejects an ancestor alias before fingerprinting", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-f0r-primary-ancestor-"));
   try {
     const realData = join(root, "real-data");
+    const aliasData = join(root, "alias-data");
     mkdirSync(realData);
     writeFileSync(join(realData, "boat.sqlite"), "not a database", "utf8");
-    symlinkSync(realData, join(root, "data"));
-    assertIdentityRejected(root);
+    symlinkSync(realData, aliasData);
+    assertIdentityRejected(join(aliasData, "boat.sqlite"), root);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -54,12 +61,11 @@ test("F0-R rollout rejects an ancestor alias before fingerprinting", () => {
 test("F0-R rollout rejects a hardlinked primary source before fingerprinting", () => {
   const root = mkdtempSync(join(tmpdir(), "boat-pon-f0r-primary-hardlink-"));
   try {
-    const data = join(root, "data");
-    mkdirSync(data);
     const target = join(root, "target.sqlite");
+    const primarySource = join(root, "boat.sqlite");
     writeFileSync(target, "not a database", "utf8");
-    linkSync(target, join(data, "boat.sqlite"));
-    assertIdentityRejected(root);
+    linkSync(target, primarySource);
+    assertIdentityRejected(primarySource, root);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
