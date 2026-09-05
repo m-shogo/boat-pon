@@ -35,3 +35,12 @@ test("all-feature ROI metrics sum realized payouts and robustness removes realiz
   assert.match(source, /returnYen - maxHitPayoutYen/);
   assert.match(source, /ROI_ALL_FEATURE_MATCHING_PAYOUT_MISSING/);
 });
+
+test("all-feature rule mining excludes post-outcome target leakage", () => {
+  for (const key of ["result", "payout_yen", "hit_payout_yen", "popularity", "returned"]) {
+    assert.match(source, new RegExp(`\\"${key}\\"`));
+  }
+  assert.match(source, /POST_OUTCOME_FEATURE_KEYS\.has\(key\)/);
+  assert.doesNotMatch(source, /f\.derived_result_match\s*=/);
+  assert.match(source, /postOutcomeFeaturesExcluded: true/);
+});
