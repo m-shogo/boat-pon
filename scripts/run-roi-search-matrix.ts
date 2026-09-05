@@ -9,6 +9,7 @@ import { join } from "node:path";
  * - This script does not write DB/app_settings.
  * - It only runs search:roi-patterns, which opens SQLite readOnly/query_only.
  * - Outputs archived reports under reports/roi-search-matrix/.
+ * - Consensus must never be promoted from quote-based current_odds ROI.
  */
 
 const OUT_DIR = "reports/roi-search-matrix";
@@ -16,6 +17,7 @@ const SOURCE_JSON = "reports/roi-pattern-search.json";
 const SOURCE_MD = "reports/roi-pattern-search.md";
 const SUMMARY_JSON = "reports/roi-search-matrix.json";
 const SUMMARY_MD = "reports/roi-search-matrix.md";
+const SEARCH_SOURCE = "scripts/search-roi-patterns.ts";
 
 type MatrixCase = {
   name: string;
@@ -59,6 +61,8 @@ type MatrixResult = {
   archivedJson: string;
   archivedMd: string;
 };
+
+assertRealizedPayoutMetricBasis();
 
 const cases: MatrixCase[] = [
   { name: "strict_n1000", minRemoved: 100, minRemaining: 1000 },
@@ -110,6 +114,7 @@ const summary = {
     changesSettings: false,
     autoBetting: false,
     generatedReportsOnly: true,
+    metricBasis: "official_payout_yen",
   },
   cases,
   results,
@@ -120,6 +125,18 @@ writeFileSync(SUMMARY_JSON, `${JSON.stringify(summary, null, 2)}\n`);
 writeFileSync(SUMMARY_MD, renderMarkdown(summary));
 console.log(`[run-roi-search-matrix] wrote ${SUMMARY_JSON}`);
 console.log(`[run-roi-search-matrix] wrote ${SUMMARY_MD}`);
+
+function assertRealizedPayoutMetricBasis() {
+  const source = readFileSync(SEARCH_SOURCE, "utf8");
+  const usesQuoteReturn = source.includes("hitOdds.reduce((sum, odds) => sum + odds * STAKE_YEN, 0)");
+  const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
+  if (usesQuoteReturn || !usesOfficialPayout) {
+    throw new Error(
+      "ROI_SEARCH_MATRIX_METRIC_BASIS_UNSAFE: search:roi-patterns still derives return from current_odds quotes. " +
+      "Matrix consensus is disabled until the search is rebased to official race_payouts.payout_yen with fail-closed settlement coverage.",
+    );
+  }
+}
 
 function buildConsensus(matrixResults: MatrixResult[]) {
   const map = new Map<string, { label: string; count: number; sOrA: number; bestImprovement: number; worstWarnings: number; cases: string[] }>();
@@ -145,41 +162,12 @@ function buildConsensus(matrixResults: MatrixResult[]) {
 }
 
 function renderMarkdown(summary: { generatedAt: string; cases: MatrixCase[]; results: MatrixResult[]; consensus: ReturnType<typeof buildConsensus> }) {
-  return `# ROI Search Matrix
-
-Generated: ${summary.generatedAt}
-
-## Safety
-
-- DB write: no
-- app_settings change: no
-- production decision logic change: no
-- auto betting/login/site operation: no
-- Output only: reports
-
-## Matrix Cases
-
-| case | minRemoved | minRemaining |
-|---|---:|---:|
-${summary.cases.map((x) => `| ${x.name} | ${x.minRemoved} | ${x.minRemaining} |`).join("\n")}
-
-## Consensus Stability Candidates
-
-${summary.consensus.length ? `| label | appeared | S/A count | best improvement | worst warning count | cases |\n|---|---:|---:|---:|---:|---|\n${summary.consensus.slice(0, 30).map((x) => `| ${md(x.label)} | ${x.count} | ${x.sOrA} | ${pct(x.bestImprovement)} | ${x.worstWarnings} | ${x.cases.join(", ")} |`).join("\n")}` : "No consensus candidates."}
-
-## Per Case Top Stability
-
-${summary.results.map((result) => `### ${result.case.name}\n\nBaseline ROI: ${pct(result.baseline.roi)} / n=${result.baseline.n}\n\n${candidateTable(result.topStability)}\n\nArchived: \`${result.archivedMd}\``).join("\n\n")}
-
-## Per Case Risky / Do Not Ship
-
-${summary.results.map((result) => `### ${result.case.name}\n\n${candidateTable(result.risky)}`).join("\n\n")}
-`;
+  return `# ROI Search Matrix\n\nGenerated: ${summary.generatedAt}\n\n## Safety\n\n- DB write: no\n- app_settings change: no\n- production decision logic change: no\n- auto betting/login/site operation: no\n- Metric basis: official payout_yen only (fail closed otherwise)\n- Output only: reports\n\n## Matrix Cases\n\n| case | minRemoved | minRemaining |\n|---|---:|---:|\n${summary.cases.map((x) => `| ${x.name} | ${x.minRemoved} | ${x.minRemaining} |`).join("\n")}\n\n## Consensus Stability Candidates\n\n${summary.consensus.length ? `| label | appeared | S/A count | best improvement | worst warning count | cases |\n|---|---:|---:|---:|---:|---|\n${summary.consensus.slice(0, 30).map((x) => `| ${md(x.label)} | ${x.count} | ${x.sOrA} | ${pct(x.bestImprovement)} | ${x.worstWarnings} | ${x.cases.join(", ")} |`).join("\n")}` : "No consensus candidates."}\n\n## Per Case Top Stability\n\n${summary.results.map((result) => `### ${result.case.name}\n\nBaseline ROI: ${pct(result.baseline.roi)} / n=${result.baseline.n}\n\n${candidateTable(result.topStability)}\n\nArchived: \`${result.archivedMd}\``).join("\n\n")}\n\n## Per Case Risky / Do Not Ship\n\n${summary.results.map((result) => `### ${result.case.name}\n\n${candidateTable(result.risky)}`).join("\n\n")}\n`;
 }
 
 function candidateTable(items: Candidate[]) {
   if (!items.length) return "No candidates.\n";
-  return `| judgement | label | removedN | removedROI | remainingN | remainingROI | improvement | test | warnings |\n|---|---|---:|---:|---:|---:|---:|---:|---|\n${items.map((x) => `| ${x.judgement} | ${md(x.label)} | ${x.removed?.n ?? 0} | ${pct(x.removed?.roi ?? 0)} | ${x.remaining?.n ?? 0} | ${pct(x.remaining?.roi ?? 0)} | ${pct(x.improvement ?? 0)} | ${pct(x.testRoi ?? 0)} | ${md((x.warnings ?? []).join(", ") || "-")} |`).join("\n")}`;
+  return `| judgement | label | removedN | removedROI | remainingN | remainingROI | improvement | test | warnings |\n|---|---|---:|---:|---:|---:|---:|---:|---|\n${items.map((x) => `| ${x.judgement} | ${md(x.label)} | ${x.removed?.n ?? 0} | ${pct(x.removed?.roi ?? 0)} | ${x.remaining?.n ?? 0} | ${pct(x.remaining?.roi ?? 0)} | ${pct(x.improvement ?? 0)} | ${pct(x.testRoi ?? 0)} | ${md((x.warnings ?? []).join(", ") || "-")} |`).join("\n")}\n`;
 }
 
 function pct(value: number) {
