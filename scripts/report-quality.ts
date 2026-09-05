@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { parseRollingReportOptions } from "../src/research-replay/rollingReportOptions";
 
 type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; required_odds: number | null; ev: number | null; sample_size?: number | null };
@@ -32,8 +33,12 @@ if (!existsSync(DB_PATH)) {
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "QUALITY_REPORT_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 try {
   const rows = listRows(db, from, to);
   const report = buildReport(rows);
