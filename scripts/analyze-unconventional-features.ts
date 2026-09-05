@@ -3,10 +3,16 @@
  * 的中率の仮説生成専用。市場差・利益edge・BUY条件とは扱わない。
  */
 import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { staticUnconventionalFlags, type UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  resolve("data/boat.sqlite"),
+  "UNCONVENTIONAL_FEATURE_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 30000;");
 
 type RaceRow = { race_id: string; date: string; venue: string; race_no: number; raw_json: string; trifecta: string };
