@@ -13,6 +13,7 @@
 
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
@@ -22,8 +23,12 @@ if (!existsSync(DB_PATH)) {
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "MISSED_HITS_REPORT_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
   const rows = queryRows();
@@ -152,8 +157,8 @@ function parseArgs(argv: string[]) {
     const value = argv[i + 1];
     if (key === "--from") { parsed.from = normalizeDate(value); i += 1; }
     else if (key === "--to") { parsed.to = normalizeDate(value); i += 1; }
-    else if (key === "--venue") { parsed.venue = String(value ?? ""); i += 1; }
     else if (key === "--decision") { parsed.decision = String(value ?? "").toUpperCase(); i += 1; }
+    else if (key === "--venue") { parsed.venue = String(value ?? ""); i += 1; }
     else if (key === "--model-version") { parsed.modelVersion = String(value ?? ""); i += 1; }
     else if (key === "--run-kind") { parsed.runKind = String(value ?? ""); i += 1; }
     else if (key === "--limit") { parsed.limit = Math.max(1, Math.min(1000, Number(value))); i += 1; }
