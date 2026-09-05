@@ -8,6 +8,7 @@
  */
 
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = "data/boat.sqlite";
 
@@ -16,8 +17,12 @@ const TRAIN_END = "2024-12-31";   // キャリブレーション導出に使っ�
 const TEST_END = "2025-12-31";    // 独立テスト期間（未使用データ）
 const LIVE_START = "2026-01-01";  // ライブ観察開始
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "MODEL_VALIDATION_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
   print();
