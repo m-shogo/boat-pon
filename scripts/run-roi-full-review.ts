@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 
 const OUT_MD = "reports/roi-full-review.md";
 const OUT_JSON = "reports/roi-full-review.json";
+const ALL_FEATURE_SOURCE = "scripts/search-roi-all-features-lite.ts";
 
 type Metric = { n?: number; hits?: number; roi?: number; roiExMaxHit?: number };
 type EvalLike = {
@@ -25,6 +26,8 @@ type GenericReport = {
   paperConsensus?: EvalLike[];
   riskyLabels?: string[];
 };
+
+assertRealizedPayoutMetricBasis();
 
 const commands: Array<[string, string[]]> = [
   ["pnpm", ["typecheck:scripts"]],
@@ -65,6 +68,7 @@ const report = {
     changesSettings: false,
     changesProductionDecisionLogic: false,
     reportsOnly: true,
+    metricBasis: "official_payout_yen",
   },
   executed,
   baseline,
@@ -85,6 +89,18 @@ writeFileSync(OUT_MD, renderMd(report));
 console.log(`[roi-full-review] finalDecision=${finalDecision}`);
 console.log(`[roi-full-review] wrote ${OUT_MD}`);
 console.log(`[roi-full-review] wrote ${OUT_JSON}`);
+
+function assertRealizedPayoutMetricBasis() {
+  const source = readFileSync(ALL_FEATURE_SOURCE, "utf8");
+  const usesQuoteReturn = source.includes("hitOdds.reduce((s, o) => s + o * STAKE_YEN, 0)");
+  const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
+  if (usesQuoteReturn || !usesOfficialPayout) {
+    throw new Error(
+      "ROI_FULL_REVIEW_METRIC_BASIS_UNSAFE: all-feature search still derives return from current_odds quotes. " +
+      "GO/PAPER review is disabled until the search uses official race_payouts.payout_yen with fail-closed settlement coverage.",
+    );
+  }
+}
 
 function decide(autoDecision: string | undefined, allFeatureStable: EvalLike[], autoStable: EvalLike[], autoPaper: EvalLike[]) {
   const strongAllFeature = allFeatureStable.filter((x) =>
