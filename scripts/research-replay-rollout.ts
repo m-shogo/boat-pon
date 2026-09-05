@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   runF0RReadiness,
@@ -10,6 +10,7 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 const root = process.cwd();
 const dryRun = process.argv.includes("--dry-run");
 const tempRootArg = process.argv.find((arg) => arg.startsWith("--root="));
+const primarySourceArg = process.argv.find((arg) => arg.startsWith("--primary-source="));
 const deploymentRoot = tempRootArg ? tempRootArg.slice("--root=".length) : root;
 const sidecarPath = dryRun
   ? join(deploymentRoot, "tmp", "research-replay-dry-run.sqlite")
@@ -17,8 +18,10 @@ const sidecarPath = dryRun
 const rawRoot = dryRun
   ? join(deploymentRoot, "tmp", "research-replay-dry-run-raw")
   : join(deploymentRoot, "data", "research-replay-raw");
-let primarySourcePath = join(root, "data", "boat.sqlite");
-if (dryRun && !existsSync(primarySourcePath)) {
+let primarySourcePath = primarySourceArg
+  ? resolve(primarySourceArg.slice("--primary-source=".length))
+  : join(root, "data", "boat.sqlite");
+if (dryRun && !primarySourceArg && !existsSync(primarySourcePath)) {
   primarySourcePath = join(deploymentRoot, "tmp", "primary-fixture.sqlite");
   mkdirSync(join(deploymentRoot, "tmp"), { recursive: true, mode: 0o700 });
   const fixture = new DatabaseSync(primarySourcePath);
