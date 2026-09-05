@@ -5,6 +5,7 @@ import {
   runF0RReadiness,
   writeF0RReadinessReports,
 } from "../src/research-replay/readiness";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const root = process.cwd();
 const dryRun = process.argv.includes("--dry-run");
@@ -26,6 +27,12 @@ if (dryRun && !existsSync(primarySourcePath)) {
     INSERT INTO app_settings VALUES ('fixture_mode', 'read_only_fingerprint');
   `);
   fixture.close();
+}
+if (existsSync(primarySourcePath)) {
+  primarySourcePath = assertCanonicalSingleLinkRegularFile(
+    primarySourcePath,
+    "F0R_PRIMARY_SOURCE_IDENTITY_INVALID",
+  );
 }
 const backupDirectory = dryRun
   ? join(deploymentRoot, "tmp", "research-replay-backups")
