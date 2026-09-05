@@ -2,6 +2,7 @@
  * 正しい買い目別オッズとモデルtop-1を使うread-only shadow backtest。
  * DB/app_settings/production decisionは変更しない。
  */
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   getSettings,
@@ -16,6 +17,7 @@ import { normalizeMarketResidual, selectBlendedMarketCandidate } from "../src/do
 import { filterComparableResultsForDate } from "../src/domain/raceRegime";
 import { summarizeShadowTop1, type ShadowTop1Row, type ShadowTop1Summary } from "../src/domain/shadowTop1";
 import type { BetCandidate, BudgetRule } from "../src/domain/types";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const MARKET_VARIANTS = [
   { id: "market-only-rank", modelWeight: 0, minEv: 0 },
@@ -30,7 +32,11 @@ const MARKET_VARIANTS = [
 ] as const;
 
 const args = parseArgs(process.argv.slice(2));
-const db = new DatabaseSync("data/boat.sqlite", { readOnly: true });
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  resolve("data/boat.sqlite"),
+  "SHADOW_TOP1_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
