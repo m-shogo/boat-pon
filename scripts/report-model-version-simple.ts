@@ -10,6 +10,7 @@
 
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
@@ -19,8 +20,12 @@ if (!existsSync(DB_PATH)) {
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "MODEL_VERSION_REPORT_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
   const rows = queryRows();
