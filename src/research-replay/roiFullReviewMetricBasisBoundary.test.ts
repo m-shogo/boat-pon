@@ -6,8 +6,11 @@ const reviewSource = readFileSync("scripts/run-roi-full-review.ts", "utf8");
 const personaSource = readFileSync("scripts/roi-pro-persona-review.ts", "utf8");
 const allFeatureSource = readFileSync("scripts/search-roi-all-features-lite.ts", "utf8");
 
-test("ROI full review fails closed while all-feature search uses quote-based returns", () => {
-  assert.match(allFeatureSource, /hitOdds\.reduce\(\(s, o\) => s \+ o \* STAKE_YEN, 0\)/);
+test("ROI full review accepts only realized-payout all-feature search output", () => {
+  assert.doesNotMatch(allFeatureSource, /hitOdds\.reduce\(\(s, o\) => s \+ o \* STAKE_YEN, 0\)/);
+  assert.match(allFeatureSource, /metricBasis: "official_payout_yen"/);
+  assert.match(allFeatureSource, /FROM race_payouts rp/);
+  assert.match(allFeatureSource, /rp\.payout_yen/);
   assert.match(reviewSource, /assertRealizedPayoutMetricBasis\(\);/);
   assert.match(reviewSource, /ROI_FULL_REVIEW_METRIC_BASIS_UNSAFE/);
   assert.match(reviewSource, /ROI_FULL_REVIEW_REPORT_METRIC_BASIS_UNSAFE/);
