@@ -144,7 +144,7 @@ function printReport(payload: { generatedAt: string; range: { from: string; to: 
   console.log("\n| from | to | status | rows | BUY | settledBUY | hits | missingPayoutHits | hitRate | ROI | avgEV |");
   console.log("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
   for (const row of payload.windows) {
-    console.log(`| ${row.from} | ${row.to} | ${row.status} | ${row.rows} | ${row.buy} | ${row.settledBuy} | ${row.hits} | ${pct(row.hitRate)} | ${fmt(row.roi)} | ${fmt(row.avgEv)} |`);
+    console.log(`| ${row.from} | ${row.to} | ${row.status} | ${row.rows} | ${row.buy} | ${row.settledBuy} | ${row.hits} | ${row.missingPayoutHits} | ${pct(row.hitRate)} | ${fmt(row.roi)} | ${fmt(row.avgEv)} |`);
   }
 }
 
