@@ -4,13 +4,18 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/root-methodology-audit.md";
 const OUT_JSON = "reports/root-methodology-audit.json";
 if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ROOT_METHODOLOGY_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
 type CountRow = { n: number; races?: number; min_date?: string | null; max_date?: string | null };
