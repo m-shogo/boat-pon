@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 
 const OUT_MD = "reports/roi-full-review.md";
 const OUT_JSON = "reports/roi-full-review.json";
+const ALL_FEATURE_SOURCE = "scripts/search-roi-all-features-lite.ts";
 
 type Metric = { n?: number; hits?: number; roi?: number; roiExMaxHit?: number };
 type EvalLike = {
@@ -17,6 +18,7 @@ type EvalLike = {
   warnings?: string[];
 };
 type GenericReport = {
+  safety?: { metricBasis?: string };
   baseline?: Metric;
   counts?: Record<string, number>;
   rankings?: Record<string, EvalLike[]>;
@@ -25,6 +27,8 @@ type GenericReport = {
   paperConsensus?: EvalLike[];
   riskyLabels?: string[];
 };
+
+assertRealizedPayoutMetricBasis();
 
 const commands: Array<[string, string[]]> = [
   ["pnpm", ["typecheck:scripts"]],
@@ -48,6 +52,7 @@ for (const [bin, args] of commands) {
 const allFeature = readOptional<GenericReport>("reports/roi-all-feature-search.json");
 const autopilot = readOptional<GenericReport>("reports/roi-autopilot-decision.json");
 const matrix = readOptional<GenericReport>("reports/roi-search-matrix.json");
+assertOfficialPayoutReport(allFeature);
 
 const baseline = allFeature?.baseline ?? autopilot?.baseline ?? matrix?.baseline ?? {};
 const allFeatureStable = allFeature?.rankings?.stability ?? [];
@@ -65,6 +70,7 @@ const report = {
     changesSettings: false,
     changesProductionDecisionLogic: false,
     reportsOnly: true,
+    metricBasis: "official_payout_yen",
   },
   executed,
   baseline,
@@ -85,6 +91,25 @@ writeFileSync(OUT_MD, renderMd(report));
 console.log(`[roi-full-review] finalDecision=${finalDecision}`);
 console.log(`[roi-full-review] wrote ${OUT_MD}`);
 console.log(`[roi-full-review] wrote ${OUT_JSON}`);
+
+function assertRealizedPayoutMetricBasis() {
+  const source = readFileSync(ALL_FEATURE_SOURCE, "utf8");
+  const usesQuoteReturn = source.includes("hitOdds.reduce((s, o) => s + o * STAKE_YEN, 0)");
+  const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
+  const declaresOfficialPayoutBasis = source.includes('metricBasis: "official_payout_yen"');
+  if (usesQuoteReturn || !usesOfficialPayout || !declaresOfficialPayoutBasis) {
+    throw new Error(
+      "ROI_FULL_REVIEW_METRIC_BASIS_UNSAFE: all-feature search still derives return from current_odds quotes or lacks official payout metadata. " +
+      "GO/PAPER review is disabled until the search uses official race_payouts.payout_yen with fail-closed settlement coverage.",
+    );
+  }
+}
+
+function assertOfficialPayoutReport(report: GenericReport | null) {
+  if (!report || report.safety?.metricBasis !== "official_payout_yen") {
+    throw new Error("ROI_FULL_REVIEW_REPORT_METRIC_BASIS_UNSAFE: all-feature report is missing verified official_payout_yen metadata");
+  }
+}
 
 function decide(autoDecision: string | undefined, allFeatureStable: EvalLike[], autoStable: EvalLike[], autoPaper: EvalLike[]) {
   const strongAllFeature = allFeatureStable.filter((x) =>

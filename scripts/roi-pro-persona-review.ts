@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
 const ALL_FEATURE_JSON = "reports/roi-all-feature-search.json";
+const ALL_FEATURE_SOURCE = "scripts/search-roi-all-features-lite.ts";
 const OUT_MD = "reports/roi-pro-persona-review.md";
 const OUT_JSON = "reports/roi-pro-persona-review.json";
 
@@ -22,6 +23,7 @@ type Eval = {
 };
 type AllFeatureReport = {
   generatedAt: string;
+  safety?: { metricBasis?: string };
   baseline: Metric;
   counts: Record<string, number>;
   rankings: Record<string, Eval[]>;
@@ -79,12 +81,15 @@ const personas: Persona[] = [
   },
 ];
 
+assertRealizedPayoutMetricBasis();
+
 if (!existsSync(ALL_FEATURE_JSON)) {
   console.log("[roi-pro-persona-review] all-feature report not found. generating...");
   execFileSync("pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"], { stdio: "inherit" });
 }
 
 const allFeature = JSON.parse(readFileSync(ALL_FEATURE_JSON, "utf8")) as AllFeatureReport;
+assertOfficialPayoutReport(allFeature);
 const allItems = uniqueByLabel([
   ...(allFeature.rankings.stability ?? []),
   ...(allFeature.rankings.improvement ?? []),
@@ -113,6 +118,7 @@ const finalDecision = consensus.some((x) => x.personas >= 2 && x.bestImprovement
 
 const report = {
   generatedAt: new Date().toISOString(),
+  safety: { metricBasis: "official_payout_yen" },
   baseline: allFeature.baseline,
   finalDecision,
   counts: allFeature.counts,
@@ -127,6 +133,24 @@ writeFileSync(OUT_MD, renderMarkdown(report));
 console.log(`[roi-pro-persona-review] finalDecision=${finalDecision}`);
 console.log(`[roi-pro-persona-review] wrote ${OUT_MD}`);
 console.log(`[roi-pro-persona-review] wrote ${OUT_JSON}`);
+
+function assertRealizedPayoutMetricBasis() {
+  const source = readFileSync(ALL_FEATURE_SOURCE, "utf8");
+  const usesQuoteReturn = source.includes("hitOdds.reduce((s, o) => s + o * STAKE_YEN, 0)");
+  const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
+  const declaresOfficialPayoutBasis = source.includes('metricBasis: "official_payout_yen"');
+  if (usesQuoteReturn || !usesOfficialPayout || !declaresOfficialPayoutBasis) {
+    throw new Error(
+      "ROI_PERSONA_REVIEW_METRIC_BASIS_UNSAFE: all-feature search does not yet provide verified official_payout_yen ROI; persona PAPER verdicts are disabled",
+    );
+  }
+}
+
+function assertOfficialPayoutReport(report: AllFeatureReport) {
+  if (report.safety?.metricBasis !== "official_payout_yen") {
+    throw new Error("ROI_PERSONA_REVIEW_REPORT_METRIC_BASIS_UNSAFE: all-feature report lacks official_payout_yen metadata");
+  }
+}
 
 function buildConsensus(items: Eval[]) {
   const map = new Map<string, { label: string; personas: number; bestImprovement: number; remainingN: number; bestRoi: number; warnings: string[] }>();
