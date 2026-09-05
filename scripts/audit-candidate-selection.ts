@@ -25,11 +25,16 @@ import {
   addCandidateSelectionAuditDays,
   parseCandidateSelectionAuditOptions,
 } from "../src/research-replay/candidateSelectionAuditOptions";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import type { BetCandidate, Decision } from "../src/domain/types";
 
 const DB_PATH = "data/boat.sqlite";
 const args = parseCandidateSelectionAuditOptions(process.argv.slice(2), todayJst());
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "CANDIDATE_SELECTION_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
