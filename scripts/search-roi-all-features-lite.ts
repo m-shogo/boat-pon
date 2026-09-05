@@ -12,6 +12,13 @@ const STAKE_YEN = 100;
 const MIN_N = Number(process.env.ROI_ALL_MIN_N ?? 50);
 const MIN_REMAINING = Number(process.env.ROI_ALL_MIN_REMAINING ?? 300);
 const MAX_RULES = Number(process.env.ROI_ALL_MAX_RULES ?? 5000);
+const POST_OUTCOME_FEATURE_KEYS = new Set([
+  "result",
+  "payout_yen",
+  "hit_payout_yen",
+  "popularity",
+  "returned",
+]);
 
 type Raw = Record<string, unknown>;
 type Value = string | number | boolean | null;
@@ -50,7 +57,7 @@ try {
     const report = {
       generatedAt: new Date().toISOString(),
       dbPath: "verified-primary-database",
-      safety: { readOnly: true, queryOnly: true, writesDb: false, changesSettings: false, metricBasis: "official_payout_yen", unitStakeYen: STAKE_YEN },
+      safety: { readOnly: true, queryOnly: true, writesDb: false, changesSettings: false, metricBasis: "official_payout_yen", unitStakeYen: STAKE_YEN, postOutcomeFeaturesExcluded: true },
       payoutCompleteness,
       baseline,
       baselineSplit,
@@ -153,7 +160,6 @@ function loadRows(): Row[] {
     add(f, "head_equipment", equipment.get(`${raceId}:${head}`) ?? {});
     add(f, "head_official", official.get(`${raceId}:${head}`) ?? {});
     f.derived_head = head;
-    f.derived_result_match = hit;
     f.derived_month = String(x.date).slice(0, 7);
     f.derived_selection = selection;
     f.derived_race_no = primitive(x.race_no);
@@ -180,7 +186,7 @@ function addSelectionSummary(f: Record<string, Value>, raceId: string, selection
 
 function add(target: Record<string, Value>, prefix: string, source: Raw) {
   for (const [key, value] of Object.entries(source)) {
-    if (key === "raw_json") continue;
+    if (key === "raw_json" || POST_OUTCOME_FEATURE_KEYS.has(key)) continue;
     const v = primitive(value);
     if (v == null) continue;
     target[`${prefix}_${key}`] = v;
@@ -284,7 +290,7 @@ function metric(rows: Row[]): Metric {
   return { n: rows.length, hits: hits.length, hitRate: rows.length ? hits.length / rows.length : 0, avgOdds: avg(rows.map((r) => r.currentOdds)), stakeYen, returnYen, roi: stakeYen ? returnYen / stakeYen : 0, maxHitOdds, maxHitPayoutYen, roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitPayoutYen) / stakeYen : 0 };
 }
 function splitMetric(rows: Row[], keep: (row: Row) => boolean) { const trainEnd = Math.floor(rows.length * 0.7); const validationEnd = Math.floor(rows.length * 0.9); return { train: metric(rows.slice(0, trainEnd).filter(keep)), validation: metric(rows.slice(trainEnd, validationEnd).filter(keep)), test: metric(rows.slice(validationEnd).filter(keep)) }; }
-function mdReport(report: { generatedAt: string; dbPath: string; baseline: Metric; counts: Record<string, number>; rankings: Record<string, Eval[]> }) { return `# ROI All Feature Search\n\nGenerated: ${report.generatedAt}\nDB: \`${report.dbPath}\`\nMetric basis: official payout yen / ¥${STAKE_YEN} unit stake\n\n## Baseline\n\nROI ${pct(report.baseline.roi)} / n=${report.baseline.n} / ROI ex max hit ${pct(report.baseline.roiExMaxHit)}\n\n## Counts\n\n${Object.entries(report.counts).map(([k, v]) => `- ${k}: ${v}`).join("\n")}\n\n## Stability\n\n${table(report.rankings.stability)}\n\n## Improvement\n\n${table(report.rankings.improvement)}\n\n## Risky\n\n${table(report.rankings.risky)}\n`; }
+function mdReport(report: { generatedAt: string; dbPath: string; baseline: Metric; counts: Record<string, number>; rankings: Record<string, Eval[]> }) { return `# ROI All Feature Search\n\nGenerated: ${report.generatedAt}\nDB: \`${report.dbPath}\`\nMetric basis: official payout yen / ¥${STAKE_YEN} unit stake\nPost-outcome feature fields: excluded\n\n## Baseline\n\nROI ${pct(report.baseline.roi)} / n=${report.baseline.n} / ROI ex max hit ${pct(report.baseline.roiExMaxHit)}\n\n## Counts\n\n${Object.entries(report.counts).map(([k, v]) => `- ${k}: ${v}`).join("\n")}\n\n## Stability\n\n${table(report.rankings.stability)}\n\n## Improvement\n\n${table(report.rankings.improvement)}\n\n## Risky\n\n${table(report.rankings.risky)}\n`; }
 function table(items: Eval[]) { if (!items.length) return "None\n"; return `| judgement | rule | removedN | removedROI | remainingN | remainingROI | improvement | train | validation | test | warnings |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|\n${items.slice(0, 40).map((x) => `| ${x.judgement} | ${esc(x.label)} | ${x.removed.n} | ${pct(x.removed.roi)} | ${x.remaining.n} | ${pct(x.remaining.roi)} | ${pct(x.improvement)} | ${pct(x.trainRoi)} | ${pct(x.validationRoi)} | ${pct(x.testRoi)} | ${esc(x.warnings.join(", ") || "-")} |`).join("\n")}\n`; }
 function csv(items: Eval[]) { return `judgement,label,feature,removed_n,removed_roi,remaining_n,remaining_roi,improvement,train_roi,validation_roi,test_roi,score,warnings\n${items.map((x) => [x.judgement, x.label, x.feature, x.removed.n, x.removed.roi, x.remaining.n, x.remaining.roi, x.improvement, x.trainRoi, x.validationRoi, x.testRoi, x.score, x.warnings.join("; ")].map(cell).join(",")).join("\n")}\n`; }
 function coverage(rows: Row[]) { return Object.keys(rows[0]?.features ?? {}).map((key) => ({ key, present: rows.filter((r) => r.features[key] != null).length, total: rows.length })).sort((a, b) => b.present - a.present); }
