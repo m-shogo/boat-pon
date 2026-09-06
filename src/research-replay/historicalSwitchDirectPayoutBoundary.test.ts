@@ -42,14 +42,15 @@ for (const c of CASES) {
     assert.equal(pkg.scripts?.[c.alias], `tsx ${c.entry}`);
   });
 
-  test(`${c.alias} payout audit requires exactly one positive official trifecta settlement`, () => {
+  test(`${c.alias} payout audit allows legitimate multi-line trifecta settlements but rejects duplicate or invalid lines`, () => {
     const source = readFileSync(c.auditPath, "utf8");
     assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
     assert.match(source, /PRAGMA query_only = ON/);
     assert.match(source, /rp\.bet_type\s*=\s*'trifecta'/);
     assert.match(source, /GROUP BY rp\.race_id/);
-    assert.match(source, /HAVING COUNT\(\*\) = 1/);
-    assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = 1/);
-    assert.doesNotMatch(source, /SELECT DISTINCT rp\.race_id/);
+    assert.match(source, /HAVING COUNT\(\*\) >= 1/);
+    assert.match(source, /COUNT\(DISTINCT rp\.combination\) = COUNT\(\*\)/);
+    assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = COUNT\(\*\)/);
+    assert.doesNotMatch(source, /HAVING COUNT\(\*\) = 1/);
   });
 }
