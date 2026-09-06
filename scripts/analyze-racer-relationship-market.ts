@@ -9,6 +9,7 @@ import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type ExactaRow = { race_id: string; date: string; venue: string; overround: number; odds14: number; winner: string | null; payout_yen: number | null; wind_speed_mps: number | null; wind_dir: string | null };
 type ProgramRow = { race_id: string; date: string; venue: string; raw_json: string; trifecta: string };
@@ -20,7 +21,8 @@ type OfficialRelationshipRegistry = { relationships: Array<{ relationshipType: s
 const officialRegistry = JSON.parse(readFileSync("docs/official-racer-relationships.json", "utf8")) as OfficialRelationshipRegistry;
 const officialPairs = new Map(officialRegistry.relationships.map(row => [pairKey(row.mentor.registrationNo, row.apprentice.registrationNo), row]));
 
-const db = new DatabaseSync(process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite", { readOnly: true });
+const dbPath = assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite", "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
   const exacta = db.prepare(`
@@ -35,6 +37,7 @@ try {
       AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
     GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL
   `).all() as ExactaRow[];
+  assertPayoutCompleteness(exacta);
   const exactaMap = new Map(exacta.map(row => [row.race_id, row]));
   const programs = db.prepare(`
     SELECT op.race_id, op.date, op.venue, op.raw_json, rr.trifecta
@@ -99,8 +102,10 @@ try {
   console.log(`relationship market screen: exacta=${evaluations.length}`);
 } finally { db.close(); }
 
+function assertPayoutCompleteness(rows: ExactaRow[]): void { const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}}; for(const row of rows){const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;} const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total; if(invalid)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`); }
+function requiredPayout(row: EvalRow): number { if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_MISSING race=${row.race_id}`); return row.payout_yen; }
 function byPeriod(rows: EvalRow[]) { return { discovery: metric(rows.filter(row => row.period === "discovery")), forward: metric(rows.filter(row => row.period === "forward")) }; }
-function metric(rows: EvalRow[]): Metric { const payouts = rows.filter(row => row.hit).map(row => row.payout_yen ?? 0).sort((a, b) => b - a); const n = rows.length; const hits = payouts.length; const expected = rows.reduce((sum, row) => sum + row.implied, 0); const variance = rows.reduce((sum, row) => sum + row.implied * (1-row.implied), 0); const total = payouts.reduce((a,b)=>a+b,0); return { n, hits, edgePp: n ? (hits/n-expected/n)*100 : 0, roi: n ? total/(n*100) : 0, max2HitExclRoi: n>2 ? (total-(payouts[0]??0)-(payouts[1]??0))/((n-2)*100) : 0, zScore: variance>0 ? (hits-expected)/Math.sqrt(variance) : 0 }; }
+function metric(rows: EvalRow[]): Metric { const payouts = rows.filter(row => row.hit).map(requiredPayout).sort((a, b) => b - a); const n = rows.length; const hits = payouts.length; const expected = rows.reduce((sum, row) => sum + row.implied, 0); const variance = rows.reduce((sum, row) => sum + row.implied * (1-row.implied), 0); const total = payouts.reduce((a,b)=>a+b,0); return { n, hits, edgePp: n ? (hits/n-expected/n)*100 : 0, roi: n ? total/(n*100) : 0, max2HitExclRoi: n>2 ? (total-(payouts[0]??0)-(payouts[1]??0))/((n-2)*100) : 0, zScore: variance>0 ? (hits-expected)/Math.sqrt(variance) : 0 }; }
 function applyDay(rows: Array<{ program: UnconventionalProgram; winnerCourse: number }>, pairs: Map<string, PairState>) { for (const row of rows) { const boats=[...row.program.boats]; const winner=boats.find(boat=>boat.course===row.winnerCourse)?.registrationNo??null; for(let i=0;i<boats.length;i++) for(let j=i+1;j<boats.length;j++){const a=boats[i].registrationNo,b=boats[j].registrationNo;if(!a||!b)continue;const key=pairKey(a,b);const state=pairs.get(key)??{meetings:0,wins:new Map<string,number>(),lastWinner:null};state.meetings+=1;if(winner===a||winner===b){state.wins.set(winner,(state.wins.get(winner)??0)+1);state.lastWinner=winner;}pairs.set(key,state);}} }
 function pairKey(a:string,b:string){return a<b?`${a}/${b}`:`${b}/${a}`;}
 function fieldFamiliarity(regs:string[],pairs:Map<string,PairState>){let total=0;for(let i=0;i<regs.length;i++)for(let j=i+1;j<regs.length;j++)total+=pairs.get(pairKey(regs[i],regs[j]))?.meetings??0;return total;}
