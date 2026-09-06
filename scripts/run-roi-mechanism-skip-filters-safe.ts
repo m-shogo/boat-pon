@@ -2,7 +2,7 @@
  * run-roi-mechanism-skip-filters-safe.ts — research-only fail-closed runner
  *
  * Require complete official trifecta settlement coverage before the legacy
- * skip-filter mechanism analyzer emits payout-ROI-based exclusion verdicts.
+ * robustness analyzer emits payout-ROI-based candidate verdicts.
  */
 
 import { spawnSync } from "node:child_process";
@@ -26,7 +26,7 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-roi-mechanism-skip-filters.ts");
+const analysis = run("scripts/analyze-roi-mechanism-skip-filters-raw.ts");
 if (analysis !== 0) {
   console.error("[roi-mechanism-skip-filter-safe-runner] skip-filter analysis failed after a successful payout completeness preflight");
   process.exit(analysis);
