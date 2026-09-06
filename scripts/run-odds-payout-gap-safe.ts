@@ -1,6 +1,5 @@
 /**
- * run-odds-payout-gap-safe.ts — research-only fail-closed runner
- *
+ * odds-payout-gap fail-closed entrypoint implementation.
  * Runs official trifecta settlement completeness validation before the legacy
  * odds-vs-payout analysis. No DB writes, app_settings changes, production
  * decisions, notifications, or betting.
@@ -28,7 +27,7 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-odds-payout-gap.ts");
+const analysis = run("scripts/analyze-odds-payout-gap-raw.ts");
 if (analysis !== 0) {
   console.error("[odds-payout-gap-safe-runner] odds-payout-gap analysis failed after a successful payout completeness preflight");
   process.exit(analysis);
