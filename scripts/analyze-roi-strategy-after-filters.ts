@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/roi-strategy-after-filters.md";
@@ -8,6 +9,7 @@ const STAKE_YEN = 100;
 
 type Row = {
   id: number;
+  raceId: string;
   date: string;
   venue: string;
   raceNo: number;
@@ -43,11 +45,12 @@ type StrategyResult = {
 };
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[analyze-roi-strategy-after-filters] DB not found: ${DB_PATH}`);
+  console.error(`[analyze-roi-strategy-after-filters] DB not found`);
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "ROI_STRATEGY_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 try {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA query_only = ON;");
@@ -64,7 +67,7 @@ try {
 
   const report = {
     generatedAt: new Date().toISOString(),
-    dbPath: DB_PATH,
+    dbIdentity: "verified-canonical-research-db",
     baseline: metric(rows.map((row) => ({ odds: row.currentOdds, hit: row.result === row.selection }))),
     results: results.sort((a, b) => b.metric.roi - a.metric.roi),
   };
@@ -80,7 +83,7 @@ try {
 
 function loadRows(): Row[] {
   const raw = db.prepare(`
-    SELECT dh.id, dh.date, dh.venue, dh.race_no, dh.selection, dh.result, dh.current_odds
+    SELECT dh.id, dh.race_id AS raceId, dh.date, dh.venue, dh.race_no, dh.selection, dh.result, dh.current_odds
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
@@ -92,11 +95,11 @@ function loadRows(): Row[] {
   return raw.map((row) => {
     const selection = String(row.selection);
     const head = Number(selection.split("-")[0]);
-    const key = `${String(row.id)}:${head}`;
-    const byRaceKey = `${String((row as any).race_id)}:${head}`;
-    const rates = mb.get(byRaceKey) ?? mb.get(key) ?? { motor: null, boat: null };
+    const raceId = String(row.raceId);
+    const rates = mb.get(`${raceId}:${head}`) ?? { motor: null, boat: null };
     return {
       id: Number(row.id),
+      raceId,
       date: String(row.date),
       venue: String(row.venue),
       raceNo: Number(row.race_no),
@@ -191,8 +194,8 @@ function metric(items: Array<{ odds: number; hit: boolean }>): Metric {
   };
 }
 
-function renderMd(report: { generatedAt: string; dbPath: string; baseline: Metric; results: StrategyResult[] }) {
-  return `# ROI Strategy After Filters\n\nGenerated: ${report.generatedAt}\nDB: \`${report.dbPath}\`\n\n## Baseline\n\n| n | hits | hitRate | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Ranking\n\n| filter | strategy | tickets | hitRate | ROI | roiExMaxHit | avgTicketsPerRace | warnings |\n|---|---|---:|---:|---:|---:|---:|---|\n${report.results.map((r) => `| ${md(r.filter)} | ${md(r.strategy)} | ${r.metric.n} | ${pct(r.metric.hitRate)} | ${pct(r.metric.roi)} | ${pct(r.metric.roiExMaxHit)} | ${r.avgTicketsPerRace.toFixed(2)} | ${md(r.warnings.join(", ") || "-")} |`).join("\n")}\n`;
+function renderMd(report: { generatedAt: string; dbIdentity: string; baseline: Metric; results: StrategyResult[] }) {
+  return `# ROI Strategy After Filters\n\nGenerated: ${report.generatedAt}\nDB identity: \`${report.dbIdentity}\`\n\n## Baseline\n\n| n | hits | hitRate | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Ranking\n\n| filter | strategy | tickets | hitRate | ROI | roiExMaxHit | avgTicketsPerRace | warnings |\n|---|---|---:|---:|---:|---:|---:|---|\n${report.results.map((r) => `| ${md(r.filter)} | ${md(r.strategy)} | ${r.metric.n} | ${pct(r.metric.hitRate)} | ${pct(r.metric.roi)} | ${pct(r.metric.roiExMaxHit)} | ${r.avgTicketsPerRace.toFixed(2)} | ${md(r.warnings.join(", ") || "-")} |`).join("\n")}\n`;
 }
 
 function highMotor(row: Row) { return (row.venueMotorTop2Rate ?? -1) >= 50; }
