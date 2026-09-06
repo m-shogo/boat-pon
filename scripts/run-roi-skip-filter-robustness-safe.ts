@@ -26,7 +26,7 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-roi-skip-filter-robustness.ts");
+const analysis = run("scripts/analyze-roi-skip-filter-robustness-raw.ts");
 if (analysis !== 0) {
   console.error("[skip-filter-robustness-safe-runner] robustness analysis failed after a successful payout completeness preflight");
   process.exit(analysis);

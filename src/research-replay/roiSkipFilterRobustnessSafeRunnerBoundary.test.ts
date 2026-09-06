@@ -2,21 +2,32 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const runnerSource = readFileSync("scripts/run-roi-skip-filter-robustness-safe.ts", "utf-8");
+const entrypointSource = readFileSync("scripts/analyze-roi-skip-filter-robustness.ts", "utf-8");
+const legacyRunnerSource = readFileSync("scripts/run-roi-skip-filter-robustness-safe.ts", "utf-8");
 const auditSource = readFileSync("scripts/audit-roi-skip-filter-robustness-payout-completeness.ts", "utf-8");
-const analysisSource = readFileSync("scripts/analyze-roi-skip-filter-robustness.ts", "utf-8");
+const analysisSource = readFileSync("scripts/analyze-roi-skip-filter-robustness-raw.ts", "utf-8");
+const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
-test("skip-filter robustness safe runner checks payout completeness before analysis", () => {
-  const preflight = runnerSource.indexOf('run("scripts/audit-roi-skip-filter-robustness-payout-completeness.ts")');
-  const analysis = runnerSource.indexOf('run("scripts/analyze-roi-skip-filter-robustness.ts")');
+test("skip-filter robustness normal entrypoint checks payout completeness before raw analysis", () => {
+  assert.equal(pkg.scripts?.["analyze:roi-skip-robustness"], "tsx scripts/analyze-roi-skip-filter-robustness.ts");
+  const preflight = entrypointSource.indexOf('run("scripts/audit-roi-skip-filter-robustness-payout-completeness.ts")');
+  const analysis = entrypointSource.indexOf('run("scripts/analyze-roi-skip-filter-robustness-raw.ts")');
   assert.ok(preflight >= 0);
   assert.ok(analysis > preflight);
 });
 
-test("skip-filter robustness safe runner fails closed before final verdicts", () => {
-  assert.match(runnerSource, /if \(preflight !== 0\)/);
-  assert.match(runnerSource, /process\.exit\(preflight\)/);
-  assert.ok(runnerSource.indexOf("if (preflight !== 0)") < runnerSource.indexOf('run("scripts/analyze-roi-skip-filter-robustness.ts")'));
+test("skip-filter robustness normal entrypoint fails closed before final verdicts", () => {
+  assert.match(entrypointSource, /if \(preflight !== 0\)/);
+  assert.match(entrypointSource, /process\.exit\(preflight\)/);
+  assert.ok(entrypointSource.indexOf("if (preflight !== 0)") < entrypointSource.indexOf('run("scripts/analyze-roi-skip-filter-robustness-raw.ts")'));
+});
+
+test("legacy skip-filter robustness safe runner also targets raw analysis after one preflight", () => {
+  const preflight = legacyRunnerSource.indexOf('run("scripts/audit-roi-skip-filter-robustness-payout-completeness.ts")');
+  const analysis = legacyRunnerSource.indexOf('run("scripts/analyze-roi-skip-filter-robustness-raw.ts")');
+  assert.ok(preflight >= 0);
+  assert.ok(analysis > preflight);
+  assert.doesNotMatch(legacyRunnerSource, /run\("scripts\/analyze-roi-skip-filter-robustness\.ts"\)/);
 });
 
 test("payout preflight matches the robustness population and remains read-only", () => {
