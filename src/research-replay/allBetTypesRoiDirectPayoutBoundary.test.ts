@@ -2,14 +2,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("all-bet-types payout audit is canonical read-only and requires positive settlement", () => {
+test("all-bet-types payout audit is canonical read-only and requires one positive settlement", () => {
   const source = readFileSync("scripts/audit-all-bet-types-payout-completeness.ts", "utf8");
 
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
-  assert.match(source, /rp\.payout_yen IS NOT NULL/);
-  assert.match(source, /rp\.payout_yen > 0/);
+  assert.match(source, /GROUP BY rp\.race_id, rp\.bet_type/);
+  assert.match(source, /HAVING COUNT\(\*\) = 1/);
+  assert.match(source, /MIN\(rp\.payout_yen\) IS NOT NULL/);
+  assert.match(source, /MIN\(rp\.payout_yen\) > 0/);
+  assert.doesNotMatch(source, /SELECT DISTINCT rp\.race_id, rp\.bet_type/);
   assert.match(source, /ALL_BET_TYPES_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /total <= 0/);
   assert.match(source, /settled !== total/);
