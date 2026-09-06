@@ -12,15 +12,18 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/bet-type-course-edge.md";
 const OUT_JSON = "reports/bet-type-course-edge.json";
 const STAKE = 100;
+const BET_TYPES = ["trifecta", "trio", "exacta", "quinella"] as const;
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(dbPath, { readOnly: true });
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 // ─── racer_course_stats の null 率確認 ──────────────────────────────────────
 
@@ -74,22 +77,34 @@ for (const cs of db.prepare(`
   courseStatsMap.set(`${cs.registration_no}|${cs.course}`, cs);
 }
 
-// payout index
+// payout index + race-level official settlement completeness
 const payoutIndex = new Map<string, number>();
 const returnedSet = new Set<string>();
-for (const p of db.prepare(`
+const settledRaceByType = new Map<string, Set<string>>(BET_TYPES.map(bt => [bt, new Set<string>()]));
+const payoutRows = db.prepare(`
   SELECT race_id, bet_type, combination, payout_yen, returned
   FROM race_payouts WHERE bet_type IN ('trifecta','trio','exacta','quinella','wide')
-`).all() as { race_id: string; bet_type: string; combination: string; payout_yen: number | null; returned: number }[]) {
+`).all() as { race_id: string; bet_type: string; combination: string; payout_yen: number | null; returned: number }[];
+for (const p of payoutRows) {
   const key = `${p.race_id}|${p.bet_type}|${p.combination}`;
-  payoutIndex.set(key, p.payout_yen ?? 0);
+  if (p.payout_yen != null && p.payout_yen > 0) {
+    payoutIndex.set(key, p.payout_yen);
+    settledRaceByType.get(p.bet_type)?.add(p.race_id);
+  }
   if (p.returned) returnedSet.add(key);
 }
 
-function getPayout(raceId: string, bt: string, comb: string) {
-  const key = `${raceId}|${bt}|${comb}`;
-  if (returnedSet.has(key)) return null;
-  return payoutIndex.get(key) ?? 0;
+assertPayoutCompleteness();
+
+function assertPayoutCompleteness(): void {
+  const raceIds = new Set(buyRows.map(row => row.race_id));
+  if (raceIds.size <= 0) throw new Error("BET_TYPE_COURSE_BUY_POPULATION_EMPTY");
+  const coverage = Object.fromEntries(BET_TYPES.map(bt => {
+    const settled = [...raceIds].filter(raceId => settledRaceByType.get(bt)?.has(raceId)).length;
+    return [bt, { total: raceIds.size, settled }];
+  }));
+  const invalid = BET_TYPES.some(bt => coverage[bt].settled !== coverage[bt].total);
+  if (invalid) throw new Error(`BET_TYPE_COURSE_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(coverage)}`);
 }
 
 function sp(a: number, b: number) { return a < b ? `${a}-${b}` : `${b}-${a}`; }
