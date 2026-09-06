@@ -14,6 +14,7 @@ import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type Period = "discovery" | "validation" | "test";
 type RaceRow = {
@@ -58,7 +59,11 @@ const strategyDefs: Array<{ id: string; label: string; strategy?: RivalStrategy;
   { id: "national_worst_placebo", label: "全国勝率最低_placebo", strategy: "national_worst_placebo" },
 ];
 
-const db = new DatabaseSync(process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite", { readOnly: true });
+const dbPath = assertCanonicalSingleLinkRegularFile(
+  process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite",
+  "RESEARCH_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
 try {
@@ -79,6 +84,8 @@ GROUP BY h.race_id
 HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
 ORDER BY h.race_date, h.race_id
 `).all() as RaceRow[];
+  assertPayoutCompleteness(races);
+
   const oddsRows = db.prepare(`
 SELECT h.race_id, h.combination, h.odds
 FROM historical_alternative_odds h
@@ -160,7 +167,7 @@ WHERE exhibition_time IS NOT NULL
           selection,
           implied,
           hit: race.winner === selection,
-          payout: race.winner === selection ? race.payout_yen ?? 0 : 0,
+          payout: race.winner === selection ? requiredPayout(race) : 0,
           venue: race.venue,
         });
       }
@@ -287,6 +294,28 @@ function periodFor(date: string): Period {
   if (date <= "2024-06-30") return "discovery";
   if (date <= "2024-12-31") return "validation";
   return "test";
+}
+
+function assertPayoutCompleteness(rows: RaceRow[]): void {
+  const counts: Record<Period, { total: number; settled: number }> = {
+    discovery: { total: 0, settled: 0 },
+    validation: { total: 0, settled: 0 },
+    test: { total: 0, settled: 0 },
+  };
+  for (const row of rows) {
+    const period = periodFor(row.date);
+    counts[period].total += 1;
+    if (row.winner != null && row.payout_yen != null && row.payout_yen > 0) counts[period].settled += 1;
+  }
+  const invalid = (Object.values(counts)).some((value) => value.total <= 0 || value.settled !== value.total);
+  if (invalid) throw new Error(`ABILITY_MARKET_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);
+}
+
+function requiredPayout(row: RaceRow): number {
+  if (row.payout_yen == null || row.payout_yen <= 0) {
+    throw new Error(`ABILITY_MARKET_EXACTA_PAYOUT_MISSING race=${row.race_id}`);
+  }
+  return row.payout_yen;
 }
 
 function contextsFor(input: {
