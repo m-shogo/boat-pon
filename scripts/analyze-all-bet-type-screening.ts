@@ -19,19 +19,22 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/all-bet-type-screening.md";
 const OUT_JSON = "reports/all-bet-type-screening.json";
 const STAKE = 100;
+const REQUIRED_BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
 
 if (!existsSync(DB_PATH)) {
   console.error(`[screening] DB not found: ${DB_PATH}`);
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(dbPath, { readOnly: true });
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -121,10 +124,30 @@ const payoutRows = db.prepare(`
 
 for (const p of payoutRows) {
   const key = `${p.race_id}|${p.bet_type}|${p.combination}`;
-  payoutIndex.set(key, p.payout_yen ?? 0);
-  if (p.returned === 1) payoutReturnedSet.add(key);
+  if (p.returned === 1) {
+    payoutReturnedSet.add(key);
+  } else {
+    if (p.payout_yen == null || p.payout_yen <= 0) {
+      throw new Error(`ALL_BET_TYPE_SCREENING_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ raceId: p.race_id, betType: p.bet_type })}`);
+    }
+    payoutIndex.set(key, p.payout_yen);
+  }
   if (!payoutRaceByType.has(p.bet_type)) payoutRaceByType.set(p.bet_type, new Set());
   payoutRaceByType.get(p.bet_type)!.add(p.race_id);
+}
+
+assertPayoutCompleteness();
+
+function assertPayoutCompleteness(): void {
+  const raceIds = new Set(rows.map((row) => row.race_id));
+  if (raceIds.size <= 0) throw new Error("ALL_BET_TYPE_SCREENING_BUY_POPULATION_EMPTY");
+  const coverage = Object.fromEntries(REQUIRED_BET_TYPES.map((betType) => {
+    const settled = [...raceIds].filter((raceId) => payoutRaceByType.get(betType)?.has(raceId)).length;
+    return [betType, { total: raceIds.size, settled, missing: raceIds.size - settled }];
+  }));
+  if (REQUIRED_BET_TYPES.some((betType) => coverage[betType].settled !== coverage[betType].total)) {
+    throw new Error(`ALL_BET_TYPE_SCREENING_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(coverage)}`);
+  }
 }
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
@@ -241,11 +264,7 @@ function evaluate(strategy: Strategy): StrategyResult {
     const hasPayoutForRace = raceSetForType.has(raceId);
     if (!hasPayoutForRace) {
       missingCoverageCount++;
-      // coverage 欠損レースは「外れ扱い」としてROI計算に含む（除外しない）
-      validRaces++;
-      ymStake.set(ym, (ymStake.get(ym) ?? 0) + STAKE);
-      ymReturn.set(ym, ymReturn.get(ym) ?? 0);
-      continue;
+      throw new Error(`ALL_BET_TYPE_SCREENING_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ raceId, betType: betTypeDb })}`);
     }
 
     validRaces++;
@@ -374,7 +393,7 @@ function evaluate(strategy: Strategy): StrategyResult {
     roiExMax5Hits,
     coverageRate,
     missingCoverageCount,
-    missingCoverageNote: "coverage欠損レースは外れ扱い（ステークに含む、回収ゼロ）でROI計算に含む",
+    missingCoverageNote: "coverage欠損はfail-closed（ROI・ranking・deep-dive候補を生成しない）",
     missingPayoutCount: missingCount,
     returnedCount,
     trainROI,
@@ -487,7 +506,7 @@ ${results
 | 良好月数(≥100%) | ${s.goodMonths} |
 | 不調月数(<80%) | ${s.badMonths} |
 | payout coverage率 | ${pct(s.coverageRate)} (${s.missingCoverageCount}件欠損) |
-| coverage欠損の扱い | 外れ扱い（ROI計算に含む・回収ゼロ） |
+| coverage欠損の扱い | fail-closed（ROI計算前に停止） |
 | returned 除外 | ${s.returnedCount} |
 | **判定** | **${s.verdict}** |
 
