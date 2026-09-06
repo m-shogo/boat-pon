@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 test("review summary derives decision ROI from official payouts and fails closed on missing hit payouts", () => {
-  const source = readFileSync("scripts/report-review-summary.ts", "utf8");
+  const source = readFileSync("scripts/report-review-summary-raw.ts", "utf8");
 
   assert.match(source, /FROM race_payouts rp/);
   assert.match(source, /rp\.payout_yen \/ 100\.0/);
