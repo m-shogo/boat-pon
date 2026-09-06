@@ -11,6 +11,7 @@ import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type Row = {
   race_id: string;
@@ -29,10 +30,14 @@ type EvalRow = Row & { period: "discovery" | "forward"; title: string; flags: st
 type Metric = { n: number; hits: number; edgePp: number; roi: number; max2HitExclRoi: number };
 
 const categories = EVENT_CONTEXT_CATEGORIES;
+const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 
-const db = new DatabaseSync(process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite", { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
+  assertSettlementCompleteness();
+
   const rows = db.prepare(`
     SELECT h.race_id, h.race_date AS date, h.venue, op.race_no, op.raw_json,
       SUM(1.0/h.odds) AS overround,
@@ -107,6 +112,56 @@ try {
   db.close();
 }
 
+function assertSettlementCompleteness(): void {
+  const rows = db.prepare(`
+    WITH market_population AS (
+      SELECT h.race_id, h.race_date AS date
+      FROM historical_alternative_odds h
+      JOIN official_programs op ON op.race_id = h.race_id
+      WHERE h.bet_type = 'exacta'
+        AND ${historicalExactaCanonicalSourcePredicate("h")}
+        AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+        AND NOT EXISTS (
+          SELECT 1 FROM race_entries re
+          WHERE re.race_id = h.race_id AND re.status_code = 'F'
+        )
+      GROUP BY h.race_id
+      HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
+        AND MAX(CASE WHEN h.combination = '1-4' THEN h.odds END) IS NOT NULL
+    ), settlement AS (
+      SELECT race_id,
+        MAX(CASE WHEN payout_yen IS NOT NULL AND payout_yen > 0 THEN 1 ELSE 0 END) AS settled
+      FROM race_payouts
+      WHERE bet_type = 'exacta'
+      GROUP BY race_id
+    )
+    SELECT
+      CASE WHEN p.date <= '2024-12-31' THEN 'discovery' ELSE 'forward' END AS period,
+      COUNT(*) AS total,
+      SUM(COALESCE(s.settled, 0)) AS settled
+    FROM market_population p
+    LEFT JOIN settlement s ON s.race_id = p.race_id
+    GROUP BY period
+    ORDER BY period
+  `).all() as Array<{ period: string; total: number; settled: number }>;
+
+  const byPeriod = Object.fromEntries(["discovery", "forward"].map(period => {
+    const row = rows.find(candidate => candidate.period === period);
+    const total = Number(row?.total ?? 0);
+    const settled = Number(row?.settled ?? 0);
+    return [period, { total, settled, missing: total - settled }];
+  }));
+
+  const invalid = ["discovery", "forward"].some(period => {
+    const { total, settled, missing } = byPeriod[period];
+    return !Number.isInteger(total) || !Number.isInteger(settled) || total <= 0 || settled !== total || missing !== 0;
+  });
+
+  if (invalid) {
+    throw new Error(`EVENT_MARKET_CONTEXT_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(byPeriod)}`);
+  }
+}
+
 function readEventTitle(raceId: string, date: string) {
   const path = `data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;
   if (!existsSync(path)) return "";
@@ -120,10 +175,16 @@ function isTopRival(program: UnconventionalProgram, course: number) {
 }
 function byPeriod(rows: EvalRow[]) { return { discovery: metric(rows.filter(row => row.period === "discovery")), forward: metric(rows.filter(row => row.period === "forward")) }; }
 function metric(rows: EvalRow[]): Metric {
-  const payouts = rows.filter(row => row.hit).map(row => row.payout_yen ?? 0).sort((a, b) => b - a);
+  const payouts = rows.filter(row => row.hit).map(row => requiredPayout(row)).sort((a, b) => b - a);
   const total = payouts.reduce((sum, payout) => sum + payout, 0);
   const expected = rows.reduce((sum, row) => sum + row.implied, 0);
   return { n: rows.length, hits: payouts.length, edgePp: rows.length ? (payouts.length - expected) / rows.length * 100 : 0, roi: rows.length ? total / (rows.length * 100) : 0, max2HitExclRoi: rows.length > 2 ? (total - (payouts[0] ?? 0) - (payouts[1] ?? 0)) / ((rows.length - 2) * 100) : 0 };
+}
+function requiredPayout(row: EvalRow): number {
+  if (row.payout_yen === null || row.payout_yen <= 0) {
+    throw new Error(`EVENT_MARKET_CONTEXT_HIT_PAYOUT_MISSING race=${row.race_id}`);
+  }
+  return row.payout_yen;
 }
 function pct(value: number) { return `${(value * 100).toFixed(1)}%`; }
 function cell(value: Metric) { return `${value.n} / ${value.edgePp >= 0 ? "+" : ""}${value.edgePp.toFixed(2)}pt / ${pct(value.roi)} / ${pct(value.max2HitExclRoi)}`; }
