@@ -8,6 +8,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/bet-type-selector-summary.md";
@@ -15,8 +16,9 @@ const OUT_JSON = "reports/bet-type-selector-summary.json";
 const STAKE = 100;
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(dbPath, { readOnly: true });
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 // ─── 各レポートの JSON を読み込む ─────────────────────────────────────────────
 
@@ -75,6 +77,8 @@ for (const s of screeningData?.strategies ?? []) {
 // 有望候補の特定（相対的に良い順）
 const sortedByROI = [...(screeningData?.strategies ?? [])].sort((a,b) => b.ROI - a.ROI);
 const deepDiveBestROI = sortedByROI[0]?.ROI ?? 0;
+const bestOverall = sortedByROI[0];
+const allScreenedBelowBreakEven = sortedByROI.length > 0 && sortedByROI.every((s) => s.ROI < 100);
 
 // リスク要因から条件を抽出
 const riskGroups = riskData?.riskGroups ?? [];
@@ -105,8 +109,8 @@ const w = screeningMap.get("拡連複");
 
 selectorRules.push({
   condition: "全体デフォルト（条件絞り込みなし）",
-  recommendedBetType: "2連複（quinella）",
-  rationale: `全5券種中 ROI が最も高い (${q?.ROI ?? "-"}%) ただし全体的に ROI < 100% のため慎重。的中率が高く(${q?.hitRate?.toFixed(1) ?? "-"}%)安定感あり。`,
+  recommendedBetType: bestOverall?.betType ?? "判断不能",
+  rationale: `全${sortedByROI.length}券種中 ROI が最も高い (${bestOverall?.ROI ?? "-"}%)。ただしROIが100%未満なら収益候補とは扱わない。`,
   evidenceROI: `2連複: ${q?.ROI ?? "-"}% / 2連単: ${e?.ROI ?? "-"}% / 3連複: ${t?.ROI ?? "-"}% / 3連単: ${tf?.ROI ?? "-"}%`,
   confidence: "低",
 });
@@ -239,7 +243,7 @@ ${sortedByROI.map((s, i) =>
   `| ${i+1} | ${s.betType} | **${s.ROI}%** | ${s.roiExMaxHit}% | ${s.hits} | ${pct(s.hitRate)} | ${s.verdict} |`
 ).join("\n")}
 
-> 全5券種とも ROI < 100%。現行 selection の期待値自体が課題。
+> ${allScreenedBelowBreakEven ? `分析済み${sortedByROI.length}券種はいずれも ROI < 100%。券種変換だけでは収益候補にならない。` : `ROI 100%以上を含むため、各券種のrobustnessとforward結果を個別に確認する。`}
 > 単勝・複勝: race_payouts に存在しないため除外。
 
 ## 3. 有望券種ランキング（相対比較）
@@ -310,7 +314,7 @@ ${[
 ### 今すぐ有望
 ${finalVerdict["今すぐ有望"].length > 0 ?
   finalVerdict["今すぐ有望"].map(b => `- **${b}**`).join("\n") :
-  "- **なし** — 全5券種でROI < 100%。現時点で「今すぐ有望」な券種は存在しない。"}
+  `- **なし** — ${sortedByROI.length > 0 ? `分析済み${sortedByROI.length}券種で「今すぐ有望」判定なし。` : "screeningデータなし。"}`}
 
 ### 追加検証候補
 ${finalVerdict["追加検証候補"].length > 0 ?
@@ -338,16 +342,10 @@ ${finalVerdict["危険/過学習"].length > 0 ?
 
 ## 率直な所見
 
-現行 BUY 選択（6,260レース）は **全5券種でROI < 80%** であり、
-券種を変えても根本的な問題（selection の期待値不足）は解決しない。
+現行 BUY 選択（${totalBuy.toLocaleString()}レース）の全体ROI首位は **${bestOverall?.betType ?? "データなし"}（${bestOverall?.ROI ?? "-"}%）**。
+${allScreenedBelowBreakEven ? "分析済み券種はいずれもROI 100%未満であり、券種を変えるだけでは根本的な期待値問題を解決しない。" : "ROI 100%以上の券種が含まれるため、単純な全滅前提ではなくforward/robustnessを個別に評価する。"}
 
-最も ROI が高い **2連複（77.96%）** でも負けており、
-「券種セレクターで収益を改善できる」という仮説は現時点では支持されない。
-
-ただし以下の条件付きセレクターは追加検証価値がある:
-1. 荒天（風速≥4m/s, 安定板使用）→ 3連複 or 見送り
-2. 展示1位 + 1コース進入 → 3連単を維持（精度が高い条件）
-3. selection の期待値が改善された後に、券種セレクターを上乗せする
+条件付きセレクターは追加検証価値があるが、screening・risk・course各レポートの最新値を根拠に判断し、固定された過去ROIを根拠にしない。
 
 **先に取り組むべきは selection の精度改善であり、券種変換は二次的な最適化である。**
 `;
