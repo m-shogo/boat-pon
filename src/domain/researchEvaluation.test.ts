@@ -128,7 +128,7 @@ test("CLI出力（RuleEvaluationResult）が必須フィールドを持つ", () 
   const result = buildRuleEvaluationResult({
     ruleId: "rule-x",
     rows: [
-      row(1, { result: "1-2-3", currentOdds: 30 }),
+      row(1, { result: "1-2-3", currentOdds: 30, payoutYen: 3000 }),
       row(2),
       row(3, { result: null }),
       row(4, { date: "2027-01-01", result: "1-2-3", currentOdds: 99 }),
@@ -168,21 +168,33 @@ test("payout_yen がある場合は payout_yen ベースのROIを使う", () => 
 
   assert.equal(result.roi, 16.2);
   assert.ok(result.reasonSummary.includes("payout_yen"));
-  assert.ok(!result.warnings.some((warning) => warning.toLowerCase().includes("fallback")));
+  assert.ok(!result.reasonSummary.includes("current_odds"));
 });
 
-test("payout_yen が無い場合はcurrent_oddsへfallbackしwarningを出す", () => {
+test("的中済みなのにpayout_yenが無い場合はcurrent_oddsへfallbackせずfail-closed", () => {
+  assert.throws(
+    () => buildRuleEvaluationResult({
+      ruleId: "rule-missing-official-payout",
+      rows: [row(1, { result: "1-2-3", currentOdds: 30, payoutYen: null })],
+      dataWindowStart: "2026-01-01",
+      dataWindowEnd: "2026-06-01",
+      evaluationRunAt: "2026-06-02T00:00:00+09:00",
+    }),
+    /RESEARCH_OFFICIAL_PAYOUT_COVERAGE_INCOMPLETE/,
+  );
+});
+
+test("外れ済み行はpayout_yenがnullでも公式払戻0円として評価できる", () => {
   const result = buildRuleEvaluationResult({
-    ruleId: "rule-fallback",
-    rows: [row(1, { result: "1-2-3", currentOdds: 30, payoutYen: null })],
+    ruleId: "rule-loss-null-payout",
+    rows: [row(1, { result: "2-1-3", payoutYen: null, currentOdds: 99 })],
     dataWindowStart: "2026-01-01",
     dataWindowEnd: "2026-06-01",
     evaluationRunAt: "2026-06-02T00:00:00+09:00",
   });
 
-  assert.equal(result.roi, 30);
-  assert.ok(result.warnings.some((warning) => warning.includes("lack payout_yen")));
-  assert.ok(result.reasonSummary.includes("current_odds (fallback)"));
+  assert.equal(result.roi, 0);
+  assert.ok(result.reasonSummary.includes("roi basis: payout_yen"));
 });
 
 test("--condition venue=xxx で対象が絞られる", () => {
