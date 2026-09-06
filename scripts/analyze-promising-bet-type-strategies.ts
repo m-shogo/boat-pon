@@ -43,11 +43,13 @@ for (const p of db.prepare(`
   }
   seenSettlementKeys.add(key);
 
-  const isValidSettlement = p.returned === 1 || (p.payout_yen != null && p.payout_yen > 0);
-  if (!isValidSettlement) {
+  const isPositivePayout = p.payout_yen != null && p.payout_yen > 0;
+  if (p.returned !== 1 && !isPositivePayout) {
     throw new Error(`PROMISING_BET_PAYOUT_INVALID_LINE ${key}`);
   }
-  settledRaceByType.get(p.bet_type)?.add(p.race_id);
+  if (isPositivePayout) {
+    settledRaceByType.get(p.bet_type)?.add(p.race_id);
+  }
 }
 
 assertPayoutCompleteness();
