@@ -10,4 +10,4 @@ function run(script: string): void {
 }
 
 run("scripts/audit-all-bet-types-payout-completeness.ts");
-run("scripts/analyze-all-bet-types-roi.ts");
+run("scripts/analyze-all-bet-types-roi-raw.ts");

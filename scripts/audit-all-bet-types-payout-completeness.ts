@@ -37,6 +37,8 @@ try {
       SELECT DISTINCT rp.race_id, rp.bet_type
       FROM race_payouts rp
       WHERE rp.bet_type IN (${betTypes})
+        AND rp.payout_yen IS NOT NULL
+        AND rp.payout_yen > 0
     )
     SELECT
       r.bet_type,
