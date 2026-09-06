@@ -23,6 +23,7 @@ import {
   requireExactaForwardMonitorLockedAt,
   requireExactaForwardMonitorRaceIdentities,
 } from "../src/research-replay/exactaForwardMonitorSafety";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const CANDIDATES_PATH = "data/exacta-forward-candidates.json";
@@ -129,8 +130,9 @@ if (!existsSync(CANDIDATES_PATH)) {
 const candidateFile = JSON.parse(readFileSync(CANDIDATES_PATH, "utf8")) as CandidateFile;
 validateCandidateFile(candidateFile);
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
   const races = loadBaseRaces(candidateFile);
@@ -270,6 +272,26 @@ WHERE bet_type='exacta'
   return map;
 }
 
+function isResolvedExactaSettlement(
+  raceId: string,
+  oddsByRace: Map<string, Map<string, number>>,
+  payoutsByRace: Map<string, PayoutRow[]>,
+): boolean {
+  const rows = payoutsByRace.get(raceId) ?? [];
+  if (rows.length !== 1) return false;
+  const payout = rows[0];
+  return payout.payout_yen != null
+    && payout.payout_yen > 0
+    && oddsByRace.get(raceId)?.has(payout.combination) === true;
+}
+
+function requiredPayout(row: PayoutRow): number {
+  if (row.payout_yen == null || row.payout_yen <= 0) {
+    throw new Error(`EXACTA_FORWARD_PAYOUT_MISSING race=${row.race_id} combination=${row.combination}`);
+  }
+  return row.payout_yen;
+}
+
 function aggregateCandidate(
   candidate: Candidate,
   lockedAt: string,
@@ -283,7 +305,7 @@ function aggregateCandidate(
     const odds = oddsByRace.get(race.race_id)?.get(candidate.combo);
     return race.combo_count === 30 && race.overround != null && race.overround > 0 && odds != null && odds > 0;
   });
-  const resolvedRows = pricedRows.filter((race) => (payoutsByRace.get(race.race_id)?.length ?? 0) > 0);
+  const resolvedRows = pricedRows.filter((race) => isResolvedExactaSettlement(race.race_id, oddsByRace, payoutsByRace));
   const incompleteRows = matched.filter((race) => race.combo_count > 0 && race.combo_count < 30);
   const unpricedRows = matched.filter((race) => {
     const odds = oddsByRace.get(race.race_id)?.get(candidate.combo);
@@ -319,7 +341,7 @@ function aggregateCandidate(
     const win = rows.find((row) => row.combination === candidate.combo);
     if (win) {
       hit += 1;
-      const amount = Number(win.payout_yen ?? 0);
+      const amount = requiredPayout(win);
       payout += amount;
       hitPayouts.push(amount);
     }
@@ -347,7 +369,7 @@ function aggregateCandidate(
       const win = (payoutsByRace.get(race.race_id) ?? []).find((row) => row.combination === candidate.combo);
       if (win) {
         monthHit += 1;
-        monthPayout += Number(win.payout_yen ?? 0);
+        monthPayout += requiredPayout(win);
       }
     }
     const monthActual = subset.length ? monthHit / subset.length : null;
