@@ -5,29 +5,52 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/calibration-stability.md";
 const OUT_JSON = "reports/calibration-stability.json";
 const MODEL = "boatpon-v3-alpha15";
 const BOUNDARY = "2025-01-01";
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+
+if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
 type Row = { id:number; date:string; venue:string; selection:string; estimated_hit_rate:number; current_odds:number|null; result:string|null; payout_yen:number|null };
 type Summary = { n:number; hits:number; hitRate:number|null; estimated:number|null; factor:number|null; roi:number|null; roiExMax:number|null };
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
 const rows = db.prepare(`SELECT id,date,venue,selection,estimated_hit_rate,current_odds,result,payout_yen
   FROM decision_history WHERE decision='BUY' AND run_kind='historical-backfill' AND model_version=? AND bet_type='3連単'
   AND result IS NOT NULL AND result!='' AND returned=0 AND current_odds IS NOT NULL ORDER BY date,id`).all(MODEL) as Row[];
+
+const train = rows.filter(r => r.date < BOUNDARY);
+const forward = rows.filter(r => r.date >= BOUNDARY);
+assertPayoutCompleteness(train, "train");
+assertPayoutCompleteness(forward, "forward");
+
+function assertPayoutCompleteness(input: Row[], period: "train" | "forward"): void {
+  const hits = input.filter(r => r.result === r.selection);
+  const settledHits = hits.filter(r => r.payout_yen != null && r.payout_yen > 0);
+  if (input.length <= 0 || hits.length <= 0 || settledHits.length !== hits.length) {
+    throw new Error(`CALIBRATION_STABILITY_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ period, total: input.length, hits: hits.length, settledHits: settledHits.length, missingHitPayouts: hits.length - settledHits.length })}`);
+  }
+}
+
+function requiredPayout(row: Row): number {
+  if (row.payout_yen == null || row.payout_yen <= 0) {
+    throw new Error(`CALIBRATION_STABILITY_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ id: row.id, date: row.date })}`);
+  }
+  return row.payout_yen;
+}
 
 function summary(input: Row[], excludeMax = false): Summary {
   const usable = excludeMax ? removeMaxHit(input) : input;
   const hits = usable.filter(r => r.result === r.selection);
   const actual = usable.length ? hits.length / usable.length : null;
   const estimated = usable.length ? mean(usable.map(r => r.estimated_hit_rate)) : null;
-  const payouts = hits.map(r => r.payout_yen ?? 0);
+  const payouts = hits.map(requiredPayout);
   const total = payouts.reduce((a,b) => a+b, 0);
   const max = payouts.length ? Math.max(...payouts) : 0;
   const roi = usable.length ? total / (usable.length * 100) : null;
@@ -37,15 +60,13 @@ function summary(input: Row[], excludeMax = false): Summary {
 function removeMaxHit(input: Row[]) {
   const hitIndexes = input.map((r,i) => ({ r,i })).filter(x => x.r.result === x.r.selection);
   if (!hitIndexes.length) return input;
-  const max = hitIndexes.reduce((a,b) => (b.r.payout_yen ?? 0) > (a.r.payout_yen ?? 0) ? b : a);
+  const max = hitIndexes.reduce((a,b) => requiredPayout(b.r) > requiredPayout(a.r) ? b : a);
   return input.filter((_,i) => i !== max.i);
 }
 function mean(v:number[]) { return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; }
 function pct(v:number|null) { return v == null ? "-" : `${(v*100).toFixed(2)}%`; }
 function f(v:number|null) { return v == null ? "-" : v.toFixed(3); }
 
-const train = rows.filter(r => r.date < BOUNDARY);
-const forward = rows.filter(r => r.date >= BOUNDARY);
 const trainAll = summary(train);
 const trainExMax = summary(train, true);
 const forwardAll = summary(forward);
