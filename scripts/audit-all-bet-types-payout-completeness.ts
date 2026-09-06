@@ -38,9 +38,9 @@ try {
       FROM race_payouts rp
       WHERE rp.bet_type IN (${betTypes})
       GROUP BY rp.race_id, rp.bet_type
-      HAVING COUNT(*) = 1
-        AND MIN(rp.payout_yen) IS NOT NULL
-        AND MIN(rp.payout_yen) > 0
+      HAVING COUNT(*) >= 1
+        AND COUNT(DISTINCT rp.combination) = COUNT(*)
+        AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = COUNT(*)
     )
     SELECT
       r.bet_type,
