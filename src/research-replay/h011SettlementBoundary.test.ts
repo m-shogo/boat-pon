@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const source = readFileSync("scripts/run-h011-implied-vs-frequency-safe.ts", "utf8");
+const source = readFileSync("scripts/analyze-h011-implied-vs-frequency.ts", "utf8");
+const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Record<string, string> };
 
 test("H011 verdict cannot run before canonical settlement coverage passes", () => {
+  assert.equal(pkg.scripts?.["analyze:h011-implied-vs-frequency"], "tsx scripts/analyze-h011-implied-vs-frequency.ts");
   assert.match(source, /H011_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
@@ -17,7 +19,7 @@ test("H011 verdict cannot run before canonical settlement coverage passes", () =
   assert.match(source, /winner_h\.combination=rp\.combination/);
 
   const coverageIndex = source.indexOf("H011_EXACTA_PAYOUT_COVERAGE_INCOMPLETE");
-  const analysisIndex = source.indexOf('await import("./analyze-h011-implied-vs-frequency")');
+  const analysisIndex = source.indexOf('await import("./analyze-h011-implied-vs-frequency-raw")');
   assert.ok(coverageIndex >= 0, "settlement coverage gate must exist");
   assert.ok(analysisIndex > coverageIndex, "H011 verdict analysis must not run before settlement coverage passes");
 });
