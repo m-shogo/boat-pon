@@ -43,11 +43,12 @@ try {
         AND dh.selection = '1-2-3'
         AND dh.date >= ?
     ), settled AS (
-      SELECT DISTINCT rp.race_id
+      SELECT rp.race_id
       FROM race_payouts rp
       WHERE rp.bet_type = 'trifecta'
-        AND rp.payout_yen IS NOT NULL
-        AND rp.payout_yen > 0
+      GROUP BY rp.race_id
+      HAVING COUNT(*) = 1
+        AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = 1
     )
     SELECT
       COUNT(*) AS total,
