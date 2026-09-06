@@ -9,8 +9,10 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   assert.equal(pkg.scripts["analyze:promising-bet-types"], "tsx scripts/analyze-promising-bet-type-strategies.ts");
   assert.match(source, /seenSettlementKeys\.has\(key\)/);
   assert.match(source, /PROMISING_BET_PAYOUT_DUPLICATE_COMBINATION/);
-  assert.match(source, /p\.returned === 1 \|\| \(p\.payout_yen != null && p\.payout_yen > 0\)/);
+  assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
+  assert.match(source, /p\.returned !== 1 && !isPositivePayout/);
   assert.match(source, /PROMISING_BET_PAYOUT_INVALID_LINE/);
+  assert.match(source, /if \(isPositivePayout\)/);
   assert.match(source, /settledRaceByType\.get\(p\.bet_type\)\?\.add\(p\.race_id\)/);
   assert.match(source, /assertPayoutCompleteness\(\)/);
   assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-raw\.ts"\)/);
