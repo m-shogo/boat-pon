@@ -6,6 +6,7 @@ import {
   historicalExactaCanonicalSourcePredicate,
   historicalExactaCompleteMarketPredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type DbRow={race_id:string;date:string;combination:string;odds:number;winner:string|null;payout_yen:number|null};
 type Metric={n:number;hits:number;edgePp:number;roi:number;max2HitExclRoi:number};
@@ -25,7 +26,8 @@ const factors=[
   ["decimal7_placebo","オッズ小数第1位が7_placebo","placebo"],
 ] as const;
 
-const db=new DatabaseSync(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite",{readOnly:true});
+const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite","RESEARCH_DB_IDENTITY_INVALID");
+const db=new DatabaseSync(dbPath,{readOnly:true});
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
   const rows=db.prepare(`SELECT h.race_id,h.race_date AS date,h.combination,h.odds,p.combination AS winner,p.payout_yen
@@ -35,6 +37,7 @@ try {
       AND ${historicalExactaCompleteMarketPredicate("h.race_id")}
     ORDER BY h.race_id,h.combination`).all() as DbRow[];
   const byRace=new Map<string,DbRow[]>();for(const row of rows){const race=byRace.get(row.race_id)??[];race.push(row);byRace.set(row.race_id,race);}
+  assertPayoutCompleteness(byRace);
   const evalRows:EvalRow[]=[];const distributions:{oneMass:number;effective:number}[]=[];let evaluatedRaces=0;
   for(const race of byRace.values()){
     const shape=buildExactaMarketShape(race);if(!shape)continue;evaluatedRaces+=1;
@@ -45,7 +48,7 @@ try {
       if(shape.effectiveSelections<12)flags.push("effective_under12");if(shape.effectiveSelections>18)flags.push("effective_over18");
       if(ratio!=null&&ratio>=1.25)flags.push("local_overbought125");if(ratio!=null&&ratio<=.80)flags.push("local_underbought80");
       if(Math.abs(source.odds-Math.round(source.odds))<1e-9)flags.push("integer_odds_placebo");if(Math.round(source.odds*10)%10===7)flags.push("decimal7_placebo");
-      evalRows.push({period:source.date<="2024-12-31"?"discovery":"forward",selection,implied:shape.probabilities.get(selection)!,hit:source.winner===selection,payout:source.payout_yen??0,flags});
+      evalRows.push({period:source.date<="2024-12-31"?"discovery":"forward",selection,implied:shape.probabilities.get(selection)!,hit:source.winner===selection,payout:requiredPayout(source),flags});
     }
   }
   const cells=factors.flatMap(([id,label,group])=>selections.map(selection=>({id,label,group,selection,discovery:metric(evalRows.filter(r=>r.period==="discovery"&&r.selection===selection&&r.flags.includes(id))),forward:metric(evalRows.filter(r=>r.period==="forward"&&r.selection===selection&&r.flags.includes(id)))})));
@@ -57,5 +60,7 @@ try {
   writeFileSync("reports/market-microstructure-screen.md",`${lines.join("\n")}\n`);console.log(`market microstructure: candidates=${byRace.size} evaluated=${evaluatedRaces} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 } finally {db.close();}
 
+function assertPayoutCompleteness(byRace:Map<string,DbRow[]>):void{const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}};for(const race of byRace.values()){const row=race[0];if(!row)continue;const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;}const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total;if(invalid)throw new Error(`MARKET_MICROSTRUCTURE_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);}
+function requiredPayout(row:DbRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`MARKET_MICROSTRUCTURE_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(r=>r.payout).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
 function q(values:number[]){const sorted=[...values].sort((a,b)=>a-b);const at=(p:number)=>sorted[Math.floor((sorted.length-1)*p)]??0;return{p10:at(.1),p50:at(.5),p90:at(.9)};}function fmtQ(v:{p10:number;p50:number;p90:number},pct:boolean){const f=(x:number)=>pct?`${(x*100).toFixed(1)}%`:x.toFixed(1);return`${f(v.p10)} / ${f(v.p50)} / ${f(v.p90)}`;}function pct(v:number){return`${(v*100).toFixed(1)}%`;}function cell(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)} / ${pct(v.max2HitExclRoi)}`;}function short(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)}`;}
