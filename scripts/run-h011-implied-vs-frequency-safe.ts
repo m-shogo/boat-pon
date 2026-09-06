@@ -1,5 +1,5 @@
 /**
- * Fail-closed launcher for analyze-h011-implied-vs-frequency.ts.
+ * Fail-closed H011 implied-vs-frequency entrypoint.
  * Historical closing-odds research only; does not connect to Current BUY, T-5, LINE, public, or betting behavior.
  */
 import { existsSync } from "node:fs";
@@ -91,4 +91,4 @@ try {
   db.close();
 }
 
-await import("./analyze-h011-implied-vs-frequency");
+await import("./analyze-h011-implied-vs-frequency-raw");
