@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const entrypointSource = readFileSync("scripts/analyze-roi-mechanism-skip-filters.ts", "utf-8");
+const legacyRunnerSource = readFileSync("scripts/run-roi-mechanism-skip-filters-safe.ts", "utf-8");
 const auditSource = readFileSync("scripts/audit-roi-mechanism-skip-filter-payout-completeness.ts", "utf-8");
 const analysisSource = readFileSync("scripts/analyze-roi-mechanism-skip-filters-raw.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
@@ -21,6 +22,14 @@ test("ROI mechanism skip-filter normal entrypoint fails closed before exclusion 
   assert.ok(
     entrypointSource.indexOf("if (preflight !== 0)") < entrypointSource.indexOf('run("scripts/analyze-roi-mechanism-skip-filters-raw.ts")'),
   );
+});
+
+test("legacy ROI mechanism safe runner also targets raw analysis after one preflight", () => {
+  const preflight = legacyRunnerSource.indexOf('run("scripts/audit-roi-mechanism-skip-filter-payout-completeness.ts")');
+  const analysis = legacyRunnerSource.indexOf('run("scripts/analyze-roi-mechanism-skip-filters-raw.ts")');
+  assert.ok(preflight >= 0);
+  assert.ok(analysis > preflight);
+  assert.doesNotMatch(legacyRunnerSource, /run\("scripts\/analyze-roi-mechanism-skip-filters\.ts"\)/);
 });
 
 test("ROI mechanism payout preflight matches raw analyzer population and stays read-only", () => {
