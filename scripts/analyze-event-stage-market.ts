@@ -8,6 +8,7 @@ import {
   historicalExactaCanonicalSourcePredicate,
   historicalExactaCompleteMarketPredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type OddsRow={race_id:string;date:string;venue:string;race_type:string|null;combination:string;odds:number;winner:string|null;payout_yen:number|null};
 type EvalRow=OddsRow&{period:"discovery"|"forward";implied:number;hit:boolean;flags:string[]};
@@ -18,9 +19,11 @@ const stages=[
   ["semifinal_day","準優勝戦がある日"],["final_day","優勝戦がある日"],["dream_race","ドリーム戦"],
   ["semifinal_race","準優勝戦"],["final_race","優勝戦"],["fixed_entry","進入固定レース"],
 ] as const;
-
-const db=new DatabaseSync(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite",{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+const DB_PATH=process.env.BOAT_PON_DB_PATH??"data/boat.sqlite";
+const verifiedDbPath=assertCanonicalSingleLinkRegularFile(DB_PATH,"RESEARCH_DB_IDENTITY_INVALID");
+const db=new DatabaseSync(verifiedDbPath,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try{
+  assertSettlementCompleteness();
   const finalDays=new Set((db.prepare("SELECT DISTINCT venue||'/'||date AS key FROM race_conditions WHERE date BETWEEN '2024-01-01' AND '2025-12-31' AND race_type LIKE '%優勝戦%' AND race_type NOT LIKE '%準優勝戦%'").all() as Array<{key:string}>).map(r=>r.key));
   const semifinalDays=new Set((db.prepare("SELECT DISTINCT venue||'/'||date AS key FROM race_conditions WHERE date BETWEEN '2024-01-01' AND '2025-12-31' AND race_type LIKE '%準優勝戦%'").all() as Array<{key:string}>).map(r=>r.key));
   const odds=db.prepare(`SELECT h.race_id,h.race_date AS date,h.venue,c.race_type,h.combination,h.odds,p.combination AS winner,p.payout_yen
@@ -40,7 +43,22 @@ try{
   writeFileSync("reports/event-stage-market-screen.md",`${lines.join("\n")}\n`);console.log(`event stage market: races=${flagsByRace.size} stage=${stageCoverage} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 }finally{db.close();}
 
+function assertSettlementCompleteness(){
+  const coverage=db.prepare(`WITH population AS(
+    SELECT h.race_id,h.race_date AS date FROM historical_alternative_odds h
+    WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+      AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+    GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
+  ),settlement AS(
+    SELECT race_id,MAX(CASE WHEN payout_yen IS NOT NULL AND payout_yen>0 THEN 1 ELSE 0 END) AS settled FROM race_payouts WHERE bet_type='exacta' GROUP BY race_id
+  )SELECT CASE WHEN p.date<='2024-12-31' THEN 'discovery' ELSE 'forward' END AS period,COUNT(*) AS total,SUM(COALESCE(s.settled,0)) AS settled
+    FROM population p LEFT JOIN settlement s ON s.race_id=p.race_id GROUP BY period ORDER BY period`).all() as Array<{period:string;total:number;settled:number}>;
+  const byPeriod=Object.fromEntries(["discovery","forward"].map(period=>{const row=coverage.find(r=>r.period===period),total=Number(row?.total??0),settled=Number(row?.settled??0);return[period,{total,settled,missing:total-settled}];}));
+  const invalid=["discovery","forward"].some(period=>{const{total,settled,missing}=byPeriod[period];return!Number.isInteger(total)||!Number.isInteger(settled)||total<=0||settled!==total||missing!==0;});
+  if(invalid)throw new Error(`EVENT_STAGE_MARKET_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(byPeriod)}`);
+}
 function readStartDate(raceId:string,date:string){const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;if(!existsSync(path))return null;const $=load(readFileSync(path,"utf8"));return parseEventStartDate($(".rname a").first().attr("href")??"");}
 function byPeriod(rows:EvalRow[]){return{discovery:metric(rows.filter(r=>r.period==="discovery")),forward:metric(rows.filter(r=>r.period==="forward"))};}
-function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(r=>r.payout_yen??0).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
+function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(requiredPayout).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
+function requiredPayout(row:EvalRow){if(row.payout_yen===null||row.payout_yen<=0)throw new Error(`EVENT_STAGE_MARKET_HIT_PAYOUT_MISSING race=${row.race_id} selection=${row.combination}`);return row.payout_yen;}
 function pct(v:number){return`${(v*100).toFixed(1)}%`;}function cell(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)} / ${pct(v.max2HitExclRoi)}`;}
