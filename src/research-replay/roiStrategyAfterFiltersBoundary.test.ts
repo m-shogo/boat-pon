@@ -13,9 +13,21 @@ test("ROI strategy analysis verifies canonical DB identity and never emits the p
 });
 
 test("motor and boat enrichment joins by race_id plus selected head course", () => {
-  assert.match(source, /SELECT dh\.id, dh\.race_id AS raceId/);
+  assert.match(source, /dh\.race_id AS raceId/);
   assert.match(source, /const raceId = String\(row\.raceId\)/);
   assert.match(source, /mb\.get\(`\$\{raceId\}:\$\{head\}`\)/);
   assert.doesNotMatch(source, /byRaceKey/);
   assert.doesNotMatch(source, /const key = `\$\{String\(row\.id\)\}:\$\{head\}`/);
+});
+
+test("strategy ROI uses positive official settlement for the actual winning combination", () => {
+  assert.match(source, /settled\.payout_yen > 0/);
+  assert.match(source, /rp\.combination = dh\.result/);
+  assert.match(source, /rp\.payout_yen > 0/);
+  assert.match(source, /ROI_STRATEGY_PAYOUT_COVERAGE_INCOMPLETE/);
+  assert.match(source, /roiBasis: "official-race-payouts"/);
+  assert.match(source, /hit: row\.result === ticket, payoutYen: row\.payoutYen/);
+  assert.match(source, /hitReturns\.reduce\(\(sum, payoutYen\) => sum \+ payoutYen, 0\)/);
+  assert.doesNotMatch(source, /ticketOutcomes\.push\(\{ odds: row\.currentOdds/);
+  assert.doesNotMatch(source, /sum \+ odds \* STAKE_YEN/);
 });
