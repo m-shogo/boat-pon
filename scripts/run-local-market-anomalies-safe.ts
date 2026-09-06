@@ -86,4 +86,4 @@ try {
   db.close();
 }
 
-await import("./analyze-local-market-anomalies.ts");
+await import("./analyze-local-market-anomalies");
