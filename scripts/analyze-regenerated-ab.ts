@@ -8,8 +8,8 @@
  * conclusions.
  *
  * Keep this normal command disabled until realized returns are rebased to the
- * canonical official settlement in `race_payouts.payout_yen` with explicit
- * completeness checks for every evaluated BUY race.
+ * canonical official race_payouts.payout_yen settlement with explicit complete
+ * settlement coverage checks for every evaluated BUY race.
  */
 
 throw new Error(
