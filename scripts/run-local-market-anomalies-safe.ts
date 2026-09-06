@@ -1,5 +1,5 @@
 /**
- * Fail-closed launcher for analyze-local-market-anomalies.ts.
+ * Fail-closed local-market anomaly entrypoint.
  * Historical closing-odds research only. No T-5/private/production/BUY wiring.
  */
 import { existsSync } from "node:fs";
@@ -86,4 +86,4 @@ try {
   db.close();
 }
 
-await import("./analyze-local-market-anomalies");
+await import("./analyze-local-market-anomalies-raw");
