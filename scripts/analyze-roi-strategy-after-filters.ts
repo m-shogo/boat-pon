@@ -16,6 +16,8 @@ type Row = {
   selection: string;
   result: string;
   currentOdds: number;
+  payoutYen: number;
+  marketSettled: boolean;
   venueMotorTop2Rate: number | null;
   venueBoatTop2Rate: number | null;
 };
@@ -44,8 +46,14 @@ type StrategyResult = {
   warnings: string[];
 };
 
+type TicketOutcome = {
+  originalOdds: number;
+  hit: boolean;
+  payoutYen: number;
+};
+
 if (!existsSync(DB_PATH)) {
-  console.error(`[analyze-roi-strategy-after-filters] DB not found`);
+  console.error("[analyze-roi-strategy-after-filters] primary DB missing");
   process.exit(1);
 }
 
@@ -55,6 +63,13 @@ try {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA query_only = ON;");
   const rows = loadRows();
+  if (rows.length === 0) throw new Error("ROI_STRATEGY_POPULATION_EMPTY");
+  const missingSettlement = rows.filter((row) => !row.marketSettled).length;
+  const missingWinningPayout = rows.filter((row) => !(row.payoutYen > 0)).length;
+  if (missingSettlement !== 0 || missingWinningPayout !== 0) {
+    throw new Error(`ROI_STRATEGY_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ rows: rows.length, missingSettlement, missingWinningPayout })}`);
+  }
+
   const filters = buildFilters();
   const results: StrategyResult[] = [];
 
@@ -68,7 +83,8 @@ try {
   const report = {
     generatedAt: new Date().toISOString(),
     dbIdentity: "verified-canonical-research-db",
-    baseline: metric(rows.map((row) => ({ odds: row.currentOdds, hit: row.result === row.selection }))),
+    roiBasis: "official-race-payouts",
+    baseline: metric(rows.map((row) => ({ originalOdds: row.currentOdds, hit: row.result === row.selection, payoutYen: row.payoutYen }))),
     results: results.sort((a, b) => b.metric.roi - a.metric.roi),
   };
 
@@ -83,7 +99,33 @@ try {
 
 function loadRows(): Row[] {
   const raw = db.prepare(`
-    SELECT dh.id, dh.race_id AS raceId, dh.date, dh.venue, dh.race_no, dh.selection, dh.result, dh.current_odds
+    SELECT
+      dh.id,
+      dh.race_id AS raceId,
+      dh.date,
+      dh.venue,
+      dh.race_no,
+      dh.selection,
+      dh.result,
+      dh.current_odds,
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM race_payouts settled
+        WHERE settled.race_id = dh.race_id
+          AND settled.bet_type = dh.bet_type
+          AND settled.returned = 0
+          AND settled.payout_yen > 0
+      ) THEN 1 ELSE 0 END AS market_settled,
+      (
+        SELECT rp.payout_yen
+        FROM race_payouts rp
+        WHERE rp.race_id = dh.race_id
+          AND rp.bet_type = dh.bet_type
+          AND rp.combination = dh.result
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
+        LIMIT 1
+      ) AS winning_payout_yen
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
@@ -106,6 +148,8 @@ function loadRows(): Row[] {
       selection,
       result: String(row.result),
       currentOdds: Number(row.current_odds),
+      payoutYen: Number(row.winning_payout_yen ?? 0),
+      marketSettled: Number(row.market_settled) === 1,
       venueMotorTop2Rate: rates.motor,
       venueBoatTop2Rate: rates.boat,
     };
@@ -140,10 +184,10 @@ function buildFilters(): FilterSet[] {
 }
 
 function evalStrategy(filter: string, strategy: string, rows: Row[], tickets: (row: Row) => string[]): StrategyResult {
-  const ticketOutcomes: Array<{ odds: number; hit: boolean }> = [];
+  const ticketOutcomes: TicketOutcome[] = [];
   for (const row of rows) {
     for (const ticket of tickets(row)) {
-      ticketOutcomes.push({ odds: row.currentOdds, hit: row.result === ticket });
+      ticketOutcomes.push({ originalOdds: row.currentOdds, hit: row.result === ticket, payoutYen: row.payoutYen });
     }
   }
   const m = metric(ticketOutcomes);
@@ -177,25 +221,25 @@ function permutations(parts: string[]) {
   ];
 }
 
-function metric(items: Array<{ odds: number; hit: boolean }>): Metric {
-  const hits = items.filter((item) => item.hit).map((item) => item.odds).sort((a, b) => b - a);
+function metric(items: TicketOutcome[]): Metric {
+  const hitReturns = items.filter((item) => item.hit).map((item) => item.payoutYen).sort((a, b) => b - a);
   const stakeYen = items.length * STAKE_YEN;
-  const returnYen = hits.reduce((sum, odds) => sum + odds * STAKE_YEN, 0);
-  const maxHit = hits[0] ?? 0;
+  const returnYen = hitReturns.reduce((sum, payoutYen) => sum + payoutYen, 0);
+  const maxHitReturn = hitReturns[0] ?? 0;
   return {
     n: items.length,
-    hits: hits.length,
-    hitRate: items.length ? hits.length / items.length : 0,
+    hits: hitReturns.length,
+    hitRate: items.length ? hitReturns.length / items.length : 0,
     stakeYen,
     returnYen,
     roi: stakeYen ? returnYen / stakeYen : 0,
-    roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHit * STAKE_YEN) / stakeYen : 0,
-    avgOdds: items.length ? items.reduce((sum, item) => sum + item.odds, 0) / items.length : 0,
+    roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitReturn) / stakeYen : 0,
+    avgOdds: items.length ? items.reduce((sum, item) => sum + item.originalOdds, 0) / items.length : 0,
   };
 }
 
-function renderMd(report: { generatedAt: string; dbIdentity: string; baseline: Metric; results: StrategyResult[] }) {
-  return `# ROI Strategy After Filters\n\nGenerated: ${report.generatedAt}\nDB identity: \`${report.dbIdentity}\`\n\n## Baseline\n\n| n | hits | hitRate | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Ranking\n\n| filter | strategy | tickets | hitRate | ROI | roiExMaxHit | avgTicketsPerRace | warnings |\n|---|---|---:|---:|---:|---:|---:|---|\n${report.results.map((r) => `| ${md(r.filter)} | ${md(r.strategy)} | ${r.metric.n} | ${pct(r.metric.hitRate)} | ${pct(r.metric.roi)} | ${pct(r.metric.roiExMaxHit)} | ${r.avgTicketsPerRace.toFixed(2)} | ${md(r.warnings.join(", ") || "-")} |`).join("\n")}\n`;
+function renderMd(report: { generatedAt: string; dbIdentity: string; roiBasis: string; baseline: Metric; results: StrategyResult[] }) {
+  return `# ROI Strategy After Filters\n\nGenerated: ${report.generatedAt}\nDB identity: \`${report.dbIdentity}\`\nROI basis: \`${report.roiBasis}\`\n\n## Baseline\n\n| n | hits | hitRate | ROI | roiExMaxHit |\n|---:|---:|---:|---:|---:|\n| ${report.baseline.n} | ${report.baseline.hits} | ${pct(report.baseline.hitRate)} | ${pct(report.baseline.roi)} | ${pct(report.baseline.roiExMaxHit)} |\n\n## Ranking\n\n| filter | strategy | tickets | hitRate | ROI | roiExMaxHit | avgTicketsPerRace | warnings |\n|---|---|---:|---:|---:|---:|---:|---|\n${report.results.map((r) => `| ${md(r.filter)} | ${md(r.strategy)} | ${r.metric.n} | ${pct(r.metric.hitRate)} | ${pct(r.metric.roi)} | ${pct(r.metric.roiExMaxHit)} | ${r.avgTicketsPerRace.toFixed(2)} | ${md(r.warnings.join(", ") || "-")} |`).join("\n")}\n`;
 }
 
 function highMotor(row: Row) { return (row.venueMotorTop2Rate ?? -1) >= 50; }
