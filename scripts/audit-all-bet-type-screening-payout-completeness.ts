@@ -23,9 +23,13 @@ try {
     ), required(bet_type) AS (
       VALUES ${REQUIRED_BET_TYPES.map((betType) => `(${q(betType)})`).join(",")}
     ), settled AS (
-      SELECT DISTINCT rp.race_id, rp.bet_type
+      SELECT rp.race_id, rp.bet_type
       FROM race_payouts rp
       WHERE rp.bet_type IN (${betTypes})
+      GROUP BY rp.race_id, rp.bet_type
+      HAVING COUNT(*) >= 1
+        AND COUNT(*) = COUNT(DISTINCT rp.combination)
+        AND SUM(CASE WHEN rp.returned = 1 OR rp.payout_yen > 0 THEN 0 ELSE 1 END) = 0
     )
     SELECT
       r.bet_type,
