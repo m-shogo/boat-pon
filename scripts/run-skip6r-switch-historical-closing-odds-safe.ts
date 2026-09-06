@@ -10,4 +10,4 @@ function run(script: string): void {
 }
 
 run("scripts/audit-skip6r-historical-payout-completeness.ts");
-run("scripts/analyze-skip6r-switch-historical-closing-odds.ts");
+run("scripts/analyze-skip6r-switch-historical-closing-odds-raw.ts");

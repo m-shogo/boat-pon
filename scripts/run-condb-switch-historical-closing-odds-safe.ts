@@ -12,7 +12,7 @@ execFileSync("pnpm", ["tsx", "scripts/audit-condb-switch-historical-payout-compl
   env,
 });
 
-execFileSync("pnpm", ["tsx", "scripts/analyze-condb-switch-historical-closing-odds.ts"], {
+execFileSync("pnpm", ["tsx", "scripts/analyze-condb-switch-historical-closing-odds-raw.ts"], {
   stdio: "inherit",
   env,
 });

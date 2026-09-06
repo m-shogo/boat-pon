@@ -46,6 +46,8 @@ try {
       SELECT DISTINCT rp.race_id
       FROM race_payouts rp
       WHERE rp.bet_type = 'trifecta'
+        AND rp.payout_yen IS NOT NULL
+        AND rp.payout_yen > 0
     )
     SELECT
       COUNT(*) AS total,
