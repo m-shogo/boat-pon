@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("exacta residual sweep binds both market queries to canonical source and complete-market authority", () => {
-  const source = readFileSync("scripts/analyze-exacta-market-residual-sweep.ts", "utf8");
+test("exacta residual sweep raw analyzer binds both market queries to canonical source and complete-market authority", () => {
+  const source = readFileSync("scripts/analyze-exacta-market-residual-sweep-raw.ts", "utf8");
 
   assert.match(source, /historicalExactaCanonicalSourcePredicate\("hao"\)/);
   assert.match(source, /HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING/);

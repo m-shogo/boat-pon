@@ -32,6 +32,18 @@ test("exacta residual payout audit requires one canonical winning settlement per
   assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = 1/);
 });
 
+test("direct exacta residual entrypoint cannot bypass payout audit", () => {
+  const source = readFileSync("scripts/analyze-exacta-market-residual-sweep.ts", "utf8");
+  const auditIndex = source.indexOf("audit-exacta-market-residual-payout-completeness.ts");
+  const rawIndex = source.indexOf("analyze-exacta-market-residual-sweep-raw.ts");
+  const statusGateIndex = source.indexOf("audit.status !== 0");
+
+  assert.ok(auditIndex >= 0);
+  assert.ok(statusGateIndex > auditIndex);
+  assert.ok(rawIndex > statusGateIndex);
+  assert.doesNotMatch(source, /DatabaseSync/);
+});
+
 test("safe exacta residual runner never starts analysis before payout audit passes", () => {
   const source = readFileSync("scripts/run-exacta-market-residual-sweep-safe.ts", "utf8");
   const auditIndex = source.indexOf("audit-exacta-market-residual-payout-completeness.ts");
