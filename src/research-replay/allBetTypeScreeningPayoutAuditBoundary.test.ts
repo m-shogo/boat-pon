@@ -15,3 +15,16 @@ test("all-bet-type screening payout audit accepts legitimate multi-line settleme
   assert.doesNotMatch(source, /SELECT DISTINCT rp\.race_id, rp\.bet_type/);
   assert.doesNotMatch(source, /COUNT\(\*\) = 1/);
 });
+
+test("normal all-bet-type screening entrypoint cannot bypass payout audit", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+  const runner = readFileSync("scripts/run-all-bet-type-screening-safe.ts", "utf8");
+
+  assert.equal(pkg.scripts["analyze:all-bet-type-screening"], "tsx scripts/run-all-bet-type-screening-safe.ts");
+  assert.match(runner, /run\("scripts\/audit-all-bet-type-screening-payout-completeness\.ts"\)/);
+  assert.match(runner, /run\("scripts\/analyze-all-bet-type-screening\.ts"\)/);
+  assert.ok(
+    runner.indexOf('run("scripts/audit-all-bet-type-screening-payout-completeness.ts")')
+      < runner.indexOf('run("scripts/analyze-all-bet-type-screening.ts")'),
+  );
+});
