@@ -15,6 +15,8 @@
  * realized-return reporting is independently settlement-safe.
  */
 
+export {};
+
 const ERROR_CODE = "V4_EVALUATION_OFFICIAL_PAYOUT_REQUIRED";
 
 throw new Error(
