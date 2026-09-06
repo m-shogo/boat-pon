@@ -42,3 +42,12 @@ test("safe exacta residual runner never starts analysis before payout audit pass
   assert.ok(statusGateIndex > auditIndex);
   assert.ok(analysisIndex > statusGateIndex);
 });
+
+test("npm exacta residual entrypoint cannot bypass the safe runner", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Record<string, string> };
+
+  assert.equal(
+    pkg.scripts?.["analyze:exacta-market-residual-sweep"],
+    "tsx scripts/run-exacta-market-residual-sweep-safe.ts",
+  );
+});
