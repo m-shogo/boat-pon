@@ -8,14 +8,71 @@ import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/wind-direction-venue-screen.md";
 const OUT_JSON = "reports/wind-direction-venue-screen.json";
 const STAKE = 100;
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "WIND_DIRECTION_PRIMARY_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+
+type CoverageRow = { period: string; total: number; settled: number };
+function assertSettlementCompleteness() {
+  const coverage = db.prepare(`
+    WITH population AS (
+      SELECT h.race_id, h.race_date AS date
+      FROM historical_alternative_odds h
+      JOIN official_programs op ON op.race_id=h.race_id
+      WHERE h.bet_type='exacta'
+        AND ${historicalExactaCanonicalSourcePredicate("h")}
+        AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+        AND json_type(op.raw_json,'$.boats')='array'
+        AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+      GROUP BY h.race_id
+      HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
+        AND MAX(CASE WHEN h.combination='1-4' THEN h.odds END) IS NOT NULL
+    ), settlement AS (
+      SELECT rp.race_id,
+        CASE WHEN COUNT(*)=1
+          AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen>0 THEN 1 ELSE 0 END)=1
+          AND MAX(CASE WHEN EXISTS (
+            SELECT 1 FROM historical_alternative_odds winner_h
+            WHERE winner_h.race_id=rp.race_id
+              AND winner_h.bet_type='exacta'
+              AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+              AND winner_h.combination=rp.combination
+          ) THEN 1 ELSE 0 END)=1
+        THEN 1 ELSE 0 END AS settled
+      FROM race_payouts rp
+      WHERE rp.bet_type='exacta'
+      GROUP BY rp.race_id
+    )
+    SELECT CASE WHEN p.date<'2025-01-01' THEN 'discovery' ELSE 'forward' END AS period,
+      COUNT(*) AS total,
+      SUM(COALESCE(s.settled,0)) AS settled
+    FROM population p
+    LEFT JOIN settlement s ON s.race_id=p.race_id
+    GROUP BY period
+    ORDER BY period
+  `).all() as CoverageRow[];
+
+  const byPeriod = Object.fromEntries(["discovery", "forward"].map(period => {
+    const row = coverage.find(candidate => candidate.period === period);
+    const total = Number(row?.total ?? 0);
+    const settled = Number(row?.settled ?? 0);
+    return [period, { total, settled, missing: total - settled }];
+  }));
+  const invalid = ["discovery", "forward"].some(period => {
+    const { total, settled, missing } = byPeriod[period];
+    return !Number.isInteger(total) || !Number.isInteger(settled) || total <= 0 || settled !== total || missing !== 0;
+  });
+  if (invalid) throw new Error(`WIND_DIRECTION_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(byPeriod)}`);
+}
+
+assertSettlementCompleteness();
 
 type Raw = { race_id: string; date: string; venue: string; race_no: number; odds14: number; payout: number; windDir: string | null; windMps: number | null; rawJson: string };
 type Row = Raw & { period: "discovery" | "forward"; topRival4: boolean };
@@ -69,11 +126,12 @@ for (const r of rows) { if (!wind23(r)) continue; const key = `${r.venue}|${dire
 const cells = [...cellMap.entries()].map(([key, xs]) => { const [venue, direction] = key.split("|"); const d = stat(periodRows(xs, "discovery")); const f = stat(periodRows(xs, "forward")); return { venue, direction, discovery: d, forward: f }; }).filter(x => x.discovery.n >= 20 && x.forward.n >= 20).sort((a, b) => Math.min(b.discovery.roi, b.forward.roi) - Math.min(a.discovery.roi, a.forward.roi));
 const directionRows = mainDirections.map(direction => { const xs = rows.filter(r => wind23(r) && directionOf(r.windDir) === direction); return { direction, discovery: stat(periodRows(xs, "discovery")), forward: stat(periodRows(xs, "forward")) }; }).filter(x => x.discovery.n > 0 || x.forward.n > 0);
 const now = new Date().toISOString();
-const report = { generatedAt: now, safety: { readOnly: true, historicalClosingOdds: true, t5: false, productionConnected: false }, scope: { rows: rows.length, venues: new Set(rows.map(r => r.venue)).size }, candidates: candidateResults, venueDirectionCells: cells, directionRows, caveats: ["風向はrace_conditions保存値を使用。会場ごとのコース方位へは未変換", "風向/相対能力セルは探索多重度が大きい", "exacta pipelineのT-5時系列が未整備", "両期間n>=20はスクリーニングであり採用基準ではない"] };
-let md = `# 会場×風向×選手相対能力 exacta 1-4 スクリーニング\n\n生成日時: ${now}\nDB: ${DB_PATH}\n\n> 実払戻しベース。historical closing oddsで、T-5・本番BUY・自動購入には接続しない。\n\n## 風向を会場方位へ変換しない理由\n\n現DBには風向はあるが、各競走場のコース方位を機械的に対応付ける確定テーブルがないため、北/南などの文字を向かい風と断定しない。まず保存値の再現性だけを見る。\n\n対象: ${rows.length}レース / ${new Set(rows.map(r => r.venue)).size}会場 / exacta 1-4\n\n## 固定候補\n\n|条件|探索n / ROI / 最大2除外|未使用n / ROI / 最大2除外|\n|---|---:|---:|\n`;
+const report = { generatedAt: now, safety: { readOnly: true, historicalClosingOdds: true, t5: false, productionConnected: false, exactaSettlementComplete: true }, scope: { rows: rows.length, venues: new Set(rows.map(r => r.venue)).size }, candidates: candidateResults, venueDirectionCells: cells, directionRows, caveats: ["風向はrace_conditions保存値を使用。会場ごとのコース方位へは未変換", "風向/相対能力セルは探索多重度が大きい", "exacta pipelineのT-5時系列が未整備", "両期間n>=20はスクリーニングであり採用基準ではない"] };
+let md = `# 会場×風向×選手相対能力 exacta 1-4 スクリーニング\n\n生成日時: ${now}\nDB: ${DB_PATH}\n\n> 実払戻しベース。historical closing oddsで、T-5・本番BUY・自動購入には接続しない。\n> discovery / forward双方でofficial exacta settlement 100%確認後のみROIを生成する。\n\n## 風向を会場方位へ変換しない理由\n\n現DBには風向はあるが、各競走場のコース方位を機械的に対応付ける確定テーブルがないため、北/南などの文字を向かい風と断定しない。まず保存値の再現性だけを見る。\n\n対象: ${rows.length}レース / ${new Set(rows.map(r => r.venue)).size}会場 / exacta 1-4\n\n## 固定候補\n\n|条件|探索n / ROI / 最大2除外|未使用n / ROI / 最大2除外|\n|---|---:|---:|\n`;
 for (const c of candidateResults) md += `|${c.label}|${c.discovery.n} / ${c.discovery.roi}% / ${c.discovery.top2ExclRoi}%|${c.forward.n} / ${c.forward.roi}% / ${c.forward.top2ExclRoi}%|\n`;
 md += `\n## 会場×風向セル（両期間n>=20）\n\n|会場|風向|2024 n / ROI / max2|2025 n / ROI / max2|\n|---|---|---:|---:|\n`;
 for (const c of cells.slice(0, 30)) md += `|${c.venue}|${c.direction}|${c.discovery.n} / ${c.discovery.roi}% / ${c.discovery.top2ExclRoi}%|${c.forward.n} / ${c.forward.roi}% / ${c.forward.top2ExclRoi}%|\n`;
 md += `\n## 判定\n\n会場×風向×能力の組合せで、両期間・最大2件除外・十分な標本を同時に満たす本番候補は未確定。最有力の南西風セルも、T-5 exacta市場がないため、次はexacta T-5保存の品質監査→paper-forwardへ進める。\n`;
 mkdirSync("reports", { recursive: true }); writeFileSync(OUT_MD, md, "utf8"); writeFileSync(OUT_JSON, JSON.stringify(report, null, 2) + "\n", "utf8");
 console.log(`[wind-direction] rows=${rows.length} cells=${cells.length}`); for (const c of candidateResults) console.log(`${c.label}: discovery=${c.discovery.n}/${c.discovery.roi}% test=${c.forward.n}/${c.forward.roi}%`);
+db.close();
