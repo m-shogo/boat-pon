@@ -26,7 +26,7 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-roi-skip-policy-simulation.ts");
+const analysis = run("scripts/analyze-roi-skip-policy-simulation-raw.ts");
 if (analysis !== 0) {
   console.error("[roi-skip-policy-safe-runner] skip-policy simulation failed after a successful payout completeness preflight");
   process.exit(analysis);
