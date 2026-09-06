@@ -28,3 +28,24 @@ test("exacta forward monitor binds both completeness and combo odds to canonical
   assert.match(source, /SELECT a\.race_id, a\.combination, a\.odds/);
   assert.doesNotMatch(source, /FROM historical_alternative_odds\n  WHERE bet_type='exacta'/);
 });
+
+test("exacta forward monitor validates DB identity and stays query-only", () => {
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
+  assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
+  assert.match(source, /PRAGMA query_only = ON/);
+});
+
+test("exacta forward monitor only resolves one positive payout present in canonical odds", () => {
+  assert.match(source, /rows\.length !== 1/);
+  assert.match(source, /payout\.payout_yen != null/);
+  assert.match(source, /payout\.payout_yen > 0/);
+  assert.match(source, /oddsByRace\.get\(raceId\)\?\.has\(payout\.combination\) === true/);
+  assert.match(source, /isResolvedExactaSettlement\(race\.race_id, oddsByRace, payoutsByRace\)/);
+});
+
+test("exacta forward monitor never coerces a winning payout to zero", () => {
+  assert.doesNotMatch(source, /win\.payout_yen \?\? 0/);
+  assert.match(source, /const amount = requiredPayout\(win\)/);
+  assert.match(source, /monthPayout \+= requiredPayout\(win\)/);
+  assert.match(source, /EXACTA_FORWARD_PAYOUT_MISSING/);
+});
