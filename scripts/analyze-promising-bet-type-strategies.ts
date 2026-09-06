@@ -11,15 +11,18 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/promising-bet-type-strategies.md";
 const OUT_JSON = "reports/promising-bet-type-strategies.json";
 const STAKE = 100;
+const BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(dbPath, { readOnly: true });
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 // ─── データ取得 ──────────────────────────────────────────────────────────────
 
@@ -36,14 +39,31 @@ type PayoutRow = { race_id: string; bet_type: string; combination: string; payou
 
 const payoutIndex = new Map<string, number>();
 const returnedSet = new Set<string>();
+const settledRaceByType = new Map<string, Set<string>>(BET_TYPES.map(bt => [bt, new Set<string>()]));
 
 for (const p of db.prepare(`
   SELECT race_id, bet_type, combination, payout_yen, returned
   FROM race_payouts WHERE bet_type IN ('exacta','quinella','wide','trifecta','trio')
 `).all() as PayoutRow[]) {
   const key = `${p.race_id}|${p.bet_type}|${p.combination}`;
-  payoutIndex.set(key, p.payout_yen ?? 0);
+  if (p.payout_yen != null && p.payout_yen > 0) {
+    payoutIndex.set(key, p.payout_yen);
+    settledRaceByType.get(p.bet_type)?.add(p.race_id);
+  }
   if (p.returned) returnedSet.add(key);
+}
+
+assertPayoutCompleteness();
+
+function assertPayoutCompleteness(): void {
+  const raceIds = new Set(rows.map(row => row.race_id));
+  if (raceIds.size <= 0) throw new Error("PROMISING_BET_BUY_POPULATION_EMPTY");
+  const coverage = Object.fromEntries(BET_TYPES.map(bt => {
+    const settled = [...raceIds].filter(raceId => settledRaceByType.get(bt)?.has(raceId)).length;
+    return [bt, { total: raceIds.size, settled }];
+  }));
+  const invalid = BET_TYPES.some(bt => coverage[bt].settled !== coverage[bt].total);
+  if (invalid) throw new Error(`PROMISING_BET_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(coverage)}`);
 }
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
