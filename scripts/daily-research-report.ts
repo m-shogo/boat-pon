@@ -10,7 +10,7 @@
  *
  * - explore-roi.ts / detect-research-drift.ts と同じくDB/テーブルが無い環境でも
  *   空評価+warningsで正常終了する
- * - DBへの書き込みは一切行わない（読み込み専用、PRAGMA readOnlyで接続）
+ * - DBへの書き込みは一切行わない（canonical identity検証 + readOnly + query_only）
  * - reports/* への自動出力はしない。標準出力にJSONを出すだけ
  * - --rules-file <path> は data/research-rules.json 形式（{ rules: ResearchRule[] }）の
  *   ファイルを read-only で読み込むだけ。書き込みは一切行わない。指定しない場合は
@@ -42,6 +42,7 @@ import {
   determineEvaluationScope,
   validateResearchRuleConditions,
 } from "../src/domain/researchRuleConditions";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { buildDriftDetectionViewModel } from "../src/view-models/driftViewModel.adapters";
 import { buildDailyResearchReportAggregatePresentation, buildDailyResearchReportPresentation } from "../src/presentation/dailyResearchReportBuilder";
 
@@ -214,8 +215,12 @@ function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourc
     return { rows: [], sourceWarnings: [`db not found at ${DB_PATH}; produced empty evaluation`] };
   }
 
-  const db = new DatabaseSync(DB_PATH, { readOnly: true });
-  db.exec("PRAGMA busy_timeout = 5000");
+  const primaryDbPath = assertCanonicalSingleLinkRegularFile(
+    DB_PATH,
+    "DAILY_RESEARCH_REPORT_PRIMARY_DB_IDENTITY_INVALID",
+  );
+  const db = new DatabaseSync(primaryDbPath, { readOnly: true });
+  db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
   try {
     const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='decision_history'").get() != null;
     if (!hasTable) {
