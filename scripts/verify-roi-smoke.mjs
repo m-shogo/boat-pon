@@ -7,13 +7,12 @@
  * explore-roi.ts against it via `node --experimental-strip-types` (with
  * `.ts` added to extensionless relative imports, same approach as
  * verify-strip-types.mjs), and asserts the JSON output has the required
- * RuleEvaluationResult shape and expected ROI numbers for a hand-computed
- * fixture. Everything is created under a temp directory and removed after.
+ * RuleEvaluationResult shape and expected official-payout ROI numbers for a
+ * hand-computed fixture. Everything is created under a temp directory and removed after.
  *
  * This is NOT a replacement for `pnpm explore:roi -- --json` against the
- * real project DB — it only proves the CLI and the payout_yen/current_odds
- * basis logic still work end-to-end without node_modules. See
- * docs/ai/05-VERIFICATION.md.
+ * real project DB — it only proves the CLI and official payout_yen basis logic
+ * still work end-to-end without node_modules. See docs/ai/05-VERIFICATION.md.
  */
 
 import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -89,9 +88,9 @@ try {
       check(`metadata has field "${field}"`, field in fullResult.metadata);
     }
     check("sampleSize is 3 (settled BUY rows in window)", fullResult.metadata.sampleSize === 3);
-    check("roi is 15.4 (mixed payout_yen/current_odds basis)", closeTo(fullResult.roi, 15.4));
-    check("roi basis mentions mixed", fullResult.reasonSummary.includes("mixed"));
-    check("warns about payout_yen fallback", fullResult.warnings.some((w) => w.includes("lack payout_yen")));
+    check("roi is 5.4 from official payout_yen only", closeTo(fullResult.roi, 5.4));
+    check("roi basis is payout_yen", fullResult.reasonSummary.includes("roi basis: payout_yen"));
+    check("roi basis does not mention current_odds", !fullResult.reasonSummary.includes("current_odds"));
   }
 
   console.log("--- scenario 2: --condition venue=桐生 ---");
@@ -100,7 +99,7 @@ try {
   const filteredResult = parseJson(filtered.stdout);
   if (filteredResult) {
     check("condition narrows sampleSize to 2", filteredResult.metadata.sampleSize === 2);
-    check("roi is 23.1 with venue filter", closeTo(filteredResult.roi, 23.1));
+    check("roi is 8.1 with venue filter", closeTo(filteredResult.roi, 8.1));
     check("reasonSummary echoes the condition", filteredResult.reasonSummary.includes("condition: venue=桐生"));
   }
 
@@ -184,8 +183,8 @@ function buildFixtureDb(path) {
   };
 
   row(1, { payoutYen: 1620 });
-  row(2, { currentOdds: 30, payoutYen: null });
-  row(3, { venue: "蒲郡", result: "3-1-2", payoutYen: 500 });
+  row(2, { result: "2-1-3", currentOdds: 30, payoutYen: null });
+  row(3, { venue: "蒲郡", result: "3-1-2", payoutYen: null });
   row(4, { venue: "蒲郡", decision: "SKIP" });
   row(5, { venue: "蒲郡", result: null });
   row(6, { date: "2027-01-01", venue: "蒲郡", currentOdds: 99, payoutYen: null });

@@ -1,4 +1,4 @@
-import { oddsPayoutYen, type DecisionHistoryRow } from "./backtest";
+import type { DecisionHistoryRow } from "./backtest";
 import type { EvaluationMetadata, RuleEvaluationResult } from "./researchRule";
 
 export type EvaluationMetadataValidation = {
@@ -85,14 +85,16 @@ export function estimateConfidence(sampleSize: number): number {
 }
 
 /**
- * 行1件の実現payoutを返す。`payout_yen`（race_payouts由来、100円あたりの公式払戻額）が
- * あればそれをstakeYenへスケールして使う。無い場合のみ current_odds ベースの
- * `oddsPayoutYen` にfallbackする（CLAUDE.mdの主評価基準 = 実払戻ベースに合わせる）。
+ * 行1件の実現payoutを返す。
+ * 的中したsettled行は公式 `payout_yen` を必須とし、欠落時は近似oddsへfallbackせずfail-closedにする。
+ * 外れ行は公式払戻0円なので `payout_yen` の保存有無にかかわらず0を返す。
  */
 export function realizedPayoutYen(row: DecisionHistoryRow, stakeYen: number): number {
   if (row.result !== row.selection || stakeYen <= 0) return 0;
-  if (row.payoutYen != null) return (row.payoutYen / 100) * stakeYen;
-  return oddsPayoutYen(row, stakeYen);
+  if (row.payoutYen == null || !Number.isFinite(row.payoutYen) || row.payoutYen <= 0) {
+    throw new Error(`RESEARCH_OFFICIAL_PAYOUT_MISSING race=${row.raceId} selection=${row.selection}`);
+  }
+  return (row.payoutYen / 100) * stakeYen;
 }
 
 /** 総投入額に対する最大ピーク→谷の落ち込み比。BUY行を日付順に累積して計算する。 */
@@ -114,10 +116,6 @@ export function computeMaxDrawdown(rows: DecisionHistoryRow[]): number {
   return totalStake ? maxDrop / totalStake : 0;
 }
 
-export function currentOddsFallbackWarning(fallbackCount: number): string {
-  return `${fallbackCount} settled BUY row(s) lack payout_yen; used current_odds-based ROI for those rows (approx. +14.94pt optimistic bias)`;
-}
-
 export type BuildRuleEvaluationInput = {
   ruleId: string;
   rows: DecisionHistoryRow[];
@@ -133,7 +131,8 @@ export type BuildRuleEvaluationInput = {
  * decision_history 行を RuleEvaluationResult へ変換する読み取り専用アダプタ。
  * - dataWindow 外の行は集計に使わない（Future Leak防止）
  * - ROI/hitRate/sampleSize は結果確定済みのBUY行のみで計算する
- * - ROIは payout_yen（実払戻）優先、無い行のみ current_odds へfallback
+ * - 的中行のROIは公式 payout_yen のみ。欠落時はfail-closedで評価を生成しない
+ * - 外れ行のpayout_yen欠落は0円払戻として正常
  * - 探索用なので isForwardTested / isProductionEligible は常に false
  */
 export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): RuleEvaluationResult {
@@ -142,17 +141,19 @@ export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): Rule
   );
   const buyRows = windowRows.filter((row) => row.decision === "BUY");
   const settledBuyRows = buyRows.filter((row) => row.result != null);
+  const missingHitPayoutRows = settledBuyRows.filter(
+    (row) => row.result === row.selection
+      && (row.payoutYen == null || !Number.isFinite(row.payoutYen) || row.payoutYen <= 0),
+  );
+  if (missingHitPayoutRows.length > 0) {
+    const sample = missingHitPayoutRows.slice(0, 5).map((row) => row.raceId).join(",");
+    throw new Error(`RESEARCH_OFFICIAL_PAYOUT_COVERAGE_INCOMPLETE hits=${missingHitPayoutRows.length} races=${sample}`);
+  }
+
   const hits = settledBuyRows.filter((row) => row.result === row.selection).length;
   const stakeYen = settledBuyRows.reduce((sum, row) => sum + row.recommendedStakeYen, 0);
   const payoutYen = settledBuyRows.reduce((sum, row) => sum + realizedPayoutYen(row, row.recommendedStakeYen), 0);
-  const fallbackCount = settledBuyRows.filter((row) => row.payoutYen == null).length;
-  const roiBasis = settledBuyRows.length === 0
-    ? "n/a"
-    : fallbackCount === 0
-      ? "payout_yen"
-      : fallbackCount === settledBuyRows.length
-        ? "current_odds (fallback)"
-        : `mixed (${settledBuyRows.length - fallbackCount}/${settledBuyRows.length} payout_yen)`;
+  const roiBasis = settledBuyRows.length === 0 ? "n/a" : "payout_yen";
 
   const metadata: EvaluationMetadata = {
     dataWindowStart: input.dataWindowStart,
@@ -164,7 +165,6 @@ export function buildRuleEvaluationResult(input: BuildRuleEvaluationInput): Rule
   const warnings = [...validateEvaluationMetadata(metadata).warnings];
   const unsettled = buyRows.length - settledBuyRows.length;
   if (unsettled > 0) warnings.push(`${unsettled} BUY rows are unsettled and excluded from roi/hitRate`);
-  if (fallbackCount > 0) warnings.push(currentOddsFallbackWarning(fallbackCount));
   warnings.push(...(input.extraWarnings ?? []));
 
   const conditionSuffix = input.conditionLabel ? `; condition: ${input.conditionLabel}` : "";
