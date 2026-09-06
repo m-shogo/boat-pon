@@ -8,6 +8,7 @@ import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type MarketRow={race_id:string;date:string;overround:number;odds14:number;winner:string|null;payout_yen:number|null;wind_speed_mps:number|null;wind_dir:string|null};
 type ProgramRow={race_id:string;date:string;venue:string;race_no:number;raw_json:string};
@@ -25,12 +26,14 @@ const mechanisms=[
   ["4_inward_shift","4号艇が前走5・6コースから4コースへ内寄り"],["4_outward_shift","4号艇が前走1〜3コースから4コースへ外寄り"],
 ] as const;
 
-const db=new DatabaseSync(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite",{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite","RESEARCH_DB_IDENTITY_INVALID");
+const db=new DatabaseSync(dbPath,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try{
   const market=db.prepare(`SELECT h.race_id,h.race_date AS date,SUM(1.0/h.odds) AS overround,MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,p.combination AS winner,p.payout_yen,w.wind_speed_mps,c.wind_dir
     FROM historical_alternative_odds h LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta' LEFT JOIN race_weather w ON w.race_id=h.race_id LEFT JOIN race_conditions c ON c.race_id=h.race_id
     WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
     GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL`).all() as MarketRow[];
+  assertPayoutCompleteness(market);
   const marketMap=new Map(market.map(r=>[r.race_id,r]));
   const programs=db.prepare(`SELECT op.race_id,op.date,op.venue,op.race_no,op.raw_json FROM official_programs op WHERE op.date BETWEEN '2024-01-01' AND '2025-12-31'
     AND EXISTS(SELECT 1 FROM historical_alternative_odds h WHERE h.race_date=op.date AND h.bet_type='exacta') ORDER BY op.date,op.venue,op.race_no`).all() as ProgramRow[];
@@ -56,8 +59,10 @@ try{
   writeFileSync("reports/same-day-rhythm-market-screen.md",`${lines.join("\n")}\n`);console.log(`same-day rhythm market: exacta=${evaluations.length}`);
 }finally{db.close();}
 
+function assertPayoutCompleteness(rows:MarketRow[]):void{const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}};for(const row of rows){const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;}const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total;if(invalid)throw new Error(`SAME_DAY_RHYTHM_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);}
+function requiredPayout(row:EvalRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`SAME_DAY_RHYTHM_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function applyRace(entries:EntryRow[],racers:Map<string,RacerState>,pairs:Map<string,PairState>){const winner=entries.find(e=>e.finish_pos===1)?.racer_reg??null;for(const e of entries){if(!e.racer_reg)continue;const s=racers.get(e.racer_reg)??{starts:0,wins:0,top2:0,lastFinish:null,lastSt:null,lastEntryCourse:null};s.starts+=1;if(e.finish_pos===1)s.wins+=1;if(e.finish_pos!=null&&e.finish_pos<=2)s.top2+=1;s.lastFinish=e.finish_pos;s.lastSt=e.st_flying?null:e.st;s.lastEntryCourse=e.entry_course??e.boat;racers.set(e.racer_reg,s);}for(let i=0;i<entries.length;i++)for(let j=i+1;j<entries.length;j++){const a=entries[i].racer_reg,b=entries[j].racer_reg;if(!a||!b)continue;const key=pairKey(a,b),s=pairs.get(key)??{meetings:0,lastWinner:null};s.meetings+=1;if(winner===a||winner===b)s.lastWinner=winner;pairs.set(key,s);}}
 function pairKey(a:string,b:string){return a<b?`${a}/${b}`:`${b}/${a}`;}function isTopRival(program:UnconventionalProgram,course:number){const own=program.boats.find(b=>b.course===course)?.nationalWinRate;if(own==null)return false;return program.boats.filter(b=>b.course!==1&&b.course!==course).every(b=>own>=(b.nationalWinRate??Infinity));}
 function readTitle(raceId:string,date:string){const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;if(!existsSync(path))return"";const $=load(readFileSync(path,"utf8"));return $(".rname a").first().text().replace(/\s+/g," ").trim();}
-function byPeriod(rows:EvalRow[]){return{discovery:metric(rows.filter(r=>r.period==="discovery")),forward:metric(rows.filter(r=>r.period==="forward"))};}function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(r=>r.payout_yen??0).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
+function byPeriod(rows:EvalRow[]){return{discovery:metric(rows.filter(r=>r.period==="discovery")),forward:metric(rows.filter(r=>r.period==="forward"))};}function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(requiredPayout).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
 function pct(v:number){return`${(v*100).toFixed(1)}%`;}function cell(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)} / ${pct(v.max2HitExclRoi)}`;}function delta(r:{inside:ReturnType<typeof byPeriod>;outside:ReturnType<typeof byPeriod>}){const one=(p:"discovery"|"forward",l:string)=>{if(!r.inside[p].n||!r.outside[p].n)return`${l} n/a`;const d=r.inside[p].edgePp-r.outside[p].edgePp;return`${l} ${d>=0?"+":""}${d.toFixed(2)}pt`;};return`${one("discovery","2024")} / ${one("forward","2025")}`;}
