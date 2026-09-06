@@ -161,8 +161,9 @@ function printHelp() {
   pnpm explore:roi [-- --from YYYY-MM-DD --to YYYY-MM-DD --rule-id <id> --condition key=value --json|--view-json|--presentation-json]
 
 Read-only. Aggregates decision_history into a RuleEvaluationResult.
-ROI prefers payout_yen (actual payout); falls back to current_odds
-per-row only when payout_yen is missing, and warns when it does.
+ROI uses official payout_yen for settled hits. If a settled hit lacks a
+positive official payout_yen, evaluation fails closed instead of falling back
+to current_odds. Settled losses remain valid zero-return rows.
 
   --from              data window start (default 1970-01-01)
   --to                data window end (default today)
