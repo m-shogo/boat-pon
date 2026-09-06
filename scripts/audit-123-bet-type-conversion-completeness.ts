@@ -2,9 +2,9 @@
  * audit-123-bet-type-conversion-completeness.ts — research-only/read-only
  *
  * Proves that every race in the exact 1-2-3 historical analysis population has
- * a non-null official settlement for every bet type compared by the analyzer.
- * Missing coverage must remain unavailable rather than becoming a synthetic
- * zero-return observation.
+ * a positive official settlement for every bet type compared by the analyzer.
+ * Missing, null, zero, or negative settlement values must remain unavailable
+ * rather than becoming a synthetic zero-return observation.
  */
 
 import { existsSync } from "node:fs";
@@ -39,7 +39,7 @@ const row = db.prepare(`
       FROM race_payouts rp
       WHERE rp.race_id = dh.race_id
         AND rp.bet_type = '${betType}'
-        AND rp.payout_yen IS NOT NULL
+        AND rp.payout_yen > 0
     ) THEN 1 ELSE 0 END) AS ${betType}`).join(",\n    ")}
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
@@ -63,8 +63,8 @@ for (const betType of REQUIRED_BET_TYPES) {
 db.close();
 
 if (!complete) {
-  console.error("[123-bet-type-preflight] FAIL: one or more required official settlement types are incomplete; cross-bet ROI/verdict interpretation must remain unavailable");
+  console.error("[123-bet-type-preflight] FAIL: one or more required official settlement types are missing a positive payout; cross-bet ROI/verdict interpretation must remain unavailable");
   process.exit(2);
 }
 
-console.log("[123-bet-type-preflight] PASS: all required official settlement types are complete for the exact analysis population");
+console.log("[123-bet-type-preflight] PASS: all required official settlement types have positive payouts for the exact analysis population");
