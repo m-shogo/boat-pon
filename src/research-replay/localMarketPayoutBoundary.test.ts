@@ -14,7 +14,7 @@ test("local market anomaly launcher fails closed before analysis", () => {
   assert.match(source, /winner_h\.combination=rp\.combination/);
 
   const coverageIndex = source.indexOf("LOCAL_MARKET_EXACTA_PAYOUT_COVERAGE_INCOMPLETE");
-  const analysisIndex = source.indexOf('await import("./analyze-local-market-anomalies.ts")');
+  const analysisIndex = source.indexOf('await import("./analyze-local-market-anomalies")');
   assert.ok(coverageIndex >= 0, "settlement coverage gate must exist");
   assert.ok(analysisIndex > coverageIndex, "analysis must not run before settlement coverage passes");
 });
