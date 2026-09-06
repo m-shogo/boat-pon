@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 test("bet-type selector summary derives headline evidence from current inputs", () => {
-  const source = readFileSync("scripts/report-bet-type-selector-summary.ts", "utf8");
+  const source = readFileSync("scripts/report-bet-type-selector-summary-raw.ts", "utf8");
 
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
   assert.match(source, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
