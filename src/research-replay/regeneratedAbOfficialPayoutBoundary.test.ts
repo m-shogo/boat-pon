@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const entrypoint = readFileSync("scripts/analyze-regenerated-ab.ts", "utf8");
@@ -17,4 +17,9 @@ test("normal regenerated A/B commands fail closed instead of using quote odds as
   assert.doesNotMatch(entrypoint, /new DatabaseSync/);
   assert.doesNotMatch(entrypoint, /writeFileSync/);
   assert.doesNotMatch(entrypoint, /currentOdds\s*\*\s*100/);
+  assert.equal(
+    existsSync("scripts/analyze-regenerated-ab-raw.ts"),
+    false,
+    "unsafe quote-based raw analyzer must not remain as a direct-invocation bypass",
+  );
 });
