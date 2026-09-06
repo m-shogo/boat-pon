@@ -12,15 +12,48 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/bet-type-risk-factors.md";
 const OUT_JSON = "reports/bet-type-risk-factors.json";
 const STAKE = 100;
+const BET_TYPES = ["trifecta", "trio", "exacta", "quinella"] as const;
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(dbPath, { readOnly: true });
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
+
+assertPayoutCompleteness();
+
+function assertPayoutCompleteness(): void {
+  const population = db.prepare(`
+    SELECT COUNT(DISTINCT race_id) AS n
+    FROM decision_history
+    WHERE decision='BUY' AND run_kind='historical-backfill'
+      AND result IS NOT NULL AND result != ''
+  `).get() as { n: number };
+  if (population.n <= 0) throw new Error("BET_TYPE_RISK_BUY_POPULATION_EMPTY");
+
+  const coverage = Object.fromEntries(BET_TYPES.map(betType => {
+    const row = db.prepare(`
+      SELECT COUNT(DISTINCT dh.race_id) AS settled
+      FROM decision_history dh
+      WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+        AND dh.result IS NOT NULL AND dh.result != ''
+        AND EXISTS (
+          SELECT 1 FROM race_payouts rp
+          WHERE rp.race_id=dh.race_id AND rp.bet_type=?
+            AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0
+        )
+    `).get(betType) as { settled: number };
+    return [betType, { total: population.n, settled: row.settled }];
+  }));
+
+  const invalid = BET_TYPES.some(betType => coverage[betType].settled !== coverage[betType].total);
+  if (invalid) throw new Error(`BET_TYPE_RISK_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(coverage)}`);
+}
 
 // ─── ベースクエリ（BUY + コンテキスト） ─────────────────────────────────────
 // 各グループ条件をWHEREに加えてSQL集計する
