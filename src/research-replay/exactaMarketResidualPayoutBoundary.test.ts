@@ -17,10 +17,19 @@ test("exacta residual payout audit is read-only and fails closed on incomplete s
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
-  assert.match(source, /payout_yen IS NOT NULL AND payout_yen > 0/);
+  assert.match(source, /payout_yen IS NOT NULL AND rp\.payout_yen > 0/);
   assert.match(source, /EXACTA_MARKET_RESIDUAL_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /total <= 0/);
   assert.match(source, /settled !== total/);
+});
+
+test("exacta residual payout audit requires one canonical winning settlement per race", () => {
+  const source = readFileSync("scripts/audit-exacta-market-residual-payout-completeness.ts", "utf8");
+
+  assert.match(source, /WHEN COUNT\(\*\) = 1/);
+  assert.match(source, /historicalExactaCanonicalSourcePredicate\("winner_hao"\)/);
+  assert.match(source, /winner_hao\.combination = rp\.combination/);
+  assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = 1/);
 });
 
 test("safe exacta residual runner never starts analysis before payout audit passes", () => {
@@ -32,4 +41,13 @@ test("safe exacta residual runner never starts analysis before payout audit pass
   assert.ok(auditIndex >= 0);
   assert.ok(statusGateIndex > auditIndex);
   assert.ok(analysisIndex > statusGateIndex);
+});
+
+test("npm exacta residual entrypoint cannot bypass the safe runner", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Record<string, string> };
+
+  assert.equal(
+    pkg.scripts?.["analyze:exacta-market-residual-sweep"],
+    "tsx scripts/run-exacta-market-residual-sweep-safe.ts",
+  );
 });
