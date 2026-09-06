@@ -20,7 +20,8 @@ test("123 bet-type preflight requires every settlement type compared by the anal
   for (const betType of ["trifecta", "trio", "exacta", "quinella", "wide"]) {
     assert.ok(audit.includes(`"${betType}"`), `missing required bet type: ${betType}`);
   }
-  assert.match(audit, /payout_yen IS NOT NULL/);
+  assert.match(audit, /payout_yen > 0/);
+  assert.doesNotMatch(audit, /payout_yen IS NOT NULL/);
   assert.match(audit, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(audit, /process\.exit\(2\)/);
 });
