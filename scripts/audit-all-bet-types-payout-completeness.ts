@@ -20,62 +20,81 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
-  const rows = db.prepare(`
-    WITH population AS (
-      SELECT DISTINCT dh.race_id
-      FROM decision_history dh
-      WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-        AND dh.result IS NOT NULL AND dh.result != ''
-        AND dh.current_odds IS NOT NULL
-        AND dh.venue NOT IN (${exclVenues})
-        AND dh.race_no NOT IN (${exclRaces})
-        AND dh.selection='1-2-3'
-        AND dh.date >= '${FORWARD_START}'
-    ), required(bet_type) AS (
-      VALUES ${REQUIRED_BET_TYPES.map((betType) => `(${q(betType)})`).join(",")}
-    ), settled AS (
-      SELECT rp.race_id, rp.bet_type
-      FROM race_payouts rp
-      WHERE rp.bet_type IN (${betTypes})
-      GROUP BY rp.race_id, rp.bet_type
-      HAVING COUNT(*) >= 1
-        AND COUNT(DISTINCT rp.combination) = COUNT(*)
-        AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = COUNT(*)
-    )
-    SELECT
-      r.bet_type,
-      COUNT(p.race_id) AS total,
-      SUM(CASE WHEN s.race_id IS NOT NULL THEN 1 ELSE 0 END) AS settled
-    FROM required r
-    CROSS JOIN population p
-    LEFT JOIN settled s ON s.race_id = p.race_id AND s.bet_type = r.bet_type
-    GROUP BY r.bet_type
-    ORDER BY r.bet_type
-  `).all() as { bet_type: string; total: number; settled: number | null }[];
+  const returnedBuy = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM decision_history dh
+    WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+      AND dh.returned != 0
+      AND dh.result IS NOT NULL AND dh.result != ''
+      AND dh.current_odds IS NOT NULL
+      AND dh.venue NOT IN (${exclVenues})
+      AND dh.race_no NOT IN (${exclRaces})
+      AND dh.selection='1-2-3'
+      AND dh.date >= '${FORWARD_START}'
+  `).get() as { count: number };
 
-  const coverage = Object.fromEntries(REQUIRED_BET_TYPES.map((betType) => {
-    const row = rows.find((candidate) => candidate.bet_type === betType);
-    const total = Number(row?.total ?? 0);
-    const settled = Number(row?.settled ?? 0);
-    const missing = total - settled;
-    return [betType, { total, settled, missing }];
-  }));
-
-  console.log(JSON.stringify({ coverage }));
-
-  const invalid = REQUIRED_BET_TYPES.some((betType) => {
-    const { total, settled, missing } = coverage[betType];
-    return !Number.isInteger(total)
-      || !Number.isInteger(settled)
-      || !Number.isInteger(missing)
-      || total <= 0
-      || settled !== total
-      || missing !== 0;
-  });
-
-  if (invalid) {
-    console.error(`ALL_BET_TYPES_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(coverage)}`);
+  if (Number(returnedBuy.count) > 0) {
+    console.error(`ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(returnedBuy.count) })}`);
     process.exitCode = 2;
+  } else {
+    const rows = db.prepare(`
+      WITH population AS (
+        SELECT DISTINCT dh.race_id
+        FROM decision_history dh
+        WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+          AND dh.returned = 0
+          AND dh.result IS NOT NULL AND dh.result != ''
+          AND dh.current_odds IS NOT NULL
+          AND dh.venue NOT IN (${exclVenues})
+          AND dh.race_no NOT IN (${exclRaces})
+          AND dh.selection='1-2-3'
+          AND dh.date >= '${FORWARD_START}'
+      ), required(bet_type) AS (
+        VALUES ${REQUIRED_BET_TYPES.map((betType) => `(${q(betType)})`).join(",")}
+      ), settled AS (
+        SELECT rp.race_id, rp.bet_type
+        FROM race_payouts rp
+        WHERE rp.bet_type IN (${betTypes})
+        GROUP BY rp.race_id, rp.bet_type
+        HAVING COUNT(*) >= 1
+          AND COUNT(DISTINCT rp.combination) = COUNT(*)
+          AND SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = COUNT(*)
+      )
+      SELECT
+        r.bet_type,
+        COUNT(p.race_id) AS total,
+        SUM(CASE WHEN s.race_id IS NOT NULL THEN 1 ELSE 0 END) AS settled
+      FROM required r
+      CROSS JOIN population p
+      LEFT JOIN settled s ON s.race_id = p.race_id AND s.bet_type = r.bet_type
+      GROUP BY r.bet_type
+      ORDER BY r.bet_type
+    `).all() as { bet_type: string; total: number; settled: number | null }[];
+
+    const coverage = Object.fromEntries(REQUIRED_BET_TYPES.map((betType) => {
+      const row = rows.find((candidate) => candidate.bet_type === betType);
+      const total = Number(row?.total ?? 0);
+      const settled = Number(row?.settled ?? 0);
+      const missing = total - settled;
+      return [betType, { total, settled, missing }];
+    }));
+
+    console.log(JSON.stringify({ coverage }));
+
+    const invalid = REQUIRED_BET_TYPES.some((betType) => {
+      const { total, settled, missing } = coverage[betType];
+      return !Number.isInteger(total)
+        || !Number.isInteger(settled)
+        || !Number.isInteger(missing)
+        || total <= 0
+        || settled !== total
+        || missing !== 0;
+    });
+
+    if (invalid) {
+      console.error(`ALL_BET_TYPES_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(coverage)}`);
+      process.exitCode = 2;
+    }
   }
 } finally {
   db.close();
