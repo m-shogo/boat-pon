@@ -8,6 +8,7 @@ test("all-bet-type screening payout audit accepts legitimate multi-line settleme
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
+  assert.match(source, /dh\.returned = 0/);
   assert.match(source, /GROUP BY rp\.race_id, rp\.bet_type/);
   assert.match(source, /COUNT\(\*\) >= 1/);
   assert.match(source, /COUNT\(\*\) = COUNT\(DISTINCT rp\.combination\)/);
