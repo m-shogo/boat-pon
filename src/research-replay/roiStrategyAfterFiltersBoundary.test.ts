@@ -20,6 +20,19 @@ test("motor and boat enrichment joins by race_id plus selected head course", () 
   assert.doesNotMatch(source, /const key = `\$\{String\(row\.id\)\}:\$\{head\}`/);
 });
 
+test("strategy ROI fails closed on returned BUY rows and duplicate exact settlement keys", () => {
+  assert.match(source, /assertResearchSettlementIntegrity\(\)/);
+  assert.match(source, /ROI_STRATEGY_RETURNED_BUY_PRESENT/);
+  assert.match(source, /COALESCE\(dh\.returned, 0\) != 0/);
+  assert.match(source, /ROI_STRATEGY_PAYOUT_DUPLICATE_KEY/);
+  assert.match(source, /GROUP BY rp\.race_id, rp\.bet_type, rp\.combination/);
+  assert.match(source, /HAVING COUNT\(\*\) > 1/);
+  assert.match(source, /COALESCE\(dh\.returned, 0\) = 0/);
+  const integrityCheck = source.indexOf("assertResearchSettlementIntegrity();");
+  const loadRows = source.indexOf("const rows = loadRows();");
+  assert.ok(integrityCheck >= 0 && loadRows > integrityCheck);
+});
+
 test("strategy ROI uses positive official settlement for the actual winning combination", () => {
   assert.match(source, /settled\.payout_yen > 0/);
   assert.match(source, /rp\.combination = dh\.result/);
