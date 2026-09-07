@@ -33,7 +33,7 @@ test("legacy ROI mechanism safe runner also targets raw analysis after one prefl
 });
 
 test("ROI mechanism payout preflight matches raw analyzer population and validates settlement line integrity", () => {
-  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
+  assert.match(auditSource, /SELECT dh\.race_id, dh\.returned/);
   assert.match(auditSource, /dh\.decision = 'BUY'/);
   assert.match(auditSource, /dh\.run_kind = 'historical-backfill'/);
   assert.match(auditSource, /dh\.current_odds IS NOT NULL/);
@@ -41,6 +41,9 @@ test("ROI mechanism payout preflight matches raw analyzer population and validat
   assert.match(auditSource, /dh\.date >= \?/);
   assert.match(auditSource, /EXCLUDED_VENUES/);
   assert.match(auditSource, /EXCLUDED_RACES/);
+  assert.match(auditSource, /COALESCE\(tr\.returned, 0\) != 0/);
+  assert.match(auditSource, /returnedBuyRows/);
+  assert.match(auditSource, /target research cohort contains returned historical BUY rows/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
   assert.match(auditSource, /ts\.returned = 0/);
   assert.match(auditSource, /ts\.payout_yen > 0/);

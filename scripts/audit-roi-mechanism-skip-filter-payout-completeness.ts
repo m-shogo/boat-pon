@@ -4,8 +4,9 @@
  * Verify that every race in the forward BUY skip-filter research population has
  * complete official trifecta settlement coverage before payout-based ROI/verdicts
  * are interpreted. Legitimate multi-line winners are allowed; malformed,
- * duplicate-combination, or refund rows fail closed because the downstream scalar
- * payout lookup does not model those ambiguities explicitly.
+ * duplicate-combination, refund settlement rows, or returned decision rows fail
+ * closed because the downstream scalar payout lookup does not model those
+ * ambiguities explicitly.
  */
 
 import { existsSync } from "node:fs";
@@ -35,13 +36,14 @@ type IntegrityRow = {
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
+  returnedBuyRows: number;
 };
 const excludedVenues = EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",");
 const excludedRaces = EXCLUDED_RACES.join(",");
 
 const row = db.prepare(`
-WITH target_races AS (
-  SELECT DISTINCT dh.race_id
+WITH target_rows AS (
+  SELECT dh.race_id, dh.returned
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -52,6 +54,9 @@ WITH target_races AS (
     AND dh.race_no NOT IN (${excludedRaces})
     AND dh.selection = '1-2-3'
     AND dh.date >= ?
+), target_races AS (
+  SELECT DISTINCT race_id
+  FROM target_rows
 ), target_settlements AS (
   SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
   FROM race_payouts rp
@@ -88,15 +93,24 @@ SELECT
   (SELECT COUNT(*)
    FROM target_settlements ts
    WHERE ts.returned = 1
-  ) AS returnedRows
+  ) AS returnedRows,
+  (SELECT COUNT(*)
+   FROM target_rows tr
+   WHERE COALESCE(tr.returned, 0) != 0
+  ) AS returnedBuyRows
 `).get(FORWARD_START) as IntegrityRow;
 
 const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covered ?? 0);
 db.close();
 
 console.log(
-  `[roi-mechanism-skip-filter-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
+  `[roi-mechanism-skip-filter-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0} returnedBuyRows=${row.returnedBuyRows ?? 0}`,
 );
+
+if ((row.returnedBuyRows ?? 0) > 0) {
+  console.error("[roi-mechanism-skip-filter-payout-preflight] FAIL: target research cohort contains returned historical BUY rows, but the downstream ROI analyzer does not exclude them explicitly");
+  process.exit(2);
+}
 
 if ((row.invalidNonRefundRows ?? 0) > 0) {
   console.error("[roi-mechanism-skip-filter-payout-preflight] FAIL: target cohort contains non-refund trifecta settlement rows without a non-empty combination and positive official payout");
