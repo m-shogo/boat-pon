@@ -63,6 +63,7 @@ function assertPayoutCompleteness(): void {
         AND EXISTS (
           SELECT 1 FROM race_payouts rp
           WHERE rp.race_id=dh.race_id AND rp.bet_type=?
+            AND rp.returned != 1
             AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0
         )
     `).get(betType) as { settled: number };
