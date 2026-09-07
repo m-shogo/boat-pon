@@ -17,7 +17,7 @@ const SOURCE_JSON = "reports/roi-pattern-search.json";
 const SOURCE_MD = "reports/roi-pattern-search.md";
 const SUMMARY_JSON = "reports/roi-search-matrix.json";
 const SUMMARY_MD = "reports/roi-search-matrix.md";
-const SEARCH_SOURCE = "scripts/search-roi-patterns.ts";
+const SEARCH_METRIC_SOURCE = "scripts/search-roi-patterns-raw.ts";
 
 type MatrixCase = {
   name: string;
@@ -99,9 +99,9 @@ for (const [index, matrixCase] of cases.entries()) {
     case: matrixCase,
     baseline: report.baseline,
     counts: report.counts,
-    topStability: (report.rankings.stability ?? []).slice(0, 10),
-    topImprovement: (report.rankings.improvement ?? []).slice(0, 10),
-    risky: (report.rankings.risky ?? []).slice(0, 10),
+    topStability: report.rankings.stability?.slice(0, 15) ?? [],
+    topImprovement: report.rankings.improvement?.slice(0, 15) ?? [],
+    risky: report.rankings.risky?.slice(0, 15) ?? [],
     archivedJson,
     archivedMd,
   });
@@ -109,25 +109,17 @@ for (const [index, matrixCase] of cases.entries()) {
 
 const summary = {
   generatedAt: new Date().toISOString(),
-  safety: {
-    writesDb: false,
-    changesSettings: false,
-    autoBetting: false,
-    generatedReportsOnly: true,
-    metricBasis: "official_payout_yen",
-  },
   cases,
   results,
   consensus: buildConsensus(results),
 };
-
 writeFileSync(SUMMARY_JSON, `${JSON.stringify(summary, null, 2)}\n`);
 writeFileSync(SUMMARY_MD, renderMarkdown(summary));
 console.log(`[run-roi-search-matrix] wrote ${SUMMARY_JSON}`);
 console.log(`[run-roi-search-matrix] wrote ${SUMMARY_MD}`);
 
 function assertRealizedPayoutMetricBasis() {
-  const source = readFileSync(SEARCH_SOURCE, "utf8");
+  const source = readFileSync(SEARCH_METRIC_SOURCE, "utf8");
   const usesQuoteReturn = source.includes("hitOdds.reduce((sum, odds) => sum + odds * STAKE_YEN, 0)");
   const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
   if (usesQuoteReturn || !usesOfficialPayout) {
