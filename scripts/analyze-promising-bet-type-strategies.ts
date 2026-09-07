@@ -69,4 +69,4 @@ function assertPayoutCompleteness(): void {
   }
 }
 
-await import("./analyze-promising-bet-type-strategies-raw.ts");
+await import("./analyze-promising-bet-type-strategies-raw");
