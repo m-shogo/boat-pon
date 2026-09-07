@@ -11,6 +11,8 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const DECISION_BET_TYPE = "3連単";
+const PAYOUT_BET_TYPE = "trifecta";
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
@@ -88,10 +90,11 @@ try {
 function assertOfficialSettlementIntegrity(): void {
   const row = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  SELECT DISTINCT dh.race_id, dh.selection
   FROM decision_history dh
   WHERE dh.run_kind = 'historical-backfill'
     AND dh.decision = 'BUY'
+    AND dh.bet_type = ?
     AND dh.returned = 0
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
@@ -112,27 +115,27 @@ WITH relevant_hits AS (
         AND re.source_type = 'official_historical'
     )
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
+  SELECT h.race_id, h.selection
   FROM relevant_hits h
   WHERE (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = ?
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = ?
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
   ) != 1
 )
 SELECT COUNT(*) AS invalid_count FROM invalid
-`).get() as { invalid_count: number };
+`).get(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE) as { invalid_count: number };
 
   if (Number(row.invalid_count ?? 0) > 0) {
     throw new Error("OFFICIAL_HISTORICAL_BUY_REDUCTION_SETTLEMENT_INTEGRITY_INVALID");
@@ -288,7 +291,7 @@ WITH race_avg_st AS (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = dh.race_id
-          AND rp.bet_type = dh.bet_type
+          AND rp.bet_type = '${PAYOUT_BET_TYPE}'
           AND rp.combination = dh.selection
           AND rp.returned = 0
           AND rp.payout_yen > 0
@@ -308,6 +311,7 @@ WITH race_avg_st AS (
   LEFT JOIN selected_equipment eq ON eq.id = dh.id
   WHERE dh.run_kind = 'historical-backfill'
     AND dh.decision = 'BUY'
+    AND dh.bet_type = '${DECISION_BET_TYPE}'
     AND dh.returned = 0
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
