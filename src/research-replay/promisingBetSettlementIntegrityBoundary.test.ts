@@ -15,10 +15,10 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   assert.match(source, /if \(isPositivePayout\)/);
   assert.match(source, /settledRaceByType\.get\(p\.bet_type\)\?\.add\(p\.race_id\)/);
   assert.match(source, /assertPayoutCompleteness\(\)/);
-  assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-raw\.ts"\)/);
+  assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-raw"\)/);
   assert.ok(
     source.indexOf("assertPayoutCompleteness();")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw.ts")'),
+      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
   );
 });
 
