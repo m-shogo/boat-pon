@@ -15,15 +15,24 @@ test("ROI improvement validation verifies canonical read-only DB identity before
   assert.ok(identity >= 0 && integrity > identity && analysis > integrity);
 });
 
-test("ROI improvement validation fails closed on incomplete, malformed, or refund settlement truth", () => {
+test("ROI improvement validation fails closed on incomplete, malformed, refund, or duplicate settlement truth", () => {
   assert.match(source, /SELECT DISTINCT dh\.race_id/);
   assert.match(source, /ts\.returned=0 AND ts\.payout_yen>0/);
   assert.match(source, /ts\.combination IS NULL OR ts\.combination=''/);
   assert.match(source, /ts\.payout_yen IS NULL OR ts\.payout_yen<=0/);
+  assert.match(source, /GROUP BY race_id, combination/);
+  assert.match(source, /HAVING COUNT\(\*\) > 1/);
   assert.match(source, /settlementIntegrity\.covered !== settlementIntegrity\.total/);
   assert.match(source, /settlementIntegrity\.invalidNonRefundRows/);
   assert.match(source, /settlementIntegrity\.returnedRows/);
+  assert.match(source, /settlementIntegrity\.duplicateKeys/);
+  assert.match(source, /duplicate race×trifecta×combination settlement keys/);
   assert.match(source, /FAIL CLOSED/);
+});
+
+test("ROI improvement validation permits legitimate multi-line trifecta settlements across distinct combinations", () => {
+  assert.match(source, /GROUP BY race_id, combination/);
+  assert.doesNotMatch(source, /GROUP BY race_id\s*\n\s*HAVING COUNT\(\*\) > 1/);
 });
 
 test("ROI improvement validation reports do not expose configured DB paths", () => {
