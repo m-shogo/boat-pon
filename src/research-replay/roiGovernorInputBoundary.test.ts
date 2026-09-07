@@ -24,18 +24,19 @@ test("ROI governor fails closed on missing or invalid decision-critical reports 
   assert.equal(pkg.scripts?.["report:roi-governor"], "tsx scripts/report-roi-governor.ts");
 });
 
-test("ROI governor validates readiness-driving counts and ROI inputs instead of trusting object shape alone", () => {
+test("ROI governor validates measured readiness counts and ROI inputs instead of trusting object shape alone", () => {
   assert.match(entry, /missing_required_switch:sw_wind24_exh1/);
-  assert.match(entry, /\["forward", "n"\], true/);
-  assert.match(entry, /\["upgradeCheck", "nToUpgrade"\], true/);
-  assert.match(entry, /\["upgradeCheck", "recentZeroMonths"\], true/);
-  assert.match(entry, /\["baseline", "n"\], true/);
-  assert.match(entry, /\["baseline", "hits"\], true/);
+  assert.match(entry, /requireNonNegativeInteger\(reportPath, condB, \["forward", "n"\]\)/);
+  assert.match(entry, /requireNonNegativeInteger\(reportPath, condB, \["upgradeCheck", "nToUpgrade"\]\)/);
+  assert.match(entry, /requireNonNegativeInteger\(reportPath, condB, \["upgradeCheck", "recentZeroMonths"\]\)/);
+  assert.match(entry, /requireNonNegativeInteger\(reportPath, parsed, \["baseline", "n"\]\)/);
+  assert.match(entry, /requireNonNegativeInteger\(reportPath, parsed, \["baseline", "hits"\]\)/);
   assert.match(entry, /\["baseline", "roi"\]/);
   assert.match(entry, /\["selectors", "onePt", "forward", "roi"\]/);
   assert.match(entry, /\["selectors", "multiPt", "forward", "roi"\]/);
-  assert.match(entry, /Number\.isSafeInteger/);
-  assert.match(entry, /Number\.isFinite/);
+  assert.match(entry, /Number\.isSafeInteger\(value\)/);
+  assert.match(entry, /value < 0/);
+  assert.match(entry, /Number\.isFinite\(value\)/);
 });
 
 test("raw ROI governor retains optional evidence fallbacks only behind the decision-critical input gate", () => {
