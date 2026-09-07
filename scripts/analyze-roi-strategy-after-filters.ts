@@ -6,6 +6,8 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/roi-strategy-after-filters.md";
 const OUT_JSON = "reports/roi-strategy-after-filters.json";
 const STAKE_YEN = 100;
+const DECISION_BET_TYPE = "3連単";
+const PAYOUT_BET_TYPE = "trifecta";
 
 type Row = {
   id: number;
@@ -104,9 +106,10 @@ function assertResearchSettlementIntegrity(): void {
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
+      AND dh.bet_type = ?
       AND dh.result IS NOT NULL AND dh.result != ''
       AND COALESCE(dh.returned, 0) != 0
-  `).get() as { n: number };
+  `).get(DECISION_BET_TYPE) as { n: number };
   if (returnedBuy.n !== 0) {
     throw new Error(`ROI_STRATEGY_RETURNED_BUY_PRESENT ${JSON.stringify(returnedBuy)}`);
   }
@@ -114,21 +117,22 @@ function assertResearchSettlementIntegrity(): void {
   const duplicateSettlement = db.prepare(`
     SELECT rp.race_id, rp.bet_type, rp.combination, COUNT(*) AS n
     FROM race_payouts rp
-    WHERE EXISTS (
-      SELECT 1
-      FROM decision_history dh
-      WHERE dh.race_id = rp.race_id
-        AND dh.bet_type = rp.bet_type
-        AND dh.result = rp.combination
-        AND dh.run_kind = 'historical-backfill'
-        AND dh.decision = 'BUY'
-        AND dh.result IS NOT NULL AND dh.result != ''
-        AND COALESCE(dh.returned, 0) = 0
-    )
+    WHERE rp.bet_type = ?
+      AND EXISTS (
+        SELECT 1
+        FROM decision_history dh
+        WHERE dh.race_id = rp.race_id
+          AND dh.bet_type = ?
+          AND dh.result = rp.combination
+          AND dh.run_kind = 'historical-backfill'
+          AND dh.decision = 'BUY'
+          AND dh.result IS NOT NULL AND dh.result != ''
+          AND COALESCE(dh.returned, 0) = 0
+      )
     GROUP BY rp.race_id, rp.bet_type, rp.combination
     HAVING COUNT(*) > 1
     LIMIT 1
-  `).get() as { race_id: string; bet_type: string; combination: string; n: number } | undefined;
+  `).get(PAYOUT_BET_TYPE, DECISION_BET_TYPE) as { race_id: string; bet_type: string; combination: string; n: number } | undefined;
   if (duplicateSettlement) {
     throw new Error(`ROI_STRATEGY_PAYOUT_DUPLICATE_KEY ${JSON.stringify(duplicateSettlement)}`);
   }
@@ -149,7 +153,7 @@ function loadRows(): Row[] {
         SELECT 1
         FROM race_payouts settled
         WHERE settled.race_id = dh.race_id
-          AND settled.bet_type = dh.bet_type
+          AND settled.bet_type = ?
           AND settled.returned = 0
           AND settled.payout_yen > 0
       ) THEN 1 ELSE 0 END AS market_settled,
@@ -157,7 +161,7 @@ function loadRows(): Row[] {
         SELECT rp.payout_yen
         FROM race_payouts rp
         WHERE rp.race_id = dh.race_id
-          AND rp.bet_type = dh.bet_type
+          AND rp.bet_type = ?
           AND rp.combination = dh.result
           AND rp.returned = 0
           AND rp.payout_yen > 0
@@ -166,11 +170,12 @@ function loadRows(): Row[] {
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
+      AND dh.bet_type = ?
       AND COALESCE(dh.returned, 0) = 0
       AND dh.current_odds IS NOT NULL
-      AND dh.result IS NOT NULL
+      AND dh.result IS NOT NULL AND dh.result != ''
     ORDER BY dh.date, dh.id
-  `).all() as Array<Record<string, unknown>>;
+  `).all(PAYOUT_BET_TYPE, PAYOUT_BET_TYPE, DECISION_BET_TYPE) as Array<Record<string, unknown>>;
   const mb = loadMotorBoat();
   return raw.map((row) => {
     const selection = String(row.selection);

@@ -20,6 +20,19 @@ test("motor and boat enrichment joins by race_id plus selected head course", () 
   assert.doesNotMatch(source, /const key = `\$\{String\(row\.id\)\}:\$\{head\}`/);
 });
 
+test("strategy ROI maps decision 3連単 rows to canonical trifecta settlements", () => {
+  assert.match(source, /const DECISION_BET_TYPE = "3連単"/);
+  assert.match(source, /const PAYOUT_BET_TYPE = "trifecta"/);
+  assert.match(source, /dh\.bet_type = \?/);
+  assert.match(source, /rp\.bet_type = \?/);
+  assert.match(source, /settled\.bet_type = \?/);
+  assert.match(source, /\.get\(PAYOUT_BET_TYPE, DECISION_BET_TYPE\)/);
+  assert.match(source, /\.all\(PAYOUT_BET_TYPE, PAYOUT_BET_TYPE, DECISION_BET_TYPE\)/);
+  assert.doesNotMatch(source, /dh\.bet_type = rp\.bet_type/);
+  assert.doesNotMatch(source, /settled\.bet_type = dh\.bet_type/);
+  assert.doesNotMatch(source, /rp\.bet_type = dh\.bet_type/);
+});
+
 test("strategy ROI fails closed on returned BUY rows and duplicate exact settlement keys", () => {
   assert.match(source, /assertResearchSettlementIntegrity\(\)/);
   assert.match(source, /ROI_STRATEGY_RETURNED_BUY_PRESENT/);
