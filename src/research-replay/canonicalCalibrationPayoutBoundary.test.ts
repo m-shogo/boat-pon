@@ -17,7 +17,7 @@ test("canonical calibration uses exactly one positive official trifecta settleme
   assert.match(source, /CANONICAL_CALIBRATION_OFFICIAL_SETTLEMENT_INVALID/);
   assert.match(source, /rp\.bet_type='trifecta'/);
   assert.match(source, /rp\.combination=w\.selection/);
-  assert.match(source, /total_rows != 1 \|\| valid_rows != 1/);
+  assert.match(source, /total_rows != 1 OR valid_rows != 1/);
   assert.match(source, /rp\.combination=decision_history\.selection/);
   assert.match(source, /rp\.returned=0/);
   assert.match(source, /rp\.payout_yen>0/);
