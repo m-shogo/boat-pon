@@ -8,7 +8,7 @@ Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自�
 
 ## 現在の状態
 
-- リポジトリ: `/Users/m-shogo/Developer/personal/boat-pon`
+- リポジトリ: `m-shogo/boat-pon`
 - ブランチ: `main`
 
 ### モデル・フィルター（確定済み）
