@@ -11,10 +11,11 @@ import {
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const REPORT_DB_LABEL = "canonical research database";
 const OUT_MD = "reports/wind-direction-venue-screen.md";
 const OUT_JSON = "reports/wind-direction-venue-screen.json";
 const STAKE = 100;
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
+if (!existsSync(DB_PATH)) { console.error("[wind-direction] database not found"); process.exit(1); }
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "WIND_DIRECTION_PRIMARY_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
@@ -36,15 +37,17 @@ function assertSettlementCompleteness() {
         AND MAX(CASE WHEN h.combination='1-4' THEN h.odds END) IS NOT NULL
     ), settlement AS (
       SELECT rp.race_id,
-        CASE WHEN COUNT(*)=1
-          AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen>0 THEN 1 ELSE 0 END)=1
-          AND MAX(CASE WHEN EXISTS (
-            SELECT 1 FROM historical_alternative_odds winner_h
-            WHERE winner_h.race_id=rp.race_id
-              AND winner_h.bet_type='exacta'
-              AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
-              AND winner_h.combination=rp.combination
-          ) THEN 1 ELSE 0 END)=1
+        CASE WHEN COUNT(*)>=1
+          AND SUM(CASE WHEN rp.returned=0
+            AND rp.combination IS NOT NULL AND rp.combination!=''
+            AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
+            AND EXISTS (
+              SELECT 1 FROM historical_alternative_odds winner_h
+              WHERE winner_h.race_id=rp.race_id
+                AND winner_h.bet_type='exacta'
+                AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+                AND winner_h.combination=rp.combination
+            ) THEN 1 ELSE 0 END)=COUNT(*)
         THEN 1 ELSE 0 END AS settled
       FROM race_payouts rp
       WHERE rp.bet_type='exacta'
@@ -127,7 +130,7 @@ const cells = [...cellMap.entries()].map(([key, xs]) => { const [venue, directio
 const directionRows = mainDirections.map(direction => { const xs = rows.filter(r => wind23(r) && directionOf(r.windDir) === direction); return { direction, discovery: stat(periodRows(xs, "discovery")), forward: stat(periodRows(xs, "forward")) }; }).filter(x => x.discovery.n > 0 || x.forward.n > 0);
 const now = new Date().toISOString();
 const report = { generatedAt: now, safety: { readOnly: true, historicalClosingOdds: true, t5: false, productionConnected: false, exactaSettlementComplete: true }, scope: { rows: rows.length, venues: new Set(rows.map(r => r.venue)).size }, candidates: candidateResults, venueDirectionCells: cells, directionRows, caveats: ["風向はrace_conditions保存値を使用。会場ごとのコース方位へは未変換", "風向/相対能力セルは探索多重度が大きい", "exacta pipelineのT-5時系列が未整備", "両期間n>=20はスクリーニングであり採用基準ではない"] };
-let md = `# 会場×風向×選手相対能力 exacta 1-4 スクリーニング\n\n生成日時: ${now}\nDB: ${DB_PATH}\n\n> 実払戻しベース。historical closing oddsで、T-5・本番BUY・自動購入には接続しない。\n> discovery / forward双方でofficial exacta settlement 100%確認後のみROIを生成する。\n\n## 風向を会場方位へ変換しない理由\n\n現DBには風向はあるが、各競走場のコース方位を機械的に対応付ける確定テーブルがないため、北/南などの文字を向かい風と断定しない。まず保存値の再現性だけを見る。\n\n対象: ${rows.length}レース / ${new Set(rows.map(r => r.venue)).size}会場 / exacta 1-4\n\n## 固定候補\n\n|条件|探索n / ROI / 最大2除外|未使用n / ROI / 最大2除外|\n|---|---:|---:|\n`;
+let md = `# 会場×風向×選手相対能力 exacta 1-4 スクリーニング\n\n生成日時: ${now}\nDB: ${REPORT_DB_LABEL}\n\n> 実払戻しベース。historical closing oddsで、T-5・本番BUY・自動購入には接続しない。\n> discovery / forward双方でofficial exacta settlement 100%確認後のみROIを生成する。正当な複数的中lineは許容し、返還・不正lineはfail-closed。\n\n## 風向を会場方位へ変換しない理由\n\n現DBには風向はあるが、各競走場のコース方位を機械的に対応付ける確定テーブルがないため、北/南などの文字を向かい風と断定しない。まず保存値の再現性だけを見る。\n\n対象: ${rows.length}レース / ${new Set(rows.map(r => r.venue)).size}会場 / exacta 1-4\n\n## 固定候補\n\n|条件|探索n / ROI / 最大2除外|未使用n / ROI / 最大2除外|\n|---|---:|---:|\n`;
 for (const c of candidateResults) md += `|${c.label}|${c.discovery.n} / ${c.discovery.roi}% / ${c.discovery.top2ExclRoi}%|${c.forward.n} / ${c.forward.roi}% / ${c.forward.top2ExclRoi}%|\n`;
 md += `\n## 会場×風向セル（両期間n>=20）\n\n|会場|風向|2024 n / ROI / max2|2025 n / ROI / max2|\n|---|---|---:|---:|\n`;
 for (const c of cells.slice(0, 30)) md += `|${c.venue}|${c.direction}|${c.discovery.n} / ${c.discovery.roi}% / ${c.discovery.top2ExclRoi}%|${c.forward.n} / ${c.forward.roi}% / ${c.forward.top2ExclRoi}%|\n`;
