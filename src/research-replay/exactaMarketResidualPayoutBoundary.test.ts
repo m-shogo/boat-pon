@@ -17,19 +17,22 @@ test("exacta residual payout audit is read-only and fails closed on incomplete s
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
-  assert.match(source, /payout_yen IS NOT NULL AND rp\.payout_yen > 0/);
+  assert.match(source, /rp\.returned = 0 AND rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0/);
   assert.match(source, /EXACTA_MARKET_RESIDUAL_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /total <= 0/);
   assert.match(source, /settled !== total/);
 });
 
-test("exacta residual payout audit requires one canonical winning settlement per race", () => {
+test("exacta residual payout audit preserves legitimate multi-line winners but rejects duplicate or malformed settlement keys", () => {
   const source = readFileSync("scripts/audit-exacta-market-residual-payout-completeness.ts", "utf8");
 
-  assert.match(source, /WHEN COUNT\(\*\) = 1/);
+  assert.match(source, /WHEN COUNT\(\*\) >= 1/);
+  assert.match(source, /COUNT\(DISTINCT rp\.combination\) = COUNT\(\*\)/);
   assert.match(source, /historicalExactaCanonicalSourcePredicate\("winner_hao"\)/);
   assert.match(source, /winner_hao\.combination = rp\.combination/);
-  assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = 1/);
+  assert.match(source, /SUM\(CASE WHEN rp\.returned = 0 AND rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = COUNT\(\*\)/);
+  assert.match(source, /THEN 1 ELSE 0 END\) = COUNT\(\*\)/);
+  assert.doesNotMatch(source, /WHEN COUNT\(\*\) = 1/);
 });
 
 test("direct exacta residual entrypoint cannot bypass payout audit", () => {
