@@ -12,7 +12,7 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
   assert.match(source, /p\.returned !== 1 && !isPositivePayout/);
   assert.match(source, /PROMISING_BET_PAYOUT_INVALID_LINE/);
-  assert.match(source, /if \(isPositivePayout\)/);
+  assert.match(source, /p\.returned !== 1 && isPositivePayout/);
   assert.match(source, /settledRaceByType\.get\(p\.bet_type\)\?\.add\(p\.race_id\)/);
   assert.match(source, /assertPayoutCompleteness\(\)/);
   assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-raw"\)/);

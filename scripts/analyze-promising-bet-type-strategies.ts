@@ -47,7 +47,7 @@ for (const p of db.prepare(`
   if (p.returned !== 1 && !isPositivePayout) {
     throw new Error(`PROMISING_BET_PAYOUT_INVALID_LINE ${key}`);
   }
-  if (isPositivePayout) {
+  if (p.returned !== 1 && isPositivePayout) {
     settledRaceByType.get(p.bet_type)?.add(p.race_id);
   }
 }
