@@ -33,11 +33,12 @@ type IntegrityRow = {
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
+  returnedBuyRows: number;
 };
 
 const row = db.prepare(`
-WITH target_races AS (
-  SELECT DISTINCT dh.race_id
+WITH target_rows AS (
+  SELECT dh.race_id, dh.returned
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -45,6 +46,9 @@ WITH target_races AS (
     AND dh.result != ''
     AND dh.venue NOT IN (${EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",")})
     AND dh.race_no NOT IN (${EXCLUDED_RACE_NOS.join(",")})
+), target_races AS (
+  SELECT DISTINCT race_id
+  FROM target_rows
 ), target_settlements AS (
   SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
   FROM race_payouts rp
@@ -76,15 +80,24 @@ SELECT
   (SELECT COUNT(*)
    FROM target_settlements ts
    WHERE ts.returned = 1
-  ) AS returnedRows
+  ) AS returnedRows,
+  (SELECT COUNT(*)
+   FROM target_rows tr
+   WHERE COALESCE(tr.returned, 0) != 0
+  ) AS returnedBuyRows
 `).get() as IntegrityRow;
 
 const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covered ?? 0);
 db.close();
 
 console.log(
-  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
+  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0} returnedBuyRows=${row.returnedBuyRows ?? 0}`,
 );
+
+if ((row.returnedBuyRows ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: target research cohort contains returned historical BUY rows, but downstream ROI consumers do not exclude them explicitly");
+  process.exit(2);
+}
 
 if ((row.invalidNonRefundRows ?? 0) > 0) {
   console.error("[odds-payout-gap-preflight] FAIL: target cohort contains non-refund trifecta settlement rows without a non-empty combination and positive official payout");
