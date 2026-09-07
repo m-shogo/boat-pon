@@ -30,17 +30,37 @@ test("legacy skip-filter robustness safe runner also targets raw analysis after 
   assert.doesNotMatch(legacyRunnerSource, /run\("scripts\/analyze-roi-skip-filter-robustness\.ts"\)/);
 });
 
-test("payout preflight matches the robustness population and remains read-only", () => {
+test("payout preflight matches the robustness population and validates settlement line integrity", () => {
+  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
   assert.match(auditSource, /dh\.decision = 'BUY'/);
   assert.match(auditSource, /dh\.run_kind = 'historical-backfill'/);
   assert.match(auditSource, /dh\.current_odds IS NOT NULL/);
   assert.match(auditSource, /dh\.selection = '1-2-3'/);
   assert.match(auditSource, /dh\.date >= \?/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
-  assert.match(auditSource, /readOnly: true/);
-  assert.match(auditSource, /PRAGMA query_only = ON/);
-  assert.match(auditSource, /assertCanonicalSingleLinkRegularFile/);
-  assert.match(auditSource, /total > 0 && covered === total/);
+  assert.match(auditSource, /ts\.returned = 0/);
+  assert.match(auditSource, /ts\.payout_yen > 0/);
+  assert.match(auditSource, /ts\.payout_yen <= 0/);
+  assert.match(auditSource, /ts\.combination IS NULL/);
+  assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
+  assert.match(auditSource, /duplicateCombinationKeys/);
+  assert.match(auditSource, /returnedRows/);
+  assert.match(auditSource, /invalidNonRefundRows/);
+  assert.match(auditSource, /evaluatePaperForwardPayoutCompleteness/);
+  assert.match(auditSource, /process\.exit\(2\)/);
   assert.match(analysisSource, /finalVerdict/);
   assert.match(analysisSource, /COALESCE/);
+  assert.match(analysisSource, /LIMIT 1/);
+});
+
+test("payout preflight permits legitimate multi-line winners instead of enforcing one settlement per race", () => {
+  assert.doesNotMatch(auditSource, /HAVING COUNT\(\*\) = 1/);
+  assert.doesNotMatch(auditSource, /COUNT\(DISTINCT ts\.combination\) = 1/);
+});
+
+test("payout preflight verifies DB identity before read-only query-only access", () => {
+  const verify = auditSource.indexOf("assertCanonicalSingleLinkRegularFile(DB_PATH");
+  const open = auditSource.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  assert.ok(verify >= 0 && open > verify);
+  assert.match(auditSource, /PRAGMA query_only = ON/);
 });
