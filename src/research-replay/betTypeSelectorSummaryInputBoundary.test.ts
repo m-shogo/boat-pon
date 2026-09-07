@@ -15,14 +15,17 @@ const requiredReports = [
   "reports/bet-type-risk-factors.json",
 ];
 
-test("bet-type selector summary fails closed on missing or invalid prerequisite reports before raw summary", () => {
+test("bet-type selector summary fails closed on missing, invalid, or point-in-time-unsafe prerequisite reports before raw summary", () => {
   for (const path of requiredReports) assert.match(entry, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(entry, /BET_TYPE_SELECTOR_INPUT_REPORT_INVALID/);
   assert.match(entry, /JSON\.parse\(readFileSync\(path, "utf8"\)\)/);
   assert.match(entry, /parsed === null \|\| typeof parsed !== "object" \|\| Array\.isArray\(parsed\)/);
+  assert.match(entry, /envelope\.safety\?\.pointInTimeSafe === false/);
+  assert.match(entry, /point_in_time_unsafe/);
   const validation = entry.indexOf("for (const path of REQUIRED_REPORTS)");
+  const safetyValidation = entry.indexOf("pointInTimeSafe === false");
   const rawRun = entry.indexOf("report-bet-type-selector-summary-raw.ts");
-  assert.ok(validation >= 0 && rawRun > validation);
+  assert.ok(validation >= 0 && safetyValidation > validation && rawRun > safetyValidation);
   assert.doesNotMatch(entry, /DatabaseSync/);
   assert.equal(pkg.scripts?.["report:bet-type-selector"], "tsx scripts/report-bet-type-selector-summary.ts");
 });
