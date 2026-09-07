@@ -2,23 +2,28 @@
  * official_historical beforeinfo を使った BUY 削減候補検証レポート。
  *
  * 読み取り専用。INSERT/UPDATE/DELETE なし。app_settings 変更なし。
- * ROI は current_odds 基準。ヒット判定は result = selection。
- * 対象は run_kind='historical-backfill' の BUY のみ。
+ * ROI は official race_payouts.payout_yen 基準。ヒット判定は result = selection。
+ * 対象は run_kind='historical-backfill' の non-returned BUY のみ。
  */
 
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[official-historical-buy-reduction] DB not found: ${DB_PATH}`);
+  console.error("OFFICIAL_HISTORICAL_BUY_REDUCTION_DB_MISSING");
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "OFFICIAL_HISTORICAL_BUY_REDUCTION_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 type Category = "A削減候補" | "B保留" | "Cデータ不足";
 
@@ -55,6 +60,7 @@ type Metric = { n: number; hits: number; roi: number | null };
 type MonthSummary = { months: number; worstMonth: string | null; worstMonthRoi: number | null; bestMonth: string | null; bestMonthRoi: number | null };
 
 try {
+  assertOfficialSettlementIntegrity();
   const completeRaces = countCompleteOfficialHistoricalRaces();
   const rows = buildConditions().map(evaluateCondition);
   const sections = {
@@ -64,12 +70,73 @@ try {
   };
 
   if (args.json) {
-    console.log(JSON.stringify({ generatedAt: new Date().toISOString(), dbPath: DB_PATH, completeRaces, rows, sections }, null, 2));
+    console.log(JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      metricBasis: "official_payout_yen",
+      target: "historical-backfill non-returned BUY",
+      completeRaces,
+      rows,
+      sections,
+    }, null, 2));
   } else {
     printReport(completeRaces, rows, sections);
   }
 } finally {
   db.close();
+}
+
+function assertOfficialSettlementIntegrity(): void {
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  FROM decision_history dh
+  WHERE dh.run_kind = 'historical-backfill'
+    AND dh.decision = 'BUY'
+    AND dh.returned = 0
+    AND dh.current_odds IS NOT NULL
+    AND dh.result IS NOT NULL
+    AND dh.result = dh.selection
+    AND EXISTS (
+      SELECT 1 FROM race_weather rw
+      WHERE rw.race_id = dh.race_id
+        AND rw.source_type = 'official_historical'
+    )
+    AND EXISTS (
+      SELECT 1 FROM exhibition_data ed
+      WHERE ed.race_id = dh.race_id
+        AND ed.source_type = 'official_historical'
+    )
+    AND EXISTS (
+      SELECT 1 FROM race_equipment re
+      WHERE re.race_id = dh.race_id
+        AND re.source_type = 'official_historical'
+    )
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS invalid_count FROM invalid
+`).get() as { invalid_count: number };
+
+  if (Number(row.invalid_count ?? 0) > 0) {
+    throw new Error("OFFICIAL_HISTORICAL_BUY_REDUCTION_SETTLEMENT_INTEGRITY_INVALID");
+  }
 }
 
 function countCompleteOfficialHistoricalRaces(): number {
@@ -140,7 +207,7 @@ ${baseCte(yearWhere)}
 SELECT
   COUNT(*) AS n,
   SUM(CASE WHEN result = selection THEN 1 ELSE 0 END) AS hits,
-  ROUND(SUM(CASE WHEN result = selection THEN current_odds ELSE 0 END) * 1.0 / NULLIF(COUNT(*), 0), 4) AS roi
+  ROUND(SUM(hit_return) * 1.0 / NULLIF(COUNT(*), 0), 4) AS roi
 FROM filtered
 `).get(...params) as { n: number; hits: number | null; roi: number | null };
   return { n: Number(row.n ?? 0), hits: Number(row.hits ?? 0), roi: row.roi == null ? null : Number(row.roi) };
@@ -153,7 +220,7 @@ ${baseCte("")}
   SELECT
     ym,
     COUNT(*) AS n,
-    ROUND(SUM(CASE WHEN result = selection THEN current_odds ELSE 0 END) * 1.0 / NULLIF(COUNT(*), 0), 4) AS roi
+    ROUND(SUM(hit_return) * 1.0 / NULLIF(COUNT(*), 0), 4) AS roi
   FROM selected
   WHERE ${whereSql}
   GROUP BY ym
@@ -207,14 +274,27 @@ WITH race_avg_st AS (
 ), selected AS (
   SELECT
     dh.id,
+    dh.race_id,
+    dh.bet_type,
     dh.date,
     substr(dh.date, 1, 7) AS ym,
     dh.venue,
     dh.race_no,
     dh.selection,
     dh.result,
-    dh.current_odds,
     dh.exhibition_st_residual_sum,
+    CASE
+      WHEN dh.result = dh.selection THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = dh.race_id
+          AND rp.bet_type = dh.bet_type
+          AND rp.combination = dh.selection
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
+      )
+      ELSE 0
+    END AS hit_return,
     rw.stable_plate,
     rw.wind_speed_mps,
     COALESCE(st.selected_st_positive_count, 0) AS selected_st_positive_count,
@@ -228,6 +308,7 @@ WITH race_avg_st AS (
   LEFT JOIN selected_equipment eq ON eq.id = dh.id
   WHERE dh.run_kind = 'historical-backfill'
     AND dh.decision = 'BUY'
+    AND dh.returned = 0
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
     ${extraDecisionWhere}
@@ -269,10 +350,9 @@ function reasonFor(category: Category, all: Metric, y2024: Metric, y2025: Metric
 function printReport(completeRaces: number, rows: Row[], sections: { A: Row[]; B: Row[]; C: Row[] }) {
   console.log("# official_historical BUY削減候補ROI検証");
   console.log("");
-  console.log(`DB: ${DB_PATH}`);
   console.log(`complete official_historical races: ${completeRaces}`);
-  console.log("target: decision_history.decision='BUY' AND run_kind='historical-backfill'");
-  console.log("ROI: current_odds basis, hit = result = selection");
+  console.log("target: decision_history.decision='BUY' AND run_kind='historical-backfill' AND returned=0");
+  console.log("ROI: official race_payouts.payout_yen basis, hit = result = selection");
   console.log("source: race_weather / exhibition_data / race_equipment source_type='official_historical' only");
   console.log("");
 
