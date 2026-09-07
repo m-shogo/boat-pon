@@ -17,18 +17,33 @@ test("paper-forward monitor entrypoint fails closed before raw report generation
 });
 
 test("paper-forward monitor payout preflight covers the historical 1-2-3 BUY union and stays read-only", () => {
+  assert.match(audit, /SELECT DISTINCT dh\.race_id/);
   assert.match(audit, /dh\.decision = 'BUY'/);
   assert.match(audit, /dh\.run_kind = 'historical-backfill'/);
   assert.match(audit, /dh\.result IS NOT NULL/);
   assert.match(audit, /dh\.selection = '1-2-3'/);
   assert.match(audit, /rp\.bet_type = 'trifecta'/);
-  assert.match(audit, /rp\.payout_yen IS NOT NULL/);
-  assert.match(audit, /rp\.payout_yen > 0/);
+  assert.match(audit, /ts\.returned = 0/);
+  assert.match(audit, /ts\.payout_yen > 0/);
   assert.match(audit, /readOnly: true/);
   assert.match(audit, /PRAGMA query_only = ON/);
   assert.match(audit, /assertCanonicalSingleLinkRegularFile/);
   assert.match(audit, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(audit, /PAPER_FORWARD_MONITOR_EXACTA_PAYOUT_COVERAGE_INCOMPLETE/);
+});
+
+test("paper-forward monitor settlement gate accepts legitimate multi-line races but rejects ambiguous lines", () => {
+  assert.match(audit, /target_settlements/);
+  assert.match(audit, /GROUP BY race_id, combination/);
+  assert.match(audit, /HAVING COUNT\(\*\) > 1/);
+  assert.match(audit, /duplicateCombinationKeys/);
+  assert.match(audit, /invalidNonRefundRows/);
+  assert.match(audit, /returnedRows/);
+  assert.match(audit, /ts\.combination IS NULL/);
+  assert.match(audit, /ts\.combination = ''/);
+  assert.match(audit, /ts\.payout_yen IS NULL/);
+  assert.match(audit, /ts\.payout_yen <= 0/);
+  assert.doesNotMatch(audit, /HAVING COUNT\(\*\) = 1/);
 });
 
 test("paper-forward monitor raw report remains payout dependent", () => {
