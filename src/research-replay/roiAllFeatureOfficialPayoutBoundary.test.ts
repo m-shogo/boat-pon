@@ -17,6 +17,20 @@ test("all-feature ROI search uses verified read-only official payouts", () => {
   assert.match(source, /metricBasis: "official_payout_yen"/);
 });
 
+test("all-feature ROI entrypoint validates exact winning settlement keys before analysis", () => {
+  assert.match(source, /import "\.\/assert-roi-all-feature-settlement-integrity";/);
+  const settlementGate = source.indexOf('import "./assert-roi-all-feature-settlement-integrity";');
+  const primaryDbOpen = source.indexOf("const db = new DatabaseSync(verifiedDbPath");
+  const coverageGate = source.indexOf("const payoutCompleteness = verifyOfficialPayoutCompleteness()");
+  const loadRows = source.indexOf("const rows = loadRows().sort");
+  const buildRules = source.indexOf("const rules = buildRules(rows)");
+  assert.ok(settlementGate >= 0);
+  assert.ok(primaryDbOpen > settlementGate);
+  assert.ok(coverageGate > settlementGate);
+  assert.ok(loadRows > settlementGate);
+  assert.ok(buildRules > loadRows);
+});
+
 test("all-feature ROI search fails closed before rule verdicts on incomplete settlement coverage", () => {
   assert.match(source, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(source, /if \(!payoutCompleteness\.complete\)/);
