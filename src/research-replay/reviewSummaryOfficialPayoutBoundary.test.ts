@@ -41,3 +41,13 @@ test("review summary payout audit rejects ambiguous or malformed winning keys wh
   assert.match(source, /PRAGMA query_only = ON/);
   assert.doesNotMatch(source, /GROUP BY rp\.race_id[\s\S]*COUNT\(\*\) = 1/);
 });
+
+test("review summary help path does not require settlement data before printing help", () => {
+  const source = readFileSync("scripts/audit-review-summary-payout-integrity.ts", "utf8");
+  const helpIndex = source.indexOf('rawArgs.includes("--help")');
+  const dbIndex = source.indexOf("new DatabaseSync");
+
+  assert.ok(helpIndex >= 0);
+  assert.ok(dbIndex > helpIndex);
+  assert.match(source, /rawArgs\.includes\("-h"\)/);
+});
