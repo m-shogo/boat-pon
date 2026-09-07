@@ -5,7 +5,9 @@ import test from "node:test";
 test("payout rebase settlement preflight rejects malformed, duplicate, and refund trifecta lines", () => {
   const source = readFileSync("scripts/audit-odds-payout-gap-completeness.ts", "utf8");
 
-  assert.match(source, /SELECT DISTINCT dh\.race_id/);
+  assert.match(source, /WITH target_rows AS \(/);
+  assert.match(source, /SELECT dh\.race_id, dh\.returned/);
+  assert.match(source, /target_races AS \(\s*SELECT DISTINCT race_id\s*FROM target_rows/);
   assert.match(source, /WHERE rp\.bet_type = 'trifecta'/);
   assert.match(source, /HAVING COUNT\(\*\) > 1/);
   assert.match(source, /ts\.returned = 0/);
