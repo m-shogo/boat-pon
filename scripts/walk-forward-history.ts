@@ -16,7 +16,7 @@ if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
 const args = parseWalkForwardHistoryOptions(rawArgs);
 
 if (!existsSync(DB_PATH)) {
-  console.error(`DB not found: ${DB_PATH}`);
+  console.error("[walk-forward-history] database not found");
   process.exit(1);
 }
 
@@ -26,6 +26,7 @@ db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000");
 try {
   const range = resolveRange(db, args.from, args.to);
+  assertWinningSettlementIntegrity(db, range.from, range.to);
   const rows = listRows(db, range.from, range.to);
   const windows = buildWindows(rows, range.from, range.to, args.windowDays, args.stepDays, args.minBuys);
   const payload = { generatedAt: new Date().toISOString(), range, args, windows, verdict: verdict(windows) };
@@ -40,6 +41,46 @@ function resolveRange(db: DatabaseSync, from: string | null, to: string | null) 
   const end = to ?? minMax?.maxDate ?? todayTokyo();
   const start = from ?? addDays(end, -179);
   return { from: start, to: end };
+}
+
+function assertWinningSettlementIntegrity(db: DatabaseSync, from: string, to: string) {
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT race_id, bet_type, selection
+  FROM decision_history
+  WHERE date >= ? AND date <= ?
+    AND decision = 'BUY'
+    AND returned = 0
+    AND result IS NOT NULL
+    AND selection = result
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+`).get(from, to) as { n: number };
+
+  if ((row.n ?? 0) > 0) {
+    throw new Error(
+      `WALK_FORWARD_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning BUY ticket key(s) do not have exactly one positive non-refund official settlement`,
+    );
+  }
 }
 
 function listRows(db: DatabaseSync, from: string, to: string): Row[] {
@@ -62,6 +103,8 @@ SELECT
       WHERE rp.race_id = decision_history.race_id
         AND rp.bet_type = decision_history.bet_type
         AND rp.combination = decision_history.selection
+        AND rp.returned = 0
+        AND rp.payout_yen > 0
       LIMIT 1
     )
     ELSE 0
@@ -155,4 +198,4 @@ function minDate(a: string, b: string) { return a < b ? a : b; }
 function todayTokyo() { return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 function fmt(value: number | null) { return value == null ? "-" : value.toFixed(3); }
 function pct(value: number | null) { return value == null ? "-" : `${(value * 100).toFixed(1)}%`; }
-function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]\n\nRead-only. ROI uses official race_payouts.payout_yen; windows with missing hit payout data are incomplete and excluded from verdicts fail-closed."); }
+function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]\n\nRead-only. ROI uses official race_payouts.payout_yen; winning BUY ticket keys must have exactly one positive non-refund official settlement before window verdicts are generated."); }
