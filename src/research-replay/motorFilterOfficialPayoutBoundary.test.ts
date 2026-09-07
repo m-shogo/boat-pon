@@ -11,6 +11,19 @@ test("motor filter research verifies canonical DB identity and remains read-only
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
 });
 
+test("motor filter maps decision 3連単 rows to canonical trifecta settlements", () => {
+  assert.match(source, /const DECISION_BET_TYPE = "3連単"/);
+  assert.match(source, /const PAYOUT_BET_TYPE = "trifecta"/);
+  assert.match(source, /dh\.bet_type = \?/);
+  assert.match(source, /rp\.bet_type = \?/);
+  assert.match(source, /settled\.bet_type = \?/);
+  assert.match(source, /\.get\(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE\)/);
+  assert.match(source, /\.all\(PAYOUT_BET_TYPE, PAYOUT_BET_TYPE, DECISION_BET_TYPE\)/);
+  assert.doesNotMatch(source, /rp\.bet_type = h\.bet_type/);
+  assert.doesNotMatch(source, /rp\.bet_type = dh\.bet_type/);
+  assert.doesNotMatch(source, /settled\.bet_type = dh\.bet_type/);
+});
+
 test("motor filter ROI uses positive official market settlement, not current odds returns", () => {
   assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /settled\.payout_yen > 0/);
@@ -21,7 +34,7 @@ test("motor filter ROI uses positive official market settlement, not current odd
 });
 
 test("motor filter fails closed on ambiguous exact winning settlement keys before ROI rows load", () => {
-  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.bet_type, dh\.selection/);
+  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.selection/);
   assert.match(source, /rp\.combination = h\.selection/);
   assert.match(source, /SELECT COUNT\(\*\)[\s\S]*rp\.returned = 0[\s\S]*rp\.payout_yen > 0/);
   assert.match(source, /MOTOR_FILTER_PAYOUT_SETTLEMENT_AMBIGUOUS/);
@@ -32,7 +45,7 @@ test("motor filter fails closed on ambiguous exact winning settlement keys befor
 
 test("motor filter settlement integrity is combination-scoped and preserves legitimate multi-line markets", () => {
   assert.match(source, /rp\.race_id = h\.race_id/);
-  assert.match(source, /rp\.bet_type = h\.bet_type/);
+  assert.match(source, /rp\.bet_type = \?/);
   assert.match(source, /rp\.combination = h\.selection/);
   assert.doesNotMatch(source, /GROUP BY\s+rp\.race_id\s*$/m);
 });
@@ -40,5 +53,5 @@ test("motor filter settlement integrity is combination-scoped and preserves legi
 test("motor filter excludes returned decision rows from both settlement validation and ROI population", () => {
   const occurrences = source.match(/dh\.returned = 0/g) ?? [];
   assert.ok(occurrences.length >= 2, "returned=0 must gate both relevant_hits and loadRows cohorts");
-  assert.match(source, /WHERE dh\.run_kind='historical-backfill'[\s\S]*AND dh\.decision='BUY'[\s\S]*AND dh\.result IS NOT NULL[\s\S]*AND dh\.returned = 0/);
+  assert.match(source, /WHERE dh\.run_kind='historical-backfill'[\s\S]*AND dh\.decision='BUY'[\s\S]*AND dh\.bet_type = \?[\s\S]*AND dh\.result IS NOT NULL[\s\S]*AND dh\.returned = 0/);
 });
