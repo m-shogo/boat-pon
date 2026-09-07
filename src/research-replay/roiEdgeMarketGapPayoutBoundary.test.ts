@@ -17,6 +17,7 @@ test("ROI edge market-gap normal entrypoint fails closed before raw analysis", (
 });
 
 test("ROI edge market-gap payout preflight matches analyzer population and stays read-only", () => {
+  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
   assert.match(auditSource, /dh\.decision = 'BUY'/);
   assert.match(auditSource, /dh\.run_kind = 'historical-backfill'/);
   assert.match(auditSource, /dh\.result IS NOT NULL/);
@@ -24,13 +25,27 @@ test("ROI edge market-gap payout preflight matches analyzer population and stays
   assert.match(auditSource, /dh\.selection = '1-2-3'/);
   assert.match(auditSource, /dh\.date >= \?/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
-  assert.match(auditSource, /rp\.payout_yen IS NOT NULL/);
-  assert.match(auditSource, /rp\.payout_yen > 0/);
+  assert.match(auditSource, /ts\.returned = 0/);
+  assert.match(auditSource, /ts\.payout_yen > 0/);
   assert.match(auditSource, /readOnly: true/);
   assert.match(auditSource, /PRAGMA query_only = ON/);
   assert.match(auditSource, /assertCanonicalSingleLinkRegularFile/);
   assert.match(auditSource, /evaluatePaperForwardPayoutCompleteness/);
-  assert.match(auditSource, /ROI_EDGE_MARKET_GAP_EXACTA_PAYOUT_COVERAGE_INCOMPLETE/);
+  assert.match(auditSource, /ROI_EDGE_MARKET_GAP_TRIFECTA_PAYOUT_COVERAGE_INCOMPLETE/);
+});
+
+test("ROI edge market-gap settlement gate permits legitimate multi-line races but rejects ambiguous lines", () => {
+  assert.match(auditSource, /target_settlements/);
+  assert.match(auditSource, /GROUP BY race_id, combination/);
+  assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
+  assert.match(auditSource, /duplicateCombinationKeys/);
+  assert.match(auditSource, /invalidNonRefundRows/);
+  assert.match(auditSource, /returnedRows/);
+  assert.match(auditSource, /ts\.combination IS NULL/);
+  assert.match(auditSource, /ts\.combination = ''/);
+  assert.match(auditSource, /ts\.payout_yen IS NULL/);
+  assert.match(auditSource, /ts\.payout_yen <= 0/);
+  assert.doesNotMatch(auditSource, /HAVING COUNT\(\*\) = 1/);
 });
 
 test("ROI edge market-gap raw analyzer retains both payout-dependent combinations", () => {
