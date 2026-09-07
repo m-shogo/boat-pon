@@ -6,6 +6,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const LOCK_PATH = "data/exacta-forward-candidates.json";
@@ -13,7 +14,11 @@ const OUT_JSON = "reports/exacta-forward-pipeline-audit.json";
 const OUT_MD = "reports/exacta-forward-pipeline-audit.md";
 const RECENT_TIMESERIES_ROWS = 5_000;
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("EXACTA_FORWARD_PIPELINE_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "EXACTA_FORWARD_PIPELINE_DB_IDENTITY_INVALID",
+);
 
 const autoFetchSource = readFileSync("scripts/auto-fetch-odds.ts", "utf8");
 const h011Source = readFileSync("scripts/report-h011-forward-monitor.ts", "utf8");
@@ -23,7 +28,7 @@ const lock = JSON.parse(readFileSync(LOCK_PATH, "utf8")) as {
   basePopulation: { runKind: string; decision: string; selection: string };
 };
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000;");
 
 try {
