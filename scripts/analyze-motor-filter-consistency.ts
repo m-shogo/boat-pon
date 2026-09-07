@@ -9,6 +9,8 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/motor-filter-consistency.md";
+const DECISION_BET_TYPE = "3連単";
+const PAYOUT_BET_TYPE = "trifecta";
 
 if (!existsSync(DB_PATH)) throw new Error("MOTOR_FILTER_PRIMARY_DB_MISSING");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "MOTOR_FILTER_PRIMARY_DB_IDENTITY_INVALID");
@@ -59,36 +61,37 @@ type Row = {
 function assertWinningSettlementIntegrity() {
   const invalid = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  SELECT DISTINCT dh.race_id, dh.selection
   FROM decision_history dh
   WHERE dh.run_kind = 'historical-backfill'
     AND dh.decision = 'BUY'
+    AND dh.bet_type = ?
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
     AND dh.returned = 0
     AND dh.selection = dh.result
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
+  SELECT h.race_id, h.selection
   FROM relevant_hits h
   WHERE (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = ?
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = ?
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
   ) != 1
 )
 SELECT COUNT(*) AS n FROM invalid
-  `).get() as { n: number };
+  `).get(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE) as { n: number };
 
   if ((invalid.n ?? 0) > 0) {
     throw new Error(`MOTOR_FILTER_PAYOUT_SETTLEMENT_AMBIGUOUS count=${invalid.n}`);
@@ -107,7 +110,7 @@ SELECT
     SELECT rp.payout_yen
     FROM race_payouts rp
     WHERE rp.race_id = dh.race_id
-      AND rp.bet_type = dh.bet_type
+      AND rp.bet_type = ?
       AND rp.combination = dh.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
@@ -117,7 +120,7 @@ SELECT
     SELECT 1
     FROM race_payouts settled
     WHERE settled.race_id = dh.race_id
-      AND settled.bet_type = dh.bet_type
+      AND settled.bet_type = ?
       AND settled.returned = 0
       AND settled.payout_yen > 0
   ) THEN 1 ELSE 0 END AS market_settled
@@ -128,10 +131,11 @@ LEFT JOIN motor_boat_stats mbs
  AND mbs.course = CAST(substr(dh.selection, 1, 1) AS INTEGER)
 WHERE dh.run_kind='historical-backfill'
   AND dh.decision='BUY'
+  AND dh.bet_type = ?
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
   AND dh.returned = 0
-`).all() as Array<Record<string, unknown>>;
+`).all(PAYOUT_BET_TYPE, PAYOUT_BET_TYPE, DECISION_BET_TYPE) as Array<Record<string, unknown>>;
   return rows.map((row) => {
     const head = Number(String(row.selection).split("-")[0]);
     return {
