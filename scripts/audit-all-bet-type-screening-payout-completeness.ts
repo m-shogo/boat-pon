@@ -14,11 +14,24 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
+  const returnedBuy = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM decision_history dh
+    WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+      AND dh.returned != 0
+      AND dh.result IS NOT NULL AND dh.result != ''
+  `).get() as { count: number };
+
+  if (Number(returnedBuy.count) > 0) {
+    throw new Error(`ALL_BET_TYPE_SCREENING_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(returnedBuy.count) })}`);
+  }
+
   const rows = db.prepare(`
     WITH population AS (
       SELECT DISTINCT dh.race_id
       FROM decision_history dh
       WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+        AND dh.returned = 0
         AND dh.result IS NOT NULL AND dh.result != ''
     ), required(bet_type) AS (
       VALUES ${REQUIRED_BET_TYPES.map((betType) => `(${q(betType)})`).join(",")}
