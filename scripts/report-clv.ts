@@ -6,7 +6,7 @@
  * 見ること:
  * - decision 別に T-30 / T-20 / T-10 / T-5 の平均オッズ
  * - T-30 から T-5 への変化率
- * - 結果確定済みの hit / ROI(current_odds基準)
+ * - 結果確定済みの hit / ROI（公式 race_payouts.payout_yen 基準）
  */
 
 import { existsSync } from "node:fs";
@@ -23,7 +23,7 @@ if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
 const args = parseDecisionHistoryReportOptions(rawArgs);
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[report-clv] DB not found: ${DB_PATH}`);
+  console.error("CLV_REPORT_DB_MISSING");
   process.exit(1);
 }
 
@@ -35,9 +35,15 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertOfficialSettlementIntegrity();
   const rows = queryRows();
   if (args.json) {
-    console.log(JSON.stringify({ generatedAt: new Date().toISOString(), args, rows }, null, 2));
+    console.log(JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      args,
+      roiSource: "official race_payouts.payout_yen",
+      rows,
+    }, null, 2));
   } else {
     printRows(rows);
   }
@@ -58,7 +64,7 @@ type ReportRow = {
   avgClvDrop: number | null;
 };
 
-function queryRows(): ReportRow[] {
+function reportWhere(): { where: string[]; params: Array<string | number> } {
   const where: string[] = ["1=1"];
   const params: Array<string | number> = [];
 
@@ -67,6 +73,55 @@ function queryRows(): ReportRow[] {
   if (args.decision) { where.push("dh.decision = ?"); params.push(args.decision); }
   if (args.modelVersion) { where.push("dh.model_version = ?"); params.push(args.modelVersion); }
   if (args.runKind) { where.push("dh.run_kind = ?"); params.push(args.runKind); }
+
+  return { where, params };
+}
+
+function assertOfficialSettlementIntegrity(): void {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  FROM decision_history dh
+  WHERE ${where.join(" AND ")}
+    AND dh.result IS NOT NULL
+    AND dh.returned = 0
+    AND dh.selection = dh.result
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS invalid FROM invalid
+`).get(...params) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("CLV_REPORT_SETTLEMENT_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("CLV_REPORT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED");
+  }
+}
+
+function queryRows(): ReportRow[] {
+  const { where, params } = reportWhere();
 
   const sql = `
 WITH odds_by_checkpoint AS (
@@ -98,7 +153,20 @@ WITH odds_by_checkpoint AS (
     dh.selection,
     dh.result,
     dh.returned,
-    dh.current_odds,
+    CASE
+      WHEN dh.selection = dh.result AND dh.returned = 0 THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = dh.race_id
+          AND rp.bet_type = dh.bet_type
+          AND rp.combination = dh.selection
+          AND rp.returned = 0
+          AND rp.payout_yen IS NOT NULL
+          AND rp.payout_yen > 0
+        LIMIT 1
+      )
+      ELSE 0
+    END AS payout_units,
     p.t30,
     p.t20,
     p.t10,
@@ -119,7 +187,7 @@ SELECT
   SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
   SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
   ROUND(
-    SUM(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END) * 1.0
+    SUM(payout_units) * 1.0
     / NULLIF(SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END), 0),
     3
   ) AS roi,
@@ -140,6 +208,7 @@ function printRows(rows: ReportRow[]) {
   console.log("=== CLV report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
   console.log("");
   console.log("decision  n      settled  hits   roi     T-30    T-20    T-10    T-5     clvDrop");
   for (const row of rows) {
@@ -166,5 +235,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-clv.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]
 
-Read-only. No external access.`);
+Read-only. CLV uses aggregate checkpoint odds; ROI uses canonical official race_payouts.payout_yen.`);
 }
