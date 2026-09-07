@@ -27,6 +27,16 @@ test("123 bet-type preflight requires every settlement type compared by the anal
   assert.match(audit, /process\.exit\(2\)/);
 });
 
+test("123 bet-type preflight rejects returned historical BUY rows before cross-bet ROI analysis", () => {
+  assert.match(audit, /COALESCE\(dh\.returned, 0\) != 0/);
+  assert.match(audit, /returnedBuyRow/);
+  assert.match(audit, /if \(\(returnedBuyRow\.n \?\? 0\) > 0\)/);
+
+  const returnedGuard = audit.indexOf("if ((returnedBuyRow.n ?? 0) > 0)");
+  const completenessGuard = audit.indexOf("if (!complete)");
+  assert.ok(returnedGuard >= 0 && returnedGuard < completenessGuard, "returned BUY rows must fail closed before cross-bet completeness is accepted");
+});
+
 test("123 bet-type preflight rejects malformed, refunded, and duplicate settlement keys", () => {
   assert.match(audit, /WITH population AS/);
   assert.match(audit, /SELECT DISTINCT dh\.race_id/);
