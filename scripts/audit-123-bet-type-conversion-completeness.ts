@@ -41,6 +41,13 @@ const populationWhere = `
   AND dh.selection = '1-2-3'
 `;
 
+const returnedBuyRow = db.prepare(`
+  SELECT COUNT(*) AS n
+  FROM decision_history dh
+  WHERE ${populationWhere}
+    AND COALESCE(dh.returned, 0) != 0
+`).get() as { n: number };
+
 const row = db.prepare(`
   SELECT
     COUNT(*) AS total,
@@ -95,6 +102,11 @@ SELECT
 `).get() as { malformed: number; duplicateKeys: number };
 
 db.close();
+
+if ((returnedBuyRow.n ?? 0) > 0) {
+  console.error(`[123-bet-type-preflight] FAIL: target research cohort contains ${returnedBuyRow.n} returned historical BUY row(s), but the cross-bet ROI consumers do not exclude them explicitly`);
+  process.exit(2);
+}
 
 if (!complete) {
   console.error("[123-bet-type-preflight] FAIL: one or more required official settlement types are missing a positive non-refund payout; cross-bet ROI/verdict interpretation must remain unavailable");
