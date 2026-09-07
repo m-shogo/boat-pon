@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 
 const ALL_FEATURE_JSON = "reports/roi-all-feature-search.json";
 const ALL_FEATURE_SOURCE = "scripts/search-roi-all-features-lite.ts";
+const SETTLEMENT_GATE = "scripts/assert-roi-all-feature-settlement-integrity.ts";
 const OUT_MD = "reports/roi-pro-persona-review.md";
 const OUT_JSON = "reports/roi-pro-persona-review.json";
 
@@ -82,6 +83,7 @@ const personas: Persona[] = [
 ];
 
 assertRealizedPayoutMetricBasis();
+assertAllFeatureSettlementIntegrity();
 
 if (!existsSync(ALL_FEATURE_JSON)) {
   console.log("[roi-pro-persona-review] all-feature report not found. generating...");
@@ -144,6 +146,10 @@ function assertRealizedPayoutMetricBasis() {
       "ROI_PERSONA_REVIEW_METRIC_BASIS_UNSAFE: all-feature search does not yet provide verified official_payout_yen ROI; persona PAPER verdicts are disabled",
     );
   }
+}
+
+function assertAllFeatureSettlementIntegrity() {
+  execFileSync("pnpm", ["tsx", SETTLEMENT_GATE], { stdio: "inherit" });
 }
 
 function assertOfficialPayoutReport(report: AllFeatureReport) {
