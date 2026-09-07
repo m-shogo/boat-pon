@@ -3,6 +3,7 @@
  *
  * read-only / 外部アクセスなし。
  * 新モデルが旧モデルより良いかを見る入口。
+ * ROI主評価は race_payouts.payout_yen の公式実払戻。current_odds は補助特徴として平均のみ表示する。
  *
  * Usage:
  *   pnpm exec tsx scripts/report-model-version-simple.ts -- --from 2026-01-01 --to 2026-06-03
@@ -28,6 +29,7 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertOfficialSettlementIntegrity();
   const rows = queryRows();
   if (args.json) console.log(JSON.stringify({ generatedAt: new Date().toISOString(), args, rows }, null, 2));
   else printRows(rows);
@@ -49,7 +51,7 @@ type Row = {
   maxPayoutOdds: number | null;
 };
 
-function queryRows(): Row[] {
+function reportWhere(): { where: string[]; params: Array<string | number> } {
   const where: string[] = ["1=1"];
   const params: Array<string | number> = [];
   if (args.from) { where.push("date >= ?"); params.push(args.from); }
@@ -57,6 +59,50 @@ function queryRows(): Row[] {
   if (args.decision) { where.push("decision = ?"); params.push(args.decision); }
   if (args.venue) { where.push("venue = ?"); params.push(args.venue); }
   if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
+  return { where, params };
+}
+
+function assertOfficialSettlementIntegrity() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT race_id, bet_type, selection
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND selection = result
+    AND returned = 0
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `MODEL_VERSION_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+    );
+  }
+}
+
+function queryRows(): Row[] {
+  const { where, params } = reportWhere();
   params.push(args.minSettled);
 
   return db.prepare(`
@@ -69,7 +115,19 @@ WITH base AS (
     returned,
     estimated_hit_rate,
     current_odds,
-    CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END AS payout_odds
+    CASE
+      WHEN selection = result AND returned = 0 THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = decision_history.race_id
+          AND rp.bet_type = decision_history.bet_type
+          AND rp.combination = decision_history.selection
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
+        LIMIT 1
+      )
+      ELSE 0
+    END AS payout_units
   FROM decision_history
   WHERE ${where.join(" AND ")}
 ), grouped AS (
@@ -81,8 +139,8 @@ WITH base AS (
     SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
     AVG(estimated_hit_rate) AS avgEstimatedHitRate,
     AVG(current_odds) AS avgCurrentOdds,
-    SUM(payout_odds) AS totalPayoutOdds,
-    MAX(payout_odds) AS maxPayoutOdds
+    SUM(payout_units) AS totalPayoutUnits,
+    MAX(payout_units) AS maxPayoutUnits
   FROM base
   GROUP BY modelVersion, decision
 )
@@ -95,9 +153,9 @@ SELECT
   ROUND(hits * 1.0 / NULLIF(settled, 0), 4) AS hitRate,
   ROUND(avgEstimatedHitRate, 4) AS avgEstimatedHitRate,
   ROUND(avgCurrentOdds, 2) AS avgCurrentOdds,
-  ROUND(totalPayoutOdds * 1.0 / NULLIF(settled, 0), 3) AS roi,
-  ROUND((totalPayoutOdds - maxPayoutOdds) * 1.0 / NULLIF(settled - CASE WHEN maxPayoutOdds > 0 THEN 1 ELSE 0 END, 0), 3) AS roiExMax,
-  ROUND(maxPayoutOdds, 2) AS maxPayoutOdds
+  ROUND(totalPayoutUnits * 1.0 / NULLIF(settled, 0), 3) AS roi,
+  ROUND((totalPayoutUnits - maxPayoutUnits) * 1.0 / NULLIF(settled - CASE WHEN maxPayoutUnits > 0 THEN 1 ELSE 0 END, 0), 3) AS roiExMax,
+  ROUND(maxPayoutUnits, 2) AS maxPayoutOdds
 FROM grouped
 WHERE settled >= ?
 ORDER BY modelVersion ASC, CASE decision WHEN 'BUY' THEN 1 WHEN 'WATCH' THEN 2 WHEN 'SKIP' THEN 3 ELSE 4 END
@@ -107,8 +165,9 @@ ORDER BY modelVersion ASC, CASE decision WHEN 'BUY' THEN 1 WHEN 'WATCH' THEN 2 W
 function printRows(rows: Row[]) {
   console.log("=== model version simple report ===");
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} minSettled=${args.minSettled}`);
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
   console.log("");
-  console.log("model            decision  n      settled  hits   hitRate  estAvg  oddsAvg  roi     exMax   maxOdds");
+  console.log("model            decision  n      settled  hits   hitRate  estAvg  oddsAvg  roi     exMax   maxPay");
   for (const row of rows) {
     console.log([
       row.modelVersion.padEnd(16),
@@ -156,5 +215,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-model-version-simple.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--venue 蒲郡] [--min-settled 10] [--json]`);
+  pnpm exec tsx scripts/report-model-version-simple.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--venue 蒲郡] [--min-settled 10] [--json]\n\nRead-only. ROI uses canonical official race_payouts.payout_yen; current_odds is a quote-only feature.`);
 }
