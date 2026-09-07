@@ -24,10 +24,35 @@ type Row = {
   venueBoatTop2Rate: number | null;
 };
 
-type FilterSet = { name: string; keep: (row: Row) => boolean };
-type Metric = { n: number; hits: number; hitRate: number; stakeYen: number; returnYen: number; roi: number; roiExMaxHit: number; avgOdds: number };
-type StrategyResult = { filter: string; strategy: string; metric: Metric; avgTicketsPerRace: number; warnings: string[] };
-type TicketOutcome = { originalOdds: number; hit: boolean; payoutYen: number };
+type FilterSet = {
+  name: string;
+  keep: (row: Row) => boolean;
+};
+
+type Metric = {
+  n: number;
+  hits: number;
+  hitRate: number;
+  stakeYen: number;
+  returnYen: number;
+  roi: number;
+  roiExMaxHit: number;
+  avgOdds: number;
+};
+
+type StrategyResult = {
+  filter: string;
+  strategy: string;
+  metric: Metric;
+  avgTicketsPerRace: number;
+  warnings: string[];
+};
+
+type TicketOutcome = {
+  originalOdds: number;
+  hit: boolean;
+  payoutYen: number;
+};
 
 if (!existsSync(DB_PATH)) {
   console.error("[analyze-roi-strategy-after-filters] primary DB missing");
@@ -50,6 +75,7 @@ try {
 
   const filters = buildFilters();
   const results: StrategyResult[] = [];
+
   for (const filter of filters) {
     const kept = rows.filter(filter.keep);
     results.push(evalStrategy(filter.name, "original", kept, (row) => [row.selection]));
@@ -157,9 +183,18 @@ function loadRows(): Row[] {
     const raceId = String(row.raceId);
     const rates = mb.get(`${raceId}:${head}`) ?? { motor: null, boat: null };
     return {
-      id: Number(row.id), raceId, date: String(row.date), venue: String(row.venue), raceNo: Number(row.race_no), selection,
-      result: String(row.result), currentOdds: Number(row.current_odds), payoutYen: Number(row.winning_payout_yen ?? 0),
-      marketSettled: Number(row.market_settled) === 1, venueMotorTop2Rate: rates.motor, venueBoatTop2Rate: rates.boat,
+      id: Number(row.id),
+      raceId,
+      date: String(row.date),
+      venue: String(row.venue),
+      raceNo: Number(row.race_no),
+      selection,
+      result: String(row.result),
+      currentOdds: Number(row.current_odds),
+      payoutYen: Number(row.winning_payout_yen ?? 0),
+      marketSettled: Number(row.market_settled) === 1,
+      venueMotorTop2Rate: rates.motor,
+      venueBoatTop2Rate: rates.boat,
     };
   });
 }
@@ -168,7 +203,12 @@ function loadMotorBoat() {
   const map = new Map<string, { motor: number | null; boat: number | null }>();
   if (!tableExists("motor_boat_stats")) return map;
   const rows = db.prepare("SELECT race_id, course, motor_top2_rate, boat_top2_rate FROM motor_boat_stats").all() as Array<Record<string, unknown>>;
-  for (const row of rows) map.set(`${String(row.race_id)}:${Number(row.course)}`, { motor: num(row.motor_top2_rate), boat: num(row.boat_top2_rate) });
+  for (const row of rows) {
+    map.set(`${String(row.race_id)}:${Number(row.course)}`, {
+      motor: num(row.motor_top2_rate),
+      boat: num(row.boat_top2_rate),
+    });
+  }
   return map;
 }
 
@@ -188,7 +228,11 @@ function buildFilters(): FilterSet[] {
 
 function evalStrategy(filter: string, strategy: string, rows: Row[], tickets: (row: Row) => string[]): StrategyResult {
   const ticketOutcomes: TicketOutcome[] = [];
-  for (const row of rows) for (const ticket of tickets(row)) ticketOutcomes.push({ originalOdds: row.currentOdds, hit: row.result === ticket, payoutYen: row.payoutYen });
+  for (const row of rows) {
+    for (const ticket of tickets(row)) {
+      ticketOutcomes.push({ originalOdds: row.currentOdds, hit: row.result === ticket, payoutYen: row.payoutYen });
+    }
+  }
   const m = metric(ticketOutcomes);
   const warnings: string[] = [];
   if (rows.length < 100) warnings.push("race n small");
@@ -197,18 +241,44 @@ function evalStrategy(filter: string, strategy: string, rows: Row[], tickets: (r
   return { filter, strategy, metric: m, avgTicketsPerRace: rows.length ? ticketOutcomes.length / rows.length : 0, warnings };
 }
 
-function reverse23(row: Row) { const parts = row.selection.split("-"); return parts.length !== 3 ? [row.selection] : [row.selection, `${parts[0]}-${parts[2]}-${parts[1]}`]; }
-function top3Box(row: Row) { const parts = row.selection.split("-"); return parts.length !== 3 ? [row.selection] : permutations(parts).map((p) => p.join("-")); }
-function permutations(parts: string[]) { return [[parts[0], parts[1], parts[2]], [parts[0], parts[2], parts[1]], [parts[1], parts[0], parts[2]], [parts[1], parts[2], parts[0]], [parts[2], parts[0], parts[1]], [parts[2], parts[1], parts[0]]]; }
+function reverse23(row: Row) {
+  const parts = row.selection.split("-");
+  if (parts.length !== 3) return [row.selection];
+  return [row.selection, `${parts[0]}-${parts[2]}-${parts[1]}`];
+}
+
+function top3Box(row: Row) {
+  const parts = row.selection.split("-");
+  if (parts.length !== 3) return [row.selection];
+  return permutations(parts).map((p) => p.join("-"));
+}
+
+function permutations(parts: string[]) {
+  return [
+    [parts[0], parts[1], parts[2]],
+    [parts[0], parts[2], parts[1]],
+    [parts[1], parts[0], parts[2]],
+    [parts[1], parts[2], parts[0]],
+    [parts[2], parts[0], parts[1]],
+    [parts[2], parts[1], parts[0]],
+  ];
+}
 
 function metric(items: TicketOutcome[]): Metric {
   const hitReturns = items.filter((item) => item.hit).map((item) => item.payoutYen).sort((a, b) => b - a);
   const stakeYen = items.length * STAKE_YEN;
   const returnYen = hitReturns.reduce((sum, payoutYen) => sum + payoutYen, 0);
   const maxHitReturn = hitReturns[0] ?? 0;
-  return { n: items.length, hits: hitReturns.length, hitRate: items.length ? hitReturns.length / items.length : 0, stakeYen, returnYen,
-    roi: stakeYen ? returnYen / stakeYen : 0, roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitReturn) / stakeYen : 0,
-    avgOdds: items.length ? items.reduce((sum, item) => sum + item.originalOdds, 0) / items.length : 0 };
+  return {
+    n: items.length,
+    hits: hitReturns.length,
+    hitRate: items.length ? hitReturns.length / items.length : 0,
+    stakeYen,
+    returnYen,
+    roi: stakeYen ? returnYen / stakeYen : 0,
+    roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitReturn) / stakeYen : 0,
+    avgOdds: items.length ? items.reduce((sum, item) => sum + item.originalOdds, 0) / items.length : 0,
+  };
 }
 
 function renderMd(report: { generatedAt: string; dbIdentity: string; roiBasis: string; baseline: Metric; results: StrategyResult[] }) {
