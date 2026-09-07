@@ -32,6 +32,7 @@ assertRealizedPayoutMetricBasis();
 
 const commands: Array<[string, string[]]> = [
   ["pnpm", ["typecheck:scripts"]],
+  ["pnpm", ["tsx", "scripts/assert-roi-all-feature-settlement-integrity.ts"]],
   ["pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"]],
   ["pnpm", ["tsx", "scripts/run-roi-autopilot.ts"]],
 ];
