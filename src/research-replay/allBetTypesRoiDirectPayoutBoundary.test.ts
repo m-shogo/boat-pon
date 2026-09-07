@@ -8,10 +8,13 @@ test("all-bet-types payout audit is canonical read-only and validates complete o
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
+  assert.match(source, /dh\.returned != 0/);
+  assert.match(source, /ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED/);
+  assert.match(source, /dh\.returned = 0/);
   assert.match(source, /GROUP BY rp\.race_id, rp\.bet_type/);
   assert.match(source, /HAVING COUNT\(\*\) >= 1/);
   assert.match(source, /COUNT\(DISTINCT rp\.combination\) = COUNT\(\*\)/);
-  assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = COUNT\(\*\)/);
+  assert.match(source, /SUM\(CASE WHEN rp\.returned = 0 AND rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = COUNT\(\*\)/);
   assert.doesNotMatch(source, /HAVING COUNT\(\*\) = 1/);
   assert.match(source, /ALL_BET_TYPES_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /total <= 0/);
