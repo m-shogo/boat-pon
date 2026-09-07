@@ -21,7 +21,7 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[report-time-split-stability] DB not found: ${DB_PATH}`);
+  console.error("[report-time-split-stability] DB not found");
   process.exit(1);
 }
 
@@ -38,6 +38,7 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertOfficialSettlementIntegrity(args.from, args.to);
   const before = queryPeriod("before", args.from, previousDate(args.splitDate));
   const after = queryPeriod("after", args.splitDate, args.to);
   const rows = mergeRows(before, after).filter((row) => row.beforeSettled >= args.minSettled || row.afterSettled >= args.minSettled);
@@ -81,6 +82,57 @@ type StabilityRow = {
   stability: "stable-good" | "stable-bad" | "reversed" | "insufficient" | "mixed";
 };
 
+function reportWhere(from: string | null, to: string | null): { where: string[]; params: Array<string | number> } {
+  const where: string[] = ["1=1"];
+  const params: Array<string | number> = [];
+  if (from) { where.push("date >= ?"); params.push(from); }
+  if (to) { where.push("date <= ?"); params.push(to); }
+  if (args.venue) { where.push("venue = ?"); params.push(args.venue); }
+  if (args.decision) { where.push("decision = ?"); params.push(args.decision); }
+  if (args.modelVersion) { where.push("model_version = ?"); params.push(args.modelVersion); }
+  if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
+  return { where, params };
+}
+
+function assertOfficialSettlementIntegrity(from: string | null, to: string | null) {
+  const { where, params } = reportWhere(from, to);
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT race_id, bet_type, selection
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND selection = result
+    AND returned = 0
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `TIME_SPLIT_STABILITY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+    );
+  }
+}
+
 function queryPeriod(period: "before" | "after", from: string | null, to: string | null): PeriodRow[] {
   return [
     ...queryMetric(period, "current_odds", oddsBandSql("current_odds"), from, to),
@@ -92,14 +144,7 @@ function queryPeriod(period: "before" | "after", from: string | null, to: string
 }
 
 function queryMetric(period: "before" | "after", metric: string, bandExpr: string, from: string | null, to: string | null): PeriodRow[] {
-  const where: string[] = ["1=1"];
-  const params: Array<string | number> = [];
-  if (from) { where.push("date >= ?"); params.push(from); }
-  if (to) { where.push("date <= ?"); params.push(to); }
-  if (args.venue) { where.push("venue = ?"); params.push(args.venue); }
-  if (args.decision) { where.push("decision = ?"); params.push(args.decision); }
-  if (args.modelVersion) { where.push("model_version = ?"); params.push(args.modelVersion); }
-  if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
+  const { where, params } = reportWhere(from, to);
 
   const sql = `
 WITH base AS (
@@ -117,6 +162,8 @@ WITH base AS (
         WHERE rp.race_id = decision_history.race_id
           AND rp.bet_type = decision_history.bet_type
           AND rp.combination = decision_history.selection
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
         LIMIT 1
       )
       ELSE 0
