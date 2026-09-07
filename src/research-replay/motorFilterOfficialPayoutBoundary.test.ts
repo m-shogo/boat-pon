@@ -19,3 +19,20 @@ test("motor filter ROI uses positive official market settlement, not current odd
   assert.doesNotMatch(source, /sum \+ r\.odds \* 100/);
   assert.match(source, /roiBasis: "official-race-payouts"/);
 });
+
+test("motor filter fails closed on ambiguous exact winning settlement keys before ROI rows load", () => {
+  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.bet_type, dh\.selection/);
+  assert.match(source, /rp\.combination = h\.selection/);
+  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*rp\.returned = 0[\s\S]*rp\.payout_yen > 0/);
+  assert.match(source, /MOTOR_FILTER_PAYOUT_SETTLEMENT_AMBIGUOUS/);
+  const integrity = source.indexOf("assertWinningSettlementIntegrity();");
+  const rows = source.indexOf("const rows = loadRows();");
+  assert.ok(integrity >= 0 && rows > integrity);
+});
+
+test("motor filter settlement integrity is combination-scoped and preserves legitimate multi-line markets", () => {
+  assert.match(source, /rp\.race_id = h\.race_id/);
+  assert.match(source, /rp\.bet_type = h\.bet_type/);
+  assert.match(source, /rp\.combination = h\.selection/);
+  assert.doesNotMatch(source, /GROUP BY\s+rp\.race_id\s*$/m);
+});

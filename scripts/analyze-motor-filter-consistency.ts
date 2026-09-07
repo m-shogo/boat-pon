@@ -17,6 +17,7 @@ db.exec("PRAGMA busy_timeout = 5000;");
 db.exec("PRAGMA query_only = ON;");
 
 try {
+  assertWinningSettlementIntegrity();
   const rows = loadRows();
   if (rows.length === 0) throw new Error("MOTOR_FILTER_POPULATION_EMPTY");
   const missingSettlement = rows.filter((row) => !row.marketSettled).length;
@@ -54,6 +55,44 @@ type Row = {
   nationalMotor: number | null;
   venueMotor: number | null;
 };
+
+function assertWinningSettlementIntegrity() {
+  const invalid = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  FROM decision_history dh
+  WHERE dh.run_kind = 'historical-backfill'
+    AND dh.decision = 'BUY'
+    AND dh.current_odds IS NOT NULL
+    AND dh.result IS NOT NULL
+    AND dh.selection = dh.result
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+  `).get() as { n: number };
+
+  if ((invalid.n ?? 0) > 0) {
+    throw new Error(`MOTOR_FILTER_PAYOUT_SETTLEMENT_AMBIGUOUS count=${invalid.n}`);
+  }
+}
 
 function loadRows(): Row[] {
   const rows = db.prepare(`
