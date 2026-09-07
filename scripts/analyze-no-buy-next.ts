@@ -11,19 +11,20 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/no-buy-next-candidates.md";
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("NO_BUY_NEXT_RESEARCH_DB_UNAVAILABLE");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "no-buy-next primary database");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 type Row = {
-  id: number; date: string; ym: string; venue: string; raceNo: number; selection: string; result: string; odds: number;
+  id: number; date: string; ym: string; venue: string; raceNo: number; selection: string; result: string; odds: number; payoutYen: number;
   venueMotor: number | null; exhibitionRank: number | null; wind: number | null; wave: number | null; fCount: number; parts: number;
 };
 
 try {
   assertNoReturnedBuyRows();
+  assertOfficialWinningSettlements();
   const rows = loadRows();
   const before = metric(rows);
   const conditions = buildConditions(rows);
@@ -35,7 +36,7 @@ try {
     const split = splitStability(removedRows);
     return { condition: c.label, removed, remaining, risk: c.risk, recommendation: recommend(removed, remaining, before, split), split, lift: remaining.roi - before.roi };
   }).filter((r) => r.removed.n >= 30).sort((a, b) => b.lift - a.lift || a.removed.roi - b.removed.roi);
-  const report = { generatedAt: new Date().toISOString(), before, ranked };
+  const report = { generatedAt: new Date().toISOString(), returnSource: "official race_payouts", before, ranked };
   mkdirSync("reports", { recursive: true });
   writeFileSync("reports/no-buy-next-candidates.json", `${JSON.stringify(report, null, 2)}\n`);
   writeFileSync(OUT_MD, renderMarkdown(report));
@@ -60,6 +61,39 @@ WHERE dh.run_kind='historical-backfill'
   if (count > 0) throw new Error(`NO_BUY_NEXT_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count })}`);
 }
 
+function assertOfficialWinningSettlements(): void {
+  const row = db.prepare(`
+WITH winners AS (
+  SELECT DISTINCT dh.race_id, dh.selection
+  FROM decision_history dh
+  WHERE dh.run_kind='historical-backfill'
+    AND dh.decision='BUY'
+    AND dh.current_odds IS NOT NULL
+    AND dh.result IS NOT NULL
+    AND dh.returned = 0
+    AND dh.selection = dh.result
+), exact_settlements AS (
+  SELECT
+    w.race_id,
+    w.selection,
+    COUNT(rp.race_id) AS total_rows,
+    SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) AS valid_rows
+  FROM winners w
+  LEFT JOIN race_payouts rp
+    ON rp.race_id = w.race_id
+   AND rp.bet_type = 'trifecta'
+   AND rp.combination = w.selection
+  GROUP BY w.race_id, w.selection
+)
+SELECT COUNT(*) AS invalid
+FROM exact_settlements
+WHERE total_rows != 1 OR valid_rows != 1
+`).get() as { invalid: number | bigint | null };
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isInteger(invalid) || invalid < 0) throw new Error("NO_BUY_NEXT_SETTLEMENT_COUNT_INVALID");
+  if (invalid > 0) throw new Error(`NO_BUY_NEXT_OFFICIAL_SETTLEMENT_INVALID ${JSON.stringify({ invalid })}`);
+}
+
 function loadRows(): Row[] {
   const rows = db.prepare(`
 WITH ranked_exhibition AS (
@@ -79,6 +113,16 @@ WITH ranked_exhibition AS (
   GROUP BY dh.id
 )
 SELECT dh.id, dh.date, dh.venue, dh.race_no, dh.selection, dh.result, dh.current_odds,
+       CASE WHEN dh.selection = dh.result THEN COALESCE((
+         SELECT rp.payout_yen
+         FROM race_payouts rp
+         WHERE rp.race_id = dh.race_id
+           AND rp.bet_type = 'trifecta'
+           AND rp.combination = dh.selection
+           AND rp.returned = 0
+           AND rp.payout_yen > 0
+         LIMIT 1
+       ), 0) ELSE 0 END AS official_payout_yen,
        mbs.motor_top2_rate AS venue_motor, re.rank AS exhibition_rank,
        rw.wind_speed_mps, rw.wave_height_cm, rf.f_count, sp.parts
 FROM decision_history dh
@@ -96,7 +140,7 @@ ORDER BY dh.date, dh.id
 `).all() as Array<Record<string, unknown>>;
   return rows.map((r) => ({
     id: Number(r.id), date: String(r.date), ym: String(r.date).slice(0, 7), venue: String(r.venue), raceNo: Number(r.race_no),
-    selection: String(r.selection), result: String(r.result), odds: Number(r.current_odds),
+    selection: String(r.selection), result: String(r.result), odds: Number(r.current_odds), payoutYen: Number(r.official_payout_yen),
     venueMotor: nullableNumber(r.venue_motor), exhibitionRank: nullableNumber(r.exhibition_rank),
     wind: nullableNumber(r.wind_speed_mps), wave: nullableNumber(r.wave_height_cm),
     fCount: Number(r.f_count ?? 0), parts: Number(r.parts ?? 0),
@@ -128,18 +172,18 @@ function buildConditions(rows: Row[]) {
 function c(label: string, fn: (row: Row) => boolean, risk: string) { return { label, fn, risk }; }
 
 function metric(rows: Row[]) {
-  const hits = rows.filter((r) => r.selection === r.result).map((r) => r.odds).sort((a, b) => b - a);
-  const ret = hits.reduce((s, odds) => s + odds * 100, 0);
+  const hitReturns = rows.map((r) => r.payoutYen).filter((v) => v > 0).sort((a, b) => b - a);
+  const ret = rows.reduce((sum, row) => sum + row.payoutYen, 0);
   const stake = rows.length * 100;
-  const max = hits[0] ?? 0;
+  const max = hitReturns[0] ?? 0;
   return {
     n: rows.length,
-    hits: hits.length,
-    hitRate: rows.length ? hits.length / rows.length : 0,
+    hits: hitReturns.length,
+    hitRate: rows.length ? hitReturns.length / rows.length : 0,
     avgOdds: rows.length ? rows.reduce((s, r) => s + r.odds, 0) / rows.length : 0,
     roi: stake ? ret / stake : 0,
-    roiExMaxHit: stake ? Math.max(0, ret - max * 100) / stake : 0,
-    maxHitOdds: max,
+    roiExMaxHit: stake ? Math.max(0, ret - max) / stake : 0,
+    maxHitOdds: max / 100,
   };
 }
 
@@ -163,10 +207,11 @@ function recommend(removed: ReturnType<typeof metric>, remaining: ReturnType<typ
   return "B: 観察";
 }
 
-function renderMarkdown(report: { before: ReturnType<typeof metric>; ranked: Array<{ condition: string; removed: ReturnType<typeof metric>; remaining: ReturnType<typeof metric>; split: ReturnType<typeof splitStability>; risk: string; recommendation: string }> }) {
+function renderMarkdown(report: { returnSource: string; before: ReturnType<typeof metric>; ranked: Array<{ condition: string; removed: ReturnType<typeof metric>; remaining: ReturnType<typeof metric>; split: ReturnType<typeof splitStability>; risk: string; recommendation: string }> }) {
   const lines = [
     "# no buy next candidates",
     "",
+    `return source: ${report.returnSource}`,
     `baseline: n=${report.before.n} hit=${report.before.hits} ROI=${fmt(report.before.roi)}`,
     "",
     "| rank | NO BUY条件 | 削除BUY数 | 削除BUY ROI | 残りBUY数 | 残りROI | train/test安定性 | 推奨 |",
@@ -178,6 +223,7 @@ function renderMarkdown(report: { before: ReturnType<typeof metric>; ranked: Arr
   });
   lines.push("");
   lines.push("## 注意");
+  lines.push("- ROI回収額は公式race_payoutsのみを使用し、current_oddsは条件分類と平均オッズ表示にのみ使います。");
   lines.push("- これはedge候補であり、本物のedgeではありません。");
   lines.push("- n<50、最大1hit依存、test逆行の条件は本番採用しません。");
   return `${lines.join("\n")}\n`;
