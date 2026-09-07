@@ -125,6 +125,7 @@ export function reconcileSanitizedKFixture(legacyDbPath: string, fixturePath: st
   const text = new TextDecoder("shift_jis").decode(readFileSync(fixturePath));
   const parsed = parseOfficialResultDetail(text, { date: "2026-05-20", fetchedAt: "1970-01-01T00:00:00.000Z" });
   const db = new DatabaseSync(legacyDbPath, { readOnly: true });
+  db.exec("PRAGMA query_only = ON");
   const exact = db.prepare(`
     SELECT 1 found FROM race_payouts
     WHERE race_id=? AND bet_type=? AND combination=? AND payout_yen=? LIMIT 1
@@ -137,6 +138,32 @@ export function reconcileSanitizedKFixture(legacyDbPath: string, fixturePath: st
     SELECT race_id, bet_type, combination, payout_yen FROM race_payouts
     WHERE race_id=?
   `);
+  type LegacyPayoutRow = {
+    race_id: string;
+    bet_type: string;
+    combination: string;
+    payout_yen: number;
+  };
+  const relevantRaceIds = new Set([
+    ...parsed.conditions.map((condition) => condition.raceId),
+    ...parsed.payouts.map((line) => line.raceId),
+  ]);
+  const legacyRowsByRace = new Map<string, LegacyPayoutRow[]>();
+  for (const raceId of relevantRaceIds) {
+    const legacyRows = legacyByRace.all(raceId) as LegacyPayoutRow[];
+    const seenKeys = new Set<string>();
+    for (const row of legacyRows) {
+      const key = `${row.race_id}\u0000${row.bet_type}\u0000${row.combination}`;
+      if (seenKeys.has(key)) {
+        db.close();
+        throw new Error(
+          "N1_LEGACY_SETTLEMENT_DUPLICATE_KEY: reconciliation requires unique race_id × bet_type × combination settlement keys",
+        );
+      }
+      seenKeys.add(key);
+    }
+    legacyRowsByRace.set(raceId, legacyRows);
+  }
   const report: ReconciliationReport = {
     reconciliationVersion: "n1-legacy-reconciliation-v1",
     scope: "local_sanitized_k_fixture_vs_read_only_legacy",
@@ -167,13 +194,7 @@ export function reconcileSanitizedKFixture(legacyDbPath: string, fixturePath: st
 
   const parsedSelectionKeys = new Set(parsed.payouts.map((line) =>
     `${line.raceId}\u0000${line.betType}\u0000${line.combination}`));
-  for (const raceId of new Set(parsed.conditions.map((condition) => condition.raceId))) {
-    const legacyRows = legacyByRace.all(raceId) as Array<{
-      race_id: string;
-      bet_type: string;
-      combination: string;
-      payout_yen: number;
-    }>;
+  for (const legacyRows of legacyRowsByRace.values()) {
     for (const row of legacyRows) {
       const key = `${row.race_id}\u0000${row.bet_type}\u0000${row.combination}`;
       if (!parsedSelectionKeys.has(key)) report.legacyOnly += 1;
