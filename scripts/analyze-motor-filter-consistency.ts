@@ -31,7 +31,7 @@ try {
     ["venueMotorTop2Rate >= 50", (r: Row) => (r.venueMotor ?? -1) >= 50],
     ["both >= 50", (r: Row) => (r.nationalMotor ?? -1) >= 50 && (r.venueMotor ?? -1) >= 50],
     ["nationalのみ >= 50", (r: Row) => (r.nationalMotor ?? -1) >= 50 && !((r.venueMotor ?? -1) >= 50)],
-    ["venueのみ >= 50", (r: Row) => (r.venueMotor ?? -1) >= 50 && !((r.nationalMotor ?? -1) >= 50)],
+    ["venueのみ >= 50", (r: Row) => !((r.nationalMotor ?? -1) >= 50) && (r.venueMotor ?? -1) >= 50],
     ["両方 < 50", (r: Row) => !((r.nationalMotor ?? -1) >= 50) && !((r.venueMotor ?? -1) >= 50)],
     ["venueMotor missing", (r: Row) => r.venueMotor == null],
   ] as const;
@@ -65,6 +65,7 @@ WITH relevant_hits AS (
     AND dh.decision = 'BUY'
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
+    AND dh.returned = 0
     AND dh.selection = dh.result
 ), invalid AS (
   SELECT h.race_id, h.bet_type, h.selection
@@ -129,6 +130,7 @@ WHERE dh.run_kind='historical-backfill'
   AND dh.decision='BUY'
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
+  AND dh.returned = 0
 `).all() as Array<Record<string, unknown>>;
   return rows.map((row) => {
     const head = Number(String(row.selection).split("-")[0]);

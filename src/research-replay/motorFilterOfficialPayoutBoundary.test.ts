@@ -36,3 +36,9 @@ test("motor filter settlement integrity is combination-scoped and preserves legi
   assert.match(source, /rp\.combination = h\.selection/);
   assert.doesNotMatch(source, /GROUP BY\s+rp\.race_id\s*$/m);
 });
+
+test("motor filter excludes returned decision rows from both settlement validation and ROI population", () => {
+  const occurrences = source.match(/dh\.returned = 0/g) ?? [];
+  assert.ok(occurrences.length >= 2, "returned=0 must gate both relevant_hits and loadRows cohorts");
+  assert.match(source, /WHERE dh\.run_kind='historical-backfill'[\s\S]*AND dh\.decision='BUY'[\s\S]*AND dh\.result IS NOT NULL[\s\S]*AND dh\.returned = 0/);
+});
