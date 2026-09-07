@@ -27,10 +27,18 @@ function readPath(root: unknown, path: readonly string[]): unknown {
   return current;
 }
 
-function requireFiniteNumber(reportPath: string, root: unknown, path: readonly string[], integer = false): number {
+function requireFiniteNumber(reportPath: string, root: unknown, path: readonly string[]): number {
   const value = readPath(root, path);
-  if (typeof value !== "number" || !Number.isFinite(value) || (integer && !Number.isSafeInteger(value))) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
     fail(reportPath, `invalid_required_number:${path.join(".")}`);
+  }
+  return value;
+}
+
+function requireNonNegativeInteger(reportPath: string, root: unknown, path: readonly string[]): number {
+  const value = requireFiniteNumber(reportPath, root, path);
+  if (!Number.isSafeInteger(value) || value < 0) {
+    fail(reportPath, `invalid_required_count:${path.join(".")}`);
   }
   return value;
 }
@@ -53,11 +61,11 @@ function validatePaperForwardMonitor(reportPath: string, parsed: unknown): void 
   if (!condB) fail(reportPath, "missing_required_switch:sw_wind24_exh1");
 
   requireFiniteNumber(reportPath, condB, ["train", "payoutRoi132"]);
-  requireFiniteNumber(reportPath, condB, ["forward", "n"], true);
+  requireNonNegativeInteger(reportPath, condB, ["forward", "n"]);
   requireFiniteNumber(reportPath, condB, ["forward", "payoutRoi132"]);
   requireFiniteNumber(reportPath, condB, ["upgradeCheck", "top2ExclRoi"]);
-  requireFiniteNumber(reportPath, condB, ["upgradeCheck", "recentZeroMonths"], true);
-  requireFiniteNumber(reportPath, condB, ["upgradeCheck", "nToUpgrade"], true);
+  requireNonNegativeInteger(reportPath, condB, ["upgradeCheck", "recentZeroMonths"]);
+  requireNonNegativeInteger(reportPath, condB, ["upgradeCheck", "nToUpgrade"]);
   requireString(reportPath, condB, ["upgradeCheck", "upgradeVerdict"]);
 }
 
@@ -68,8 +76,8 @@ function validateTicketSelector(reportPath: string, parsed: unknown): void {
 }
 
 function validateSkipPolicy(reportPath: string, parsed: unknown): void {
-  requireFiniteNumber(reportPath, parsed, ["baseline", "n"], true);
-  requireFiniteNumber(reportPath, parsed, ["baseline", "hits"], true);
+  requireNonNegativeInteger(reportPath, parsed, ["baseline", "n"]);
+  requireNonNegativeInteger(reportPath, parsed, ["baseline", "hits"]);
   requireFiniteNumber(reportPath, parsed, ["baseline", "roi"]);
   requireArray(reportPath, parsed, ["policies"]);
   requireArray(reportPath, parsed, ["greedy"]);
