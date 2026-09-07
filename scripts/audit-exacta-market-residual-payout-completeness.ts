@@ -33,16 +33,17 @@ try {
       SELECT
         rp.race_id,
         CASE
-          WHEN COUNT(*) = 1
-            AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = 1
-            AND MAX(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 AND EXISTS (
+          WHEN COUNT(*) >= 1
+            AND COUNT(DISTINCT rp.combination) = COUNT(*)
+            AND SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = COUNT(*)
+            AND SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 AND EXISTS (
               SELECT 1
               FROM historical_alternative_odds winner_hao
               WHERE winner_hao.race_id = rp.race_id
                 AND winner_hao.bet_type = 'exacta'
                 AND ${historicalExactaCanonicalSourcePredicate("winner_hao")}
                 AND winner_hao.combination = rp.combination
-            ) THEN 1 ELSE 0 END) = 1
+            ) THEN 1 ELSE 0 END) = COUNT(*)
           THEN 1 ELSE 0
         END AS settled
       FROM race_payouts rp
