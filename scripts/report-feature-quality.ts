@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { parseRollingReportOptions } from "../src/research-replay/rollingReportOptions";
 
 type Row = {
@@ -9,6 +10,7 @@ type Row = {
   result: string | null;
   returned: number;
   current_odds: number | null;
+  official_payout_yen: number | null;
   wind_speed_mps: number | null;
   wave_height_cm: number | null;
   stable_plate: number | null;
@@ -33,19 +35,25 @@ const to = args.to ?? todayTokyo();
 const from = args.from ?? addDays(to, -(args.days - 1));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`DB not found: ${DB_PATH}`);
+  console.error("FEATURE_QUALITY_REPORT_DB_MISSING");
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "FEATURE_QUALITY_REPORT_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 try {
+  assertOfficialSettlementIntegrity(db, from, to);
   const rows = listRows(db, from, to);
   const report = {
     generatedAt: new Date().toISOString(),
     from,
     to,
     modelVersion: LIVE_MONITOR_MODEL_VERSION,
+    roiSource: "official race_payouts.payout_yen",
     rows: rows.length,
     coverage: featureCoverage(rows),
     byWind: groups(rows, windBucket),
@@ -54,12 +62,56 @@ try {
     byExhibitionResidual: groups(rows, residualBucket),
     byTilt: groups(rows, tiltBucket),
     byParts: groups(rows, partsBucket),
-    guardrail: "特徴量の観察用。nが小さい区分は採用しない。live設定変更・自動投票は行わない。",
+    guardrail: "特徴量の観察用。nが小さい区分は採用しない。live設定変更・自動投票は行わない。ROIは公式払戻のみを使う。",
   };
   if (args.json) console.log(JSON.stringify(report, null, 2));
   else printReport(report);
 } finally {
   db.close();
+}
+
+function assertOfficialSettlementIntegrity(db: DatabaseSync, from: string, to: string): void {
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  FROM decision_history dh
+  WHERE dh.date >= ? AND dh.date <= ?
+    AND dh.model_version = ?
+    AND dh.decision = 'BUY'
+    AND dh.returned = 0
+    AND dh.result IS NOT NULL
+    AND dh.selection = dh.result
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS invalid FROM invalid
+`).get(from, to, LIVE_MONITOR_MODEL_VERSION) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("FEATURE_QUALITY_SETTLEMENT_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("FEATURE_QUALITY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED");
+  }
 }
 
 function listRows(db: DatabaseSync, from: string, to: string): Row[] {
@@ -86,6 +138,17 @@ function listRows(db: DatabaseSync, from: string, to: string): Row[] {
   const weatherJoin = hasWeather ? "LEFT JOIN race_weather w ON w.race_id = dh.race_id" : "";
   return db.prepare(`
 SELECT dh.decision, dh.selection, dh.result, dh.returned, dh.current_odds,
+       CASE WHEN dh.decision = 'BUY' AND dh.returned = 0 AND dh.result IS NOT NULL AND dh.selection = dh.result THEN (
+         SELECT rp.payout_yen
+         FROM race_payouts rp
+         WHERE rp.race_id = dh.race_id
+           AND rp.bet_type = dh.bet_type
+           AND rp.combination = dh.selection
+           AND rp.returned = 0
+           AND rp.payout_yen IS NOT NULL
+           AND rp.payout_yen > 0
+         LIMIT 1
+       ) ELSE 0 END AS official_payout_yen,
        dh.exhibition_st_residual_sum,
        ${weatherSelect},
        ${equipmentSelect}
@@ -116,14 +179,14 @@ function summarize(rows: Row[]): Summary {
   const buyRows = rows.filter((r) => r.decision === "BUY");
   const settled = buyRows.filter((r) => r.returned === 0 && r.result != null);
   const hits = settled.filter((r) => r.selection === r.result);
-  const payoutOdds = hits.reduce((sum, r) => sum + (r.current_odds ?? 0), 0);
+  const payoutUnits = hits.reduce((sum, r) => sum + Number(r.official_payout_yen ?? 0) / 100, 0);
   return {
     rows: rows.length,
     buy: buyRows.length,
     settledBuy: settled.length,
     hits: hits.length,
     hitRate: settled.length ? hits.length / settled.length : null,
-    roi: settled.length ? payoutOdds / settled.length : null,
+    roi: settled.length ? payoutUnits / settled.length : null,
   };
 }
 
@@ -167,6 +230,7 @@ function partsBucket(row: Row) {
 function printReport(report: {
   from: string;
   to: string;
+  roiSource: string;
   rows: number;
   coverage: ReturnType<typeof featureCoverage>;
   byWind: Group[];
@@ -179,6 +243,7 @@ function printReport(report: {
 }) {
   console.log("# Boat Pon feature quality");
   console.log(`period: ${report.from}..${report.to}`);
+  console.log(`roiSource: ${report.roiSource}`);
   console.log(`rows=${report.rows} weather=${formatPct(report.coverage.weatherPct)} exhibitionResidual=${formatPct(report.coverage.exhibitionResidualPct)} equipment=${formatPct(report.coverage.equipmentPct)} BUY=${report.coverage.buyRows}`);
   printTable("Wind", report.byWind);
   printTable("Wave", report.byWave);
