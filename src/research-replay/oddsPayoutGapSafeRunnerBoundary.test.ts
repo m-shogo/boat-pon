@@ -33,3 +33,14 @@ test("odds-payout-gap completeness audit covers the full research population and
   assert.match(auditSource, /assertCanonicalSingleLinkRegularFile/);
   assert.match(auditSource, /if \(!result\.complete\)/);
 });
+
+test("odds-payout-gap preflight rejects returned historical BUY rows before ROI analysis", () => {
+  assert.match(auditSource, /SELECT dh\.race_id, dh\.returned/);
+  assert.match(auditSource, /COALESCE\(tr\.returned, 0\) != 0/);
+  assert.match(auditSource, /returnedBuyRows/);
+  assert.match(auditSource, /if \(\(row\.returnedBuyRows \?\? 0\) > 0\)/);
+
+  const returnedGuard = auditSource.indexOf("if ((row.returnedBuyRows ?? 0) > 0)");
+  const completenessGuard = auditSource.indexOf("if (!result.complete)");
+  assert.ok(returnedGuard >= 0 && returnedGuard < completenessGuard, "returned BUY rows must fail closed before payout completeness is accepted");
+});
