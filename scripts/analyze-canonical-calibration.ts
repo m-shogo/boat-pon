@@ -28,9 +28,20 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_D
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
+  assertOfficialSettlementIntegrity();
   const rows = db.prepare(`
     SELECT id, date, venue, race_id, selection, estimated_hit_rate,
-      current_odds, required_odds, result, payout_yen, returned
+      current_odds, required_odds, result, returned,
+      CASE WHEN result=selection THEN (
+        SELECT rp.payout_yen
+        FROM race_payouts rp
+        WHERE rp.race_id=decision_history.race_id
+          AND rp.bet_type='trifecta'
+          AND rp.combination=decision_history.selection
+          AND rp.returned=0
+          AND rp.payout_yen>0
+        LIMIT 1
+      ) ELSE 0 END AS payout_yen
     FROM decision_history
     WHERE decision='BUY'
       AND run_kind='historical-backfill'
@@ -72,7 +83,7 @@ try {
     safety: { readOnly: true, dbWrites: false, productionConnected: false, productionChanged: false },
     contract: {
       model: MODEL, betType: "3連単", decision: "BUY", runKind: "historical-backfill",
-      boundary: BOUNDARY, payoutBasis: "decision_history.payout_yen / 100円", currentOddsOnlyForReplay: true,
+      boundary: BOUNDARY, payoutBasis: "race_payouts.payout_yen / 100円 (official trifecta settlement)", currentOddsOnlyForReplay: true,
     },
     cohorts: { all: summary(rows), train: trainSummary, forward: forwardSummary, replaySelected: replaySummary },
     trainFactor,
@@ -80,18 +91,18 @@ try {
     caveats: [
       "historical-backfillのBUY台帳を同じrace_id集合で評価した監査であり、モデル再学習ではない",
       "train係数をforwardへ一度だけ適用した再生。replaySelectedは本番導入根拠ではない",
-      "current_oddsは暫定値なので、ROI判定はpayout_yenを主とする",
+      "current_oddsは暫定値なので、ROI判定はrace_payoutsの公式payout_yenを主とする",
       "返還(returned=1)と未確定(result=NULL)は母集団から除外",
     ],
   };
 
   const lines = [
     "# 現行BUY canonical calibration", "", `生成日時: ${report.generatedAt}`, "",
-    "> 読み取り専用。実払戻ベース。BUY通知・本番判定・DBは変更していない。", "",
+    "> 読み取り専用。公式実払戻ベース。BUY通知・本番判定・DBは変更していない。", "",
     "## 評価契約", "",
     `- model: ${MODEL} / bet_type: 3連単 / decision: BUY / run_kind: historical-backfill`,
     `- train: 2024年（${BOUNDARY}未満） / forward: ${BOUNDARY}以降`,
-    "- 主評価: payout_yen。current_oddsは再生条件の補助値のみ。", "",
+    "- 主評価: race_payouts.payout_yen。current_oddsは再生条件の補助値のみ。", "",
     "## 同一母集団の結果", "",
     "| 期間 | n | 的中 | 的中率 | 平均推定 | 較正係数(実績/推定) | 実払戻ROI | 平均current_odds |",
     "|---|---:|---:|---:|---:|---:|---:|---:|",
@@ -118,6 +129,41 @@ try {
   console.log(`[canonical-calibration] wrote ${OUT_MD} / ${OUT_JSON}`);
 } finally {
   db.close();
+}
+
+function assertOfficialSettlementIntegrity(): void {
+  const row = db.prepare(`
+WITH winners AS (
+  SELECT DISTINCT race_id, selection
+  FROM decision_history
+  WHERE decision='BUY'
+    AND run_kind='historical-backfill'
+    AND model_version=?
+    AND bet_type='3連単'
+    AND result IS NOT NULL AND result!=''
+    AND returned=0
+    AND current_odds IS NOT NULL
+    AND selection=result
+), exact_settlements AS (
+  SELECT
+    w.race_id,
+    w.selection,
+    COUNT(rp.race_id) AS total_rows,
+    SUM(CASE WHEN rp.returned=0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0 THEN 1 ELSE 0 END) AS valid_rows
+  FROM winners w
+  LEFT JOIN race_payouts rp
+    ON rp.race_id=w.race_id
+   AND rp.bet_type='trifecta'
+   AND rp.combination=w.selection
+  GROUP BY w.race_id, w.selection
+)
+SELECT COUNT(*) AS invalid
+FROM exact_settlements
+WHERE total_rows != 1 OR valid_rows != 1
+  `).get(MODEL) as { invalid: number };
+  if (row.invalid > 0) {
+    throw new Error(`CANONICAL_CALIBRATION_OFFICIAL_SETTLEMENT_INVALID ${JSON.stringify({ invalid: row.invalid })}`);
+  }
 }
 
 function assertPayoutCompleteness(rows: Row[]): void {
