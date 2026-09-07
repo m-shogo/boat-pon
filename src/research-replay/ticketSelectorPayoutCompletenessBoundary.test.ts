@@ -16,15 +16,33 @@ test("direct ticket-selector analysis cannot bypass compared-market payout compl
 });
 
 test("ticket-selector preflight covers the exact base population and every compared market", () => {
+  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
   assert.match(auditSource, /dh\.decision='BUY'/);
   assert.match(auditSource, /dh\.run_kind='historical-backfill'/);
   assert.match(auditSource, /dh\.selection='1-2-3'/);
   assert.match(auditSource, /dh\.current_odds IS NOT NULL/);
+  assert.match(auditSource, /EXCLUDED_VENUES/);
+  assert.match(auditSource, /EXCLUDED_RACE_NOS/);
   for (const betType of ["trifecta", "trio", "exacta", "quinella", "wide"]) {
-    assert.match(auditSource, new RegExp(`rp\\.bet_type='${betType}'`));
+    assert.match(auditSource, new RegExp(`ts\\.bet_type='${betType}'`));
   }
   assert.match(auditSource, /total > 0/);
   assert.match(auditSource, /covered !== total/);
+});
+
+test("ticket-selector preflight validates all compared settlement lines without banning legitimate multi-line winners", () => {
+  assert.match(auditSource, /ts\.returned=0/);
+  assert.match(auditSource, /ts\.payout_yen>0/);
+  assert.match(auditSource, /ts\.payout_yen<=0/);
+  assert.match(auditSource, /ts\.combination IS NULL/);
+  assert.match(auditSource, /GROUP BY race_id, bet_type, combination/);
+  assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
+  assert.match(auditSource, /duplicateCombinationKeys/);
+  assert.match(auditSource, /returnedRows/);
+  assert.match(auditSource, /invalidNonRefundRows/);
+  assert.match(auditSource, /process\.exit\(2\)/);
+  assert.doesNotMatch(auditSource, /HAVING COUNT\(\*\) = 1/);
+  assert.doesNotMatch(auditSource, /COUNT\(DISTINCT ts\.combination\) = 1/);
 });
 
 test("ticket-selector payout audit verifies database identity and remains query-only", () => {
@@ -35,9 +53,10 @@ test("ticket-selector payout audit verifies database identity and remains query-
   assert.match(auditSource, /PRAGMA query_only = ON/);
 });
 
-test("preserved selector core still ranks train and forward strategies from payout ROI", () => {
+test("preserved selector core still ranks train and forward strategies from scalar payout ROI", () => {
   assert.match(coreSource, /bestTrain/);
   assert.match(coreSource, /bestFwd/);
   assert.match(coreSource, /coverage:/);
   assert.match(coreSource, /COALESCE\(\(SELECT rp\.payout_yen/);
+  assert.match(coreSource, /LIMIT 1/);
 });
