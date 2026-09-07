@@ -15,6 +15,7 @@ test("miss recovery normal entrypoint validates official settlement integrity be
   assert.match(source, /MISS_RECOVERY_PAYOUT_DUPLICATE_COMBINATION/);
   assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
   assert.match(source, /p\.returned !== 1 && !isPositivePayout/);
+  assert.match(source, /p\.returned !== 1 && isPositivePayout/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_INVALID_LINE/);
   assert.match(source, /MISS_RECOVERY_BUY_POPULATION_EMPTY/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_COVERAGE_INCOMPLETE/);
