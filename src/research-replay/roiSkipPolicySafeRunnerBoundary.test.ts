@@ -30,12 +30,15 @@ test("ROI skip-policy npm command stays on the fail-closed normal entrypoint", (
 });
 
 test("ROI skip-policy payout preflight matches simulator population and validates settlement line integrity", () => {
-  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
+  assert.match(auditSource, /SELECT dh\.race_id, dh\.returned/);
   assert.match(auditSource, /dh\.decision = 'BUY'/);
   assert.match(auditSource, /dh\.run_kind = 'historical-backfill'/);
   assert.match(auditSource, /dh\.current_odds IS NOT NULL/);
   assert.match(auditSource, /dh\.selection = '1-2-3'/);
   assert.match(auditSource, /dh\.date >= \?/);
+  assert.match(auditSource, /COALESCE\(tr\.returned, 0\) != 0/);
+  assert.match(auditSource, /returnedBuyRows/);
+  assert.match(auditSource, /target research cohort contains returned historical BUY rows/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
   assert.match(auditSource, /ts\.returned = 0/);
   assert.match(auditSource, /ts\.payout_yen > 0/);
