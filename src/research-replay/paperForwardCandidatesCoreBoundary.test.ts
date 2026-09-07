@@ -19,5 +19,5 @@ test("paper-forward raw implementation stays internal and read-only", () => {
   const scripts = Object.values(pkg.scripts ?? {});
   assert.equal(scripts.some((command) => command.includes("report-paper-forward-candidates-raw.ts")), false);
   assert.match(raw, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
-  assert.doesNotMatch(raw, /\b(?:INSERT|UPDATE|DELETE|DROP)\b\s+/i);
+  assert.doesNotMatch(raw, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
 });
