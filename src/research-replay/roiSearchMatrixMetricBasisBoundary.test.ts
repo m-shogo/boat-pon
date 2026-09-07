@@ -14,6 +14,8 @@ test("ROI search matrix accepts only realized-payout pattern search output", () 
   assert.match(searchEntrypoint, /scripts\/search-roi-patterns-raw\.ts/);
   assert.match(searchEntrypoint, /FROM race_payouts rp/);
   assert.match(searchEntrypoint, /rp\.payout_yen > 0/);
+  assert.match(matrixSource, /const SEARCH_METRIC_SOURCE = "scripts\/search-roi-patterns-raw\.ts"/);
+  assert.match(matrixSource, /readFileSync\(SEARCH_METRIC_SOURCE, "utf8"\)/);
   assert.match(matrixSource, /assertRealizedPayoutMetricBasis\(\);/);
   assert.match(matrixSource, /ROI_SEARCH_MATRIX_METRIC_BASIS_UNSAFE/);
   assert.match(matrixSource, /source\.includes\("race_payouts"\)/);
