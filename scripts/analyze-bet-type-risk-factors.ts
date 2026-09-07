@@ -36,6 +36,24 @@ function assertPayoutCompleteness(): void {
   `).get() as { n: number };
   if (population.n <= 0) throw new Error("BET_TYPE_RISK_BUY_POPULATION_EMPTY");
 
+  const invalidLine = db.prepare(`
+    SELECT rp.race_id, rp.bet_type, rp.combination, rp.payout_yen, rp.returned
+    FROM race_payouts rp
+    WHERE rp.bet_type IN ('trifecta','trio','exacta','quinella')
+      AND rp.returned != 1
+      AND (rp.payout_yen IS NULL OR rp.payout_yen <= 0)
+      AND EXISTS (
+        SELECT 1 FROM decision_history dh
+        WHERE dh.race_id=rp.race_id
+          AND dh.decision='BUY' AND dh.run_kind='historical-backfill'
+          AND dh.result IS NOT NULL AND dh.result != ''
+      )
+    LIMIT 1
+  `).get() as { race_id: string; bet_type: string; combination: string; payout_yen: number | null; returned: number } | undefined;
+  if (invalidLine) {
+    throw new Error(`BET_TYPE_RISK_PAYOUT_INVALID_LINE ${JSON.stringify(invalidLine)}`);
+  }
+
   const coverage = Object.fromEntries(BET_TYPES.map(betType => {
     const row = db.prepare(`
       SELECT COUNT(DISTINCT dh.race_id) AS settled
@@ -45,6 +63,7 @@ function assertPayoutCompleteness(): void {
         AND EXISTS (
           SELECT 1 FROM race_payouts rp
           WHERE rp.race_id=dh.race_id AND rp.bet_type=?
+            AND rp.returned != 1
             AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0
         )
     `).get(betType) as { settled: number };
