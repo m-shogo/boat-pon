@@ -22,10 +22,23 @@ type PayoutRow = {
   returned: number;
 };
 
+const returnedBuy = db.prepare(`
+  SELECT COUNT(*) AS count
+  FROM decision_history
+  WHERE decision='BUY' AND run_kind='historical-backfill'
+    AND returned != 0
+    AND result IS NOT NULL AND result != ''
+`).get() as { count: number };
+
+if (Number(returnedBuy.count) > 0) {
+  throw new Error(`PROMISING_BET_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(returnedBuy.count) })}`);
+}
+
 const rows = db.prepare(`
   SELECT race_id
   FROM decision_history
   WHERE decision='BUY' AND run_kind='historical-backfill'
+    AND returned = 0
     AND result IS NOT NULL AND result != ''
 `).all() as RawRow[];
 
