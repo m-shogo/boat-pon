@@ -31,6 +31,7 @@ type SettlementIntegrityRow = {
   covered: number;
   invalidNonRefundRows: number;
   returnedRows: number;
+  duplicateKeys: number;
 };
 
 const settlementIntegrity = db.prepare(`
@@ -45,6 +46,11 @@ WITH target_races AS (
   FROM race_payouts rp
   JOIN target_races tr ON tr.race_id=rp.race_id
   WHERE rp.bet_type='trifecta'
+), duplicate_keys AS (
+  SELECT race_id, combination
+  FROM target_settlements
+  GROUP BY race_id, combination
+  HAVING COUNT(*) > 1
 )
 SELECT
   (SELECT COUNT(*) FROM target_races) AS total,
@@ -56,7 +62,8 @@ SELECT
    WHERE ts.returned=0
      AND (ts.combination IS NULL OR ts.combination='' OR ts.payout_yen IS NULL OR ts.payout_yen<=0)
   ) AS invalidNonRefundRows,
-  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned=1) AS returnedRows
+  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned=1) AS returnedRows,
+  (SELECT COUNT(*) FROM duplicate_keys) AS duplicateKeys
 `).get() as SettlementIntegrityRow;
 
 const settlementCountsValid =
@@ -78,6 +85,11 @@ if ((settlementIntegrity.invalidNonRefundRows ?? 0) > 0) {
 }
 if ((settlementIntegrity.returnedRows ?? 0) > 0) {
   console.error("[roi-validation] FAIL CLOSED: target-cohort trifecta refund rows require explicit refund semantics before ROI validation");
+  db.close();
+  process.exit(2);
+}
+if ((settlementIntegrity.duplicateKeys ?? 0) > 0) {
+  console.error("[roi-validation] FAIL CLOSED: duplicate race×trifecta×combination settlement keys make scalar payout lookup ambiguous");
   db.close();
   process.exit(2);
 }
