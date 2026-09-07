@@ -17,3 +17,13 @@ test("no-buy next research keeps SQLite query-only and remains analysis-only", (
   assert.match(source, /これはedge候補であり、本物のedgeではありません/);
   assert.match(source, /本番採用しません/);
 });
+
+test("no-buy next research fails closed on returned historical BUY rows before ranking", () => {
+  const returnedGate = source.indexOf("assertNoReturnedBuyRows();");
+  const load = source.indexOf("const rows = loadRows();");
+  assert.ok(returnedGate >= 0);
+  assert.ok(load > returnedGate);
+  assert.match(source, /dh\.returned != 0/);
+  assert.match(source, /NO_BUY_NEXT_RETURNED_BUY_UNSUPPORTED/);
+  assert.match(source, /dh\.returned = 0/);
+});
