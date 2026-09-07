@@ -30,6 +30,18 @@ test("ROI improvement validation fails closed on incomplete, malformed, refund, 
   assert.match(source, /FAIL CLOSED/);
 });
 
+test("ROI improvement validation excludes returned historical BUY rows from both settlement truth and ROI population", () => {
+  const guards = source.match(/COALESCE\(dh\.returned,0\)=0/g) ?? [];
+  assert.equal(guards.length, 2, "returned BUY exclusion must be applied to both settlement-integrity target races and analyzed ROI rows");
+
+  const integrity = source.indexOf("const settlementIntegrity = db.prepare");
+  const rows = source.indexOf("const rows = db.prepare");
+  const firstGuard = source.indexOf("COALESCE(dh.returned,0)=0", integrity);
+  const secondGuard = source.indexOf("COALESCE(dh.returned,0)=0", rows);
+  assert.ok(firstGuard > integrity && firstGuard < rows, "settlement integrity must exclude returned BUY rows");
+  assert.ok(secondGuard > rows, "ROI population must exclude returned BUY rows");
+});
+
 test("ROI improvement validation permits legitimate multi-line trifecta settlements across distinct combinations", () => {
   assert.match(source, /GROUP BY race_id, combination/);
   assert.doesNotMatch(source, /GROUP BY race_id\s*\n\s*HAVING COUNT\(\*\) > 1/);
