@@ -10,6 +10,12 @@ const REQUIRED_REPORTS = [
   "reports/bet-type-risk-factors.json",
 ] as const;
 
+type ReportEnvelope = {
+  safety?: {
+    pointInTimeSafe?: unknown;
+  };
+};
+
 function fail(path: string, reason: string): never {
   console.error(`BET_TYPE_SELECTOR_INPUT_REPORT_INVALID ${JSON.stringify({ path, reason })}`);
   process.exit(2);
@@ -25,6 +31,11 @@ for (const path of REQUIRED_REPORTS) {
   }
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     fail(path, "invalid_shape");
+  }
+
+  const envelope = parsed as ReportEnvelope;
+  if (envelope.safety?.pointInTimeSafe === false) {
+    fail(path, "point_in_time_unsafe");
   }
 }
 
