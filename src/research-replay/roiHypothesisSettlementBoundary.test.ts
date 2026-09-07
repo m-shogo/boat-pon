@@ -4,9 +4,18 @@ import test from "node:test";
 
 const source = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8");
 
+test("ROI hypothesis analysis maps decision 3連単 rows to canonical trifecta settlement keys", () => {
+  assert.match(source, /const DECISION_BET_TYPE = "3連単"/);
+  assert.match(source, /const PAYOUT_BET_TYPE = "trifecta"/);
+  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.selection/);
+  assert.match(source, /dh\.bet_type = \?/);
+  assert.match(source, /rp\.bet_type = \?/);
+  assert.match(source, /\.get\(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE\)/);
+  assert.doesNotMatch(source, /rp\.bet_type = h\.bet_type/);
+});
+
 test("ROI hypothesis analysis fails closed on ambiguous winning settlement keys", () => {
-  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.bet_type, dh\.selection/);
-  assert.match(source, /COUNT\(\*\)[\s\S]*rp\.combination = h\.selection/);
+  assert.match(source, /COUNT\(\*\)[\s\S]*rp\.bet_type = \?[\s\S]*rp\.combination = h\.selection/);
   assert.match(source, /rp\.returned = 0/);
   assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /do not have exactly one positive non-refund official settlement/);
