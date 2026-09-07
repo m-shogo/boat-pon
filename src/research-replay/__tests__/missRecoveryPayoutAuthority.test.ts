@@ -11,6 +11,9 @@ test("miss recovery normal entrypoint validates official settlement integrity be
   assert.match(source, /assertCanonicalSingleLinkRegularFile/);
   assert.match(source, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
+  assert.match(source, /returned != 0/);
+  assert.match(source, /returned = 0/);
+  assert.match(source, /MISS_RECOVERY_RETURNED_BUY_UNSUPPORTED/);
   assert.match(source, /seenSettlementKeys\.has\(key\)/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_DUPLICATE_COMBINATION/);
   assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
@@ -20,6 +23,10 @@ test("miss recovery normal entrypoint validates official settlement integrity be
   assert.match(source, /MISS_RECOVERY_BUY_POPULATION_EMPTY/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /await import\("\.\/analyze-miss-to-bet-type-recovery-raw"\)/);
+  assert.ok(
+    source.indexOf("MISS_RECOVERY_RETURNED_BUY_UNSUPPORTED")
+      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
+  );
   assert.ok(
     source.indexOf("assertPayoutCompleteness();")
       < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
