@@ -19,6 +19,7 @@ try {
       SELECT DISTINCT dh.race_id
       FROM decision_history dh
       WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+        AND dh.returned = 0
         AND dh.result IS NOT NULL AND dh.result != ''
     ), required(bet_type) AS (
       VALUES ${REQUIRED_BET_TYPES.map((betType) => `(${q(betType)})`).join(",")}
