@@ -38,6 +38,7 @@ function assertSettlementCompleteness() {
     ), settlement AS (
       SELECT rp.race_id,
         CASE WHEN COUNT(*)>=1
+          AND COUNT(DISTINCT rp.combination)=COUNT(*)
           AND SUM(CASE WHEN rp.returned=0
             AND rp.combination IS NOT NULL AND rp.combination!=''
             AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
