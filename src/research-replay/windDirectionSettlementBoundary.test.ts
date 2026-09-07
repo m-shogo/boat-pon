@@ -6,9 +6,17 @@ const source = readFileSync("scripts/analyze-wind-direction-by-venue.ts", "utf8"
 
 test("wind-direction exacta settlement coverage permits legitimate multi-line winners", () => {
   assert.match(source, /CASE WHEN COUNT\(\*\)>=1/);
+  assert.match(source, /COUNT\(\*\)=COUNT\(DISTINCT rp\.combination\)/);
   assert.match(source, /SUM\(CASE WHEN rp\.returned=0/);
   assert.match(source, /THEN 1 ELSE 0 END\)=COUNT\(\*\)/);
   assert.doesNotMatch(source, /CASE WHEN COUNT\(\*\)=1/);
+});
+
+test("wind-direction exacta settlement coverage rejects duplicate exact combinations", () => {
+  assert.match(source, /COUNT\(\*\)=COUNT\(DISTINCT rp\.combination\)/);
+  assert.match(source, /GROUP BY rp\.race_id/);
+  assert.match(source, /rp\.combination='1-4'/);
+  assert.match(source, /LIMIT 1/);
 });
 
 test("wind-direction exacta settlement coverage rejects malformed, refund, or non-market lines", () => {
