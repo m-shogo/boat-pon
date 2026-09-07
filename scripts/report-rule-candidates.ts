@@ -33,6 +33,8 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertOfficialSettlementIntegrity();
+
   const eligibleRows = [
     ...queryMetric("current_odds", oddsBandSql("current_odds")),
     ...queryMetric("required_odds", oddsBandSql("required_odds")),
@@ -79,7 +81,7 @@ type SuggestionRow = BaseRow & {
   reason: string;
 };
 
-function queryMetric(metric: string, bandExpr: string): BaseRow[] {
+function reportWhere(): { where: string[]; params: Array<string | number> } {
   const where: string[] = ["1=1"];
   const params: Array<string | number> = [];
 
@@ -88,6 +90,51 @@ function queryMetric(metric: string, bandExpr: string): BaseRow[] {
   if (args.venue) { where.push("venue = ?"); params.push(args.venue); }
   if (args.modelVersion) { where.push("model_version = ?"); params.push(args.modelVersion); }
   if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
+
+  return { where, params };
+}
+
+function assertOfficialSettlementIntegrity() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT race_id, bet_type, selection
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND selection = result
+    AND returned = 0
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `RULE_CANDIDATES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+    );
+  }
+}
+
+function queryMetric(metric: string, bandExpr: string): BaseRow[] {
+  const { where, params } = reportWhere();
 
   const sql = `
 WITH base AS (
