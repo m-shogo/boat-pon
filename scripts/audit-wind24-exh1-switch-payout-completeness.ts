@@ -31,11 +31,12 @@ type IntegrityRow = {
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
+  returnedBuyRows: number;
 };
 
 const row = db.prepare(`
-WITH target_races AS (
-  SELECT DISTINCT dh.race_id
+WITH target_rows AS (
+  SELECT dh.race_id, dh.returned
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -61,6 +62,9 @@ WITH target_races AS (
           WHERE ed2.race_id = dh.race_id
         )
     )
+), target_races AS (
+  SELECT DISTINCT race_id
+  FROM target_rows
 ), target_settlements AS (
   SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
   FROM race_payouts rp
@@ -92,7 +96,11 @@ SELECT
   (SELECT COUNT(*)
    FROM target_settlements ts
    WHERE ts.returned = 1
-  ) AS returnedRows
+  ) AS returnedRows,
+  (SELECT COUNT(*)
+   FROM target_rows tr
+   WHERE COALESCE(tr.returned, 0) != 0
+  ) AS returnedBuyRows
 `).get() as IntegrityRow;
 
 db.close();
@@ -102,14 +110,20 @@ const covered = row.covered ?? 0;
 const invalidNonRefundRows = row.invalidNonRefundRows ?? 0;
 const duplicateCombinationKeys = row.duplicateCombinationKeys ?? 0;
 const returnedRows = row.returnedRows ?? 0;
+const returnedBuyRows = row.returnedBuyRows ?? 0;
 const validCounts = Number.isSafeInteger(total) && Number.isSafeInteger(covered) && total >= 0 && covered >= 0 && covered <= total;
 const complete = validCounts && total > 0 && covered === total;
 const missing = validCounts ? total - covered : null;
 const coverageRate = validCounts && total > 0 ? Math.round((covered / total) * 10000) / 100 : 0;
 
 console.log(
-  `[wind24-switch-payout-preflight] covered=${covered}/${total} (${coverageRate}%) missing=${missing ?? "invalid"} invalidNonRefund=${invalidNonRefundRows} duplicateKeys=${duplicateCombinationKeys} returnedRows=${returnedRows}`,
+  `[wind24-switch-payout-preflight] covered=${covered}/${total} (${coverageRate}%) missing=${missing ?? "invalid"} invalidNonRefund=${invalidNonRefundRows} duplicateKeys=${duplicateCombinationKeys} returnedRows=${returnedRows} returnedBuyRows=${returnedBuyRows}`,
 );
+
+if (returnedBuyRows > 0) {
+  console.error("[wind24-switch-payout-preflight] FAIL: target research cohort contains returned historical BUY rows, but the deep-dive ROI consumers do not exclude them explicitly");
+  process.exit(2);
+}
 
 if (invalidNonRefundRows > 0) {
   console.error("[wind24-switch-payout-preflight] FAIL: target cohort contains non-refund trifecta settlement rows without a non-empty combination and positive official payout");
