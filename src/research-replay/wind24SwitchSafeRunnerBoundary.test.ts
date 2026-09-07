@@ -30,6 +30,7 @@ test("direct wind24 entrypoint cannot bypass payout completeness", () => {
 });
 
 test("wind24 payout preflight matches the deep-dive population and is read-only", () => {
+  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
   assert.match(auditSource, /rw\.wind_speed_mps >= 2 AND rw\.wind_speed_mps < 4/);
   assert.match(auditSource, /re\.boat = 1/);
   assert.match(auditSource, /dh\.selection = '1-2-3'/);
@@ -40,4 +41,16 @@ test("wind24 payout preflight matches the deep-dive population and is read-only"
   assert.match(auditSource, /total > 0 && covered === total/);
   assert.match(coreSource, /格上げ条件/);
   assert.match(coreSource, /降格条件/);
+});
+
+test("wind24 payout preflight rejects ambiguous or malformed settlement lines", () => {
+  assert.match(auditSource, /ts\.returned = 0/);
+  assert.match(auditSource, /ts\.payout_yen > 0/);
+  assert.match(auditSource, /ts\.combination IS NULL OR ts\.combination = ''/);
+  assert.match(auditSource, /ts\.payout_yen IS NULL OR ts\.payout_yen <= 0/);
+  assert.match(auditSource, /GROUP BY race_id, combination/);
+  assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
+  assert.match(auditSource, /returnedRows > 0/);
+  assert.match(auditSource, /duplicateCombinationKeys > 0/);
+  assert.match(auditSource, /invalidNonRefundRows > 0/);
 });
