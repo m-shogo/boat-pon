@@ -2,36 +2,45 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const source = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8");
+const entrypoint = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8");
+const raw = readFileSync("scripts/analyze-roi-hypothesis-sets-raw.ts", "utf8");
 
-test("ROI hypothesis sets use verified read-only official payouts", () => {
-  assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
-  assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
-  assert.match(source, /PRAGMA query_only = ON/);
-  assert.match(source, /FROM race_payouts rp/);
-  assert.match(source, /rp\.payout_yen/);
-  assert.match(source, /rp\.bet_type = dh\.bet_type/);
-  assert.match(source, /rp\.combination = dh\.selection/);
-  assert.match(source, /dh\.returned = 0/);
-  assert.match(source, /rp\.returned = 0/);
-  assert.match(source, /metricBasis: "official_payout_yen"/);
+test("ROI hypothesis entrypoint verifies the database and settlement integrity before raw analysis", () => {
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
+  assert.match(entrypoint, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
+  assert.match(entrypoint, /PRAGMA query_only = ON/);
+  assert.match(entrypoint, /FROM race_payouts rp/);
+  assert.match(entrypoint, /rp\.payout_yen > 0/);
+  assert.match(entrypoint, /rp\.combination = h\.selection/);
+  assert.match(entrypoint, /rp\.returned = 0/);
+  const integrity = entrypoint.indexOf("WITH relevant_hits AS");
+  const rawLaunch = entrypoint.indexOf("analyze-roi-hypothesis-sets-raw.ts");
+  assert.ok(integrity >= 0);
+  assert.ok(rawLaunch > integrity);
 });
 
-test("ROI hypothesis sets fail closed before scenario ranking on incomplete settlements", () => {
-  assert.match(source, /evaluatePaperForwardPayoutCompleteness/);
-  assert.match(source, /if \(!payoutCompleteness\.complete\)/);
-  assert.match(source, /process\.exitCode = 2/);
-  const gate = source.indexOf("if (!payoutCompleteness.complete)");
-  const loadRows = source.indexOf("const rows = loadRows().sort");
-  const scenarios = source.indexOf("const scenarios = buildScenarios()");
+test("ROI hypothesis raw core retains official payout completeness and scenario-ranking fail closed behavior", () => {
+  assert.match(raw, /evaluatePaperForwardPayoutCompleteness/);
+  assert.match(raw, /if \(!payoutCompleteness\.complete\)/);
+  assert.match(raw, /process\.exitCode = 2/);
+  assert.match(raw, /FROM race_payouts rp/);
+  assert.match(raw, /rp\.payout_yen/);
+  assert.match(raw, /rp\.bet_type = dh\.bet_type/);
+  assert.match(raw, /rp\.combination = dh\.selection/);
+  assert.match(raw, /dh\.returned = 0/);
+  assert.match(raw, /rp\.returned = 0/);
+  assert.match(raw, /metricBasis: "official_payout_yen"/);
+  const gate = raw.indexOf("if (!payoutCompleteness.complete)");
+  const loadRows = raw.indexOf("const rows = loadRows().sort");
+  const scenarios = raw.indexOf("const scenarios = buildScenarios()");
   assert.ok(gate >= 0);
   assert.ok(loadRows > gate);
   assert.ok(scenarios > loadRows);
 });
 
 test("ROI hypothesis metrics sum realized payouts and remove realized max hit", () => {
-  assert.doesNotMatch(source, /hitOdds\.reduce\(\(sum, odds\) => sum \+ odds \* STAKE_YEN, 0\)/);
-  assert.match(source, /rows\.reduce\(\(sum, row\) => sum \+ row\.payoutYen, 0\)/);
-  assert.match(source, /returnYen - maxHitPayoutYen/);
-  assert.match(source, /ROI_HYPOTHESIS_MATCHING_PAYOUT_MISSING/);
+  assert.doesNotMatch(raw, /hitOdds\.reduce\(\(sum, odds\) => sum \+ odds \* STAKE_YEN, 0\)/);
+  assert.match(raw, /rows\.reduce\(\(sum, row\) => sum \+ row\.payoutYen, 0\)/);
+  assert.match(raw, /returnYen - maxHitPayoutYen/);
+  assert.match(raw, /ROI_HYPOTHESIS_MATCHING_PAYOUT_MISSING/);
 });
