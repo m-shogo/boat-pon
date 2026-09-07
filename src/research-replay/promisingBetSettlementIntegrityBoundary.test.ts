@@ -7,6 +7,9 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
 
   assert.equal(pkg.scripts["analyze:promising-bet-types"], "tsx scripts/analyze-promising-bet-type-strategies.ts");
+  assert.match(source, /returned != 0/);
+  assert.match(source, /returned = 0/);
+  assert.match(source, /PROMISING_BET_RETURNED_BUY_UNSUPPORTED/);
   assert.match(source, /seenSettlementKeys\.has\(key\)/);
   assert.match(source, /PROMISING_BET_PAYOUT_DUPLICATE_COMBINATION/);
   assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
@@ -16,6 +19,10 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   assert.match(source, /settledRaceByType\.get\(p\.bet_type\)\?\.add\(p\.race_id\)/);
   assert.match(source, /assertPayoutCompleteness\(\)/);
   assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-raw"\)/);
+  assert.ok(
+    source.indexOf("PROMISING_BET_RETURNED_BUY_UNSUPPORTED")
+      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
+  );
   assert.ok(
     source.indexOf("assertPayoutCompleteness();")
       < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
