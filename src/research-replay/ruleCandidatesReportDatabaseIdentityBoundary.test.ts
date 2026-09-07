@@ -11,3 +11,17 @@ test("rule candidates report verifies primary database identity before opening r
   assert.match(source, /PRAGMA query_only = ON/);
   assert.doesNotMatch(source, /new DatabaseSync\(DB_PATH/);
 });
+
+test("rule candidates report fails closed when a winning ticket lacks one valid official settlement", () => {
+  const source = readFileSync("scripts/report-rule-candidates.ts", "utf8");
+  const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
+  const queryIndex = source.indexOf("const eligibleRows = [");
+
+  assert.ok(guardIndex >= 0 && guardIndex < queryIndex, "settlement preflight must run before ROI suggestions");
+  assert.match(source, /RULE_CANDIDATES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
+  assert.match(source, /SELECT DISTINCT race_id, bet_type, selection/);
+  assert.match(source, /rp\.combination = h\.selection/);
+  assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen > 0/);
+  assert.match(source, /\) != 1/);
+});
