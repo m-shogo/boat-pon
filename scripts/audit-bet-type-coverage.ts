@@ -12,18 +12,21 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const REPORT_DB_LABEL = "canonical research database";
 const OUT_MD = "reports/bet-type-coverage-audit.md";
 const OUT_JSON = "reports/bet-type-coverage-audit.json";
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[coverage-audit] DB not found: ${DB_PATH}`);
+  console.error("[coverage-audit] research database unavailable");
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 // ─── bet_type 正規化マップ ───────────────────────────────────────────────────
 
@@ -38,8 +41,6 @@ const NORMALIZED: Record<string, string> = {
 };
 
 const ALL_BET_TYPES = ["単勝", "複勝", "2連単", "2連複", "拡連複", "3連単", "3連複"] as const;
-
-// ─── Types ──────────────────────────────────────────────────────────────────
 
 type BetTypeStat = {
   rawBetType: string | null;
@@ -67,8 +68,6 @@ type CoverageReport = {
   summary: string;
 };
 
-// ─── 集計 ────────────────────────────────────────────────────────────────────
-
 const rawRows = db.prepare(`
   SELECT bet_type, COUNT(*) AS n
   FROM race_payouts
@@ -86,7 +85,6 @@ const totalBuyRaces = (db.prepare(`
   WHERE decision='BUY' AND run_kind='historical-backfill' AND result IS NOT NULL AND result != ''
 `).get() as { n: number }).n;
 
-// raw bet_type ごとの詳細統計
 const detailRows = db.prepare(`
   SELECT
     bet_type,
@@ -108,7 +106,6 @@ const detailRows = db.prepare(`
   comb_max: string;
 }[];
 
-// BUY decision と各 bet_type の結合可能レース数
 function buyRacesJoinable(betType: string): number {
   const r = db.prepare(`
     SELECT COUNT(DISTINCT dh.race_id) AS n
@@ -120,17 +117,13 @@ function buyRacesJoinable(betType: string): number {
   return r.n;
 }
 
-// ─── 全7券種の統計を生成 ─────────────────────────────────────────────────────
-
 const betTypeStats: BetTypeStat[] = [];
 
 for (const normalized of ALL_BET_TYPES) {
-  // raw bet_type を逆引き
   const rawEntry = Object.entries(NORMALIZED).find(([, v]) => v === normalized);
   const rawBetType = rawEntry ? rawEntry[0] : null;
 
   if (!rawBetType) {
-    // DB にない券種
     betTypeStats.push({
       rawBetType: null,
       normalizedBetType: normalized,
@@ -173,7 +166,6 @@ for (const normalized of ALL_BET_TYPES) {
   const coverageRate = totalPayoutRaces > 0 ? detail.payout_races / totalPayoutRaces : 0;
   const missingRate = totalBuyRaces > 0 ? 1 - joinable / totalBuyRaces : 1;
 
-  // wide は combination が複数行ある場合があるため注意
   let notes = "";
   if (normalized === "拡連複") {
     notes = "wide: 1レースあたり払戻行数が1〜3のレースが混在。払戻行は一部省略の可能性あり。";
@@ -203,11 +195,9 @@ for (const normalized of ALL_BET_TYPES) {
   });
 }
 
-// ─── レポート生成 ─────────────────────────────────────────────────────────────
-
 const report: CoverageReport = {
   generatedAt: new Date().toISOString(),
-  dbPath: DB_PATH,
+  dbPath: REPORT_DB_LABEL,
   totalBuyRaces,
   totalPayoutRaces,
   rawBetTypes: rawRows,
@@ -216,8 +206,6 @@ const report: CoverageReport = {
     .map((s) => `${s.normalizedBetType}: ${s.verdict} (joinable=${s.buyRacesJoinable})`)
     .join(", "),
 };
-
-// ─── Markdown ────────────────────────────────────────────────────────────────
 
 function pct(v: number) {
   return (v * 100).toFixed(1) + "%";
@@ -276,6 +264,8 @@ ${betTypeStats
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
 writeFileSync(OUT_MD, md, "utf-8");
 writeFileSync(OUT_JSON, JSON.stringify(report, null, 2), "utf-8");
+
+db.close();
 
 console.log(`[coverage-audit] 完了`);
 console.log(`  MD:   ${OUT_MD}`);
