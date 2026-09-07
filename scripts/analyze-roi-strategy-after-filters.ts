@@ -6,6 +6,8 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/roi-strategy-after-filters.md";
 const OUT_JSON = "reports/roi-strategy-after-filters.json";
 const STAKE_YEN = 100;
+const DECISION_BET_TYPE = "3連単";
+const PAYOUT_BET_TYPE = "trifecta";
 
 type Row = {
   id: number;
@@ -22,35 +24,10 @@ type Row = {
   venueBoatTop2Rate: number | null;
 };
 
-type FilterSet = {
-  name: string;
-  keep: (row: Row) => boolean;
-};
-
-type Metric = {
-  n: number;
-  hits: number;
-  hitRate: number;
-  stakeYen: number;
-  returnYen: number;
-  roi: number;
-  roiExMaxHit: number;
-  avgOdds: number;
-};
-
-type StrategyResult = {
-  filter: string;
-  strategy: string;
-  metric: Metric;
-  avgTicketsPerRace: number;
-  warnings: string[];
-};
-
-type TicketOutcome = {
-  originalOdds: number;
-  hit: boolean;
-  payoutYen: number;
-};
+type FilterSet = { name: string; keep: (row: Row) => boolean };
+type Metric = { n: number; hits: number; hitRate: number; stakeYen: number; returnYen: number; roi: number; roiExMaxHit: number; avgOdds: number };
+type StrategyResult = { filter: string; strategy: string; metric: Metric; avgTicketsPerRace: number; warnings: string[] };
+type TicketOutcome = { originalOdds: number; hit: boolean; payoutYen: number };
 
 if (!existsSync(DB_PATH)) {
   console.error("[analyze-roi-strategy-after-filters] primary DB missing");
@@ -73,7 +50,6 @@ try {
 
   const filters = buildFilters();
   const results: StrategyResult[] = [];
-
   for (const filter of filters) {
     const kept = rows.filter(filter.keep);
     results.push(evalStrategy(filter.name, "original", kept, (row) => [row.selection]));
@@ -104,9 +80,10 @@ function assertResearchSettlementIntegrity(): void {
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
+      AND dh.bet_type = ?
       AND dh.result IS NOT NULL AND dh.result != ''
       AND COALESCE(dh.returned, 0) != 0
-  `).get() as { n: number };
+  `).get(DECISION_BET_TYPE) as { n: number };
   if (returnedBuy.n !== 0) {
     throw new Error(`ROI_STRATEGY_RETURNED_BUY_PRESENT ${JSON.stringify(returnedBuy)}`);
   }
@@ -114,21 +91,22 @@ function assertResearchSettlementIntegrity(): void {
   const duplicateSettlement = db.prepare(`
     SELECT rp.race_id, rp.bet_type, rp.combination, COUNT(*) AS n
     FROM race_payouts rp
-    WHERE EXISTS (
-      SELECT 1
-      FROM decision_history dh
-      WHERE dh.race_id = rp.race_id
-        AND dh.bet_type = rp.bet_type
-        AND dh.result = rp.combination
-        AND dh.run_kind = 'historical-backfill'
-        AND dh.decision = 'BUY'
-        AND dh.result IS NOT NULL AND dh.result != ''
-        AND COALESCE(dh.returned, 0) = 0
-    )
+    WHERE rp.bet_type = ?
+      AND EXISTS (
+        SELECT 1
+        FROM decision_history dh
+        WHERE dh.race_id = rp.race_id
+          AND dh.bet_type = ?
+          AND dh.result = rp.combination
+          AND dh.run_kind = 'historical-backfill'
+          AND dh.decision = 'BUY'
+          AND dh.result IS NOT NULL AND dh.result != ''
+          AND COALESCE(dh.returned, 0) = 0
+      )
     GROUP BY rp.race_id, rp.bet_type, rp.combination
     HAVING COUNT(*) > 1
     LIMIT 1
-  `).get() as { race_id: string; bet_type: string; combination: string; n: number } | undefined;
+  `).get(PAYOUT_BET_TYPE, DECISION_BET_TYPE) as { race_id: string; bet_type: string; combination: string; n: number } | undefined;
   if (duplicateSettlement) {
     throw new Error(`ROI_STRATEGY_PAYOUT_DUPLICATE_KEY ${JSON.stringify(duplicateSettlement)}`);
   }
@@ -149,7 +127,7 @@ function loadRows(): Row[] {
         SELECT 1
         FROM race_payouts settled
         WHERE settled.race_id = dh.race_id
-          AND settled.bet_type = dh.bet_type
+          AND settled.bet_type = ?
           AND settled.returned = 0
           AND settled.payout_yen > 0
       ) THEN 1 ELSE 0 END AS market_settled,
@@ -157,7 +135,7 @@ function loadRows(): Row[] {
         SELECT rp.payout_yen
         FROM race_payouts rp
         WHERE rp.race_id = dh.race_id
-          AND rp.bet_type = dh.bet_type
+          AND rp.bet_type = ?
           AND rp.combination = dh.result
           AND rp.returned = 0
           AND rp.payout_yen > 0
@@ -166,11 +144,12 @@ function loadRows(): Row[] {
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
+      AND dh.bet_type = ?
       AND COALESCE(dh.returned, 0) = 0
       AND dh.current_odds IS NOT NULL
-      AND dh.result IS NOT NULL
+      AND dh.result IS NOT NULL AND dh.result != ''
     ORDER BY dh.date, dh.id
-  `).all() as Array<Record<string, unknown>>;
+  `).all(PAYOUT_BET_TYPE, PAYOUT_BET_TYPE, DECISION_BET_TYPE) as Array<Record<string, unknown>>;
   const mb = loadMotorBoat();
   return raw.map((row) => {
     const selection = String(row.selection);
@@ -178,18 +157,9 @@ function loadRows(): Row[] {
     const raceId = String(row.raceId);
     const rates = mb.get(`${raceId}:${head}`) ?? { motor: null, boat: null };
     return {
-      id: Number(row.id),
-      raceId,
-      date: String(row.date),
-      venue: String(row.venue),
-      raceNo: Number(row.race_no),
-      selection,
-      result: String(row.result),
-      currentOdds: Number(row.current_odds),
-      payoutYen: Number(row.winning_payout_yen ?? 0),
-      marketSettled: Number(row.market_settled) === 1,
-      venueMotorTop2Rate: rates.motor,
-      venueBoatTop2Rate: rates.boat,
+      id: Number(row.id), raceId, date: String(row.date), venue: String(row.venue), raceNo: Number(row.race_no), selection,
+      result: String(row.result), currentOdds: Number(row.current_odds), payoutYen: Number(row.winning_payout_yen ?? 0),
+      marketSettled: Number(row.market_settled) === 1, venueMotorTop2Rate: rates.motor, venueBoatTop2Rate: rates.boat,
     };
   });
 }
@@ -198,12 +168,7 @@ function loadMotorBoat() {
   const map = new Map<string, { motor: number | null; boat: number | null }>();
   if (!tableExists("motor_boat_stats")) return map;
   const rows = db.prepare("SELECT race_id, course, motor_top2_rate, boat_top2_rate FROM motor_boat_stats").all() as Array<Record<string, unknown>>;
-  for (const row of rows) {
-    map.set(`${String(row.race_id)}:${Number(row.course)}`, {
-      motor: num(row.motor_top2_rate),
-      boat: num(row.boat_top2_rate),
-    });
-  }
+  for (const row of rows) map.set(`${String(row.race_id)}:${Number(row.course)}`, { motor: num(row.motor_top2_rate), boat: num(row.boat_top2_rate) });
   return map;
 }
 
@@ -223,11 +188,7 @@ function buildFilters(): FilterSet[] {
 
 function evalStrategy(filter: string, strategy: string, rows: Row[], tickets: (row: Row) => string[]): StrategyResult {
   const ticketOutcomes: TicketOutcome[] = [];
-  for (const row of rows) {
-    for (const ticket of tickets(row)) {
-      ticketOutcomes.push({ originalOdds: row.currentOdds, hit: row.result === ticket, payoutYen: row.payoutYen });
-    }
-  }
+  for (const row of rows) for (const ticket of tickets(row)) ticketOutcomes.push({ originalOdds: row.currentOdds, hit: row.result === ticket, payoutYen: row.payoutYen });
   const m = metric(ticketOutcomes);
   const warnings: string[] = [];
   if (rows.length < 100) warnings.push("race n small");
@@ -236,44 +197,18 @@ function evalStrategy(filter: string, strategy: string, rows: Row[], tickets: (r
   return { filter, strategy, metric: m, avgTicketsPerRace: rows.length ? ticketOutcomes.length / rows.length : 0, warnings };
 }
 
-function reverse23(row: Row) {
-  const parts = row.selection.split("-");
-  if (parts.length !== 3) return [row.selection];
-  return [row.selection, `${parts[0]}-${parts[2]}-${parts[1]}`];
-}
-
-function top3Box(row: Row) {
-  const parts = row.selection.split("-");
-  if (parts.length !== 3) return [row.selection];
-  return permutations(parts).map((p) => p.join("-"));
-}
-
-function permutations(parts: string[]) {
-  return [
-    [parts[0], parts[1], parts[2]],
-    [parts[0], parts[2], parts[1]],
-    [parts[1], parts[0], parts[2]],
-    [parts[1], parts[2], parts[0]],
-    [parts[2], parts[0], parts[1]],
-    [parts[2], parts[1], parts[0]],
-  ];
-}
+function reverse23(row: Row) { const parts = row.selection.split("-"); return parts.length !== 3 ? [row.selection] : [row.selection, `${parts[0]}-${parts[2]}-${parts[1]}`]; }
+function top3Box(row: Row) { const parts = row.selection.split("-"); return parts.length !== 3 ? [row.selection] : permutations(parts).map((p) => p.join("-")); }
+function permutations(parts: string[]) { return [[parts[0], parts[1], parts[2]], [parts[0], parts[2], parts[1]], [parts[1], parts[0], parts[2]], [parts[1], parts[2], parts[0]], [parts[2], parts[0], parts[1]], [parts[2], parts[1], parts[0]]]; }
 
 function metric(items: TicketOutcome[]): Metric {
   const hitReturns = items.filter((item) => item.hit).map((item) => item.payoutYen).sort((a, b) => b - a);
   const stakeYen = items.length * STAKE_YEN;
   const returnYen = hitReturns.reduce((sum, payoutYen) => sum + payoutYen, 0);
   const maxHitReturn = hitReturns[0] ?? 0;
-  return {
-    n: items.length,
-    hits: hitReturns.length,
-    hitRate: items.length ? hitReturns.length / items.length : 0,
-    stakeYen,
-    returnYen,
-    roi: stakeYen ? returnYen / stakeYen : 0,
-    roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitReturn) / stakeYen : 0,
-    avgOdds: items.length ? items.reduce((sum, item) => sum + item.originalOdds, 0) / items.length : 0,
-  };
+  return { n: items.length, hits: hitReturns.length, hitRate: items.length ? hitReturns.length / items.length : 0, stakeYen, returnYen,
+    roi: stakeYen ? returnYen / stakeYen : 0, roiExMaxHit: stakeYen ? Math.max(0, returnYen - maxHitReturn) / stakeYen : 0,
+    avgOdds: items.length ? items.reduce((sum, item) => sum + item.originalOdds, 0) / items.length : 0 };
 }
 
 function renderMd(report: { generatedAt: string; dbIdentity: string; roiBasis: string; baseline: Metric; results: StrategyResult[] }) {
