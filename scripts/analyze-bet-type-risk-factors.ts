@@ -32,6 +32,7 @@ function assertPayoutCompleteness(): void {
     SELECT COUNT(DISTINCT race_id) AS n
     FROM decision_history
     WHERE decision='BUY' AND run_kind='historical-backfill'
+      AND COALESCE(returned,0)=0
       AND result IS NOT NULL AND result != ''
   `).get() as { n: number };
   if (population.n <= 0) throw new Error("BET_TYPE_RISK_BUY_POPULATION_EMPTY");
@@ -46,6 +47,7 @@ function assertPayoutCompleteness(): void {
         SELECT 1 FROM decision_history dh
         WHERE dh.race_id=rp.race_id
           AND dh.decision='BUY' AND dh.run_kind='historical-backfill'
+          AND COALESCE(dh.returned,0)=0
           AND dh.result IS NOT NULL AND dh.result != ''
       )
     LIMIT 1
@@ -54,11 +56,31 @@ function assertPayoutCompleteness(): void {
     throw new Error(`BET_TYPE_RISK_PAYOUT_INVALID_LINE ${JSON.stringify(invalidLine)}`);
   }
 
+  const duplicateLine = db.prepare(`
+    SELECT rp.race_id, rp.bet_type, rp.combination, COUNT(*) AS n
+    FROM race_payouts rp
+    WHERE rp.bet_type IN ('trifecta','trio','exacta','quinella')
+      AND EXISTS (
+        SELECT 1 FROM decision_history dh
+        WHERE dh.race_id=rp.race_id
+          AND dh.decision='BUY' AND dh.run_kind='historical-backfill'
+          AND COALESCE(dh.returned,0)=0
+          AND dh.result IS NOT NULL AND dh.result != ''
+      )
+    GROUP BY rp.race_id, rp.bet_type, rp.combination
+    HAVING COUNT(*) > 1
+    LIMIT 1
+  `).get() as { race_id: string; bet_type: string; combination: string; n: number } | undefined;
+  if (duplicateLine) {
+    throw new Error(`BET_TYPE_RISK_PAYOUT_DUPLICATE_KEY ${JSON.stringify(duplicateLine)}`);
+  }
+
   const coverage = Object.fromEntries(BET_TYPES.map(betType => {
     const row = db.prepare(`
       SELECT COUNT(DISTINCT dh.race_id) AS settled
       FROM decision_history dh
       WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+        AND COALESCE(dh.returned,0)=0
         AND dh.result IS NOT NULL AND dh.result != ''
         AND EXISTS (
           SELECT 1 FROM race_payouts rp
@@ -110,6 +132,7 @@ function groupSQL(whereClause: string): string {
     LEFT JOIN exhibition_data ed ON ed.race_id=dh.race_id
       AND ed.course=re.entry_course
     WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+      AND COALESCE(dh.returned,0)=0
       AND dh.result IS NOT NULL AND dh.result != ''
       ${whereClause ? "AND " + whereClause : ""}
   ),
