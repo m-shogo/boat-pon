@@ -11,7 +11,7 @@ import {
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-if (!existsSync(DB_PATH)) throw new Error(`LOCAL_MARKET_PRIMARY_DB_MISSING ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("LOCAL_MARKET_PRIMARY_DB_MISSING");
 
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "LOCAL_MARKET_PRIMARY_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
@@ -40,15 +40,17 @@ try {
         AND MAX(CASE WHEN h.combination='1-4' THEN h.odds END) IS NOT NULL
     ), settlement AS (
       SELECT rp.race_id,
-        CASE WHEN COUNT(*)=1
-          AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen>0 THEN 1 ELSE 0 END)=1
-          AND MAX(CASE WHEN EXISTS (
-            SELECT 1 FROM historical_alternative_odds winner_h
-            WHERE winner_h.race_id=rp.race_id
-              AND winner_h.bet_type='exacta'
-              AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
-              AND winner_h.combination=rp.combination
-          ) THEN 1 ELSE 0 END)=1
+        CASE WHEN COUNT(*)>=1
+          AND SUM(CASE WHEN rp.returned=0
+            AND rp.combination IS NOT NULL AND rp.combination!=''
+            AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
+            AND EXISTS (
+              SELECT 1 FROM historical_alternative_odds winner_h
+              WHERE winner_h.race_id=rp.race_id
+                AND winner_h.bet_type='exacta'
+                AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+                AND winner_h.combination=rp.combination
+            ) THEN 1 ELSE 0 END)=COUNT(*)
         THEN 1 ELSE 0 END AS settled
       FROM race_payouts rp
       WHERE rp.bet_type='exacta'
