@@ -16,18 +16,30 @@ test("skip-interactions command cannot bypass settlement completeness", () => {
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-roi-skip-interactions-core.ts")), false);
 });
 
-test("skip-interactions preflight matches the exact forward population", () => {
+test("skip-interactions preflight matches the exact forward population and validates settlement line integrity", () => {
+  assert.match(audit, /SELECT DISTINCT dh\.race_id/);
   assert.match(audit, /dh\.decision = 'BUY'/);
   assert.match(audit, /dh\.run_kind = 'historical-backfill'/);
   assert.match(audit, /dh\.current_odds IS NOT NULL/);
   assert.match(audit, /dh\.selection = '1-2-3'/);
-  assert.match(audit, /dh\.date >= '\$\{FORWARD_START\}'/);
+  assert.match(audit, /dh\.date >= \?/);
   assert.match(audit, /EXCLUDED_VENUES/);
   assert.match(audit, /EXCLUDED_RACE_NOS/);
   assert.match(audit, /rp\.bet_type = 'trifecta'/);
-  assert.match(audit, /rp\.payout_yen IS NOT NULL/);
+  assert.match(audit, /ts\.returned = 0/);
+  assert.match(audit, /ts\.payout_yen > 0/);
+  assert.match(audit, /ts\.payout_yen <= 0/);
+  assert.match(audit, /ts\.combination IS NULL/);
+  assert.match(audit, /HAVING COUNT\(\*\) > 1/);
+  assert.match(audit, /duplicateCombinationKeys/);
+  assert.match(audit, /returnedRows/);
   assert.match(audit, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(audit, /process\.exit\(2\)/);
+});
+
+test("skip-interactions preflight permits legitimate multi-line winners rather than enforcing one row per race", () => {
+  assert.doesNotMatch(audit, /HAVING COUNT\(\*\) = 1/);
+  assert.doesNotMatch(audit, /COUNT\(DISTINCT ts\.combination\) = 1/);
 });
 
 test("skip-interactions preflight verifies DB identity before read-only SQLite open", () => {
