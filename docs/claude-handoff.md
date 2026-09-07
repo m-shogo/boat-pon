@@ -1,12 +1,14 @@
 # Claude Code 引き継ぎメモ
 
+> **Legacy snapshot / 現在のresearch authorityではありません。** この文書は 2026-05-26 時点の運用メモを保存したものです。現在の研究実装・ROI methodology・governance判断では、最新 `main` のコード、research governance、focused regressionを優先してください。特に実回収ROIは quote (`current_odds`) ではなく、canonical official settlement (`race_payouts.payout_yen` + refund semantics) を使用します。
+
 最終更新: 2026-05-26 (セッション13 v4検証・不採用・v3確定)
 
 Boat Pon は個人用の期待値通知・検証アプリ。自動購入、自動投票、ログイン保存、投票サイト操作は絶対に実装しない。
 
 ## 現在の状態
 
-- リポジトリ: `/Users/m-shogo/Developer/personal/boat-pon`
+- リポジトリ: `m-shogo/boat-pon`
 - ブランチ: `main`
 
 ### モデル・フィルター（確定済み）
@@ -99,13 +101,18 @@ n < 300 の段階では ROI がどう出ても購入判断しない（3連単の
 
 ## ROI計算の注意
 
-```sql
--- 正しい（current_odds基準）
-SUM(CASE WHEN selection = result THEN current_odds ELSE 0 END) / COUNT(*)
+この節の旧 `current_odds` ROI 指示は廃止済みです。`current_odds` はquote/観測特徴であり、実現回収を表しません。
 
--- 禁止（payout_yen は使わない）
-SUM(payout_yen) / (COUNT(*) * 100)
+```sql
+-- 実回収ROIの概念: exact ticket key の canonical official settlement を使う
+-- race_id × bet_type × selection/combination を一意に照合し、refund semantics を適用する
+SUM(official_payout_yen) / total_stake_yen
+
+-- 禁止: quote を実払戻として扱わない
+-- SUM(CASE WHEN selection = result THEN current_odds ELSE 0 END) / COUNT(*)
 ```
+
+settlement coverage・exact-key uniqueness・positive/non-refund条件が保証できない場合は、ROIを推測せず fail-closed にする。
 
 ## DBスキーマ注意
 
