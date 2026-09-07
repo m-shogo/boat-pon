@@ -1,8 +1,9 @@
 /**
  * audit-odds-payout-gap-completeness.ts — 読み取り専用
  *
- * analyze-odds-payout-gap.ts が欠落 settlement を 0 円払戻として解釈する前に、
- * 対象 race すべてに official trifecta settlement が存在することを確認する。
+ * analyze-odds-payout-gap.ts / analyze-payout-rebase.ts が欠落・重複・返還 settlement を
+ * 0円払戻や任意の LIMIT 1 行として解釈する前に、対象 race の official trifecta
+ * settlement integrity を確認する。
  * DB / app_settings / production decision / automated betting は変更しない。
  */
 
@@ -26,17 +27,17 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
-type CoverageRow = { total: number; covered: number };
+type IntegrityRow = {
+  total: number;
+  covered: number;
+  invalidNonRefundRows: number;
+  duplicateCombinationKeys: number;
+  returnedRows: number;
+};
 
 const row = db.prepare(`
-  SELECT
-    COUNT(*) AS total,
-    SUM(CASE WHEN EXISTS (
-      SELECT 1
-      FROM race_payouts rp
-      WHERE rp.race_id = dh.race_id
-        AND rp.bet_type = 'trifecta'
-    ) THEN 1 ELSE 0 END) AS covered
+WITH target_races AS (
+  SELECT DISTINCT dh.race_id
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -44,18 +45,65 @@ const row = db.prepare(`
     AND dh.result != ''
     AND dh.venue NOT IN (${EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",")})
     AND dh.race_no NOT IN (${EXCLUDED_RACE_NOS.join(",")})
-`).get() as CoverageRow;
+), target_settlements AS (
+  SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
+  FROM race_payouts rp
+  JOIN target_races tr ON tr.race_id = rp.race_id
+  WHERE rp.bet_type = 'trifecta'
+), duplicate_keys AS (
+  SELECT race_id, combination
+  FROM target_settlements
+  GROUP BY race_id, combination
+  HAVING COUNT(*) > 1
+)
+SELECT
+  (SELECT COUNT(*) FROM target_races) AS total,
+  (SELECT COUNT(*)
+   FROM target_races tr
+   WHERE EXISTS (
+     SELECT 1
+     FROM target_settlements ts
+     WHERE ts.race_id = tr.race_id
+       AND ts.returned = 0
+       AND ts.payout_yen > 0
+   )) AS covered,
+  (SELECT COUNT(*)
+   FROM target_settlements ts
+   WHERE ts.returned = 0
+     AND (ts.combination IS NULL OR ts.combination = '' OR ts.payout_yen IS NULL OR ts.payout_yen <= 0)
+  ) AS invalidNonRefundRows,
+  (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
+  (SELECT COUNT(*)
+   FROM target_settlements ts
+   WHERE ts.returned = 1
+  ) AS returnedRows
+`).get() as IntegrityRow;
 
 const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covered ?? 0);
 db.close();
 
 console.log(
-  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces}`,
+  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
 );
 
-if (!result.complete) {
-  console.error("[odds-payout-gap-preflight] FAIL: official trifecta settlement coverage is incomplete; payout ROI/verdict interpretation must remain unavailable");
+if ((row.invalidNonRefundRows ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: target cohort contains non-refund trifecta settlement rows without a non-empty combination and positive official payout");
   process.exit(2);
 }
 
-console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage is complete for the analysis population");
+if ((row.duplicateCombinationKeys ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: target cohort contains duplicate race_id × trifecta × combination settlement keys; LIMIT 1 consumers must not choose an arbitrary row");
+  process.exit(2);
+}
+
+if ((row.returnedRows ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: target cohort contains trifecta refund rows, but downstream payout-rebase consumers do not model refund semantics explicitly");
+  process.exit(2);
+}
+
+if (!result.complete) {
+  console.error("[odds-payout-gap-preflight] FAIL: complete positive non-refund official trifecta settlement coverage is required; payout ROI/verdict interpretation must remain unavailable");
+  process.exit(2);
+}
+
+console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage and line integrity are complete for the analysis population");
