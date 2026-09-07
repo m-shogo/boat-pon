@@ -23,6 +23,7 @@ type Row = {
 };
 
 try {
+  assertNoReturnedBuyRows();
   const rows = loadRows();
   const before = metric(rows);
   const conditions = buildConditions(rows);
@@ -42,6 +43,21 @@ try {
   console.log("[analyze-no-buy-next] wrote reports/no-buy-next-candidates.json");
 } finally {
   db.close();
+}
+
+function assertNoReturnedBuyRows(): void {
+  const row = db.prepare(`
+SELECT COUNT(*) AS count
+FROM decision_history dh
+WHERE dh.run_kind='historical-backfill'
+  AND dh.decision='BUY'
+  AND dh.current_odds IS NOT NULL
+  AND dh.result IS NOT NULL
+  AND dh.returned != 0
+`).get() as { count: number | bigint | null };
+  const count = Number(row.count ?? 0);
+  if (!Number.isInteger(count) || count < 0) throw new Error("NO_BUY_NEXT_RETURNED_BUY_COUNT_INVALID");
+  if (count > 0) throw new Error(`NO_BUY_NEXT_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count })}`);
 }
 
 function loadRows(): Row[] {
@@ -75,6 +91,7 @@ WHERE dh.run_kind='historical-backfill'
   AND dh.decision='BUY'
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
+  AND dh.returned = 0
 ORDER BY dh.date, dh.id
 `).all() as Array<Record<string, unknown>>;
   return rows.map((r) => ({
