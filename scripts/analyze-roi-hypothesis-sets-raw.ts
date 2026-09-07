@@ -8,6 +8,8 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/roi-hypothesis-sets.md";
 const OUT_JSON = "reports/roi-hypothesis-sets.json";
 const STAKE_YEN = 100;
+const DECISION_BET_TYPE = "3連単";
+const PAYOUT_BET_TYPE = "trifecta";
 
 type Row = {
   id: number;
@@ -47,7 +49,7 @@ type Scenario = {
 };
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[analyze-roi-hypothesis-sets] DB not found: ${DB_PATH}`);
+  console.error("[analyze-roi-hypothesis-sets] database not found");
   process.exit(1);
 }
 
@@ -98,17 +100,18 @@ function verifyOfficialPayoutCompleteness() {
         SELECT 1
         FROM race_payouts rp
         WHERE rp.race_id = dh.race_id
-          AND rp.bet_type = dh.bet_type
+          AND rp.bet_type = ?
           AND rp.returned = 0
       ) THEN 1 ELSE 0 END) AS covered
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
+      AND dh.bet_type = ?
       AND dh.current_odds IS NOT NULL
       AND dh.result IS NOT NULL
       AND dh.result != ''
       AND dh.returned = 0
-  `).get() as { total: number; covered: number | null };
+  `).get(PAYOUT_BET_TYPE, DECISION_BET_TYPE) as { total: number; covered: number | null };
   return evaluatePaperForwardPayoutCompleteness(coverage.total ?? 0, coverage.covered ?? 0);
 }
 
@@ -119,20 +122,21 @@ function loadRows(): Row[] {
            (SELECT rp.payout_yen
               FROM race_payouts rp
              WHERE rp.race_id = dh.race_id
-               AND rp.bet_type = dh.bet_type
+               AND rp.bet_type = ?
                AND rp.combination = dh.selection
                AND rp.returned = 0
-             LIMIT 1) AS hit_payout_yen
+               AND rp.payout_yen > 0) AS hit_payout_yen
     FROM decision_history dh
     LEFT JOIN official_programs op ON op.race_id = dh.race_id
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
+      AND dh.bet_type = ?
       AND dh.current_odds IS NOT NULL
       AND dh.result IS NOT NULL
       AND dh.result != ''
       AND dh.returned = 0
     ORDER BY dh.date, dh.id
-  `).all() as Array<Record<string, unknown>>;
+  `).all(PAYOUT_BET_TYPE, DECISION_BET_TYPE) as Array<Record<string, unknown>>;
   const venueMb = loadVenueMotorBoat();
   return base.map((row) => {
     const selection = String(row.selection);

@@ -10,9 +10,11 @@ test("ROI hypothesis entrypoint verifies the database and settlement integrity b
   assert.match(entrypoint, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(entrypoint, /PRAGMA query_only = ON/);
   assert.match(entrypoint, /FROM race_payouts rp/);
+  assert.match(entrypoint, /rp\.bet_type = \?/);
   assert.match(entrypoint, /rp\.payout_yen > 0/);
   assert.match(entrypoint, /rp\.combination = h\.selection/);
   assert.match(entrypoint, /rp\.returned = 0/);
+  assert.doesNotMatch(entrypoint, /rp\.bet_type = h\.bet_type/);
   const integrity = entrypoint.indexOf("WITH relevant_hits AS");
   const rawLaunch = entrypoint.indexOf("analyze-roi-hypothesis-sets-raw.ts");
   assert.ok(integrity >= 0);
@@ -20,16 +22,24 @@ test("ROI hypothesis entrypoint verifies the database and settlement integrity b
 });
 
 test("ROI hypothesis raw core retains official payout completeness and scenario-ranking fail closed behavior", () => {
+  assert.match(raw, /const DECISION_BET_TYPE = "3連単"/);
+  assert.match(raw, /const PAYOUT_BET_TYPE = "trifecta"/);
   assert.match(raw, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(raw, /if \(!payoutCompleteness\.complete\)/);
   assert.match(raw, /process\.exitCode = 2/);
   assert.match(raw, /FROM race_payouts rp/);
   assert.match(raw, /rp\.payout_yen/);
-  assert.match(raw, /rp\.bet_type = dh\.bet_type/);
+  assert.match(raw, /rp\.bet_type = \?/);
+  assert.match(raw, /dh\.bet_type = \?/);
+  assert.match(raw, /\.get\(PAYOUT_BET_TYPE, DECISION_BET_TYPE\)/);
+  assert.match(raw, /\.all\(PAYOUT_BET_TYPE, DECISION_BET_TYPE\)/);
   assert.match(raw, /rp\.combination = dh\.selection/);
   assert.match(raw, /dh\.returned = 0/);
   assert.match(raw, /rp\.returned = 0/);
+  assert.match(raw, /rp\.payout_yen > 0/);
   assert.match(raw, /metricBasis: "official_payout_yen"/);
+  assert.doesNotMatch(raw, /rp\.bet_type = dh\.bet_type/);
+  assert.doesNotMatch(raw, /LIMIT 1/);
   const gate = raw.indexOf("if (!payoutCompleteness.complete)");
   const loadRows = raw.indexOf("const rows = loadRows().sort");
   const scenarios = raw.indexOf("const scenarios = buildScenarios()");
