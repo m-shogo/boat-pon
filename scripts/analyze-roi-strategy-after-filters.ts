@@ -62,6 +62,7 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 try {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA query_only = ON;");
+  assertResearchSettlementIntegrity();
   const rows = loadRows();
   if (rows.length === 0) throw new Error("ROI_STRATEGY_POPULATION_EMPTY");
   const missingSettlement = rows.filter((row) => !row.marketSettled).length;
@@ -97,6 +98,42 @@ try {
   db.close();
 }
 
+function assertResearchSettlementIntegrity(): void {
+  const returnedBuy = db.prepare(`
+    SELECT COUNT(*) AS n
+    FROM decision_history dh
+    WHERE dh.run_kind = 'historical-backfill'
+      AND dh.decision = 'BUY'
+      AND dh.result IS NOT NULL AND dh.result != ''
+      AND COALESCE(dh.returned, 0) != 0
+  `).get() as { n: number };
+  if (returnedBuy.n !== 0) {
+    throw new Error(`ROI_STRATEGY_RETURNED_BUY_PRESENT ${JSON.stringify(returnedBuy)}`);
+  }
+
+  const duplicateSettlement = db.prepare(`
+    SELECT rp.race_id, rp.bet_type, rp.combination, COUNT(*) AS n
+    FROM race_payouts rp
+    WHERE EXISTS (
+      SELECT 1
+      FROM decision_history dh
+      WHERE dh.race_id = rp.race_id
+        AND dh.bet_type = rp.bet_type
+        AND dh.result = rp.combination
+        AND dh.run_kind = 'historical-backfill'
+        AND dh.decision = 'BUY'
+        AND dh.result IS NOT NULL AND dh.result != ''
+        AND COALESCE(dh.returned, 0) = 0
+    )
+    GROUP BY rp.race_id, rp.bet_type, rp.combination
+    HAVING COUNT(*) > 1
+    LIMIT 1
+  `).get() as { race_id: string; bet_type: string; combination: string; n: number } | undefined;
+  if (duplicateSettlement) {
+    throw new Error(`ROI_STRATEGY_PAYOUT_DUPLICATE_KEY ${JSON.stringify(duplicateSettlement)}`);
+  }
+}
+
 function loadRows(): Row[] {
   const raw = db.prepare(`
     SELECT
@@ -129,6 +166,7 @@ function loadRows(): Row[] {
     FROM decision_history dh
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
+      AND COALESCE(dh.returned, 0) = 0
       AND dh.current_odds IS NOT NULL
       AND dh.result IS NOT NULL
     ORDER BY dh.date, dh.id
