@@ -1,13 +1,16 @@
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes("--help") || rawArgs.includes("-h")) process.exit(0);
+
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
-  const { where, params } = reportWhere(process.argv.slice(2));
+  const { where, params } = reportWhere(rawArgs);
   const row = db.prepare(`
 WITH relevant_hits AS (
   SELECT DISTINCT race_id, bet_type, selection
@@ -63,7 +66,6 @@ function reportWhere(argv: string[]) {
     else if (key === "--run-kind") { where.push("run_kind = ?"); params.push(requireValue(value, key)); i += 1; }
     else if (key === "--limit") { requireValue(value, key); i += 1; }
     else if (key === "--json" || key === "--") { /* report-only option */ }
-    else if (key === "--help" || key === "-h") { /* raw report handles help after audit */ }
     else throw new Error(`unknown option: ${key}`);
   }
 
