@@ -20,10 +20,28 @@ test("123 bet-type preflight requires every settlement type compared by the anal
   for (const betType of ["trifecta", "trio", "exacta", "quinella", "wide"]) {
     assert.ok(audit.includes(`"${betType}"`), `missing required bet type: ${betType}`);
   }
-  assert.match(audit, /payout_yen > 0/);
-  assert.doesNotMatch(audit, /payout_yen IS NOT NULL/);
+  assert.match(audit, /rp\.returned = 0/);
+  assert.match(audit, /rp\.payout_yen > 0/);
+  assert.match(audit, /TRIM\(COALESCE\(rp\.combination, ''\)\) != ''/);
   assert.match(audit, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(audit, /process\.exit\(2\)/);
+});
+
+test("123 bet-type preflight rejects malformed, refunded, and duplicate settlement keys", () => {
+  assert.match(audit, /WITH population AS/);
+  assert.match(audit, /SELECT DISTINCT dh\.race_id/);
+  assert.match(audit, /returned != 0/);
+  assert.match(audit, /payout_yen IS NULL/);
+  assert.match(audit, /payout_yen <= 0/);
+  assert.match(audit, /TRIM\(COALESCE\(combination, ''\)\) = ''/);
+  assert.match(audit, /GROUP BY race_id, bet_type, combination/);
+  assert.match(audit, /HAVING COUNT\(\*\) > 1/);
+  assert.match(audit, /process\.exit\(3\)/);
+});
+
+test("123 bet-type integrity remains per combination so legitimate multi-line races are allowed", () => {
+  assert.doesNotMatch(audit, /GROUP BY race_id, bet_type\s*\n\s*HAVING COUNT\(\*\) > 1/);
+  assert.match(audit, /GROUP BY race_id, bet_type, combination/);
 });
 
 test("123 bet-type preflight matches the analyzer population and keeps SQLite read-only", () => {
