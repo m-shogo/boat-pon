@@ -29,18 +29,38 @@ test("ROI skip-policy npm command stays on the fail-closed normal entrypoint", (
   assert.match(packageSource, /"analyze:roi-skip-policy": "tsx scripts\/analyze-roi-skip-policy-simulation\.ts"/);
 });
 
-test("ROI skip-policy payout preflight matches simulator population and stays read-only", () => {
+test("ROI skip-policy payout preflight matches simulator population and validates settlement line integrity", () => {
+  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
   assert.match(auditSource, /dh\.decision = 'BUY'/);
   assert.match(auditSource, /dh\.run_kind = 'historical-backfill'/);
   assert.match(auditSource, /dh\.current_odds IS NOT NULL/);
   assert.match(auditSource, /dh\.selection = '1-2-3'/);
   assert.match(auditSource, /dh\.date >= \?/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
-  assert.match(auditSource, /readOnly: true/);
-  assert.match(auditSource, /PRAGMA query_only = ON/);
-  assert.match(auditSource, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(auditSource, /ts\.returned = 0/);
+  assert.match(auditSource, /ts\.payout_yen > 0/);
+  assert.match(auditSource, /ts\.payout_yen <= 0/);
+  assert.match(auditSource, /ts\.combination IS NULL/);
+  assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
+  assert.match(auditSource, /duplicateCombinationKeys/);
+  assert.match(auditSource, /returnedRows/);
+  assert.match(auditSource, /invalidNonRefundRows/);
   assert.match(auditSource, /evaluatePaperForwardPayoutCompleteness/);
+  assert.match(auditSource, /process\.exit\(2\)/);
   assert.match(rawSource, /主評価: race_payouts\.payout_yen 実払戻ベース/);
   assert.match(rawSource, /COALESCE/);
   assert.match(rawSource, /deriveVerdict/);
+  assert.match(rawSource, /LIMIT 1/);
+});
+
+test("ROI skip-policy payout preflight permits legitimate multi-line winners instead of enforcing one settlement per race", () => {
+  assert.doesNotMatch(auditSource, /HAVING COUNT\(\*\) = 1/);
+  assert.doesNotMatch(auditSource, /COUNT\(DISTINCT ts\.combination\) = 1/);
+});
+
+test("ROI skip-policy payout preflight verifies DB identity before read-only query-only access", () => {
+  const verify = auditSource.indexOf("assertCanonicalSingleLinkRegularFile(DB_PATH");
+  const open = auditSource.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  assert.ok(verify >= 0 && open > verify);
+  assert.match(auditSource, /PRAGMA query_only = ON/);
 });
