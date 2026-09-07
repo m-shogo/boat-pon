@@ -2,9 +2,9 @@
  * audit-123-bet-type-conversion-completeness.ts — research-only/read-only
  *
  * Proves that every race in the exact 1-2-3 historical analysis population has
- * a positive official settlement for every bet type compared by the analyzer.
- * Missing, null, zero, or negative settlement values must remain unavailable
- * rather than becoming a synthetic zero-return observation.
+ * a positive official settlement for every bet type compared by the analyzer,
+ * and that the settlement rows consumed by scalar combination lookups are
+ * unambiguous and safe to interpret.
  */
 
 import { existsSync } from "node:fs";
@@ -31,6 +31,16 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
+const populationWhere = `
+  dh.decision = 'BUY'
+  AND dh.run_kind = 'historical-backfill'
+  AND dh.result IS NOT NULL
+  AND dh.result != ''
+  AND dh.venue NOT IN (${EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",")})
+  AND dh.race_no NOT IN (${EXCLUDED_RACE_NOS.join(",")})
+  AND dh.selection = '1-2-3'
+`;
+
 const row = db.prepare(`
   SELECT
     COUNT(*) AS total,
@@ -39,16 +49,12 @@ const row = db.prepare(`
       FROM race_payouts rp
       WHERE rp.race_id = dh.race_id
         AND rp.bet_type = '${betType}'
+        AND rp.returned = 0
         AND rp.payout_yen > 0
+        AND TRIM(COALESCE(rp.combination, '')) != ''
     ) THEN 1 ELSE 0 END) AS ${betType}`).join(",\n    ")}
   FROM decision_history dh
-  WHERE dh.decision = 'BUY'
-    AND dh.run_kind = 'historical-backfill'
-    AND dh.result IS NOT NULL
-    AND dh.result != ''
-    AND dh.venue NOT IN (${EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",")})
-    AND dh.race_no NOT IN (${EXCLUDED_RACE_NOS.join(",")})
-    AND dh.selection = '1-2-3'
+  WHERE ${populationWhere}
 `).get() as CoverageRow;
 
 let complete = true;
@@ -60,11 +66,46 @@ for (const betType of REQUIRED_BET_TYPES) {
   if (!result.complete) complete = false;
 }
 
+const integrity = db.prepare(`
+WITH population AS (
+  SELECT DISTINCT dh.race_id
+  FROM decision_history dh
+  WHERE ${populationWhere}
+), relevant AS (
+  SELECT rp.race_id, rp.bet_type, rp.combination, rp.payout_yen, rp.returned
+  FROM race_payouts rp
+  JOIN population p ON p.race_id = rp.race_id
+  WHERE rp.bet_type IN (${REQUIRED_BET_TYPES.map((betType) => `'${betType}'`).join(",")})
+), malformed AS (
+  SELECT race_id, bet_type, combination
+  FROM relevant
+  WHERE returned != 0
+     OR payout_yen IS NULL
+     OR payout_yen <= 0
+     OR TRIM(COALESCE(combination, '')) = ''
+), duplicate_keys AS (
+  SELECT race_id, bet_type, combination
+  FROM relevant
+  GROUP BY race_id, bet_type, combination
+  HAVING COUNT(*) > 1
+)
+SELECT
+  (SELECT COUNT(*) FROM malformed) AS malformed,
+  (SELECT COUNT(*) FROM duplicate_keys) AS duplicateKeys
+`).get() as { malformed: number; duplicateKeys: number };
+
 db.close();
 
 if (!complete) {
-  console.error("[123-bet-type-preflight] FAIL: one or more required official settlement types are missing a positive payout; cross-bet ROI/verdict interpretation must remain unavailable");
+  console.error("[123-bet-type-preflight] FAIL: one or more required official settlement types are missing a positive non-refund payout; cross-bet ROI/verdict interpretation must remain unavailable");
   process.exit(2);
 }
 
-console.log("[123-bet-type-preflight] PASS: all required official settlement types have positive payouts for the exact analysis population");
+if ((integrity.malformed ?? 0) > 0 || (integrity.duplicateKeys ?? 0) > 0) {
+  console.error(
+    `[123-bet-type-preflight] FAIL: settlement integrity invalid (malformed=${integrity.malformed ?? 0}, duplicateKeys=${integrity.duplicateKeys ?? 0}); cross-bet ROI/verdict interpretation must remain unavailable`,
+  );
+  process.exit(3);
+}
+
+console.log("[123-bet-type-preflight] PASS: all required official settlement types are complete, positive, non-refund, and unique per combination for the exact analysis population");
