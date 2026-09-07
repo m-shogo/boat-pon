@@ -14,7 +14,7 @@ test("bet type risk-factor ROI fails closed on returned BUY rows and invalid off
   assert.match(source, /BET_TYPE_RISK_PAYOUT_DUPLICATE_KEY/);
   assert.match(source, /BET_TYPE_RISK_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /const BET_TYPES = \["trifecta", "trio", "exacta", "quinella"\] as const/);
-  assert.ok((source.match(/COALESCE\(dh?\.returned,0\)=0/g) ?? []).length >= 4);
+  assert.ok((source.match(/COALESCE\((?:dh\.)?returned,0\)=0/g) ?? []).length >= 4);
   assert.ok((source.match(/rp\.returned != 1/g) ?? []).length >= 2);
   assert.match(source, /rp\.payout_yen IS NULL OR rp\.payout_yen <= 0/);
   assert.match(source, /rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0/);
