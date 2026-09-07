@@ -20,10 +20,22 @@ test("official historical BUY reduction cohort excludes returned decisions", () 
   assert.match(source, /decision = 'BUY'/);
 });
 
+test("official historical BUY reduction maps decision 3連単 rows to canonical trifecta settlements", () => {
+  assert.match(source, /const DECISION_BET_TYPE = "3連単"/);
+  assert.match(source, /const PAYOUT_BET_TYPE = "trifecta"/);
+  assert.match(source, /dh\.bet_type = \?/);
+  assert.match(source, /rp\.bet_type = \?/);
+  assert.match(source, /\.get\(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE\)/);
+  assert.match(source, /rp\.bet_type = '\$\{PAYOUT_BET_TYPE\}'/);
+  assert.match(source, /dh\.bet_type = '\$\{DECISION_BET_TYPE\}'/);
+  assert.doesNotMatch(source, /rp\.bet_type = h\.bet_type/);
+  assert.doesNotMatch(source, /rp\.bet_type = dh\.bet_type/);
+});
+
 test("official historical BUY reduction ROI uses exact official settlements", () => {
   assert.match(source, /FROM race_payouts rp/);
   assert.match(source, /rp\.race_id = dh\.race_id/);
-  assert.match(source, /rp\.bet_type = dh\.bet_type/);
+  assert.match(source, /rp\.bet_type = '\$\{PAYOUT_BET_TYPE\}'/);
   assert.match(source, /rp\.combination = dh\.selection/);
   assert.match(source, /rp\.returned = 0/);
   assert.match(source, /rp\.payout_yen > 0/);
@@ -34,7 +46,7 @@ test("official historical BUY reduction ROI uses exact official settlements", ()
 
 test("official historical BUY reduction fails closed on ambiguous winning settlement keys", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity\(\): void/);
-  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*FROM race_payouts rp[\s\S]*rp\.combination = h\.selection[\s\S]*\) != 1/);
+  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*FROM race_payouts rp[\s\S]*rp\.bet_type = \?[\s\S]*rp\.combination = h\.selection[\s\S]*\) != 1/);
   assert.match(source, /OFFICIAL_HISTORICAL_BUY_REDUCTION_SETTLEMENT_INTEGRITY_INVALID/);
   const gate = source.indexOf("assertOfficialSettlementIntegrity();");
   const evaluate = source.indexOf("buildConditions().map(evaluateCondition)");
