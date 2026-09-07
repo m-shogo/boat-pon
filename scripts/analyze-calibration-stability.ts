@@ -13,82 +13,135 @@ const OUT_JSON = "reports/calibration-stability.json";
 const MODEL = "boatpon-v3-alpha15";
 const BOUNDARY = "2025-01-01";
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("CALIBRATION_STABILITY_RESEARCH_DB_UNAVAILABLE");
 const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
-type Row = { id:number; date:string; venue:string; selection:string; estimated_hit_rate:number; current_odds:number|null; result:string|null; payout_yen:number|null };
+type Row = { id:number; date:string; venue:string; race_id:string; selection:string; estimated_hit_rate:number; current_odds:number|null; result:string|null; payout_yen:number|null };
 type Summary = { n:number; hits:number; hitRate:number|null; estimated:number|null; factor:number|null; roi:number|null; roiExMax:number|null };
 
-const rows = db.prepare(`SELECT id,date,venue,selection,estimated_hit_rate,current_odds,result,payout_yen
-  FROM decision_history WHERE decision='BUY' AND run_kind='historical-backfill' AND model_version=? AND bet_type='3連単'
-  AND result IS NOT NULL AND result!='' AND returned=0 AND current_odds IS NOT NULL ORDER BY date,id`).all(MODEL) as Row[];
+try {
+  assertOfficialSettlementIntegrity();
+  const rows = db.prepare(`SELECT id,date,venue,race_id,selection,estimated_hit_rate,current_odds,result,
+    CASE WHEN result=selection THEN (
+      SELECT rp.payout_yen
+      FROM race_payouts rp
+      WHERE rp.race_id=decision_history.race_id
+        AND rp.bet_type='trifecta'
+        AND rp.combination=decision_history.selection
+        AND rp.returned=0
+        AND rp.payout_yen>0
+      LIMIT 1
+    ) ELSE 0 END AS payout_yen
+    FROM decision_history WHERE decision='BUY' AND run_kind='historical-backfill' AND model_version=? AND bet_type='3連単'
+    AND result IS NOT NULL AND result!='' AND returned=0 AND current_odds IS NOT NULL ORDER BY date,id`).all(MODEL) as Row[];
 
-const train = rows.filter(r => r.date < BOUNDARY);
-const forward = rows.filter(r => r.date >= BOUNDARY);
-assertPayoutCompleteness(train, "train");
-assertPayoutCompleteness(forward, "forward");
+  const train = rows.filter(r => r.date < BOUNDARY);
+  const forward = rows.filter(r => r.date >= BOUNDARY);
+  assertPayoutCompleteness(train, "train");
+  assertPayoutCompleteness(forward, "forward");
 
-function assertPayoutCompleteness(input: Row[], period: "train" | "forward"): void {
-  const hits = input.filter(r => r.result === r.selection);
-  const settledHits = hits.filter(r => r.payout_yen != null && r.payout_yen > 0);
-  if (input.length <= 0 || hits.length <= 0 || settledHits.length !== hits.length) {
-    throw new Error(`CALIBRATION_STABILITY_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ period, total: input.length, hits: hits.length, settledHits: settledHits.length, missingHitPayouts: hits.length - settledHits.length })}`);
+  function assertPayoutCompleteness(input: Row[], period: "train" | "forward"): void {
+    const hits = input.filter(r => r.result === r.selection);
+    const settledHits = hits.filter(r => r.payout_yen != null && r.payout_yen > 0);
+    if (input.length <= 0 || hits.length <= 0 || settledHits.length !== hits.length) {
+      throw new Error(`CALIBRATION_STABILITY_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ period, total: input.length, hits: hits.length, settledHits: settledHits.length, missingHitPayouts: hits.length - settledHits.length })}`);
+    }
+  }
+
+  function requiredPayout(row: Row): number {
+    if (row.payout_yen == null || row.payout_yen <= 0) {
+      throw new Error(`CALIBRATION_STABILITY_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ id: row.id, date: row.date })}`);
+    }
+    return row.payout_yen;
+  }
+
+  function summary(input: Row[], excludeMax = false): Summary {
+    const usable = excludeMax ? removeMaxHit(input) : input;
+    const hits = usable.filter(r => r.result === r.selection);
+    const actual = usable.length ? hits.length / usable.length : null;
+    const estimated = usable.length ? mean(usable.map(r => r.estimated_hit_rate)) : null;
+    const payouts = hits.map(requiredPayout);
+    const total = payouts.reduce((a,b) => a+b, 0);
+    const max = payouts.length ? Math.max(...payouts) : 0;
+    const roi = usable.length ? total / (usable.length * 100) : null;
+    const roiExMax = usable.length > 1 && max > 0 ? (total - max) / ((usable.length - 1) * 100) : roi;
+    return { n:usable.length, hits:hits.length, hitRate:actual, estimated, factor:actual != null && estimated ? actual / estimated : null, roi, roiExMax };
+  }
+  function removeMaxHit(input: Row[]) {
+    const hitIndexes = input.map((r,i) => ({ r,i })).filter(x => x.r.result === x.r.selection);
+    if (!hitIndexes.length) return input;
+    const max = hitIndexes.reduce((a,b) => requiredPayout(b.r) > requiredPayout(a.r) ? b : a);
+    return input.filter((_,i) => i !== max.i);
+  }
+  function mean(v:number[]) { return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; }
+  function pct(v:number|null) { return v == null ? "-" : `${(v*100).toFixed(2)}%`; }
+  function f(v:number|null) { return v == null ? "-" : v.toFixed(3); }
+
+  const trainAll = summary(train);
+  const trainExMax = summary(train, true);
+  const forwardAll = summary(forward);
+  const forwardExMax = summary(forward, true);
+
+  const months = [...new Set(forward.map(r => r.date.slice(0,7)))].sort().map(month => {
+    const s = summary(forward.filter(r => r.date.startsWith(month)));
+    return { month, ...s };
+  });
+
+  const venues = [...new Set(forward.map(r => r.venue))].sort().map(venue => {
+    const trainLoo = summary(train.filter(r => r.venue !== venue));
+    const current = forward.filter(r => r.venue === venue);
+    const currentSummary = summary(current);
+    const factor = trainLoo.factor ?? 1;
+    const selected = current.filter(r => r.current_odds != null && r.current_odds <= 80 && r.estimated_hit_rate * factor * r.current_odds >= 1.25);
+    const selectedSummary = summary(selected);
+    return { venue, trainLooN:trainLoo.n, trainLooFactor:factor, forwardN:currentSummary.n, forwardFactor:currentSummary.factor, forwardRoi:currentSummary.roi, replayN:selectedSummary.n, replayRoi:selectedSummary.roi };
+  });
+
+  const report = { generatedAt:new Date().toISOString(), safety:{readOnly:true,dbWrites:false,productionChanged:false}, contract:{model:MODEL,betType:"3連単",boundary:BOUNDARY,payoutBasis:"race_payouts.payout_yen / 100円 (official trifecta settlement)"}, train:{all:trainAll,exMax:trainExMax}, forward:{all:forwardAll,exMax:forwardExMax}, months, venues, verdict:{trainFactor:trainAll.factor,trainExMaxFactor:trainExMax.factor,stableMonths:months.filter(m=>m.n>=30&&m.factor!=null&&m.factor>0).length,venueReplayWithSamples:venues.filter(v=>v.replayN>=30).length}};
+
+  const lines = ["# 較正安定性監査", "", `生成日時: ${report.generatedAt}`, "", "> 読み取り専用。公式実払戻ベース。再較正係数を本番へ自動適用していない。", "", "## 全体・最大払戻除外", "", "| 期間 | n | 的中率 | 平均推定 | 較正係数 | ROI | 最大払戻1件除外ROI |", "|---|---:|---:|---:|---:|---:|---:|", `| train | ${trainAll.n} | ${pct(trainAll.hitRate)} | ${pct(trainAll.estimated)} | ${f(trainAll.factor)} | ${pct(trainAll.roi)} | ${pct(trainExMax.roiExMax)} |`, `| forward | ${forwardAll.n} | ${pct(forwardAll.hitRate)} | ${pct(forwardAll.estimated)} | ${f(forwardAll.factor)} | ${pct(forwardAll.roi)} | ${pct(forwardExMax.roiExMax)} |`, "", "## forward月別", "", "| 月 | n | 的中率 | 平均推定 | 較正係数 | ROI |", "|---|---:|---:|---:|---:|---:|", ...months.map(m=>`| ${m.month} | ${m.n} | ${pct(m.hitRate)} | ${pct(m.estimated)} | ${f(m.factor)} | ${pct(m.roi)} |`), "", "## 会場LOO（会場を学習から外して係数算出）", "", "| 会場 | train LOO n | LOO係数 | forward n | forward係数 | forward ROI | 再生n | 再生ROI |", "|---|---:|---:|---:|---:|---:|---:|", ...venues.map(v=>`| ${v.venue} | ${v.trainLooN} | ${f(v.trainLooFactor)} | ${v.forwardN} | ${f(v.forwardFactor)} | ${pct(v.forwardRoi)} | ${v.replayN} | ${pct(v.replayRoi)} |`), "", "## 判定", "", `- train全体の係数: **${f(trainAll.factor)}** / 最大払戻1件除外: **${f(trainExMax.factor)}**`, `- forwardでn>=30の月: ${months.filter(m=>m.n>=30).length}件。係数が月をまたいで安定するかを確認する。`, `- 会場LOO再生でn>=30の候補が残る会場: ${venues.filter(v=>v.replayN>=30).length}件。`, "- 月・会場で係数やROIが揺れる場合、単一係数の本番適用は行わず、BUYを増やさない。", "- ROIはrace_payoutsの公式settlementのみを使い、current_oddsは再生条件の補助値に限定する。", "- 本監査は既存BUYの再生であり、再較正後に新規候補を生成したforward検証ではない。"];
+
+  mkdirSync("reports",{recursive:true});
+  writeFileSync(OUT_JSON,`${JSON.stringify(report,null,2)}\n`);
+  writeFileSync(OUT_MD,`${lines.join("\n")}\n`);
+  console.log(`[calibration-stability] wrote ${OUT_MD} / ${OUT_JSON}`);
+} finally {
+  db.close();
+}
+
+function assertOfficialSettlementIntegrity(): void {
+  const row = db.prepare(`
+WITH winners AS (
+  SELECT DISTINCT race_id, selection
+  FROM decision_history
+  WHERE decision='BUY'
+    AND run_kind='historical-backfill'
+    AND model_version=?
+    AND bet_type='3連単'
+    AND result IS NOT NULL AND result!=''
+    AND returned=0
+    AND current_odds IS NOT NULL
+    AND selection=result
+), exact_settlements AS (
+  SELECT
+    w.race_id,
+    w.selection,
+    COUNT(rp.race_id) AS total_rows,
+    SUM(CASE WHEN rp.returned=0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0 THEN 1 ELSE 0 END) AS valid_rows
+  FROM winners w
+  LEFT JOIN race_payouts rp
+    ON rp.race_id=w.race_id
+   AND rp.bet_type='trifecta'
+   AND rp.combination=w.selection
+  GROUP BY w.race_id, w.selection
+)
+SELECT COUNT(*) AS invalid
+FROM exact_settlements
+WHERE total_rows != 1 OR valid_rows != 1
+  `).get(MODEL) as { invalid: number };
+  if (row.invalid > 0) {
+    throw new Error(`CALIBRATION_STABILITY_OFFICIAL_SETTLEMENT_INVALID ${JSON.stringify({ invalid: row.invalid })}`);
   }
 }
-
-function requiredPayout(row: Row): number {
-  if (row.payout_yen == null || row.payout_yen <= 0) {
-    throw new Error(`CALIBRATION_STABILITY_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ id: row.id, date: row.date })}`);
-  }
-  return row.payout_yen;
-}
-
-function summary(input: Row[], excludeMax = false): Summary {
-  const usable = excludeMax ? removeMaxHit(input) : input;
-  const hits = usable.filter(r => r.result === r.selection);
-  const actual = usable.length ? hits.length / usable.length : null;
-  const estimated = usable.length ? mean(usable.map(r => r.estimated_hit_rate)) : null;
-  const payouts = hits.map(requiredPayout);
-  const total = payouts.reduce((a,b) => a+b, 0);
-  const max = payouts.length ? Math.max(...payouts) : 0;
-  const roi = usable.length ? total / (usable.length * 100) : null;
-  const roiExMax = usable.length > 1 && max > 0 ? (total - max) / ((usable.length - 1) * 100) : roi;
-  return { n:usable.length, hits:hits.length, hitRate:actual, estimated, factor:actual != null && estimated ? actual / estimated : null, roi, roiExMax };
-}
-function removeMaxHit(input: Row[]) {
-  const hitIndexes = input.map((r,i) => ({ r,i })).filter(x => x.r.result === x.r.selection);
-  if (!hitIndexes.length) return input;
-  const max = hitIndexes.reduce((a,b) => requiredPayout(b.r) > requiredPayout(a.r) ? b : a);
-  return input.filter((_,i) => i !== max.i);
-}
-function mean(v:number[]) { return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; }
-function pct(v:number|null) { return v == null ? "-" : `${(v*100).toFixed(2)}%`; }
-function f(v:number|null) { return v == null ? "-" : v.toFixed(3); }
-
-const trainAll = summary(train);
-const trainExMax = summary(train, true);
-const forwardAll = summary(forward);
-const forwardExMax = summary(forward, true);
-
-const months = [...new Set(forward.map(r => r.date.slice(0,7)))].sort().map(month => {
-  const s = summary(forward.filter(r => r.date.startsWith(month)));
-  return { month, ...s };
-});
-
-const venues = [...new Set(forward.map(r => r.venue))].sort().map(venue => {
-  const trainLoo = summary(train.filter(r => r.venue !== venue));
-  const current = forward.filter(r => r.venue === venue);
-  const currentSummary = summary(current);
-  const factor = trainLoo.factor ?? 1;
-  const selected = current.filter(r => r.current_odds != null && r.current_odds <= 80 && r.estimated_hit_rate * factor * r.current_odds >= 1.25);
-  const selectedSummary = summary(selected);
-  return { venue, trainLooN:trainLoo.n, trainLooFactor:factor, forwardN:currentSummary.n, forwardFactor:currentSummary.factor, forwardRoi:currentSummary.roi, replayN:selectedSummary.n, replayRoi:selectedSummary.roi };
-});
-
-const report = { generatedAt:new Date().toISOString(), safety:{readOnly:true,dbWrites:false,productionChanged:false}, contract:{model:MODEL,betType:"3連単",boundary:BOUNDARY,payoutBasis:"payout_yen"}, train:{all:trainAll,exMax:trainExMax}, forward:{all:forwardAll,exMax:forwardExMax}, months, venues, verdict:{trainFactor:trainAll.factor,trainExMaxFactor:trainExMax.factor,stableMonths:months.filter(m=>m.n>=30&&m.factor!=null&&m.factor>0).length,venueReplayWithSamples:venues.filter(v=>v.replayN>=30).length}};
-
-const lines = ["# 較正安定性監査", "", `生成日時: ${report.generatedAt}`, "", "> 読み取り専用。再較正係数を本番へ自動適用していない。", "", "## 全体・最大払戻除外", "", "| 期間 | n | 的中率 | 平均推定 | 較正係数 | ROI | 最大払戻1件除外ROI |", "|---|---:|---:|---:|---:|---:|---:|", `| train | ${trainAll.n} | ${pct(trainAll.hitRate)} | ${pct(trainAll.estimated)} | ${f(trainAll.factor)} | ${pct(trainAll.roi)} | ${pct(trainExMax.roiExMax)} |`, `| forward | ${forwardAll.n} | ${pct(forwardAll.hitRate)} | ${pct(forwardAll.estimated)} | ${f(forwardAll.factor)} | ${pct(forwardAll.roi)} | ${pct(forwardExMax.roiExMax)} |`, "", "## forward月別", "", "| 月 | n | 的中率 | 平均推定 | 較正係数 | ROI |", "|---|---:|---:|---:|---:|---:|", ...months.map(m=>`| ${m.month} | ${m.n} | ${pct(m.hitRate)} | ${pct(m.estimated)} | ${f(m.factor)} | ${pct(m.roi)} |`), "", "## 会場LOO（会場を学習から外して係数算出）", "", "| 会場 | train LOO n | LOO係数 | forward n | forward係数 | forward ROI | 再生n | 再生ROI |", "|---|---:|---:|---:|---:|---:|---:|", ...venues.map(v=>`| ${v.venue} | ${v.trainLooN} | ${f(v.trainLooFactor)} | ${v.forwardN} | ${f(v.forwardFactor)} | ${pct(v.forwardRoi)} | ${v.replayN} | ${pct(v.replayRoi)} |`), "", "## 判定", "", `- train全体の係数: **${f(trainAll.factor)}** / 最大払戻1件除外: **${f(trainExMax.factor)}**`, `- forwardでn>=30の月: ${months.filter(m=>m.n>=30).length}件。係数が月をまたいで安定するかを確認する。`, `- 会場LOO再生でn>=30の候補が残る会場: ${venues.filter(v=>v.replayN>=30).length}件。`, "- 月・会場で係数やROIが揺れる場合、単一係数の本番適用は行わず、BUYを増やさない。", "- 本監査は既存BUYの再生であり、再較正後に新規候補を生成したforward検証ではない。"];
-
-mkdirSync("reports",{recursive:true}); writeFileSync(OUT_JSON,`${JSON.stringify(report,null,2)}\n`); writeFileSync(OUT_MD,`${lines.join("\n")}\n`); db.close(); console.log(`[calibration-stability] wrote ${OUT_MD} / ${OUT_JSON}`);
