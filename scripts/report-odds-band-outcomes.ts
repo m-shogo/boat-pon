@@ -22,7 +22,7 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[report-odds-band-outcomes] DB not found: ${DB_PATH}`);
+  console.error("[report-odds-band-outcomes] DB not found");
   process.exit(1);
 }
 
@@ -32,6 +32,7 @@ db.exec("PRAGMA query_only = ON");
 db.exec("PRAGMA busy_timeout = 5000");
 
 try {
+  assertOfficialSettlementIntegrity();
   const rows = [
     ...queryMetric("current_odds", oddsBandSql("current_odds")),
     ...queryMetric("required_odds", oddsBandSql("required_odds")),
@@ -64,7 +65,7 @@ type ReportRow = {
   maxPayoutOdds: number | null;
 };
 
-function queryMetric(metric: string, bandExpr: string): ReportRow[] {
+function reportWhere(): { where: string[]; params: Array<string | number> } {
   const where: string[] = ["1=1"];
   const params: Array<string | number> = [];
 
@@ -74,6 +75,51 @@ function queryMetric(metric: string, bandExpr: string): ReportRow[] {
   if (args.venue) { where.push("venue = ?"); params.push(args.venue); }
   if (args.modelVersion) { where.push("model_version = ?"); params.push(args.modelVersion); }
   if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
+
+  return { where, params };
+}
+
+function assertOfficialSettlementIntegrity() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT race_id, bet_type, selection
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND selection = result
+    AND returned = 0
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `ODDS_BAND_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+    );
+  }
+}
+
+function queryMetric(metric: string, bandExpr: string): ReportRow[] {
+  const { where, params } = reportWhere();
 
   const sql = `
 WITH base AS (
@@ -93,6 +139,8 @@ WITH base AS (
         WHERE rp.race_id = decision_history.race_id
           AND rp.bet_type = decision_history.bet_type
           AND rp.combination = decision_history.selection
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
         LIMIT 1
       )
       ELSE 0
@@ -232,7 +280,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-odds-band-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
-
-Read-only. No external access.`);
+  pnpm exec tsx scripts/report-odds-band-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]\n\nRead-only. No external access. Winning ticket keys must have exactly one positive non-refund official settlement before payout-derived metrics are generated.`);
 }

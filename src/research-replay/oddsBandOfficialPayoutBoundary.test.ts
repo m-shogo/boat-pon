@@ -12,13 +12,33 @@ test("odds-band outcomes verifies the research DB before read-only SQLite open",
   assert.match(source, /PRAGMA query_only = ON/);
 });
 
-test("odds-band ROI uses official payouts and fails closed on missing winning payouts", () => {
+test("odds-band ROI uses an exact positive non-refund official settlement", () => {
   assert.match(source, /FROM race_payouts rp/);
   assert.match(source, /rp\.payout_yen \/ 100\.0/);
   assert.match(source, /rp\.bet_type = decision_history\.bet_type/);
   assert.match(source, /rp\.combination = decision_history\.selection/);
+  assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen > 0/);
   assert.doesNotMatch(source, /THEN current_odds ELSE 0 END AS payout_odds/);
   assert.match(source, /missing_payout_hits AS missingPayoutHits/);
   assert.match(source, /CASE WHEN missing_payout_hits = 0[\s\S]*?ELSE NULL[\s\S]*?END AS roi/);
   assert.match(source, /CASE WHEN missing_payout_hits = 0[\s\S]*?ELSE NULL[\s\S]*?END AS roiExMax/);
+});
+
+test("odds-band outcomes fails closed on ambiguous winning settlement keys before band ROI generation", () => {
+  assert.match(source, /function assertOfficialSettlementIntegrity\(\)/);
+  assert.match(source, /SELECT DISTINCT race_id, bet_type, selection/);
+  assert.match(source, /selection = result/);
+  assert.match(source, /returned = 0/);
+  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*rp\.combination = h\.selection/);
+  assert.match(source, /\) != 1/);
+  assert.match(source, /ODDS_BAND_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
+
+  const integrity = source.indexOf("assertOfficialSettlementIntegrity();");
+  const rows = source.indexOf("const rows = [");
+  assert.ok(integrity >= 0 && rows > integrity);
+});
+
+test("odds-band missing-file failure does not disclose the configured database path", () => {
+  assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
 });
