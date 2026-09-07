@@ -8,8 +8,10 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const REPORT_DB_LABEL = "canonical research database";
 const OUT_MD = "reports/roi-improvement-validation.md";
 const OUT_JSON = "reports/roi-improvement-validation.json";
 const STAKE = 100;
@@ -18,10 +20,67 @@ const EXCLUDED_RACE_NOS = [10, 11, 12];
 const EXCL_V = EXCLUDED_VENUES.map(v => `'${v}'`).join(",");
 const EXCL_R = EXCLUDED_RACE_NOS.join(",");
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) { console.error("[roi-validation] database not found"); process.exit(1); }
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "roi improvement validation primary database");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000;");
 db.exec("PRAGMA query_only = ON;");
+
+type SettlementIntegrityRow = {
+  total: number;
+  covered: number;
+  invalidNonRefundRows: number;
+  returnedRows: number;
+};
+
+const settlementIntegrity = db.prepare(`
+WITH target_races AS (
+  SELECT DISTINCT dh.race_id
+  FROM decision_history dh
+  WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+    AND dh.result IS NOT NULL AND dh.result!='' AND dh.selection='1-2-3'
+    AND dh.venue NOT IN (${EXCL_V}) AND dh.race_no NOT IN (${EXCL_R})
+), target_settlements AS (
+  SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
+  FROM race_payouts rp
+  JOIN target_races tr ON tr.race_id=rp.race_id
+  WHERE rp.bet_type='trifecta'
+)
+SELECT
+  (SELECT COUNT(*) FROM target_races) AS total,
+  (SELECT COUNT(*) FROM target_races tr WHERE EXISTS (
+    SELECT 1 FROM target_settlements ts
+    WHERE ts.race_id=tr.race_id AND ts.returned=0 AND ts.payout_yen>0
+  )) AS covered,
+  (SELECT COUNT(*) FROM target_settlements ts
+   WHERE ts.returned=0
+     AND (ts.combination IS NULL OR ts.combination='' OR ts.payout_yen IS NULL OR ts.payout_yen<=0)
+  ) AS invalidNonRefundRows,
+  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned=1) AS returnedRows
+`).get() as SettlementIntegrityRow;
+
+const settlementCountsValid =
+  Number.isSafeInteger(settlementIntegrity.total) &&
+  Number.isSafeInteger(settlementIntegrity.covered) &&
+  settlementIntegrity.total > 0 &&
+  settlementIntegrity.covered >= 0 &&
+  settlementIntegrity.covered <= settlementIntegrity.total;
+
+if (!settlementCountsValid || settlementIntegrity.covered !== settlementIntegrity.total) {
+  console.error("[roi-validation] FAIL CLOSED: complete positive non-refund official trifecta settlement coverage is required");
+  db.close();
+  process.exit(2);
+}
+if ((settlementIntegrity.invalidNonRefundRows ?? 0) > 0) {
+  console.error("[roi-validation] FAIL CLOSED: malformed non-refund trifecta settlement rows exist in the target cohort");
+  db.close();
+  process.exit(2);
+}
+if ((settlementIntegrity.returnedRows ?? 0) > 0) {
+  console.error("[roi-validation] FAIL CLOSED: target-cohort trifecta refund rows require explicit refund semantics before ROI validation");
+  db.close();
+  process.exit(2);
+}
 
 const WIND24 = `EXISTS (SELECT 1 FROM race_weather rw WHERE rw.race_id=dh.race_id AND rw.wind_speed_mps >= 2 AND rw.wind_speed_mps < 4)`;
 const EXH1 = `EXISTS (SELECT 1 FROM race_entries re JOIN exhibition_data ed ON ed.race_id=re.race_id AND ed.course=re.entry_course WHERE re.race_id=dh.race_id AND re.boat=1 AND ed.exhibition_time IS NOT NULL AND ed.exhibition_time=(SELECT MIN(ed2.exhibition_time) FROM exhibition_data ed2 WHERE ed2.race_id=dh.race_id))`;
@@ -37,7 +96,7 @@ const rows = db.prepare(`
   SELECT dh.date, dh.venue, dh.race_no, dh.current_odds,
     COALESCE((SELECT rp.payout_yen FROM race_payouts rp WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta' AND rp.combination='1-2-3' AND rp.returned=0 LIMIT 1),0) p123,
     COALESCE((SELECT rp.payout_yen FROM race_payouts rp WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta' AND rp.combination='1-3-2' AND rp.returned=0 LIMIT 1),0) p132,
-    CASE WHEN EXISTS (SELECT 1 FROM race_payouts rp WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta' AND rp.returned=0) THEN 1 ELSE 0 END hasTrifecta,
+    CASE WHEN EXISTS (SELECT 1 FROM race_payouts rp WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta' AND rp.returned=0 AND rp.payout_yen>0) THEN 1 ELSE 0 END hasTrifecta,
     CASE WHEN ${WIND24} THEN 1 ELSE 0 END wind24,
     CASE WHEN ${EXH1} THEN 1 ELSE 0 END exh1,
     CASE WHEN ${BOAT3_FASTER} THEN 1 ELSE 0 END boat3faster
@@ -124,8 +183,8 @@ const verdicts = CANDIDATES.map(c => {
 
 const fmtPct = (v: number | null) => v === null ? "N/A" : `${v}%`;
 const now = new Date().toISOString();
-const json = { generatedAt: now, db: DB_PATH, population: { rows: rows.length, dateMin: rows[0]?.date ?? null, dateMax: rows.at(-1)?.date ?? null }, periods: PERIODS.map(p => ({ id: p.id, label: p.label })), baselineByPeriod, candidates: verdicts, rules: { stakeYen: STAKE, pass: "探索・検証・未使用テストで払戻カバレッジ100%、各ROI>=100%、テスト最大2件除外ROI>=90%、各n>=100。払戻欠落時はROIをN/Aとしてfail-closed。合格しても本番採用ではなく紙運用追加検証。" } };
-let md = `# ROI改善候補の時系列・頑健性検証\n\n生成日時: ${now}\nDB: ${DB_PATH}\n\n> 実払戻し（race_payouts）を主指標に固定。current_oddsは使わず、結果を見た後の条件追加を避けるため探索・検証・未使用テストを分離。購入推奨ではない。\n> **払戻カバレッジが100%でない区間はROIをN/Aとしてfail-closedにし、0円扱いで判定しない。**\n\n## 基準\n\n- 対象: historical-backfillのBUY、現行1-2-3、除外会場/10〜12Rを除外\n- 探索: 2024-01〜06、検証: 2024-07〜12、未使用テスト: 2025年\n- 合格目安: 各期間の払戻カバレッジ100%、n>=100、各ROI>=100%、テスト最大2件除外ROI>=90%。合格しても本番変更せず紙運用へ。\n\n## 現行1-2-3ベースライン\n\n|期間|n|払戻カバレッジ|欠落race|ROI|最大2件除外ROI|最大連敗|\n|---|---:|---:|---:|---:|---:|---:|\n`;
+const json = { generatedAt: now, db: REPORT_DB_LABEL, population: { rows: rows.length, dateMin: rows[0]?.date ?? null, dateMax: rows.at(-1)?.date ?? null }, periods: PERIODS.map(p => ({ id: p.id, label: p.label })), baselineByPeriod, candidates: verdicts, rules: { stakeYen: STAKE, pass: "探索・検証・未使用テストで払戻カバレッジ100%、各ROI>=100%、テスト最大2件除外ROI>=90%、各n>=100。払戻欠落時はROIをN/Aとしてfail-closed。合格しても本番採用ではなく紙運用追加検証。" } };
+let md = `# ROI改善候補の時系列・頑健性検証\n\n生成日時: ${now}\nDB: ${REPORT_DB_LABEL}\n\n> ROIの回収額は公式実払戻し（race_payouts）に固定。current_oddsは回収額の代用にせず、一部候補のhistorical decision snapshot条件にのみ使用する。購入推奨ではない。\n> **払戻カバレッジが100%でない区間はROIをN/Aとしてfail-closedにし、0円扱いで判定しない。**\n\n## 基準\n\n- 対象: historical-backfillのBUY、現行1-2-3、除外会場/10〜12Rを除外\n- 探索: 2024-01〜06、検証: 2024-07〜12、未使用テスト: 2025年\n- 合格目安: 各期間の払戻カバレッジ100%、n>=100、各ROI>=100%、テスト最大2件除外ROI>=90%。合格しても本番変更せず紙運用へ。\n\n## 現行1-2-3ベースライン\n\n|期間|n|払戻カバレッジ|欠落race|ROI|最大2件除外ROI|最大連敗|\n|---|---:|---:|---:|---:|---:|---:|\n`;
 for (const p of PERIODS) { const s = baselineByPeriod[p.id]; md += `|${p.label}|${s.n}|${round(s.covered / Math.max(1, s.n) * 100)}%|${s.missingPayoutRaces}|${fmtPct(s.roi)}|${fmtPct(s.top2ExclRoi)}|${s.maxLosingStreak}|\n`; }
 md += `\n## 候補結果（ハイブリッド戦略）\n\n|候補|種別|探索ROI|検証ROI|テストROI|テスト最大2件除外|テスト欠落race|テストn|判定|\n|---|---|---:|---:|---:|---:|---:|---:|---|\n`;
 for (const x of verdicts) md += `|${x.label}|${x.kind}|${fmtPct(x.discovery.roi)}|${fmtPct(x.validation.roi)}|${fmtPct(x.test.roi)}|${fmtPct(x.test.top2ExclRoi)}|${x.test.missingPayoutRaces}|${x.test.n}|${!x.complete ? "払戻欠落・未判定" : x.passes ? "条件上は通過（紙運用のみ）" : x.enough ? "不採用" : "n不足・未判定"}|\n`;
@@ -133,6 +192,7 @@ md += `\n## 読み方\n\n払戻カバレッジが100%に満たない区間は、
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
 writeFileSync(OUT_MD, md, "utf8");
 writeFileSync(OUT_JSON, JSON.stringify(json, null, 2), "utf8");
+db.close();
 console.log(`[roi-validation] rows=${rows.length}`);
 for (const x of verdicts) console.log(`${x.id}: discovery=${fmtPct(x.discovery.roi)} validation=${fmtPct(x.validation.roi)} test=${fmtPct(x.test.roi)} testTop2=${fmtPct(x.test.top2ExclRoi)} missing=${x.test.missingPayoutRaces} n=${x.test.n} => ${!x.complete ? "INCOMPLETE_PAYOUT_DATA" : x.passes ? "PASS (paper only)" : x.enough ? "REJECT" : "INSUFFICIENT"}`);
 console.log(`[roi-validation] 完了 → ${OUT_MD}`);
