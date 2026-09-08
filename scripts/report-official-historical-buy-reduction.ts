@@ -62,6 +62,7 @@ type Metric = { n: number; hits: number; roi: number | null };
 type MonthSummary = { months: number; worstMonth: string | null; worstMonthRoi: number | null; bestMonth: string | null; bestMonthRoi: number | null };
 
 try {
+  assertReturnStateIntegrity();
   assertOfficialSettlementIntegrity();
   const completeRaces = countCompleteOfficialHistoricalRaces();
   const rows = buildConditions().map(evaluateCondition);
@@ -85,6 +86,38 @@ try {
   }
 } finally {
   db.close();
+}
+
+function assertReturnStateIntegrity(): void {
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid_count
+FROM decision_history dh
+WHERE dh.run_kind = 'historical-backfill'
+  AND dh.decision = 'BUY'
+  AND dh.bet_type = ?
+  AND dh.current_odds IS NOT NULL
+  AND dh.result IS NOT NULL
+  AND (dh.returned IS NULL OR dh.returned != 0)
+  AND EXISTS (
+    SELECT 1 FROM race_weather rw
+    WHERE rw.race_id = dh.race_id
+      AND rw.source_type = 'official_historical'
+  )
+  AND EXISTS (
+    SELECT 1 FROM exhibition_data ed
+    WHERE ed.race_id = dh.race_id
+      AND ed.source_type = 'official_historical'
+  )
+  AND EXISTS (
+    SELECT 1 FROM race_equipment re
+    WHERE re.race_id = dh.race_id
+      AND re.source_type = 'official_historical'
+  )
+`).get(DECISION_BET_TYPE) as { invalid_count: number };
+
+  if (Number(row.invalid_count ?? 0) > 0) {
+    throw new Error("OFFICIAL_HISTORICAL_BUY_REDUCTION_RETURN_STATE_INVALID");
+  }
 }
 
 function assertOfficialSettlementIntegrity(): void {
