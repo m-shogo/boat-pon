@@ -35,6 +35,7 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertSupportedBetTypeMapping();
   assertOfficialSettlementIntegrity();
   const rows = queryRows();
   if (args.json) {
@@ -91,6 +92,24 @@ function payoutBetTypeSql(column: string) {
     WHEN 'wide' THEN 'wide'
     ELSE NULL
   END`;
+}
+
+function assertSupportedBetTypeMapping(): void {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history dh
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("dh.bet_type")}) IS NULL
+`).get(...params) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("CLV_REPORT_BET_TYPE_MAPPING_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("CLV_REPORT_BET_TYPE_MAPPING_FAILED");
+  }
 }
 
 function assertOfficialSettlementIntegrity(): void {
@@ -256,5 +275,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-clv.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]
 
-Read-only. CLV uses aggregate checkpoint odds; ROI uses mapped canonical official race_payouts.payout_yen.`);
+Read-only. Unsupported decision bet types fail closed before CLV/ROI aggregation; CLV uses aggregate checkpoint odds and ROI uses mapped canonical official race_payouts.payout_yen.`);
 }
