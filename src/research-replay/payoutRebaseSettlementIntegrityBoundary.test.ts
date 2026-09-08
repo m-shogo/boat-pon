@@ -2,12 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("payout rebase settlement preflight rejects malformed, duplicate, and refund trifecta lines", () => {
+test("payout rebase settlement preflight rejects cohort drift, malformed, duplicate, and refund trifecta lines", () => {
   const source = readFileSync("scripts/audit-odds-payout-gap-completeness.ts", "utf8");
 
   assert.match(source, /WITH target_rows AS \(/);
-  assert.match(source, /SELECT dh\.race_id, dh\.returned/);
+  assert.match(source, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
   assert.match(source, /target_races AS \(\s*SELECT DISTINCT race_id\s*FROM target_rows/);
+  assert.match(source, /bet_type = '3連単'/);
+  assert.match(source, /returned = 0/);
+  assert.match(source, /tr\.bet_type IS NULL/);
+  assert.match(source, /tr\.bet_type != '3連単'/);
+  assert.match(source, /tr\.returned IS NULL/);
+  assert.match(source, /tr\.returned != 0/);
+  assert.match(source, /cohortInvalidRows/);
   assert.match(source, /WHERE rp\.bet_type = 'trifecta'/);
   assert.match(source, /HAVING COUNT\(\*\) > 1/);
   assert.match(source, /ts\.returned = 0/);

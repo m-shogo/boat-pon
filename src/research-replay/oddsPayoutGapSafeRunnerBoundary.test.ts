@@ -34,13 +34,19 @@ test("odds-payout-gap completeness audit covers the full research population and
   assert.match(auditSource, /if \(!result\.complete\)/);
 });
 
-test("odds-payout-gap preflight rejects returned historical BUY rows before ROI analysis", () => {
-  assert.match(auditSource, /SELECT dh\.race_id, dh\.returned/);
-  assert.match(auditSource, /COALESCE\(tr\.returned, 0\) != 0/);
-  assert.match(auditSource, /returnedBuyRows/);
-  assert.match(auditSource, /if \(\(row\.returnedBuyRows \?\? 0\) > 0\)/);
+test("odds-payout-gap preflight rejects cohort drift before ROI analysis", () => {
+  assert.match(auditSource, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
+  assert.match(auditSource, /bet_type = '3連単'/);
+  assert.match(auditSource, /returned = 0/);
+  assert.match(auditSource, /tr\.bet_type IS NULL/);
+  assert.match(auditSource, /tr\.bet_type != '3連単'/);
+  assert.match(auditSource, /tr\.returned IS NULL/);
+  assert.match(auditSource, /tr\.returned != 0/);
+  assert.match(auditSource, /cohortInvalidRows/);
+  assert.match(auditSource, /non-3連単 or returned\/unknown-return historical BUY rows/);
+  assert.match(auditSource, /if \(\(row\.cohortInvalidRows \?\? 0\) > 0\)/);
 
-  const returnedGuard = auditSource.indexOf("if ((row.returnedBuyRows ?? 0) > 0)");
+  const cohortGuard = auditSource.indexOf("if ((row.cohortInvalidRows ?? 0) > 0)");
   const completenessGuard = auditSource.indexOf("if (!result.complete)");
-  assert.ok(returnedGuard >= 0 && returnedGuard < completenessGuard, "returned BUY rows must fail closed before payout completeness is accepted");
+  assert.ok(cohortGuard >= 0 && cohortGuard < completenessGuard, "cohort drift must fail closed before payout completeness is accepted");
 });
