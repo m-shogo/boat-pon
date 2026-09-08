@@ -31,11 +31,13 @@ test("direct wind24 entrypoint cannot bypass payout completeness", () => {
 
 test("wind24 payout preflight matches the deep-dive population and is read-only", () => {
   assert.match(auditSource, /WITH target_rows AS \(/);
-  assert.match(auditSource, /SELECT dh\.race_id, dh\.returned/);
+  assert.match(auditSource, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
   assert.match(auditSource, /target_races AS \(\s*SELECT DISTINCT race_id\s*FROM target_rows/);
   assert.match(auditSource, /rw\.wind_speed_mps >= 2 AND rw\.wind_speed_mps < 4/);
   assert.match(auditSource, /re\.boat = 1/);
   assert.match(auditSource, /dh\.selection = '1-2-3'/);
+  assert.match(auditSource, /bet_type = '3連単'/);
+  assert.match(auditSource, /returned = 0/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
   assert.match(auditSource, /readOnly: true/);
   assert.match(auditSource, /PRAGMA query_only = ON/);
@@ -45,14 +47,18 @@ test("wind24 payout preflight matches the deep-dive population and is read-only"
   assert.match(coreSource, /降格条件/);
 });
 
-test("wind24 payout preflight rejects returned historical BUY rows before deep-dive", () => {
-  assert.match(auditSource, /COALESCE\(tr\.returned, 0\) != 0/);
-  assert.match(auditSource, /returnedBuyRows/);
-  assert.match(auditSource, /if \(returnedBuyRows > 0\)/);
+test("wind24 payout preflight rejects decision cohort drift before deep-dive", () => {
+  assert.match(auditSource, /tr\.bet_type IS NULL/);
+  assert.match(auditSource, /tr\.bet_type != '3連単'/);
+  assert.match(auditSource, /tr\.returned IS NULL/);
+  assert.match(auditSource, /tr\.returned != 0/);
+  assert.match(auditSource, /cohortInvalidRows/);
+  assert.match(auditSource, /if \(cohortInvalidRows > 0\)/);
+  assert.match(auditSource, /non-3連単 or returned\/unknown-return historical BUY rows/);
 
-  const returnedGuard = auditSource.indexOf("if (returnedBuyRows > 0)");
+  const cohortGuard = auditSource.indexOf("if (cohortInvalidRows > 0)");
   const completenessGuard = auditSource.indexOf("if (!complete)");
-  assert.ok(returnedGuard >= 0 && returnedGuard < completenessGuard, "returned BUY rows must fail closed before promotion/demotion completeness is accepted");
+  assert.ok(cohortGuard >= 0 && cohortGuard < completenessGuard, "cohort drift must fail closed before promotion/demotion completeness is accepted");
 });
 
 test("wind24 payout preflight rejects ambiguous or malformed settlement lines", () => {
