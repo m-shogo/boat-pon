@@ -34,17 +34,17 @@ type SettlementIntegrityRow = {
   duplicateKeys: number;
 };
 
-const invalidReturnedBuy = db.prepare(`
+const invalidCohortBuy = db.prepare(`
   SELECT COUNT(*) AS count
   FROM decision_history dh
   WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-    AND (dh.returned IS NULL OR dh.returned != 0)
+    AND (dh.bet_type IS NULL OR dh.bet_type != '3連単' OR dh.returned IS NULL OR dh.returned != 0)
     AND dh.result IS NOT NULL AND dh.result!='' AND dh.selection='1-2-3'
     AND dh.venue NOT IN (${EXCL_V}) AND dh.race_no NOT IN (${EXCL_R})
 `).get() as { count: number };
 
-if (Number(invalidReturnedBuy.count) > 0) {
-  console.error("[roi-validation] FAIL CLOSED: unknown or returned historical BUY rows exist in the target cohort");
+if (Number(invalidCohortBuy.count) > 0) {
+  console.error("[roi-validation] FAIL CLOSED: non-3連単 or returned/unknown-return historical BUY rows exist in the target cohort");
   db.close();
   process.exit(2);
 }
@@ -54,6 +54,7 @@ WITH target_races AS (
   SELECT DISTINCT dh.race_id
   FROM decision_history dh
   WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+    AND dh.bet_type='3連単'
     AND dh.returned=0
     AND dh.result IS NOT NULL AND dh.result!='' AND dh.selection='1-2-3'
     AND dh.venue NOT IN (${EXCL_V}) AND dh.race_no NOT IN (${EXCL_R})
@@ -130,6 +131,7 @@ const rows = db.prepare(`
     CASE WHEN ${BOAT3_FASTER} THEN 1 ELSE 0 END boat3faster
   FROM decision_history dh
   WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+    AND dh.bet_type='3連単'
     AND dh.returned=0
     AND dh.result IS NOT NULL AND dh.result!='' AND dh.selection='1-2-3'
     AND dh.venue NOT IN (${EXCL_V}) AND dh.race_no NOT IN (${EXCL_R})
@@ -213,7 +215,7 @@ const verdicts = CANDIDATES.map(c => {
 const fmtPct = (v: number | null) => v === null ? "N/A" : `${v}%`;
 const now = new Date().toISOString();
 const json = { generatedAt: now, db: REPORT_DB_LABEL, population: { rows: rows.length, dateMin: rows[0]?.date ?? null, dateMax: rows.at(-1)?.date ?? null }, periods: PERIODS.map(p => ({ id: p.id, label: p.label })), baselineByPeriod, candidates: verdicts, rules: { stakeYen: STAKE, pass: "探索・検証・未使用テストで払戻カバレッジ100%、各ROI>=100%、テスト最大2件除外ROI>=90%、各n>=100。払戻欠落時はROIをN/Aとしてfail-closed。合格しても本番採用ではなく紙運用追加検証。" } };
-let md = `# ROI改善候補の時系列・頑健性検証\n\n生成日時: ${now}\nDB: ${REPORT_DB_LABEL}\n\n> ROIの回収額は公式実払戻し（race_payouts）に固定。current_oddsは回収額の代用にせず、一部候補のhistorical decision snapshot条件にのみ使用する。購入推奨ではない。\n> **払戻カバレッジが100%でない区間はROIをN/Aとしてfail-closedにし、0円扱いで判定しない。**\n\n## 基準\n\n- 対象: historical-backfillのBUY、現行1-2-3、除外会場/10〜12Rを除外\n- 探索: 2024-01〜06、検証: 2024-07〜12、未使用テスト: 2025年\n- 合格目安: 各期間の払戻カバレッジ100%、n>=100、各ROI>=100%、テスト最大2件除外ROI>=90%。合格しても本番変更せず紙運用へ。\n\n## 現行1-2-3ベースライン\n\n|期間|n|払戻カバレッジ|欠落race|ROI|最大2件除外ROI|最大連敗|\n|---|---:|---:|---:|---:|---:|---:|\n`;
+let md = `# ROI改善候補の時系列・頑健性検証\n\n生成日時: ${now}\nDB: ${REPORT_DB_LABEL}\n\n> ROIの回収額は公式実払戻し（race_payouts）に固定。current_oddsは回収額の代用にせず、一部候補のhistorical decision snapshot条件にのみ使用する。購入推奨ではない。\n> **払戻カバレッジが100%でない区間はROIをN/Aとしてfail-closedにし、0円扱いで判定しない。**\n\n## 基準\n\n- 対象: historical-backfillの3連単BUY、現行1-2-3、returned=0、除外会場/10〜12Rを除外\n- 探索: 2024-01〜06、検証: 2024-07〜12、未使用テスト: 2025年\n- 合格目安: 各期間の払戻カバレッジ100%、n>=100、各ROI>=100%、テスト最大2件除外ROI>=90%。合格しても本番変更せず紙運用へ。\n\n## 現行1-2-3ベースライン\n\n|期間|n|払戻カバレッジ|欠落race|ROI|最大2件除外ROI|最大連敗|\n|---|---:|---:|---:|---:|---:|---:|\n`;
 for (const p of PERIODS) { const s = baselineByPeriod[p.id]; md += `|${p.label}|${s.n}|${round(s.covered / Math.max(1, s.n) * 100)}%|${s.missingPayoutRaces}|${fmtPct(s.roi)}|${fmtPct(s.top2ExclRoi)}|${s.maxLosingStreak}|\n`; }
 md += `\n## 候補結果（ハイブリッド戦略）\n\n|候補|種別|探索ROI|検証ROI|テストROI|テスト最大2件除外|テスト欠落race|テストn|判定|\n|---|---|---:|---:|---:|---:|---:|---:|---|\n`;
 for (const x of verdicts) md += `|${x.label}|${x.kind}|${fmtPct(x.discovery.roi)}|${fmtPct(x.validation.roi)}|${fmtPct(x.test.roi)}|${fmtPct(x.test.top2ExclRoi)}|${x.test.missingPayoutRaces}|${x.test.n}|${!x.complete ? "払戻欠落・未判定" : x.passes ? "条件上は通過（紙運用のみ）" : x.enough ? "不採用" : "n不足・未判定"}|\n`;
