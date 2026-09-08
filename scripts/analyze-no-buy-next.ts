@@ -52,6 +52,7 @@ SELECT COUNT(*) AS count
 FROM decision_history dh
 WHERE dh.run_kind='historical-backfill'
   AND dh.decision='BUY'
+  AND dh.bet_type='3連単'
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
   AND dh.returned != 0
@@ -68,6 +69,7 @@ WITH winners AS (
   FROM decision_history dh
   WHERE dh.run_kind='historical-backfill'
     AND dh.decision='BUY'
+    AND dh.bet_type='3連単'
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
     AND dh.returned = 0
@@ -133,6 +135,7 @@ LEFT JOIN race_f rf ON rf.race_id=dh.race_id
 LEFT JOIN selected_parts sp ON sp.id=dh.id
 WHERE dh.run_kind='historical-backfill'
   AND dh.decision='BUY'
+  AND dh.bet_type='3連単'
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
   AND dh.returned = 0
