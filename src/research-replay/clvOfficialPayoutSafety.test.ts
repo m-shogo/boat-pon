@@ -24,6 +24,7 @@ test("CLV report rejects unsupported bet types across the full report population
 
 test("CLV report requires complete canonical official winning settlement for every settled denominator row", () => {
   const settlementGuard = functionBody("assertOfficialSettlementIntegrity", "queryRows");
+  const query = functionBody("queryRows", "printRows");
 
   assert.match(settlementGuard, /WITH relevant_settled AS/u);
   assert.match(settlementGuard, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*dh\.result/u);
@@ -40,6 +41,9 @@ test("CLV report requires complete canonical official winning settlement for eve
   assert.match(settlementGuard, /rp\.payout_yen > 0/u);
   assert.match(settlementGuard, /CLV_REPORT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/u);
   assert.doesNotMatch(settlementGuard, /rp\.bet_type = s\.bet_type/u);
+
+  assert.match(query, /SUM\(CASE WHEN result IS NOT NULL AND result != '' AND returned = 0 THEN 1 ELSE 0 END\) AS settled/u);
+  assert.match(query, /NULLIF\(SUM\(CASE WHEN result IS NOT NULL AND result != '' AND returned = 0 THEN 1 ELSE 0 END\), 0\)/u);
 
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/u);
   assert.match(source, /WHEN '3連複' THEN 'trio'/u);
