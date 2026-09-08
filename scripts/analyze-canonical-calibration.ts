@@ -28,6 +28,7 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_D
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
+  assertReturnStateIntegrity();
   assertOfficialSettlementIntegrity();
   const rows = db.prepare(`
     SELECT id, date, venue, race_id, selection, estimated_hit_rate,
@@ -92,7 +93,7 @@ try {
       "historical-backfillのBUY台帳を同じrace_id集合で評価した監査であり、モデル再学習ではない",
       "train係数をforwardへ一度だけ適用した再生。replaySelectedは本番導入根拠ではない",
       "current_oddsは暫定値なので、ROI判定はrace_payoutsの公式payout_yenを主とする",
-      "返還(returned=1)と未確定(result=NULL)は母集団から除外",
+      "unknown/non-zero return stateが対象母集団に存在する場合は分析を中止する",
     ],
   };
 
@@ -129,6 +130,23 @@ try {
   console.log(`[canonical-calibration] wrote ${OUT_MD} / ${OUT_JSON}`);
 } finally {
   db.close();
+}
+
+function assertReturnStateIntegrity(): void {
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history
+WHERE decision='BUY'
+  AND run_kind='historical-backfill'
+  AND model_version=?
+  AND bet_type='3連単'
+  AND result IS NOT NULL AND result!=''
+  AND current_odds IS NOT NULL
+  AND (returned IS NULL OR returned != 0)
+  `).get(MODEL) as { invalid: number };
+  if (row.invalid > 0) {
+    throw new Error(`CANONICAL_CALIBRATION_RETURN_STATE_INVALID ${JSON.stringify({ invalid: row.invalid })}`);
+  }
 }
 
 function assertOfficialSettlementIntegrity(): void {

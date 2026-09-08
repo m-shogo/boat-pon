@@ -11,6 +11,18 @@ test("canonical calibration remains research-only and uses the fixed BUY populat
   assert.match(source, /returned=0/);
 });
 
+test("canonical calibration rejects unknown or returned BUY rows before settlement and row loading", () => {
+  const source = readFileSync("scripts/analyze-canonical-calibration.ts", "utf8");
+  assert.match(source, /returned IS NULL OR returned != 0/);
+  assert.match(source, /CANONICAL_CALIBRATION_RETURN_STATE_INVALID/);
+  const returnGate = source.indexOf("assertReturnStateIntegrity();");
+  const settlementGate = source.indexOf("assertOfficialSettlementIntegrity();");
+  const rowQuery = source.indexOf("const rows = db.prepare(`");
+  assert.ok(returnGate >= 0);
+  assert.ok(settlementGate > returnGate);
+  assert.ok(rowQuery > settlementGate);
+});
+
 test("canonical calibration uses exactly one positive official trifecta settlement for every winning row", () => {
   const source = readFileSync("scripts/analyze-canonical-calibration.ts", "utf8");
   assert.match(source, /assertOfficialSettlementIntegrity\(\);/);
