@@ -9,7 +9,7 @@ test("all-bet-type screening payout audit accepts legitimate multi-line settleme
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
   assert.match(source, /dh\.returned = 0/);
-  assert.match(source, /dh\.returned != 0/);
+  assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
   assert.match(source, /ALL_BET_TYPE_SCREENING_RETURNED_BUY_UNSUPPORTED/);
   assert.match(source, /GROUP BY rp\.race_id, rp\.bet_type/);
   assert.match(source, /COUNT\(\*\) >= 1/);
@@ -17,6 +17,17 @@ test("all-bet-type screening payout audit accepts legitimate multi-line settleme
   assert.match(source, /rp\.returned = 1 OR rp\.payout_yen > 0/);
   assert.doesNotMatch(source, /SELECT DISTINCT rp\.race_id, rp\.bet_type/);
   assert.doesNotMatch(source, /COUNT\(\*\) = 1/);
+});
+
+test("all-bet-type screening fails closed on unknown return state before settlement coverage", () => {
+  const source = readFileSync("scripts/audit-all-bet-type-screening-payout-completeness.ts", "utf8");
+  const unknownReturn = source.indexOf("dh.returned IS NULL OR dh.returned != 0");
+  const guard = source.indexOf("ALL_BET_TYPE_SCREENING_RETURNED_BUY_UNSUPPORTED");
+  const coverage = source.indexOf("WITH population AS");
+
+  assert.ok(unknownReturn >= 0);
+  assert.ok(guard > unknownReturn);
+  assert.ok(coverage > guard, "unknown/returned BUY rows must be rejected before payout coverage can be accepted");
 });
 
 test("normal all-bet-type screening entrypoint cannot bypass payout audit", () => {
