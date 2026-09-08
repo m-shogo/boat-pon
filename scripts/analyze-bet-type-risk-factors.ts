@@ -271,7 +271,7 @@ evalGroup("風速データなし", "事前取得可能", "rw.wind_speed_mps IS N
 // ─── 波高帯（事前取得可能） ──────────────────────────────────────────────────
 evalGroup("波高 0〜5cm", "事前取得可能", "rw.wave_height_cm < 5 AND rw.wave_height_cm IS NOT NULL");
 evalGroup("波高 5〜15cm", "事前取得可能", "rw.wave_height_cm >= 5 AND rw.wave_height_cm < 15");
-evalGroup("波高 15cm以上 (荒れ傾向)", "事前取得可能", "rw.wave_height_cm >= 15");
+evalGroup("波高 15cm以上 (荒れ)", "事前取得可能", "rw.wave_height_cm >= 15");
 
 // ─── 安定板（事前取得可能） ──────────────────────────────────────────────────
 evalGroup("安定板あり", "事前取得可能", "rw.stable_plate = 1");
