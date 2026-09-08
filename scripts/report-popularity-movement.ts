@@ -33,6 +33,7 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertSupportedBetTypeMapping();
   assertOfficialSettlementIntegrity();
   const rows = queryRows();
   if (args.json) {
@@ -93,6 +94,24 @@ function reportWhere(): { where: string[]; params: Array<string | number> } {
   if (args.runKind) { where.push("dh.run_kind = ?"); params.push(args.runKind); }
 
   return { where, params };
+}
+
+function assertSupportedBetTypeMapping(): void {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history dh
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("dh.bet_type")}) IS NULL
+`).get(...params) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("POPULARITY_MOVEMENT_REPORT_BET_TYPE_MAPPING_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("POPULARITY_MOVEMENT_REPORT_BET_TYPE_MAPPING_FAILED");
+  }
 }
 
 function assertOfficialSettlementIntegrity(): void {
@@ -326,5 +345,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-popularity-movement.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
 
-Read-only. Popularity uses aggregate checkpoint data; ROI uses mapped canonical official race_payouts.payout_yen.`);
+Read-only. Unsupported decision bet types fail closed before popularity/ROI aggregation; popularity uses aggregate checkpoint data and ROI uses mapped canonical official race_payouts.payout_yen.`);
 }
