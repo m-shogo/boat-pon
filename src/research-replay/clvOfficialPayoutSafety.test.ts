@@ -4,23 +4,32 @@ import test from "node:test";
 
 const source = readFileSync("scripts/report-clv.ts", "utf8");
 
-test("CLV report fails closed on ambiguous official winning settlements", () => {
+test("CLV report maps payout bet types and fails closed on unsupported or ambiguous official winning settlements", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity/u);
-  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.bet_type, dh\.selection/u);
+  assert.match(source, /WHEN '3連単' THEN 'trifecta'/u);
+  assert.match(source, /WHEN '3連複' THEN 'trio'/u);
+  assert.match(source, /WHEN '2連単' THEN 'exacta'/u);
+  assert.match(source, /WHEN '2連複' THEN 'quinella'/u);
+  assert.match(source, /WHEN '拡連複' THEN 'wide'/u);
+  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*dh\.selection/u);
   assert.match(source, /dh\.returned = 0/u);
   assert.match(source, /dh\.selection = dh\.result/u);
+  assert.match(source, /h\.payout_bet_type IS NULL/u);
+  assert.match(source, /rp\.bet_type = h\.payout_bet_type/u);
   assert.match(source, /\) != 1[\s\S]*OR \([\s\S]*\) != 1/u);
   assert.match(source, /rp\.returned = 0/u);
   assert.match(source, /rp\.payout_yen > 0/u);
   assert.match(source, /CLV_REPORT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/u);
+  assert.doesNotMatch(source, /rp\.bet_type = h\.bet_type/u);
 });
 
-test("CLV report ROI uses official payout units", () => {
+test("CLV report ROI uses mapped official payout units", () => {
   assert.match(source, /rp\.payout_yen \/ 100\.0/u);
-  assert.match(source, /rp\.bet_type = dh\.bet_type/u);
+  assert.match(source, /rp\.bet_type = \$\{payoutBetTypeSql\("dh\.bet_type"\)\}/u);
   assert.match(source, /rp\.combination = dh\.selection/u);
   assert.match(source, /SUM\(payout_units\)/u);
   assert.match(source, /roiSource: "official race_payouts\.payout_yen"/u);
+  assert.doesNotMatch(source, /rp\.bet_type = dh\.bet_type/u);
   assert.doesNotMatch(source, /SUM\(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END\)/u);
 });
 
