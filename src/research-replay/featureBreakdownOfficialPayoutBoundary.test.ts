@@ -13,6 +13,17 @@ test("feature breakdown verifies canonical database identity and stays query-onl
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
 });
 
+test("feature breakdown rejects unsupported bet types across the full report population before feature-band ROI", () => {
+  assert.match(source, /function assertSupportedBetTypeMapping\(\)/);
+  assert.match(source, /FEATURE_BREAKDOWN_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /\(\$\{payoutBetTypeSql\("bet_type"\)\}\) IS NULL/);
+
+  const mappingIndex = source.indexOf("assertSupportedBetTypeMapping();");
+  const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
+  const reportIndex = source.indexOf("const rows = FACTORS.flatMap");
+  assert.ok(mappingIndex >= 0 && guardIndex > mappingIndex && reportIndex > guardIndex);
+});
+
 test("feature breakdown maps winning decision bet types before complete official settlement and feature-band ROI", () => {
   const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
   const reportIndex = source.indexOf("const rows = FACTORS.flatMap");
