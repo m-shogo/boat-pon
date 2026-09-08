@@ -13,7 +13,11 @@ test("review summary normal entrypoint pins the canonical research DB before raw
   assert.ok(verifyAt >= 0 && rawAt > verifyAt);
 });
 
-test("raw review summary remains read-only and fails payout metrics closed on missing hit payouts", () => {
-  assert.match(raw, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
+test("raw review summary independently verifies the canonical DB and remains query-only", () => {
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "REVIEW_SUMMARY_RAW_PRIMARY_DB_IDENTITY_INVALID"\)/);
+  assert.match(raw, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
+  assert.match(raw, /PRAGMA query_only = ON/);
+  assert.doesNotMatch(raw, /new DatabaseSync\(DB_PATH/);
+  assert.doesNotMatch(raw, /DB not found: \$\{DB_PATH\}/);
   assert.match(raw, /missing_payout_hits > 0 THEN NULL ELSE ROUND/);
 });
