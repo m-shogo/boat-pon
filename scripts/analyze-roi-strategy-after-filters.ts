@@ -108,7 +108,7 @@ function assertResearchSettlementIntegrity(): void {
       AND dh.decision = 'BUY'
       AND dh.bet_type = ?
       AND dh.result IS NOT NULL AND dh.result != ''
-      AND COALESCE(dh.returned, 0) != 0
+      AND (dh.returned IS NULL OR dh.returned != 0)
   `).get(DECISION_BET_TYPE) as { n: number };
   if (returnedBuy.n !== 0) {
     throw new Error(`ROI_STRATEGY_RETURNED_BUY_PRESENT ${JSON.stringify(returnedBuy)}`);
@@ -127,7 +127,7 @@ function assertResearchSettlementIntegrity(): void {
           AND dh.run_kind = 'historical-backfill'
           AND dh.decision = 'BUY'
           AND dh.result IS NOT NULL AND dh.result != ''
-          AND COALESCE(dh.returned, 0) = 0
+          AND dh.returned = 0
       )
     GROUP BY rp.race_id, rp.bet_type, rp.combination
     HAVING COUNT(*) > 1
@@ -171,7 +171,7 @@ function loadRows(): Row[] {
     WHERE dh.run_kind = 'historical-backfill'
       AND dh.decision = 'BUY'
       AND dh.bet_type = ?
-      AND COALESCE(dh.returned, 0) = 0
+      AND dh.returned = 0
       AND dh.current_odds IS NOT NULL
       AND dh.result IS NOT NULL AND dh.result != ''
     ORDER BY dh.date, dh.id
