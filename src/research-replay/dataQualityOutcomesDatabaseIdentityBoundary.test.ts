@@ -21,3 +21,21 @@ test("data quality outcomes report keeps ROI denominators restricted to settled 
   assert.match(source, /SUM\(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END\) AS hits/);
   assert.match(source, /NULLIF\(settled, 0\)/);
 });
+
+test("data quality outcomes report derives ROI from exact official payouts and fails closed on settlement drift", () => {
+  const source = readFileSync("scripts/report-data-quality-outcomes.ts", "utf8");
+
+  assert.match(source, /DATA_QUALITY_OUTCOMES_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /DATA_QUALITY_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
+  assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
+  assert.match(source, /WHEN '3連複' THEN 'trio'/);
+  assert.match(source, /WHEN '2連単' THEN 'exacta'/);
+  assert.match(source, /WHEN '2連複' THEN 'quinella'/);
+  assert.match(source, /WHEN '拡連複' THEN 'wide'/);
+  assert.match(source, /rp\.combination = decision_history\.selection/);
+  assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen > 0/);
+  assert.match(source, /rp\.payout_yen \/ 100\.0/);
+  assert.match(source, /SUM\(payout_units\) AS total_payout_units/);
+  assert.doesNotMatch(source, /THEN current_odds ELSE 0 END AS payout_odds/);
+});
