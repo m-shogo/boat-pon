@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 test("root methodology verifies primary database identity before opening read-only", () => {
-  const source = readFileSync("scripts/audit-root-methodology.ts", "utf8");
+  const source = readFileSync("scripts/audit-root-methodology-internal.ts", "utf8");
 
   assert.match(source, /assertCanonicalSingleLinkRegularFile/);
   assert.match(source, /ROOT_METHODOLOGY_PRIMARY_DB_IDENTITY_INVALID/);
