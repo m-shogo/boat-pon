@@ -4,13 +4,18 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/motor-boat-load-performance.md";
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+if (!existsSync(DB_PATH)) throw new Error("MOTOR_BOAT_LOAD_PERFORMANCE_DB_UNAVAILABLE");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "MOTOR_BOAT_LOAD_PERFORMANCE_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
   const indexes = db.prepare("SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='motor_boat_stats' ORDER BY name").all();
