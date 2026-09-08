@@ -16,7 +16,7 @@ test("exacta closing odds audit rejects unknown or returned historical BUY rows 
   assert.match(source, /EXACTA_CLOSING_ODDS_AUDIT_RETURN_STATE_INVALID/u);
   const returnGate = source.indexOf("assertDecisionReturnStateIntegrity();");
   const buyRaces = source.indexOf("const buyRaces = db.prepare");
-  const candidates = source.indexOf("requireExactaClosingOddsAuditCandidates");
+  const candidates = source.indexOf("requireExactaClosingOddsAuditCandidates(buyRaces.map");
   assert.ok(returnGate >= 0, "return-state guard must be invoked");
   assert.ok(buyRaces > returnGate, "candidate population must load only after return-state guard");
   assert.ok(candidates > buyRaces, "candidate validation must run only after guarded population load");
