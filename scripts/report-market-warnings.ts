@@ -4,27 +4,25 @@
  * 目的:
  * - BUYなのに締切前に市場が嫌っている候補を探す
  * - WATCH/SKIPなのに締切前に市場が買っている候補を探す
- * - popularity movement と odds movement を1行明細で確認する
+ * - private checkpoint snapshot 自体は出力せず、変化率・順位差だけを確認する
  *
  * 注意:
  * - 読み取り専用
  * - 外部アクセスなし
  * - 自動購入・投票操作なし
+ * - row-level T-30/T-5 odds/popularity は標準出力・JSONへ露出しない
  */
 
-import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
 
-if (!existsSync(DB_PATH)) {
-  console.error(`[report-market-warnings] DB not found: ${DB_PATH}`);
-  process.exit(1);
-}
-
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "market warnings primary database");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
+db.exec("PRAGMA busy_timeout = 5000;");
 
 try {
   const rows = queryRows();
@@ -47,11 +45,7 @@ type ReportRow = {
   result: string | null;
   currentOdds: number | null;
   ev: number | null;
-  t30Odds: number | null;
-  t5Odds: number | null;
   oddsChangeRate: number | null;
-  t30Popularity: number | null;
-  t5Popularity: number | null;
   popularityDelta: number | null;
 };
 
@@ -102,14 +96,10 @@ WITH ranked AS (
     dh.result,
     dh.current_odds AS currentOdds,
     dh.ev,
-    p.t30_odds AS t30Odds,
-    p.t5_odds AS t5Odds,
     CASE WHEN p.t30_odds IS NOT NULL AND p.t5_odds IS NOT NULL AND p.t30_odds > 0
       THEN (p.t5_odds - p.t30_odds) * 1.0 / p.t30_odds
       ELSE NULL
     END AS oddsChangeRate,
-    p.t30_popularity AS t30Popularity,
-    p.t5_popularity AS t5Popularity,
     CASE WHEN p.t30_popularity IS NOT NULL AND p.t5_popularity IS NOT NULL
       THEN p.t5_popularity - p.t30_popularity
       ELSE NULL
@@ -141,11 +131,7 @@ SELECT
   result,
   currentOdds,
   ev,
-  t30Odds,
-  t5Odds,
   ROUND(oddsChangeRate, 4) AS oddsChangeRate,
-  t30Popularity,
-  t5Popularity,
   popularityDelta
 FROM warnings
 WHERE warning IS NOT NULL
@@ -160,8 +146,9 @@ function printRows(rows: ReportRow[]) {
   console.log("=== market warnings report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"} limit=${args.limit}`);
+  console.log("checkpoint privacy: row-level T-30/T-5 odds/popularity withheld; derived movement only");
   console.log("");
-  console.log("warning                         date        venue      R   decision  selection  odds    ev      T30odds T5odds  oddsΔ    T30pop T5pop  popΔ");
+  console.log("warning                         date        venue      R   decision  selection  odds    ev      oddsΔ    popΔ");
   for (const row of rows) {
     console.log([
       row.warning.padEnd(31),
@@ -172,11 +159,7 @@ function printRows(rows: ReportRow[]) {
       row.selection.padEnd(9),
       fmt(row.currentOdds).padStart(7),
       fmt(row.ev).padStart(7),
-      fmt(row.t30Odds).padStart(7),
-      fmt(row.t5Odds).padStart(7),
       fmt(row.oddsChangeRate).padStart(7),
-      String(row.t30Popularity ?? "-").padStart(6),
-      String(row.t5Popularity ?? "-").padStart(5),
       String(row.popularityDelta ?? "-").padStart(5),
     ].join("  "));
   }
@@ -226,5 +209,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-market-warnings.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--limit 100] [--json]
 
-Read-only. No external access.`);
+Read-only. Row-level private checkpoint odds/popularity are not emitted. No external access.`);
 }
