@@ -2,12 +2,24 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("walk-forward history uses official payouts and excludes missing-payout windows from verdicts", () => {
-  const source = readFileSync("scripts/walk-forward-history.ts", "utf8");
+const source = readFileSync("scripts/walk-forward-history.ts", "utf8");
 
+test("walk-forward history maps decision bet types into canonical payout namespaces", () => {
+  assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
+  assert.match(source, /WHEN '3連複' THEN 'trio'/);
+  assert.match(source, /WHEN '2連単' THEN 'exacta'/);
+  assert.match(source, /WHEN '2連複' THEN 'quinella'/);
+  assert.match(source, /WHEN '拡連複' THEN 'wide'/);
+  assert.match(source, /assertSupportedBetTypeMapping\(db, range\.from, range\.to\)/);
+  assert.match(source, /WALK_FORWARD_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /rp\.bet_type = h\.payout_bet_type/);
+  assert.match(source, /rp\.bet_type = \$\{payoutBetTypeSql\("decision_history\.bet_type"\)\}/);
+  assert.doesNotMatch(source, /rp\.bet_type = decision_history\.bet_type/);
+});
+
+test("walk-forward history uses official payouts and excludes missing-payout windows from verdicts", () => {
   assert.match(source, /FROM race_payouts rp/);
   assert.match(source, /rp\.payout_yen \/ 100\.0/);
-  assert.match(source, /rp\.bet_type = decision_history\.bet_type/);
   assert.match(source, /rp\.combination = decision_history\.selection/);
   assert.match(source, /missingPayoutHits > 0 \|\| roi == null\) return "incomplete"/);
   assert.match(source, /row\.status !== "no_sample" && row\.status !== "incomplete"/);
@@ -16,16 +28,18 @@ test("walk-forward history uses official payouts and excludes missing-payout win
 });
 
 test("walk-forward history fails closed before LIMIT 1 can choose an ambiguous winning settlement", () => {
-  const source = readFileSync("scripts/walk-forward-history.ts", "utf8");
+  const mappingIndex = source.indexOf("assertSupportedBetTypeMapping(db, range.from, range.to)");
   const integrityIndex = source.indexOf("assertWinningSettlementIntegrity(db, range.from, range.to)");
   const rowsIndex = source.indexOf("listRows(db, range.from, range.to)");
 
-  assert.ok(integrityIndex >= 0);
+  assert.ok(mappingIndex >= 0);
+  assert.ok(integrityIndex > mappingIndex);
   assert.ok(rowsIndex > integrityIndex);
-  assert.match(source, /SELECT DISTINCT race_id, bet_type, selection/);
+  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*selection/);
   assert.match(source, /decision = 'BUY'/);
   assert.match(source, /returned = 0/);
   assert.match(source, /selection = result/);
+  assert.match(source, /h\.payout_bet_type IS NULL/);
   assert.match(source, /\) != 1/);
   assert.match(source, /rp\.returned = 0/);
   assert.match(source, /rp\.payout_yen > 0/);
@@ -33,8 +47,6 @@ test("walk-forward history fails closed before LIMIT 1 can choose an ambiguous w
 });
 
 test("walk-forward payout scalar lookup is constrained to the validated positive non-refund winning key", () => {
-  const source = readFileSync("scripts/walk-forward-history.ts", "utf8");
-
   assert.match(source, /rp\.combination = decision_history\.selection\n        AND rp\.returned = 0\n        AND rp\.payout_yen > 0\n      LIMIT 1/);
   assert.match(source, /new DatabaseSync\(primaryDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
