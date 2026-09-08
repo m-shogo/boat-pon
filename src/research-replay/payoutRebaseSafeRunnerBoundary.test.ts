@@ -3,14 +3,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const runnerSource = readFileSync("scripts/run-payout-rebase-safe.ts", "utf-8");
-const analysisSource = readFileSync("scripts/analyze-payout-rebase.ts", "utf-8");
+const entrypointSource = readFileSync("scripts/analyze-payout-rebase.ts", "utf-8");
+const internalSource = readFileSync("scripts/analyze-payout-rebase-internal.ts", "utf-8");
 
-test("payout rebase safe runner executes settlement preflight before analysis", () => {
+test("payout rebase safe runner executes settlement preflight before guarded analysis entrypoint", () => {
   const preflight = runnerSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
   const analysis = runnerSource.indexOf('run("scripts/analyze-payout-rebase.ts")');
 
   assert.ok(preflight >= 0, "safe runner must invoke settlement completeness preflight");
-  assert.ok(analysis > preflight, "payout rebase analysis must run only after the settlement preflight");
+  assert.ok(analysis > preflight, "guarded payout rebase entrypoint must run only after the settlement preflight");
 });
 
 test("payout rebase safe runner fails closed before classifications when preflight fails", () => {
@@ -19,12 +20,18 @@ test("payout rebase safe runner fails closed before classifications when preflig
 
   const guard = runnerSource.indexOf("if (preflight !== 0)");
   const analysis = runnerSource.indexOf('run("scripts/analyze-payout-rebase.ts")');
-  assert.ok(guard >= 0 && guard < analysis, "preflight failure guard must precede payout rebase analysis");
+  assert.ok(guard >= 0 && guard < analysis, "preflight failure guard must precede guarded payout rebase entrypoint");
 });
 
-test("legacy payout rebase still depends on official payout values and remains research-only", () => {
-  assert.match(analysisSource, /race_payouts\.payout_yen/);
-  assert.match(analysisSource, /COALESCE/);
-  assert.match(analysisSource, /readOnly: true/);
-  assert.match(analysisSource, /本番 decision ロジック変更/);
+test("direct payout rebase entrypoint independently retains the same preflight boundary", () => {
+  const preflight = entrypointSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
+  const internal = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts")');
+  assert.ok(preflight >= 0 && internal > preflight, "direct invocation must not bypass settlement integrity preflight");
+});
+
+test("legacy payout rebase implementation still depends on official payout values and remains research-only", () => {
+  assert.match(internalSource, /race_payouts\.payout_yen/);
+  assert.match(internalSource, /COALESCE/);
+  assert.match(internalSource, /readOnly: true/);
+  assert.match(internalSource, /本番 decision ロジック変更/);
 });
