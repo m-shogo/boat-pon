@@ -7,6 +7,7 @@
  *
  * - scripts/explore-roi.ts と同じくDB/テーブルが無い環境でも空評価+warningsで正常終了する
  * - DBへの書き込みは一切行わない（canonical identity検証 + readOnly + query_only）
+ * - realized ROI は canonical race_payouts.payout_yen のみを使い、unsupported/ambiguous settlement は fail-close
  * - data/research-rules.json は --rule-id 指定時に read-only で参照するだけ（Phase 4.1）。
  *   一致するruleがあればtitle/statusを表示情報に添えるのみで、書き換えは一切行わない。
  *   一致しなければ引き続きadhoc ruleとして動く
@@ -86,9 +87,73 @@ function evaluateWindow(from: string, to: string, label: "baseline" | "recent") 
   });
 }
 
+function payoutBetTypeSql(column: string): string {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
+function assertOfficialSettlementIntegrity(db: DatabaseSync, from: string, to: string): void {
+  const row = db.prepare(`
+WITH settled_buy AS (
+  SELECT DISTINCT
+    dh.race_id,
+    dh.bet_type,
+    ${payoutBetTypeSql("dh.bet_type")} AS payout_bet_type,
+    dh.selection,
+    dh.result
+  FROM decision_history dh
+  WHERE dh.date >= ? AND dh.date <= ?
+    AND dh.decision = 'BUY'
+    AND dh.returned = 0
+    AND dh.result IS NOT NULL
+    AND dh.result != ''
+), invalid AS (
+  SELECT s.race_id
+  FROM settled_buy s
+  WHERE s.payout_bet_type IS NULL
+     OR (s.selection = s.result AND (
+       (SELECT COUNT(*)
+        FROM race_payouts rp
+        WHERE rp.race_id = s.race_id
+          AND rp.bet_type = s.payout_bet_type
+          AND rp.combination = s.selection) != 1
+       OR
+       (SELECT COUNT(*)
+        FROM race_payouts rp
+        WHERE rp.race_id = s.race_id
+          AND rp.bet_type = s.payout_bet_type
+          AND rp.combination = s.selection
+          AND rp.returned = 0
+          AND rp.payout_yen IS NOT NULL
+          AND rp.payout_yen > 0) != 1
+     ))
+)
+SELECT COUNT(*) AS invalid FROM invalid
+`).get(from, to) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("RESEARCH_DRIFT_SETTLEMENT_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("RESEARCH_DRIFT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED");
+  }
+}
+
 function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourceWarnings: string[] } {
   if (!existsSync(DB_PATH)) {
-    return { rows: [], sourceWarnings: [`db not found at ${DB_PATH}; produced empty evaluation`] };
+    return { rows: [], sourceWarnings: ["research database not found; produced empty evaluation"] };
   }
 
   const primaryDbPath = assertCanonicalSingleLinkRegularFile(
@@ -102,14 +167,32 @@ function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourc
     if (!hasTable) {
       return { rows: [], sourceWarnings: ["decision_history table not found; produced empty evaluation"] };
     }
+    const hasPayoutTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='race_payouts'").get() != null;
+    if (!hasPayoutTable) {
+      throw new Error("RESEARCH_DRIFT_OFFICIAL_PAYOUT_TABLE_MISSING");
+    }
+
+    assertOfficialSettlementIntegrity(db, from, to);
 
     const raw = db.prepare(`
-SELECT id, race_id, date, venue, race_no, selection, estimated_hit_rate, required_odds, current_odds,
-       ev, decision, actually_bought, stake_yen, recommended_stake_yen, sample_size,
-       result, payout_yen, popularity, returned, source, fetched_at, created_at
-FROM decision_history
-WHERE date >= ? AND date <= ?
-ORDER BY date, id
+SELECT dh.id, dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, dh.estimated_hit_rate, dh.required_odds, dh.current_odds,
+       dh.ev, dh.decision, dh.actually_bought, dh.stake_yen, dh.recommended_stake_yen, dh.sample_size,
+       dh.result,
+       CASE WHEN dh.decision = 'BUY' AND dh.returned = 0 AND dh.result IS NOT NULL AND dh.result != '' AND dh.selection = dh.result THEN (
+         SELECT rp.payout_yen
+         FROM race_payouts rp
+         WHERE rp.race_id = dh.race_id
+           AND rp.bet_type = ${payoutBetTypeSql("dh.bet_type")}
+           AND rp.combination = dh.selection
+           AND rp.returned = 0
+           AND rp.payout_yen IS NOT NULL
+           AND rp.payout_yen > 0
+         LIMIT 1
+       ) ELSE 0 END AS official_payout_yen,
+       dh.popularity, dh.returned, dh.source, dh.fetched_at, dh.created_at
+FROM decision_history dh
+WHERE dh.date >= ? AND dh.date <= ?
+ORDER BY dh.date, dh.id
 `).all(from, to) as Array<Record<string, unknown>>;
 
     const rows = raw.map((row): DecisionHistoryRow => ({
@@ -129,7 +212,7 @@ ORDER BY date, id
       recommendedStakeYen: Number(row.recommended_stake_yen ?? 0),
       sampleSize: Number(row.sample_size ?? 0),
       result: row.result == null ? null : String(row.result),
-      payoutYen: row.payout_yen == null ? null : Number(row.payout_yen),
+      payoutYen: row.official_payout_yen == null ? null : Number(row.official_payout_yen),
       popularity: row.popularity == null ? null : Number(row.popularity),
       returned: Boolean(row.returned),
       source: String(row.source ?? ""),
@@ -167,7 +250,9 @@ function printHelp() {
 
 Read-only. Compares two decision_history windows (baseline vs recent) as
 RuleEvaluationResult and reports a DriftDetectionResult (roi/hitRate delta,
-severity, signals, warnings). Does not write to the DB or to any rule store.
+severity, signals, warnings). Realized ROI uses canonical race_payouts.payout_yen;
+unsupported or ambiguous winning settlements fail closed. Does not write to the
+DB or to any rule store.
 
   --baseline-from     baseline window start (default 1970-01-01)
   --baseline-to       baseline window end (default 1970-01-01; must be set explicitly)
