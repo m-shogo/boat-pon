@@ -11,12 +11,22 @@ test("condB historical payout preflight uses verified read-only positive officia
   assert.match(preflight, /PRAGMA query_only = ON/);
   assert.match(preflight, /FROM race_payouts rp/);
   assert.match(preflight, /rp\.bet_type = 'trifecta'/);
+  assert.match(preflight, /rp\.returned = 0/);
   assert.match(preflight, /rp\.payout_yen IS NOT NULL/);
   assert.match(preflight, /rp\.payout_yen > 0/);
   assert.match(preflight, /dh\.decision = 'BUY'/);
   assert.match(preflight, /dh\.run_kind = 'historical-backfill'/);
   assert.match(preflight, /dh\.selection = '1-2-3'/);
   assert.match(preflight, /dh\.date >= \?/);
+});
+
+test("condB historical payout preflight rejects unknown or returned official payout rows before coverage", () => {
+  assert.match(preflight, /rp\.returned IS NULL OR rp\.returned != 0/);
+  assert.match(preflight, /CONDB_SWITCH_HISTORICAL_PAYOUT_RETURN_STATE_INVALID/);
+  const returnStateGate = preflight.indexOf("const payoutReturnState = db.prepare");
+  const coverage = preflight.indexOf("const row = db.prepare");
+  assert.ok(returnStateGate >= 0);
+  assert.ok(coverage > returnStateGate);
 });
 
 test("condB historical payout preflight fails closed on empty or incomplete coverage", () => {
