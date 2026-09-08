@@ -8,13 +8,6 @@
  *
  * 目的: 全5券種（exacta/quinella/wide/trifecta/trio）の一次ROIを浅く比較し、
  *       深掘り候補を絞る。単勝・複勝は coverage=0 のため除外。
- *
- * 各戦略:
- *   C. 2連単 (exacta):  selection S1-S2-S3 → buy exacta S1-S2
- *   D. 2連複 (quinella): → buy quinella min(S1,S2)-max(S1,S2)
- *   E. 拡連複 (wide):    → buy wide min(S1,S2)-max(S1,S2)
- *   F. 3連単 (trifecta): → buy trifecta S1-S2-S3 (現行)
- *   G. 3連複 (trio):     → buy trio sorted(S1,S2,S3)
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -22,21 +15,20 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const REPORT_DB_LABEL = "canonical research database";
 const OUT_MD = "reports/all-bet-type-screening.md";
 const OUT_JSON = "reports/all-bet-type-screening.json";
 const STAKE = 100;
 const REQUIRED_BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[screening] DB not found: ${DB_PATH}`);
+  console.error("[screening] research database unavailable");
   process.exit(1);
 }
 
 const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
-
-// ─── Types ──────────────────────────────────────────────────────────────────
 
 type RawRow = {
   race_id: string;
@@ -52,7 +44,7 @@ type PayoutRow = {
   bet_type: string;
   combination: string;
   payout_yen: number | null;
-  returned: number;
+  returned: number | null;
 };
 
 type StrategyResult = {
@@ -72,9 +64,9 @@ type StrategyResult = {
   roiExMaxHit: number;
   roiExMax3Hits: number;
   roiExMax5Hits: number;
-  coverageRate: number;         // joinableRaces / totalBuyRaces（payout行が存在したレース率）
-  missingCoverageCount: number; // payout行が一切存在しなかったレース数
-  missingCoverageNote: string;  // 欠損の扱い（外れ扱い or 除外）
+  coverageRate: number;
+  missingCoverageCount: number;
+  missingCoverageNote: string;
   missingPayoutCount: number;
   returnedCount: number;
   trainROI: number;
@@ -100,21 +92,33 @@ type ScreeningReport = {
   summary: string;
 };
 
-// ─── データ取得 ──────────────────────────────────────────────────────────────
+const invalidHistoricalBuyReturns = (db.prepare(`
+  SELECT COUNT(*) AS n
+  FROM decision_history
+  WHERE decision='BUY' AND run_kind='historical-backfill'
+    AND result IS NOT NULL AND result != ''
+    AND (returned IS NULL OR returned != 0)
+`).get() as { n: number }).n;
+
+if (Number(invalidHistoricalBuyReturns) > 0) {
+  console.error("[screening] FAIL CLOSED: unknown or returned historical BUY rows exist in the screening population");
+  db.close();
+  process.exit(2);
+}
 
 const rows = db.prepare(`
   SELECT race_id, date, selection, result, current_odds, returned
   FROM decision_history
   WHERE decision='BUY' AND run_kind='historical-backfill'
     AND result IS NOT NULL AND result != ''
+    AND returned=0
   ORDER BY date
 `).all() as RawRow[];
 
-// race_payouts を全件ロード（インデックスとして使う）
-const payoutIndex = new Map<string, number>(); // key: "race_id|bet_type|combination"
+const targetRaceIds = new Set(rows.map((row) => row.race_id));
+const payoutIndex = new Map<string, number>();
 const payoutReturnedSet = new Set<string>();
-// bet_type ごとに「そのレースのpayoutが存在するか」を確認するセット
-const payoutRaceByType = new Map<string, Set<string>>(); // betType -> Set<race_id>
+const payoutRaceByType = new Map<string, Set<string>>();
 
 const payoutRows = db.prepare(`
   SELECT race_id, bet_type, combination, payout_yen, returned
@@ -123,14 +127,20 @@ const payoutRows = db.prepare(`
 `).all() as PayoutRow[];
 
 for (const p of payoutRows) {
+  if (!targetRaceIds.has(p.race_id)) continue;
   const key = `${p.race_id}|${p.bet_type}|${p.combination}`;
+  if (payoutIndex.has(key) || payoutReturnedSet.has(key)) {
+    throw new Error(`ALL_BET_TYPE_SCREENING_PAYOUT_KEY_DUPLICATE ${JSON.stringify({ raceId: p.race_id, betType: p.bet_type, combination: p.combination })}`);
+  }
   if (p.returned === 1) {
     payoutReturnedSet.add(key);
-  } else {
-    if (p.payout_yen == null || p.payout_yen <= 0) {
+  } else if (p.returned === 0) {
+    if (p.combination == null || p.combination === "" || p.payout_yen == null || p.payout_yen <= 0) {
       throw new Error(`ALL_BET_TYPE_SCREENING_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify({ raceId: p.race_id, betType: p.bet_type })}`);
     }
     payoutIndex.set(key, p.payout_yen);
+  } else {
+    throw new Error(`ALL_BET_TYPE_SCREENING_PAYOUT_RETURN_STATE_INVALID ${JSON.stringify({ raceId: p.race_id, betType: p.bet_type })}`);
   }
   if (!payoutRaceByType.has(p.bet_type)) payoutRaceByType.set(p.bet_type, new Set());
   payoutRaceByType.get(p.bet_type)!.add(p.race_id);
@@ -150,8 +160,6 @@ function assertPayoutCompleteness(): void {
   }
 }
 
-// ─── ユーティリティ ──────────────────────────────────────────────────────────
-
 function parseSelection(sel: string): [number, number, number] {
   const parts = sel.split("-").map(Number);
   return [parts[0], parts[1], parts[2]] as [number, number, number];
@@ -168,9 +176,9 @@ function sortedTrio(a: number, b: number, c: number): string {
 
 function payout(raceId: string, betType: string, combination: string): number | null {
   const key = `${raceId}|${betType}|${combination}`;
-  if (payoutReturnedSet.has(key)) return null; // 返還
+  if (payoutReturnedSet.has(key)) return null;
   if (payoutIndex.has(key)) return payoutIndex.get(key)!;
-  return undefined as unknown as null; // 払戻なし（外れ or データなし）
+  return undefined as unknown as null;
 }
 
 function median(arr: number[]): number {
@@ -180,14 +188,6 @@ function median(arr: number[]): number {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-function calcROI(hits: { payout: number }[], totalStake: number): number {
-  if (totalStake === 0) return 0;
-  const totalReturn = hits.reduce((s, h) => s + h.payout, 0);
-  return Math.round((totalReturn / totalStake) * 10000) / 100;
-}
-
-// ─── 戦略定義 ────────────────────────────────────────────────────────────────
-
 type Strategy = {
   betType: string;
   name: string;
@@ -196,52 +196,21 @@ type Strategy = {
 };
 
 const STRATEGIES: Strategy[] = [
-  {
-    betType: "3連単",
-    name: "3連単: selection そのまま",
-    getBetCombination: ([s1, s2, s3]) => `${s1}-${s2}-${s3}`,
-    dbBetType: "trifecta",
-  },
-  {
-    betType: "3連複",
-    name: "3連複: selection 3艇 trio",
-    getBetCombination: ([s1, s2, s3]) => sortedTrio(s1, s2, s3),
-    dbBetType: "trio",
-  },
-  {
-    betType: "2連単",
-    name: "2連単: 上位2艇 exacta",
-    getBetCombination: ([s1, s2]) => `${s1}-${s2}`,
-    dbBetType: "exacta",
-  },
-  {
-    betType: "2連複",
-    name: "2連複: 上位2艇 quinella",
-    getBetCombination: ([s1, s2]) => sortedPair(s1, s2),
-    dbBetType: "quinella",
-  },
-  {
-    betType: "拡連複",
-    name: "拡連複: 上位2艇 wide",
-    getBetCombination: ([s1, s2]) => sortedPair(s1, s2),
-    dbBetType: "wide",
-  },
+  { betType: "3連単", name: "3連単: selection そのまま", getBetCombination: ([s1, s2, s3]) => `${s1}-${s2}-${s3}`, dbBetType: "trifecta" },
+  { betType: "3連複", name: "3連複: selection 3艇 trio", getBetCombination: ([s1, s2, s3]) => sortedTrio(s1, s2, s3), dbBetType: "trio" },
+  { betType: "2連単", name: "2連単: 上位2艇 exacta", getBetCombination: ([s1, s2]) => `${s1}-${s2}`, dbBetType: "exacta" },
+  { betType: "2連複", name: "2連複: 上位2艇 quinella", getBetCombination: ([s1, s2]) => sortedPair(s1, s2), dbBetType: "quinella" },
+  { betType: "拡連複", name: "拡連複: 上位2艇 wide", getBetCombination: ([s1, s2]) => sortedPair(s1, s2), dbBetType: "wide" },
 ];
-
-// ─── 各戦略を評価 ─────────────────────────────────────────────────────────────
 
 function evaluate(strategy: Strategy): StrategyResult {
   type HitRecord = { payout: number; odds: number; date: string; ym: string };
-
   const hitsByDate: HitRecord[] = [];
   let missingCount = 0;
-  let missingCoverageCount = 0; // payout テーブルにそのレース自体が存在しない
+  let missingCoverageCount = 0;
   let returnedCount = 0;
   let validRaces = 0;
-
   const raceSetForType = payoutRaceByType.get(strategy.dbBetType) ?? new Set<string>();
-
-  // 年月別 stake / return
   const ymStake = new Map<string, number>();
   const ymReturn = new Map<string, number>();
 
@@ -251,7 +220,6 @@ function evaluate(strategy: Strategy): StrategyResult {
     const raceId = row.race_id;
     const betTypeDb = strategy.dbBetType;
     const ym = row.date.slice(0, 7);
-
     const key = `${raceId}|${betTypeDb}|${combination}`;
     const isReturned = payoutReturnedSet.has(key);
 
@@ -260,7 +228,6 @@ function evaluate(strategy: Strategy): StrategyResult {
       continue;
     }
 
-    // そのレース自体が race_payouts に存在するか確認
     const hasPayoutForRace = raceSetForType.has(raceId);
     if (!hasPayoutForRace) {
       missingCoverageCount++;
@@ -269,24 +236,20 @@ function evaluate(strategy: Strategy): StrategyResult {
 
     validRaces++;
     ymStake.set(ym, (ymStake.get(ym) ?? 0) + STAKE);
-
     const p = payout(raceId, betTypeDb, combination);
     if (p === null) {
-      // returned 処理済み（上で continue 済み）
+      // returned handling was already separated above; otherwise no matching winning payout means a loss.
     } else if (p > 0) {
       const odds = p / 100;
       hitsByDate.push({ payout: p, odds, date: row.date, ym });
       ymReturn.set(ym, (ymReturn.get(ym) ?? 0) + p);
     }
-    // p === 0: 外れ（stake は積んでいる）
   }
 
   const hits = hitsByDate.length;
   const totalStake = validRaces * STAKE;
   const totalReturn = hitsByDate.reduce((s, h) => s + h.payout, 0);
   const ROI = totalStake > 0 ? Math.round((totalReturn / totalStake) * 10000) / 100 : 0;
-
-  // ExMaxHit 系
   const sortedHits = [...hitsByDate].sort((a, b) => b.payout - a.payout);
   const returnExMax1 = totalReturn - (sortedHits[0]?.payout ?? 0);
   const returnExMax3 = totalReturn - sortedHits.slice(0, 3).reduce((s, h) => s + h.payout, 0);
@@ -294,18 +257,13 @@ function evaluate(strategy: Strategy): StrategyResult {
   const stakeExMax1 = totalStake - STAKE;
   const stakeExMax3 = totalStake - 3 * STAKE;
   const stakeExMax5 = totalStake - 5 * STAKE;
-
   const roiExMaxHit = stakeExMax1 > 0 ? Math.round((returnExMax1 / stakeExMax1) * 10000) / 100 : 0;
   const roiExMax3Hits = stakeExMax3 > 0 ? Math.round((returnExMax3 / stakeExMax3) * 10000) / 100 : 0;
   const roiExMax5Hits = stakeExMax5 > 0 ? Math.round((returnExMax5 / stakeExMax5) * 10000) / 100 : 0;
-
-  // オッズ統計
   const hitOdds = hitsByDate.map((h) => h.odds);
   const avgPayoutOdds = hits > 0 ? hitOdds.reduce((s, o) => s + o, 0) / hits : 0;
   const medianPayoutOdds = median(hitOdds);
   const maxHitOdds = hits > 0 ? Math.max(...hitOdds) : 0;
-
-  // 期間分割: 2024-01〜2024-08 train / 2024-09〜2024-12 validation / 2025-01〜 test
   const trainYms = [...ymStake.keys()].filter((ym) => ym >= "2024-01" && ym <= "2024-08");
   const valYms = [...ymStake.keys()].filter((ym) => ym >= "2024-09" && ym <= "2024-12");
   const testYms = [...ymStake.keys()].filter((ym) => ym >= "2025-01");
@@ -317,15 +275,12 @@ function evaluate(strategy: Strategy): StrategyResult {
   }
 
   function yearROI(year: string): number {
-    const yms = [...ymStake.keys()].filter((ym) => ym.startsWith(year));
-    return periodROI(yms);
+    return periodROI([...ymStake.keys()].filter((ym) => ym.startsWith(year)));
   }
 
   const trainROI = periodROI(trainYms);
   const validationROI = periodROI(valYms);
   const testROI = periodROI(testYms);
-
-  // 月別 ROI
   const monthROIs: number[] = [];
   for (const [ym, stake] of ymStake) {
     const ret = ymReturn.get(ym) ?? 0;
@@ -334,13 +289,9 @@ function evaluate(strategy: Strategy): StrategyResult {
   const worstMonthROI = monthROIs.length > 0 ? Math.min(...monthROIs) : 0;
   const goodMonths = monthROIs.filter((r) => r >= 100).length;
   const badMonths = monthROIs.filter((r) => r < 80).length;
-
   const hitRate = validRaces > 0 ? Math.round((hits / validRaces) * 10000) / 100 : 0;
-  // coverageRate: race_payouts にpayout行が存在したレース / 全BUYレース
   const joinableRaces = validRaces - missingCoverageCount;
   const coverageRate = rows.length > 0 ? Math.round((joinableRaces / rows.length) * 10000) / 100 : 0;
-
-  // 警告
   const warnings: string[] = [];
   if (hits < 5) warnings.push("的中数 < 5: 参考扱い");
   if (hits < 3) warnings.push("的中数 < 3: 統計的に無意味");
@@ -349,30 +300,12 @@ function evaluate(strategy: Strategy): StrategyResult {
   if (strategy.betType === "拡連複" && ROI < 105) warnings.push("低オッズ券種: ROI105未満は弱い");
   if (strategy.betType === "2連複" && ROI < 103) warnings.push("低オッズ券種: ROI103未満は弱い");
 
-  // 判定
   let verdict: StrategyResult["verdict"];
-  if (hits < 5 || validRaces < 100) {
-    verdict = "coverage不足";
-  } else if (
-    ROI >= 108 &&
-    roiExMaxHit >= 95 &&
-    testROI >= 95 &&
-    validationROI >= 95 &&
-    hits >= 10
-  ) {
-    verdict = "今すぐ有望";
-  } else if (
-    ROI >= 103 &&
-    roiExMaxHit >= 90 &&
-    hits >= 5 &&
-    !(trainROI > 110 && validationROI < 90 && testROI < 90)
-  ) {
-    verdict = "追加検証候補";
-  } else if (trainROI > 110 && (validationROI < 85 || testROI < 85)) {
-    verdict = "危険/過学習";
-  } else {
-    verdict = "本番投入はまだ早い";
-  }
+  if (hits < 5 || validRaces < 100) verdict = "coverage不足";
+  else if (ROI >= 108 && roiExMaxHit >= 95 && testROI >= 95 && validationROI >= 95 && hits >= 10) verdict = "今すぐ有望";
+  else if (ROI >= 103 && roiExMaxHit >= 90 && hits >= 5 && !(trainROI > 110 && validationROI < 90 && testROI < 90)) verdict = "追加検証候補";
+  else if (trainROI > 110 && (validationROI < 85 || testROI < 85)) verdict = "危険/過学習";
+  else verdict = "本番投入はまだ早い";
 
   return {
     betType: strategy.betType,
@@ -410,43 +343,24 @@ function evaluate(strategy: Strategy): StrategyResult {
   };
 }
 
-// ─── 全戦略評価 ───────────────────────────────────────────────────────────────
-
 const results: StrategyResult[] = STRATEGIES.map(evaluate);
-
-// ランキング（ROI降順）
 const ranking = [...results]
   .sort((a, b) => b.ROI - a.ROI)
-  .map((r, i) => ({
-    rank: i + 1,
-    strategyName: r.strategyName,
-    ROI: r.ROI,
-    verdict: r.verdict,
-  }));
-
+  .map((r, i) => ({ rank: i + 1, strategyName: r.strategyName, ROI: r.ROI, verdict: r.verdict }));
 const deepDiveCandidates = results
-  .filter(
-    (r) =>
-      r.nRaces >= 100 &&
-      r.hits >= 5 &&
-      r.ROI >= 100 &&
-      r.verdict !== "危険/過学習" &&
-      r.verdict !== "coverage不足"
-  )
+  .filter((r) => r.nRaces >= 100 && r.hits >= 5 && r.ROI >= 100 && r.verdict !== "危険/過学習" && r.verdict !== "coverage不足")
   .sort((a, b) => b.ROI - a.ROI)
   .map((r) => r.betType);
 
 const report: ScreeningReport = {
   generatedAt: new Date().toISOString(),
-  dbPath: DB_PATH,
+  dbPath: REPORT_DB_LABEL,
   totalBuyRaces: rows.length,
   strategies: results,
   ranking,
   deepDiveCandidates,
   summary: `深掘り候補: ${deepDiveCandidates.join(", ") || "なし"}`,
 };
-
-// ─── Markdown ────────────────────────────────────────────────────────────────
 
 function pct(v: number) { return v.toFixed(1) + "%"; }
 function yen(v: number) { return v.toLocaleString() + "円"; }
@@ -459,7 +373,7 @@ DB: ${report.dbPath}
 
 ## 対象
 
-- run_kind='historical-backfill', decision='BUY', result あり
+- run_kind='historical-backfill', decision='BUY', result あり, returned=0
 - BUY レース数: **${rows.length.toLocaleString()}**
 - 単勝・複勝: race_payouts に存在しないため除外
 
@@ -467,20 +381,14 @@ DB: ${report.dbPath}
 
 | rank | 戦略 | ROI | ExMaxHit ROI | hits | hitRate | 判定 |
 |---|---|---|---|---|---|---|
-${ranking
-  .map(
-    (r) => {
-      const s = results.find((x) => x.strategyName === r.strategyName)!;
-      return `| ${r.rank} | ${r.strategyName} | **${r.ROI}%** | ${s.roiExMaxHit}% | ${s.hits} | ${pct(s.hitRate)} | ${r.verdict} |`;
-    }
-  )
-  .join("\n")}
+${ranking.map((r) => {
+  const s = results.find((x) => x.strategyName === r.strategyName)!;
+  return `| ${r.rank} | ${r.strategyName} | **${r.ROI}%** | ${s.roiExMaxHit}% | ${s.hits} | ${pct(s.hitRate)} | ${r.verdict} |`;
+}).join("\n")}
 
 ## 戦略別 詳細
 
-${results
-  .map(
-    (s) => `### ${s.strategyName}
+${results.map((s) => `### ${s.strategyName}
 
 | 指標 | 値 |
 |---|---|
@@ -511,15 +419,11 @@ ${results
 | **判定** | **${s.verdict}** |
 
 ${s.warnings.length > 0 ? `**警告:** ${s.warnings.join(" / ")}` : "警告なし"}
-`
-  )
-  .join("\n")}
+`).join("\n")}
 
 ## 深掘り候補
 
-${deepDiveCandidates.length > 0
-  ? deepDiveCandidates.map((c) => `- **${c}**`).join("\n")
-  : "- 有望候補なし（全券種 ROI < 100 または hit < 5）"}
+${deepDiveCandidates.length > 0 ? deepDiveCandidates.map((c) => `- **${c}**`).join("\n") : "- 有望候補なし（全券種 ROI < 100 または hit < 5）"}
 
 ## 注意事項
 
