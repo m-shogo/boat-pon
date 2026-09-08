@@ -51,6 +51,8 @@ test("ROI mechanism payout preflight matches raw analyzer population and validat
   assert.match(auditSource, /non-3連単 or returned\/unknown-return historical BUY rows/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
   assert.match(auditSource, /ts\.returned = 0/);
+  assert.match(auditSource, /ts\.returned IS NULL OR ts\.returned != 0/);
+  assert.match(auditSource, /refund or unknown-return settlement rows/);
   assert.match(auditSource, /ts\.payout_yen > 0/);
   assert.match(auditSource, /ts\.payout_yen <= 0/);
   assert.match(auditSource, /ts\.combination IS NULL/);
