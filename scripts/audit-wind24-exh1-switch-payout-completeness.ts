@@ -104,7 +104,7 @@ SELECT
   (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
   (SELECT COUNT(*)
    FROM target_settlements ts
-   WHERE ts.returned = 1
+   WHERE ts.returned IS NULL OR ts.returned != 0
   ) AS returnedRows
 `).get() as IntegrityRow;
 
@@ -141,7 +141,7 @@ if (duplicateCombinationKeys > 0) {
 }
 
 if (returnedRows > 0) {
-  console.error("[wind24-switch-payout-preflight] FAIL: target cohort contains trifecta refund rows, but the switch deep-dive does not model refund semantics explicitly");
+  console.error("[wind24-switch-payout-preflight] FAIL: target cohort contains trifecta refund or unknown-return settlement rows, but the switch deep-dive does not model those semantics explicitly");
   process.exit(2);
 }
 
