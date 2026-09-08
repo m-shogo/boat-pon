@@ -125,7 +125,7 @@ const allCandidates = db.prepare(`
       AND ${dateWhere}
   ),
   cb AS (
-    SELECT dh.race_id
+    SELECT DISTINCT dh.race_id
     FROM decision_history dh
     WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
       AND dh.selection='1-2-3'
