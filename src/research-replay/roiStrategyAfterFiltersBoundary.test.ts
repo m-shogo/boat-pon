@@ -33,14 +33,15 @@ test("strategy ROI maps decision 3連単 rows to canonical trifecta settlements"
   assert.doesNotMatch(source, /rp\.bet_type = dh\.bet_type/);
 });
 
-test("strategy ROI fails closed on returned BUY rows and duplicate exact settlement keys", () => {
+test("strategy ROI fails closed on unknown or returned BUY rows and duplicate exact settlement keys", () => {
   assert.match(source, /assertResearchSettlementIntegrity\(\)/);
   assert.match(source, /ROI_STRATEGY_RETURNED_BUY_PRESENT/);
-  assert.match(source, /COALESCE\(dh\.returned, 0\) != 0/);
+  assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
   assert.match(source, /ROI_STRATEGY_PAYOUT_DUPLICATE_KEY/);
   assert.match(source, /GROUP BY rp\.race_id, rp\.bet_type, rp\.combination/);
   assert.match(source, /HAVING COUNT\(\*\) > 1/);
-  assert.match(source, /COALESCE\(dh\.returned, 0\) = 0/);
+  assert.ok((source.match(/dh\.returned = 0/g) ?? []).length >= 2);
+  assert.doesNotMatch(source, /COALESCE\(dh\.returned, 0\)/);
   const integrityCheck = source.indexOf("assertResearchSettlementIntegrity();");
   const loadRows = source.indexOf("const rows = loadRows();");
   assert.ok(integrityCheck >= 0 && loadRows > integrityCheck);
