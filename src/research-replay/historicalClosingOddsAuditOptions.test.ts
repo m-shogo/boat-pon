@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START,
   HISTORICAL_CLOSING_ODDS_AUDIT_MAX_LIMIT,
   HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS,
   parseHistoricalClosingOddsAuditOptions,
@@ -56,6 +57,16 @@ test("historical closing odds audit requires a real positive bounded sleep inter
   assert.equal(
     parseHistoricalClosingOddsAuditOptions({ ...valid(), sleepMs: String(HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS) }, VENUES).sleepMs,
     HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS,
+  );
+});
+
+test("historical closing odds audit requires dates within the forward research period", () => {
+  assert.throws(
+    () => parseHistoricalClosingOddsAuditOptions({ ...valid(), fromDate: "2024-12-31" }, VENUES),
+    /HISTORICAL_CLOSING_ODDS_AUDIT_FROM_DATE_INVALID/u,
+  );
+  assert.doesNotThrow(
+    () => parseHistoricalClosingOddsAuditOptions({ ...valid(), fromDate: HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START }, VENUES),
   );
 });
 
