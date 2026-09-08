@@ -8,7 +8,7 @@ test("all-bet-types payout audit is canonical read-only and validates complete o
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
-  assert.match(source, /dh\.returned != 0/);
+  assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
   assert.match(source, /ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED/);
   assert.match(source, /dh\.returned = 0/);
   assert.match(source, /GROUP BY rp\.race_id, rp\.bet_type/);
@@ -19,6 +19,17 @@ test("all-bet-types payout audit is canonical read-only and validates complete o
   assert.match(source, /ALL_BET_TYPES_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /total <= 0/);
   assert.match(source, /settled !== total/);
+});
+
+test("all-bet-types payout audit fails closed on unknown return state before settlement coverage", () => {
+  const source = readFileSync("scripts/audit-all-bet-types-payout-completeness.ts", "utf8");
+  const unknownReturn = source.indexOf("dh.returned IS NULL OR dh.returned != 0");
+  const guard = source.indexOf("ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED");
+  const coverage = source.indexOf("WITH population AS");
+
+  assert.ok(unknownReturn >= 0);
+  assert.ok(guard > unknownReturn);
+  assert.ok(coverage > guard, "unknown/returned BUY rows must be rejected before payout coverage can be accepted");
 });
 
 test("direct all-bet-types ROI entrypoint cannot bypass payout completeness audit", () => {
