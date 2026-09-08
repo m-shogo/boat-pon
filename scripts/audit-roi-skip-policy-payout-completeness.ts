@@ -4,9 +4,9 @@
  * Verify that every race in the forward BUY population used by the monitor-only
  * ROI skip-policy simulation has unambiguous official trifecta settlement coverage
  * before payout ROI or policy verdicts are interpreted. Legitimate multi-line winners
- * are allowed; malformed, duplicate-combination, refund settlement rows, or returned
- * decision rows fail closed because the downstream scalar payout lookup does not
- * model those ambiguities explicitly.
+ * are allowed; malformed, duplicate-combination, refund settlement rows, returned
+ * decision rows, unknown-return rows, or non-trifecta decision rows fail closed because
+ * the downstream scalar payout lookup does not model those ambiguities explicitly.
  */
 
 import { existsSync } from "node:fs";
@@ -33,17 +33,17 @@ db.exec("PRAGMA busy_timeout = 5000;");
 type IntegrityRow = {
   total: number;
   covered: number;
+  cohortInvalidRows: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
-  returnedBuyRows: number;
 };
 const excludedVenues = EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",");
 const excludedRaces = EXCLUDED_RACES.join(",");
 
 const row = db.prepare(`
 WITH target_rows AS (
-  SELECT dh.race_id, dh.returned
+  SELECT dh.race_id, dh.bet_type, dh.returned
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -57,6 +57,8 @@ WITH target_rows AS (
 ), target_races AS (
   SELECT DISTINCT race_id
   FROM target_rows
+  WHERE bet_type = '3連単'
+    AND returned = 0
 ), target_settlements AS (
   SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
   FROM race_payouts rp
@@ -70,6 +72,13 @@ WITH target_rows AS (
 )
 SELECT
   (SELECT COUNT(*) FROM target_races) AS total,
+  (SELECT COUNT(*)
+   FROM target_rows tr
+   WHERE tr.bet_type IS NULL
+      OR tr.bet_type != '3連単'
+      OR tr.returned IS NULL
+      OR tr.returned != 0
+  ) AS cohortInvalidRows,
   (SELECT COUNT(*)
    FROM target_races tr
    WHERE EXISTS (
@@ -90,19 +99,18 @@ SELECT
      )
   ) AS invalidNonRefundRows,
   (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
-  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned = 1) AS returnedRows,
-  (SELECT COUNT(*) FROM target_rows tr WHERE COALESCE(tr.returned, 0) != 0) AS returnedBuyRows
+  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned = 1) AS returnedRows
 `).get(FORWARD_START) as IntegrityRow;
 
 const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covered ?? 0);
 db.close();
 
 console.log(
-  `[roi-skip-policy-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0} returnedBuyRows=${row.returnedBuyRows ?? 0}`,
+  `[roi-skip-policy-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
 );
 
-if ((row.returnedBuyRows ?? 0) > 0) {
-  console.error("[roi-skip-policy-payout-preflight] FAIL: target research cohort contains returned historical BUY rows, but the downstream skip-policy simulator does not exclude them explicitly");
+if ((row.cohortInvalidRows ?? 0) > 0) {
+  console.error("[roi-skip-policy-payout-preflight] FAIL: target research cohort contains non-3連単 or returned/unknown-return historical BUY rows, but the downstream skip-policy simulator does not exclude them explicitly");
   process.exit(2);
 }
 
