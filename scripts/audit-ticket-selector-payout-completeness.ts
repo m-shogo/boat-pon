@@ -28,7 +28,7 @@ type IntegrityRow = {
   cov_wide: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
-  returnedRows: number;
+  invalidSettlementReturnStates: number;
 };
 
 if (!existsSync(DB_PATH)) {
@@ -44,12 +44,32 @@ db.exec("PRAGMA busy_timeout = 5000;");
 try {
   const excludedVenues = EXCLUDED_VENUES.map(() => "?").join(",");
   const excludedRaceNos = EXCLUDED_RACE_NOS.map(() => "?").join(",");
+
+  const invalidBuyReturnStates = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM decision_history dh
+    WHERE dh.decision='BUY'
+      AND dh.run_kind='historical-backfill'
+      AND dh.result IS NOT NULL AND dh.result != ''
+      AND dh.current_odds IS NOT NULL
+      AND dh.venue NOT IN (${excludedVenues})
+      AND dh.race_no NOT IN (${excludedRaceNos})
+      AND dh.selection='1-2-3'
+      AND (dh.returned IS NULL OR dh.returned != 0)
+  `).get(...EXCLUDED_VENUES, ...EXCLUDED_RACE_NOS) as { count: number };
+
+  if (Number(invalidBuyReturnStates.count ?? 0) > 0) {
+    console.error("[ticket-selector-preflight] FAIL: target historical BUY cohort contains unknown or returned rows");
+    process.exit(2);
+  }
+
   const row = db.prepare(`
     WITH target_races AS (
       SELECT DISTINCT dh.race_id
       FROM decision_history dh
       WHERE dh.decision='BUY'
         AND dh.run_kind='historical-backfill'
+        AND dh.returned=0
         AND dh.result IS NOT NULL AND dh.result != ''
         AND dh.current_odds IS NOT NULL
         AND dh.venue NOT IN (${excludedVenues})
@@ -99,17 +119,18 @@ try {
          ts.payout_yen IS NULL OR ts.payout_yen<=0
        )) AS invalidNonRefundRows,
       (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
-      (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned=1) AS returnedRows
+      (SELECT COUNT(*) FROM target_settlements ts
+       WHERE ts.returned IS NULL OR ts.returned != 0) AS invalidSettlementReturnStates
   `).get(...EXCLUDED_VENUES, ...EXCLUDED_RACE_NOS) as IntegrityRow;
 
   const total = Number(row.total ?? 0);
   const invalidNonRefundRows = Number(row.invalidNonRefundRows ?? 0);
   const duplicateCombinationKeys = Number(row.duplicateCombinationKeys ?? 0);
-  const returnedRows = Number(row.returnedRows ?? 0);
+  const invalidSettlementReturnStates = Number(row.invalidSettlementReturnStates ?? 0);
   let complete = Number.isSafeInteger(total) && total > 0;
 
   console.log(
-    `[ticket-selector-preflight] population=${total} invalidNonRefund=${invalidNonRefundRows} duplicateKeys=${duplicateCombinationKeys} returnedRows=${returnedRows}`,
+    `[ticket-selector-preflight] population=${total} invalidNonRefund=${invalidNonRefundRows} duplicateKeys=${duplicateCombinationKeys} invalidSettlementReturnStates=${invalidSettlementReturnStates}`,
   );
 
   for (const betType of BET_TYPES) {
@@ -131,8 +152,8 @@ try {
     process.exit(2);
   }
 
-  if (returnedRows > 0) {
-    console.error("[ticket-selector-preflight] FAIL: compared markets contain refund rows, but the downstream selector does not model refund semantics explicitly");
+  if (invalidSettlementReturnStates > 0) {
+    console.error("[ticket-selector-preflight] FAIL: compared markets contain unknown or returned settlement states, but the downstream selector does not model those semantics explicitly");
     process.exit(2);
   }
 
