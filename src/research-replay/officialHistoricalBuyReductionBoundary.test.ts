@@ -13,7 +13,19 @@ test("official historical BUY reduction report uses verified read-only canonical
   assert.doesNotMatch(source, /console\.log\(`DB: \$\{DB_PATH\}`\)/);
 });
 
-test("official historical BUY reduction cohort excludes returned decisions", () => {
+test("official historical BUY reduction rejects unknown or returned target rows before settlement and verdict analysis", () => {
+  assert.match(source, /function assertReturnStateIntegrity\(\): void/);
+  assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
+  assert.match(source, /OFFICIAL_HISTORICAL_BUY_REDUCTION_RETURN_STATE_INVALID/);
+  const returnGate = source.indexOf("assertReturnStateIntegrity();");
+  const settlementGate = source.indexOf("assertOfficialSettlementIntegrity();");
+  const evaluate = source.indexOf("buildConditions().map(evaluateCondition)");
+  assert.ok(returnGate >= 0);
+  assert.ok(settlementGate > returnGate);
+  assert.ok(evaluate > settlementGate);
+});
+
+test("official historical BUY reduction cohort remains fixed to non-returned decisions", () => {
   const matches = source.match(/dh\.returned = 0/g) ?? [];
   assert.ok(matches.length >= 2, "returned=0 must guard both settlement preflight and analysis cohort");
   assert.match(source, /run_kind = 'historical-backfill'/);
