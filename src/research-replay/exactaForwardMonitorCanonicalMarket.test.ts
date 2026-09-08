@@ -3,10 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { ModuleKind, ScriptTarget, transpileModule } from "typescript";
 
-const scriptPath = new URL("../../scripts/report-exacta-forward-monitor.ts", import.meta.url);
+const scriptPath = new URL("../../scripts/report-exacta-forward-monitor-internal.ts", import.meta.url);
 const source = readFileSync(scriptPath, "utf8");
 
-test("exacta forward monitor remains valid TypeScript syntax", () => {
+test("exacta forward monitor internal implementation remains valid TypeScript syntax", () => {
   const result = transpileModule(source, {
     reportDiagnostics: true,
     compilerOptions: {
