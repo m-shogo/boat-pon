@@ -4,17 +4,25 @@ import test from "node:test";
 
 const source = readFileSync("scripts/search-roi-all-features-lite.ts", "utf8");
 
-test("all-feature ROI search uses verified read-only official payouts", () => {
+test("all-feature ROI search uses verified read-only official payouts with canonical bet-type mapping", () => {
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
+  assert.match(source, /const DECISION_BET_TYPE = "3連単"/);
+  assert.match(source, /const PAYOUT_BET_TYPE = "trifecta"/);
   assert.match(source, /FROM race_payouts rp/);
   assert.match(source, /rp\.payout_yen/);
-  assert.match(source, /rp\.bet_type = dh\.bet_type/);
+  assert.match(source, /rp\.bet_type = \?/);
+  assert.match(source, /dh\.bet_type = \?/);
+  assert.match(source, /\.get\(PAYOUT_BET_TYPE, DECISION_BET_TYPE\)/);
+  assert.match(source, /\.all\(PAYOUT_BET_TYPE, DECISION_BET_TYPE\)/);
   assert.match(source, /rp\.combination = dh\.selection/);
   assert.match(source, /dh\.returned = 0/);
   assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /metricBasis: "official_payout_yen"/);
+  assert.doesNotMatch(source, /rp\.bet_type = dh\.bet_type/);
+  assert.doesNotMatch(source, /LIMIT 1/);
 });
 
 test("all-feature ROI entrypoint validates exact winning settlement keys before analysis", () => {
