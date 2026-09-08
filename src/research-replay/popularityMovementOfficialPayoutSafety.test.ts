@@ -15,7 +15,7 @@ test("popularity movement report rejects unsupported bet types across the full r
   assert.ok(mapping >= 0 && settlement > mapping && query > settlement);
 });
 
-test("popularity movement report maps payout namespaces and fails closed on unsupported or ambiguous winning settlements", () => {
+test("popularity movement report validates every settled denominator against canonical official winning-result settlements", () => {
   assert.match(source, /function payoutBetTypeSql/u);
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/u);
   assert.match(source, /WHEN '3連複' THEN 'trio'/u);
@@ -23,11 +23,15 @@ test("popularity movement report maps payout namespaces and fails closed on unsu
   assert.match(source, /WHEN '2連複' THEN 'quinella'/u);
   assert.match(source, /WHEN '拡連複' THEN 'wide'/u);
   assert.match(source, /function assertOfficialSettlementIntegrity/u);
-  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*dh\.selection/u);
+  assert.match(source, /WITH relevant_settled AS/u);
+  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*dh\.result/u);
+  assert.match(source, /dh\.result IS NOT NULL/u);
+  assert.match(source, /dh\.result != ''/u);
   assert.match(source, /dh\.returned = 0/u);
-  assert.match(source, /dh\.selection = dh\.result/u);
-  assert.match(source, /h\.payout_bet_type IS NULL/u);
-  assert.match(source, /rp\.bet_type = h\.payout_bet_type/u);
+  assert.doesNotMatch(source, /relevant_hits AS/u);
+  assert.match(source, /s\.payout_bet_type IS NULL/u);
+  assert.match(source, /rp\.bet_type = s\.payout_bet_type/u);
+  assert.match(source, /rp\.combination = s\.result/u);
   assert.match(source, /\) != 1[\s\S]*OR \([\s\S]*\) != 1/u);
   assert.match(source, /rp\.returned = 0/u);
   assert.match(source, /rp\.payout_yen IS NOT NULL/u);
