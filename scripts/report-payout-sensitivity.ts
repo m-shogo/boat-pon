@@ -73,11 +73,31 @@ function reportWhere(): { where: string[]; params: Array<string | number> } {
   return { where, params };
 }
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
 function assertOfficialSettlementIntegrity() {
   const { where, params } = reportWhere();
   const row = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT race_id, bet_type, selection
+  SELECT DISTINCT
+    race_id,
+    bet_type,
+    ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
+    selection
   FROM decision_history
   WHERE ${where.join(" AND ")}
     AND selection = result
@@ -85,18 +105,19 @@ WITH relevant_hits AS (
 ), invalid AS (
   SELECT h.race_id, h.bet_type, h.selection
   FROM relevant_hits h
-  WHERE (
+  WHERE h.payout_bet_type IS NULL
+  OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
@@ -107,7 +128,7 @@ SELECT COUNT(*) AS n FROM invalid
 
   if (row.n > 0) {
     throw new Error(
-      `PAYOUT_SENSITIVITY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+      `PAYOUT_SENSITIVITY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have a supported payout mapping and exactly one positive non-refund official settlement`,
     );
   }
 }
@@ -130,7 +151,7 @@ WITH base AS (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
-          AND rp.bet_type = decision_history.bet_type
+          AND rp.bet_type = ${payoutBetTypeSql("decision_history.bet_type")}
           AND rp.combination = decision_history.selection
           AND rp.returned = 0
           AND rp.payout_yen > 0
@@ -204,7 +225,7 @@ function printRows(rows: ReportRow[]) {
   console.log("=== payout sensitivity report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} groupBy=${args.groupBy}`);
-  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching mapped decision bet_type/selection)");
   console.log("");
   console.log("group             n      settled  hits   missing  hitRate  roi     exTop1  exTop3  exTop5  top1    top3    top5");
   for (const row of rows) {
@@ -274,5 +295,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-payout-sensitivity.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--group-by decision|venue|month|venue-month|all] [--json]
 
-Read-only. No external access. ROI uses official race_payouts.payout_yen; groups with missing hit payout data return null payout-derived metrics fail-closed.`);
+Read-only. No external access. ROI uses mapped official race_payouts.payout_yen; groups with missing hit payout data return null payout-derived metrics fail-closed.`);
 }
