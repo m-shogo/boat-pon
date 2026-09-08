@@ -8,6 +8,9 @@ test("root methodology calibration uses canonical official settlements", () => {
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(/);
   assert.match(source, /new DatabaseSync\(primaryDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
+  assert.match(source, /assertCalibrationReturnStateIntegrity\(\)/);
+  assert.match(source, /ROOT_METHODOLOGY_RETURN_STATE_INVALID/);
+  assert.match(source, /returned IS NULL OR returned != 0/);
   assert.match(source, /assertCalibrationSettlementIntegrity\(\)/);
   assert.match(source, /FROM race_payouts rp/);
   assert.match(source, /rp\.bet_type='trifecta'/);
@@ -18,4 +21,9 @@ test("root methodology calibration uses canonical official settlements", () => {
   assert.match(source, /payoutBasis: "race_payouts\.payout_yen \/ 100円 \(official trifecta settlement\)"/);
   assert.doesNotMatch(source, /SUM\(CASE WHEN result=selection AND returned=0 THEN payout_yen ELSE 0 END\)/);
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
+
+  const returnStateCheck = source.indexOf("assertCalibrationReturnStateIntegrity()");
+  const settlementCheck = source.indexOf("assertCalibrationSettlementIntegrity()");
+  const calibrationQuery = source.indexOf("const calibration = db.prepare");
+  assert.ok(returnStateCheck >= 0 && settlementCheck > returnStateCheck && calibrationQuery > settlementCheck);
 });
