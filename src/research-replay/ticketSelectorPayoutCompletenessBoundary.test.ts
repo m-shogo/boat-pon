@@ -21,6 +21,9 @@ test("ticket-selector preflight covers the exact base population and every compa
   assert.match(auditSource, /dh\.run_kind='historical-backfill'/);
   assert.match(auditSource, /dh\.selection='1-2-3'/);
   assert.match(auditSource, /dh\.current_odds IS NOT NULL/);
+  assert.match(auditSource, /dh\.returned=0/);
+  assert.match(auditSource, /dh\.returned IS NULL OR dh\.returned != 0/);
+  assert.match(auditSource, /target historical BUY cohort contains unknown or returned rows/);
   assert.match(auditSource, /EXCLUDED_VENUES/);
   assert.match(auditSource, /EXCLUDED_RACE_NOS/);
   for (const betType of ["trifecta", "trio", "exacta", "quinella", "wide"]) {
@@ -32,13 +35,14 @@ test("ticket-selector preflight covers the exact base population and every compa
 
 test("ticket-selector preflight validates all compared settlement lines without banning legitimate multi-line winners", () => {
   assert.match(auditSource, /ts\.returned=0/);
+  assert.match(auditSource, /ts\.returned IS NULL OR ts\.returned != 0/);
+  assert.match(auditSource, /invalidSettlementReturnStates/);
   assert.match(auditSource, /ts\.payout_yen>0/);
   assert.match(auditSource, /ts\.payout_yen<=0/);
   assert.match(auditSource, /ts\.combination IS NULL/);
   assert.match(auditSource, /GROUP BY race_id, bet_type, combination/);
   assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
   assert.match(auditSource, /duplicateCombinationKeys/);
-  assert.match(auditSource, /returnedRows/);
   assert.match(auditSource, /invalidNonRefundRows/);
   assert.match(auditSource, /process\.exit\(2\)/);
   assert.doesNotMatch(auditSource, /HAVING COUNT\(\*\) = 1/);
