@@ -68,6 +68,20 @@ type CoverageReport = {
   summary: string;
 };
 
+const unknownHistoricalBuyReturns = (db.prepare(`
+  SELECT COUNT(*) AS n
+  FROM decision_history
+  WHERE decision='BUY' AND run_kind='historical-backfill'
+    AND result IS NOT NULL AND result != ''
+    AND returned IS NULL
+`).get() as { n: number }).n;
+
+if (Number(unknownHistoricalBuyReturns) > 0) {
+  console.error("[coverage-audit] FAIL CLOSED: unknown historical BUY return states exist in completed coverage population");
+  db.close();
+  process.exit(2);
+}
+
 const rawRows = db.prepare(`
   SELECT bet_type, COUNT(*) AS n
   FROM race_payouts
@@ -82,7 +96,9 @@ const totalPayoutRaces = (db.prepare(`
 const totalBuyRaces = (db.prepare(`
   SELECT COUNT(DISTINCT race_id) AS n
   FROM decision_history
-  WHERE decision='BUY' AND run_kind='historical-backfill' AND result IS NOT NULL AND result != ''
+  WHERE decision='BUY' AND run_kind='historical-backfill'
+    AND result IS NOT NULL AND result != ''
+    AND returned=0
 `).get() as { n: number }).n;
 
 const detailRows = db.prepare(`
@@ -110,9 +126,15 @@ function buyRacesJoinable(betType: string): number {
   const r = db.prepare(`
     SELECT COUNT(DISTINCT dh.race_id) AS n
     FROM decision_history dh
-    JOIN race_payouts rp ON rp.race_id = dh.race_id AND rp.bet_type = ?
+    JOIN race_payouts rp
+      ON rp.race_id = dh.race_id
+     AND rp.bet_type = ?
+     AND rp.returned=0
+     AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
+     AND rp.combination IS NOT NULL AND rp.combination!=''
     WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
       AND dh.result IS NOT NULL AND dh.result != ''
+      AND dh.returned=0
   `).get(betType) as { n: number };
   return r.n;
 }
@@ -218,7 +240,7 @@ DB: ${report.dbPath}
 
 ## 概要
 
-- BUY レース数（historical-backfill, result あり）: **${totalBuyRaces.toLocaleString()}**
+- BUY レース数（historical-backfill, result あり, returned=0）: **${totalBuyRaces.toLocaleString()}**
 - race_payouts 総レース数: **${totalPayoutRaces.toLocaleString()}**
 
 ## race_payouts bet_type 実値
@@ -258,7 +280,7 @@ ${betTypeStats
 
 - 単勝・複勝は race_payouts に存在しないため、本分析では「coverage不足」として扱い、ROI計算対象外とする。
 - 拡連複(wide)は1レースあたり払戻行数が1〜3件混在。本分析では BUY 買い目との exact match で判定。
-- returned=1 の行は払戻レースのため ROI 計算で除外する。
+- BUY結合可能数はreturned=0のhistorical BUYと、positive/non-refundかつcombination確定済みのofficial payoutが存在するraceだけを数える。
 `;
 
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
