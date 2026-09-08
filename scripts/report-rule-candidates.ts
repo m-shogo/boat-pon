@@ -33,6 +33,7 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertSupportedBetTypeMapping();
   assertOfficialSettlementIntegrity();
 
   const eligibleRows = [
@@ -94,11 +95,47 @@ function reportWhere(): { where: string[]; params: Array<string | number> } {
   return { where, params };
 }
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
+function assertSupportedBetTypeMapping() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("bet_type")}) IS NULL
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `RULE_CANDIDATES_BET_TYPE_MAPPING_FAILED: ${row.n} decision row(s) use an unsupported or unknown payout bet type mapping`,
+    );
+  }
+}
+
 function assertOfficialSettlementIntegrity() {
   const { where, params } = reportWhere();
   const row = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT race_id, bet_type, selection
+  SELECT DISTINCT
+    race_id,
+    bet_type,
+    ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
+    selection
   FROM decision_history
   WHERE ${where.join(" AND ")}
     AND selection = result
@@ -106,18 +143,19 @@ WITH relevant_hits AS (
 ), invalid AS (
   SELECT h.race_id, h.bet_type, h.selection
   FROM relevant_hits h
-  WHERE (
+  WHERE h.payout_bet_type IS NULL
+  OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
@@ -151,8 +189,10 @@ WITH base AS (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
-          AND rp.bet_type = decision_history.bet_type
+          AND rp.bet_type = ${payoutBetTypeSql("decision_history.bet_type")}
           AND rp.combination = decision_history.selection
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
         LIMIT 1
       )
       ELSE 0
@@ -267,7 +307,7 @@ function printRows(rows: SuggestionRow[]) {
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
   console.log(`thresholds: minSettled=${args.minSettled} badRoi=${args.badRoi} badRoiExMax=${args.badRoiExMax} goodRoi=${args.goodRoi} goodRoiExMax=${args.goodRoiExMax}`);
-  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching mapped decision bet_type/selection)");
   console.log("");
   console.log("suggestion        metric         band        decision  n      settled  hits   hitRate  roi     roiExMax  reason");
   for (const row of rows) {
@@ -340,8 +380,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-rule-candidates.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--min-settled 30] [--json]
-
-Read-only. No external access. Suggestions are for review only.
-ROI uses official race_payouts.payout_yen matching each decision ticket; groups with missing hit payout data are skipped fail-closed.`);
+  pnpm exec tsx scripts/report-rule-candidates.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--min-settled 30] [--json]\n\nRead-only. No external access. Suggestions are for review only.\nROI uses official race_payouts.payout_yen matching each mapped decision ticket; groups with missing hit payout data are skipped fail-closed.`);
 }
