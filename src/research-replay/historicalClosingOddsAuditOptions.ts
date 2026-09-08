@@ -1,5 +1,6 @@
 export const HISTORICAL_CLOSING_ODDS_AUDIT_MAX_LIMIT = 200;
 export const HISTORICAL_CLOSING_ODDS_AUDIT_MAX_SLEEP_MS = 2_147_483_647;
+export const HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START = "2025-01-01";
 
 export const HISTORICAL_CLOSING_ODDS_AUDIT_CATEGORIES = [
   "condB",
@@ -68,6 +69,9 @@ export function parseHistoricalClosingOddsAuditOptions(
 
   requireCanonicalDate(raw.fromDate, "FROM_DATE");
   requireCanonicalDate(raw.toDate, "TO_DATE");
+  if (raw.fromDate && raw.fromDate < HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START) {
+    throw new Error(`HISTORICAL_CLOSING_ODDS_AUDIT_FROM_DATE_INVALID:${raw.fromDate}`);
+  }
   if (raw.fromDate && raw.toDate && raw.fromDate > raw.toDate) {
     throw new Error("HISTORICAL_CLOSING_ODDS_AUDIT_DATE_RANGE_INVALID");
   }
