@@ -17,13 +17,15 @@ test("ROI edge market-gap normal entrypoint fails closed before raw analysis", (
 });
 
 test("ROI edge market-gap payout preflight matches analyzer population and stays read-only", () => {
-  assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
+  assert.match(auditSource, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
   assert.match(auditSource, /dh\.decision = 'BUY'/);
   assert.match(auditSource, /dh\.run_kind = 'historical-backfill'/);
   assert.match(auditSource, /dh\.result IS NOT NULL/);
   assert.match(auditSource, /dh\.current_odds IS NOT NULL/);
   assert.match(auditSource, /dh\.selection = '1-2-3'/);
   assert.match(auditSource, /dh\.date >= \?/);
+  assert.match(auditSource, /bet_type = '3連単'/);
+  assert.match(auditSource, /returned = 0/);
   assert.match(auditSource, /rp\.bet_type = 'trifecta'/);
   assert.match(auditSource, /ts\.returned = 0/);
   assert.match(auditSource, /ts\.payout_yen > 0/);
@@ -32,6 +34,16 @@ test("ROI edge market-gap payout preflight matches analyzer population and stays
   assert.match(auditSource, /assertCanonicalSingleLinkRegularFile/);
   assert.match(auditSource, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(auditSource, /ROI_EDGE_MARKET_GAP_TRIFECTA_PAYOUT_COVERAGE_INCOMPLETE/);
+});
+
+test("ROI edge market-gap preflight fails closed on decision cohort drift before payout verdicts", () => {
+  assert.match(auditSource, /tr\.bet_type IS NULL/);
+  assert.match(auditSource, /tr\.bet_type != '3連単'/);
+  assert.match(auditSource, /tr\.returned IS NULL/);
+  assert.match(auditSource, /tr\.returned != 0/);
+  assert.match(auditSource, /cohortInvalidRows/);
+  assert.match(auditSource, /non-3連単 or returned\/unknown-return historical BUY rows/);
+  assert.match(auditSource, /process\.exit\(2\)/);
 });
 
 test("ROI edge market-gap settlement gate permits legitimate multi-line races but rejects ambiguous lines", () => {

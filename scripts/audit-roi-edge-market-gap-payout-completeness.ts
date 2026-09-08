@@ -5,8 +5,8 @@
  * market-gap analyzer has trustworthy official trifecta settlement data before
  * 1-2-3 ROI, 1-3-2 missed-opportunity ROI, or payout-based verdicts are interpreted.
  * Legitimate multi-line winners are allowed; malformed, duplicate-combination,
- * or refund rows fail closed because the downstream scalar payout lookups do not
- * model those ambiguities explicitly.
+ * refund rows, or decision-cohort drift fail closed because the downstream scalar
+ * payout lookups do not model those ambiguities explicitly.
  */
 
 import { existsSync } from "node:fs";
@@ -33,6 +33,7 @@ db.exec("PRAGMA busy_timeout = 5000;");
 type IntegrityRow = {
   total: number;
   covered: number;
+  cohortInvalidRows: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
@@ -41,8 +42,8 @@ const excludedVenues = EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",");
 const excludedRaces = EXCLUDED_RACES.join(",");
 
 const row = db.prepare(`
-WITH target_races AS (
-  SELECT DISTINCT dh.race_id
+WITH target_rows AS (
+  SELECT dh.race_id, dh.bet_type, dh.returned
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -53,6 +54,11 @@ WITH target_races AS (
     AND dh.race_no NOT IN (${excludedRaces})
     AND dh.selection = '1-2-3'
     AND dh.date >= ?
+), target_races AS (
+  SELECT DISTINCT race_id
+  FROM target_rows
+  WHERE bet_type = '3連単'
+    AND returned = 0
 ), target_settlements AS (
   SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
   FROM race_payouts rp
@@ -66,6 +72,11 @@ WITH target_races AS (
 )
 SELECT
   (SELECT COUNT(*) FROM target_races) AS total,
+  (SELECT COUNT(*) FROM target_rows tr
+   WHERE tr.bet_type IS NULL
+      OR tr.bet_type != '3連単'
+      OR tr.returned IS NULL
+      OR tr.returned != 0) AS cohortInvalidRows,
   (SELECT COUNT(*)
    FROM target_races tr
    WHERE EXISTS (
@@ -96,8 +107,13 @@ const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covere
 db.close();
 
 console.log(
-  `[roi-edge-market-gap-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
+  `[roi-edge-market-gap-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
 );
+
+if ((row.cohortInvalidRows ?? 0) > 0) {
+  console.error("[roi-edge-market-gap-payout-preflight] FAIL: target analyzer population contains non-3連単 or returned/unknown-return historical BUY rows; payout verdicts must remain unavailable");
+  process.exit(2);
+}
 
 if ((row.invalidNonRefundRows ?? 0) > 0) {
   console.error("[roi-edge-market-gap-payout-preflight] FAIL: target cohort contains non-refund trifecta settlement rows without a non-empty combination and positive official payout");
