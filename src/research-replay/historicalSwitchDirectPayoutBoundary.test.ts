@@ -53,4 +53,17 @@ for (const c of CASES) {
     assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = COUNT\(\*\)/);
     assert.doesNotMatch(source, /HAVING COUNT\(\*\) = 1/);
   });
+
+  test(`${c.alias} payout audit rejects decision cohort drift before settlement coverage`, () => {
+    const source = readFileSync(c.auditPath, "utf8");
+    const contamination = source.indexOf("const contamination = db.prepare");
+    const coverage = source.indexOf("WITH ");
+    assert.ok(contamination >= 0);
+    assert.ok(coverage > contamination);
+    assert.match(source, /dh\.bet_type != '3連単'/);
+    assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
+    assert.match(source, /dh\.bet_type\s*=\s*'3連単'/);
+    assert.match(source, /dh\.returned\s*=\s*0/);
+    assert.match(source, /HISTORICAL_COHORT_INVALID/);
+  });
 }
