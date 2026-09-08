@@ -30,6 +30,12 @@ test("no-buy next research fails closed on returned historical BUY rows before r
   assert.match(source, /dh\.returned = 0/);
 });
 
+test("no-buy next research scopes return, settlement, and ROI cohorts to trifecta decisions", () => {
+  const matches = source.match(/dh\.bet_type='3連単'/g) ?? [];
+  assert.equal(matches.length, 3, "returned gate, settlement gate, and ROI load must share the same 3連単 decision cohort");
+  assert.match(source, /rp\.bet_type = 'trifecta'/);
+});
+
 test("no-buy next ROI uses unique positive non-refund official trifecta settlements", () => {
   assert.match(source, /rp\.bet_type = 'trifecta'/);
   assert.match(source, /rp\.combination = w\.selection/);
