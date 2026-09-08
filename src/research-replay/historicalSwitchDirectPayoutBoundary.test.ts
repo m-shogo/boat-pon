@@ -47,11 +47,18 @@ for (const c of CASES) {
     assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
     assert.match(source, /PRAGMA query_only = ON/);
     assert.match(source, /rp\.bet_type\s*=\s*'trifecta'/);
+    assert.match(source, /rp\.returned\s*=\s*0/);
+    assert.match(source, /rp\.returned IS NULL OR rp\.returned != 0/);
+    assert.match(source, /PAYOUT_RETURN_STATE_INVALID/);
     assert.match(source, /GROUP BY rp\.race_id/);
     assert.match(source, /HAVING COUNT\(\*\) >= 1/);
     assert.match(source, /COUNT\(DISTINCT rp\.combination\) = COUNT\(\*\)/);
     assert.match(source, /SUM\(CASE WHEN rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0 THEN 1 ELSE 0 END\) = COUNT\(\*\)/);
     assert.doesNotMatch(source, /HAVING COUNT\(\*\) = 1/);
+    const returnStateGate = source.indexOf("const payoutReturnState = db.prepare");
+    const coverage = source.indexOf("const row = db.prepare");
+    assert.ok(returnStateGate >= 0);
+    assert.ok(coverage > returnStateGate);
   });
 
   test(`${c.alias} payout audit rejects decision cohort drift before settlement coverage`, () => {
