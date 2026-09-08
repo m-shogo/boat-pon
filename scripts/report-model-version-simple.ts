@@ -29,6 +29,7 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertSupportedBetTypeMapping();
   assertOfficialSettlementIntegrity();
   const rows = queryRows();
   if (args.json) console.log(JSON.stringify({ generatedAt: new Date().toISOString(), args, rows }, null, 2));
@@ -76,6 +77,22 @@ function payoutBetTypeSql(column: string) {
     WHEN 'wide' THEN 'wide'
     ELSE NULL
   END`;
+}
+
+function assertSupportedBetTypeMapping() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("bet_type")}) IS NULL
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `MODEL_VERSION_BET_TYPE_MAPPING_FAILED: ${row.n} decision row(s) use an unsupported or unknown payout bet type mapping`,
+    );
+  }
 }
 
 function assertOfficialSettlementIntegrity() {
@@ -236,5 +253,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-model-version-simple.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--venue 蒲郡] [--min-settled 10] [--json]\n\nRead-only. ROI uses mapped canonical official race_payouts.payout_yen; current_odds is a quote-only feature.`);
+  pnpm exec tsx scripts/report-model-version-simple.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--venue 蒲郡] [--min-settled 10] [--json]\n\nRead-only. Unsupported decision bet types fail closed before aggregation. ROI uses mapped canonical official race_payouts.payout_yen; current_odds is a quote-only feature.`);
 }
