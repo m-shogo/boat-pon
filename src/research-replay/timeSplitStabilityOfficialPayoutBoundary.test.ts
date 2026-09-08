@@ -11,7 +11,7 @@ test("time split stability maps decision bet types into canonical payout namespa
   assert.match(source, /WHEN '2連単' THEN 'exacta'/);
   assert.match(source, /WHEN '2連複' THEN 'quinella'/);
   assert.match(source, /WHEN '拡連複' THEN 'wide'/);
-  assert.match(source, /rp\.bet_type = h\.payout_bet_type/);
+  assert.match(source, /rp\.bet_type = s\.payout_bet_type/);
   assert.match(source, /rp\.bet_type = \$\{payoutBetTypeSql\("decision_history\.bet_type"\)\}/);
   assert.doesNotMatch(source, /rp\.bet_type = decision_history\.bet_type/);
 });
@@ -35,13 +35,21 @@ test("time split stability uses exact positive non-refund official settlements",
   assert.match(source, /rp\.payout_yen > 0/);
 });
 
-test("time split stability fails closed on ambiguous winning settlement keys before window ROI", () => {
+test("time split stability validates every settled denominator against canonical official winning-result settlements", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity\(from: string \| null, to: string \| null\)/);
-  assert.match(source, /SELECT DISTINCT[\s\S]*race_id,[\s\S]*payout_bet_type,[\s\S]*selection/);
-  assert.match(source, /selection = result/);
+  assert.match(source, /WITH relevant_settled AS/);
+  assert.match(source, /SELECT DISTINCT[\s\S]*race_id,[\s\S]*payout_bet_type,[\s\S]*result/);
+  assert.match(source, /result IS NOT NULL/);
+  assert.match(source, /result != ''/);
   assert.match(source, /returned = 0/);
-  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*rp\.combination = h\.selection/);
-  assert.match(source, /\) != 1/);
+  assert.doesNotMatch(source, /relevant_hits AS/);
+  assert.doesNotMatch(source, /AND selection = result[\s\S]*\), invalid AS/);
+  assert.match(source, /s\.payout_bet_type IS NULL/);
+  assert.match(source, /rp\.bet_type = s\.payout_bet_type/);
+  assert.match(source, /rp\.combination = s\.result/);
+  assert.match(source, /\) != 1[\s\S]*OR \([\s\S]*\) != 1/);
+  assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen IS NOT NULL/);
   assert.match(source, /TIME_SPLIT_STABILITY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
 
   const integrity = source.indexOf("assertOfficialSettlementIntegrity(args.from, args.to);");
