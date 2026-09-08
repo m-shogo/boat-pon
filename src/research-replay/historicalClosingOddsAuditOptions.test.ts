@@ -61,12 +61,20 @@ test("historical closing odds audit requires a real positive bounded sleep inter
 });
 
 test("historical closing odds audit requires dates within the forward research period", () => {
-  assert.throws(
-    () => parseHistoricalClosingOddsAuditOptions({ ...valid(), fromDate: "2024-12-31" }, VENUES),
-    /HISTORICAL_CLOSING_ODDS_AUDIT_FROM_DATE_INVALID/u,
-  );
+  for (const patch of [
+    { fromDate: "2024-12-31" },
+    { fromDate: "", toDate: "2024-12-31" },
+  ]) {
+    assert.throws(
+      () => parseHistoricalClosingOddsAuditOptions({ ...valid(), ...patch }, VENUES),
+      /HISTORICAL_CLOSING_ODDS_AUDIT_(FROM_DATE|TO_DATE)_INVALID/u,
+    );
+  }
   assert.doesNotThrow(
     () => parseHistoricalClosingOddsAuditOptions({ ...valid(), fromDate: HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START }, VENUES),
+  );
+  assert.doesNotThrow(
+    () => parseHistoricalClosingOddsAuditOptions({ ...valid(), fromDate: "", toDate: HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START }, VENUES),
   );
 });
 
