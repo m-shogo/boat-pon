@@ -19,7 +19,7 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[report-buy-misses] DB not found: ${DB_PATH}`);
+  console.error("[report-buy-misses] BUY_MISSES_REPORT_PRIMARY_DB_MISSING");
   process.exit(1);
 }
 
@@ -58,7 +58,7 @@ type ReportRow = {
 };
 
 function queryRows(): ReportRow[] {
-  const where: string[] = ["decision = 'BUY'", "returned = 0", "(result IS NULL OR selection != result)"];
+  const where: string[] = ["decision = 'BUY'", "returned = 0", "result IS NOT NULL", "selection != result"];
   const params: Array<string | number> = [];
 
   if (args.from) { where.push("date >= ?"); params.push(args.from); }
