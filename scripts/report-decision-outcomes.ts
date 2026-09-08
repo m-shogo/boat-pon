@@ -106,34 +106,36 @@ WHERE ${where.join(" AND ")}
 function assertOfficialSettlementIntegrity() {
   const { where, params } = reportWhere();
   const row = db.prepare(`
-WITH relevant_hits AS (
+WITH relevant_settled AS (
   SELECT DISTINCT
     race_id,
     bet_type,
     ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
-    selection
+    result
   FROM decision_history
   WHERE ${where.join(" AND ")}
-    AND selection = result
+    AND result IS NOT NULL
+    AND result != ''
     AND returned = 0
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
-  FROM relevant_hits h
-  WHERE h.payout_bet_type IS NULL
+  SELECT s.race_id, s.bet_type, s.result
+  FROM relevant_settled s
+  WHERE s.payout_bet_type IS NULL
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
       AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
   ) != 1
 )
@@ -142,7 +144,7 @@ SELECT COUNT(*) AS n FROM invalid
 
   if (row.n > 0) {
     throw new Error(
-      `DECISION_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+      `DECISION_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled race key(s) do not have exactly one positive non-refund official winning settlement`,
     );
   }
 }
@@ -161,13 +163,14 @@ WITH base AS (
     current_odds,
     ev,
     CASE
-      WHEN selection = result AND returned = 0 THEN (
+      WHEN result IS NOT NULL AND result != '' AND selection = result AND returned = 0 THEN (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
           AND rp.bet_type = ${payoutBetTypeSql("decision_history.bet_type")}
           AND rp.combination = decision_history.selection
           AND rp.returned = 0
+          AND rp.payout_yen IS NOT NULL
           AND rp.payout_yen > 0
         LIMIT 1
       )
@@ -179,9 +182,9 @@ WITH base AS (
   SELECT
     decision,
     COUNT(*) AS n,
-    SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
-    SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
-    SUM(CASE WHEN selection = result AND returned = 0 AND payout_odds IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
+    SUM(CASE WHEN result IS NOT NULL AND result != '' AND returned = 0 THEN 1 ELSE 0 END) AS settled,
+    SUM(CASE WHEN result IS NOT NULL AND result != '' AND selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN result IS NOT NULL AND result != '' AND selection = result AND returned = 0 AND payout_odds IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
     AVG(estimated_hit_rate) AS avg_estimated_hit_rate,
     AVG(current_odds) AS avg_current_odds,
     AVG(ev) AS avg_ev,
@@ -278,5 +281,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-decision-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. No external access. ROI uses official race_payouts.payout_yen; winning ticket keys must have exactly one positive non-refund official settlement before payout-derived metrics are generated.`);
+  pnpm exec tsx scripts/report-decision-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. No external access. ROI uses complete canonical official winning settlements for every non-empty settled denominator row before payout-derived metrics are generated.`);
 }
