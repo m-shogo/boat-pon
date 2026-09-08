@@ -5,6 +5,8 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const DECISION_BET_TYPE = "3連単";
+const PAYOUT_BET_TYPE = "trifecta";
 
 if (!existsSync(DB_PATH)) {
   console.error("[search-roi-patterns] database not found");
@@ -19,37 +21,38 @@ db.exec("PRAGMA busy_timeout = 5000;");
 try {
   const integrity = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  SELECT DISTINCT dh.race_id, dh.selection
   FROM decision_history dh
   WHERE dh.run_kind = 'historical-backfill'
     AND dh.decision = 'BUY'
+    AND dh.bet_type = ?
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
     AND dh.result != ''
     AND dh.returned = 0
     AND dh.selection = dh.result
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
+  SELECT h.race_id, h.selection
   FROM relevant_hits h
   WHERE (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = ?
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = ?
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
   ) != 1
 )
 SELECT COUNT(*) AS n FROM invalid
-`).get() as { n: number };
+`).get(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE) as { n: number };
 
   if ((integrity.n ?? 0) > 0) {
     console.error(`[search-roi-patterns] FAIL CLOSED: ${integrity.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`);
