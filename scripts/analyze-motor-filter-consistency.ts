@@ -19,6 +19,7 @@ db.exec("PRAGMA busy_timeout = 5000;");
 db.exec("PRAGMA query_only = ON;");
 
 try {
+  assertReturnStateIntegrity();
   assertWinningSettlementIntegrity();
   const rows = loadRows();
   if (rows.length === 0) throw new Error("MOTOR_FILTER_POPULATION_EMPTY");
@@ -57,6 +58,24 @@ type Row = {
   nationalMotor: number | null;
   venueMotor: number | null;
 };
+
+function assertReturnStateIntegrity() {
+  const invalid = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE run_kind = 'historical-backfill'
+  AND decision = 'BUY'
+  AND bet_type = ?
+  AND current_odds IS NOT NULL
+  AND result IS NOT NULL
+  AND result != ''
+  AND (returned IS NULL OR returned != 0)
+  `).get(DECISION_BET_TYPE) as { n: number };
+
+  if ((invalid.n ?? 0) > 0) {
+    throw new Error(`MOTOR_FILTER_RETURN_STATE_INVALID count=${invalid.n}`);
+  }
+}
 
 function assertWinningSettlementIntegrity() {
   const invalid = db.prepare(`
