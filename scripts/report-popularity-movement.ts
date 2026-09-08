@@ -117,34 +117,34 @@ WHERE ${where.join(" AND ")}
 function assertOfficialSettlementIntegrity(): void {
   const { where, params } = reportWhere();
   const row = db.prepare(`
-WITH relevant_hits AS (
+WITH relevant_settled AS (
   SELECT DISTINCT
     dh.race_id,
     dh.bet_type,
     ${payoutBetTypeSql("dh.bet_type")} AS payout_bet_type,
-    dh.selection
+    dh.result
   FROM decision_history dh
   WHERE ${where.join(" AND ")}
     AND dh.result IS NOT NULL
+    AND dh.result != ''
     AND dh.returned = 0
-    AND dh.selection = dh.result
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
-  FROM relevant_hits h
-  WHERE h.payout_bet_type IS NULL
+  SELECT s.race_id, s.bet_type, s.result
+  FROM relevant_settled s
+  WHERE s.payout_bet_type IS NULL
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
       AND rp.returned = 0
       AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
@@ -345,5 +345,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-popularity-movement.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
 
-Read-only. Unsupported decision bet types fail closed before popularity/ROI aggregation; popularity uses aggregate checkpoint data and ROI uses mapped canonical official race_payouts.payout_yen.`);
+Read-only. Unsupported decision bet types fail closed before popularity/ROI aggregation; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement, popularity uses aggregate checkpoint data, and ROI uses mapped canonical official race_payouts.payout_yen.`);
 }
