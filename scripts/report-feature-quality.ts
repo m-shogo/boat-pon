@@ -70,10 +70,30 @@ try {
   db.close();
 }
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
 function assertOfficialSettlementIntegrity(db: DatabaseSync, from: string, to: string): void {
   const row = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  SELECT DISTINCT
+    dh.race_id,
+    dh.bet_type,
+    ${payoutBetTypeSql("dh.bet_type")} AS payout_bet_type,
+    dh.selection
   FROM decision_history dh
   WHERE dh.date >= ? AND dh.date <= ?
     AND dh.model_version = ?
@@ -84,18 +104,19 @@ WITH relevant_hits AS (
 ), invalid AS (
   SELECT h.race_id, h.bet_type, h.selection
   FROM relevant_hits h
-  WHERE (
+  WHERE h.payout_bet_type IS NULL
+  OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen IS NOT NULL
@@ -142,7 +163,7 @@ SELECT dh.decision, dh.selection, dh.result, dh.returned, dh.current_odds,
          SELECT rp.payout_yen
          FROM race_payouts rp
          WHERE rp.race_id = dh.race_id
-           AND rp.bet_type = dh.bet_type
+           AND rp.bet_type = ${payoutBetTypeSql("dh.bet_type")}
            AND rp.combination = dh.selection
            AND rp.returned = 0
            AND rp.payout_yen IS NOT NULL
