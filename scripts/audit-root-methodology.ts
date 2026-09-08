@@ -23,6 +23,7 @@ type BetTypeRow = { bet_type: string; payout_races: number; payout_rows: number;
 type CalibrationRow = { n: number; hits: number; estimated: number | null; actual_odds: number | null; payout: number | null };
 
 try {
+  assertCalibrationReturnStateIntegrity();
   assertCalibrationSettlementIntegrity();
 
   const excludedVenues = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
@@ -181,6 +182,23 @@ try {
   console.log(`[root-methodology-audit] wrote ${OUT_MD} / ${OUT_JSON}`);
 } finally {
   db.close();
+}
+
+function assertCalibrationReturnStateIntegrity(): void {
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history
+WHERE decision='BUY'
+  AND run_kind='historical-backfill'
+  AND result IS NOT NULL AND result!=''
+  AND current_odds IS NOT NULL
+  AND required_odds >= 20 AND required_odds < 50
+  AND bet_type='3連単'
+  AND (returned IS NULL OR returned != 0)
+  `).get() as { invalid: number };
+  if (Number(row.invalid) > 0) {
+    throw new Error(`ROOT_METHODOLOGY_RETURN_STATE_INVALID ${JSON.stringify({ invalid: Number(row.invalid) })}`);
+  }
 }
 
 function assertCalibrationSettlementIntegrity(): void {
