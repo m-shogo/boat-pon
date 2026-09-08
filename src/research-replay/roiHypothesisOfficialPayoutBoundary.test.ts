@@ -21,6 +21,23 @@ test("ROI hypothesis entrypoint verifies the database and settlement integrity b
   assert.ok(rawLaunch > integrity);
 });
 
+test("ROI hypothesis raw core fails closed on return-state and exact winning-key settlement drift before scenario analysis", () => {
+  assert.match(raw, /assertOfficialSettlementIntegrity\(\)/);
+  assert.match(raw, /dh\.returned IS NULL OR dh\.returned != 0/);
+  assert.match(raw, /WITH relevant_hits AS/);
+  assert.match(raw, /SELECT COUNT\(\*\)[\s\S]*FROM race_payouts rp[\s\S]*rp\.combination = h\.selection/);
+  assert.match(raw, /rp\.returned = 0/);
+  assert.match(raw, /rp\.payout_yen > 0/);
+  assert.match(raw, /ROI_HYPOTHESIS_INVALID_RETURN_STATE/);
+  assert.match(raw, /ROI_HYPOTHESIS_SETTLEMENT_INTEGRITY/);
+  const directGate = raw.indexOf("assertOfficialSettlementIntegrity()");
+  const coverageGate = raw.indexOf("const payoutCompleteness = verifyOfficialPayoutCompleteness()");
+  const loadRows = raw.indexOf("const rows = loadRows().sort");
+  assert.ok(directGate >= 0);
+  assert.ok(coverageGate > directGate);
+  assert.ok(loadRows > coverageGate);
+});
+
 test("ROI hypothesis raw core retains official payout completeness and scenario-ranking fail closed behavior", () => {
   assert.match(raw, /const DECISION_BET_TYPE = "3連単"/);
   assert.match(raw, /const PAYOUT_BET_TYPE = "trifecta"/);
