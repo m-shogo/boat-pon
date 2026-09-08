@@ -25,10 +25,10 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const report = run("scripts/report-paper-forward-monitor-raw.ts");
+const report = run("scripts/report-paper-forward-monitor-internal.ts");
 if (report !== 0) {
-  console.error("[paper-forward-monitor-entrypoint] report failed after a successful payout completeness preflight");
+  console.error("[paper-forward-monitor-entrypoint] internal report failed after a successful payout completeness preflight");
   process.exit(report);
 }
 
-console.log("[paper-forward-monitor-entrypoint] PASS: payout completeness preflight passed before monitor report generation");
+console.log("[paper-forward-monitor-entrypoint] PASS: payout completeness preflight passed before internal monitor report generation");
