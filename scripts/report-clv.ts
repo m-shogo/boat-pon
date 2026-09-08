@@ -194,7 +194,7 @@ WITH odds_by_checkpoint AS (
     dh.result,
     dh.returned,
     CASE
-      WHEN dh.selection = dh.result AND dh.returned = 0 THEN (
+      WHEN dh.result IS NOT NULL AND dh.result != '' AND dh.selection = dh.result AND dh.returned = 0 THEN (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = dh.race_id
@@ -224,11 +224,11 @@ WITH odds_by_checkpoint AS (
 SELECT
   decision,
   COUNT(*) AS n,
-  SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
-  SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+  SUM(CASE WHEN result IS NOT NULL AND result != '' AND returned = 0 THEN 1 ELSE 0 END) AS settled,
+  SUM(CASE WHEN result IS NOT NULL AND result != '' AND selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
   ROUND(
     SUM(payout_units) * 1.0
-    / NULLIF(SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END), 0),
+    / NULLIF(SUM(CASE WHEN result IS NOT NULL AND result != '' AND returned = 0 THEN 1 ELSE 0 END), 0),
     3
   ) AS roi,
   ROUND(AVG(t30), 2) AS avgT30,
