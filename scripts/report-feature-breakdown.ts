@@ -26,7 +26,7 @@ const FACTORS = [
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[report-feature-breakdown] DB not found: ${DB_PATH}`);
+  console.error("[report-feature-breakdown] DB not found");
   process.exit(1);
 }
 
@@ -77,11 +77,31 @@ function reportWhere(): { where: string[]; params: Array<string | number> } {
   return { where, params };
 }
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
 function assertOfficialSettlementIntegrity() {
   const { where, params } = reportWhere();
   const row = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT race_id, bet_type, selection
+  SELECT DISTINCT
+    race_id,
+    bet_type,
+    ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
+    selection
   FROM decision_history
   WHERE ${where.join(" AND ")}
     AND selection = result
@@ -89,18 +109,19 @@ WITH relevant_hits AS (
 ), invalid AS (
   SELECT h.race_id, h.bet_type, h.selection
   FROM relevant_hits h
-  WHERE (
+  WHERE h.payout_bet_type IS NULL
+  OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
@@ -111,7 +132,7 @@ SELECT COUNT(*) AS n FROM invalid
 
   if (row.n > 0) {
     throw new Error(
-      `FEATURE_BREAKDOWN_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+      `FEATURE_BREAKDOWN_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have a supported payout mapping and exactly one positive non-refund official settlement`,
     );
   }
 }
@@ -131,7 +152,7 @@ WITH base AS (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
-          AND rp.bet_type = decision_history.bet_type
+          AND rp.bet_type = ${payoutBetTypeSql("decision_history.bet_type")}
           AND rp.combination = decision_history.selection
           AND rp.returned = 0
           AND rp.payout_yen > 0
@@ -182,7 +203,7 @@ function printRows(rows: ReportRow[]) {
   console.log("=== feature breakdown report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
-  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching mapped decision bet_type/selection)");
   console.log("");
   console.log("factor                       band        n      settled  hits   roi     avgValue");
   for (const row of rows) {
@@ -241,5 +262,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. ROI uses canonical official race_payouts.payout_yen; current_odds is not used as realized return.`);
+  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. ROI uses canonical official race_payouts.payout_yen with canonical bet-type mapping; current_odds is not used as realized return.`);
 }
