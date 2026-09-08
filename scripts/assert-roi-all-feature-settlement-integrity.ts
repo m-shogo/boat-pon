@@ -22,6 +22,24 @@ try {
   db.exec("PRAGMA query_only = ON;");
   db.exec("PRAGMA busy_timeout = 5000;");
 
+  const invalidReturn = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE run_kind = 'historical-backfill'
+  AND decision = 'BUY'
+  AND bet_type = ?
+  AND current_odds IS NOT NULL
+  AND result IS NOT NULL
+  AND result != ''
+  AND (returned IS NULL OR returned != 0)
+`).get(DECISION_BET_TYPE) as { n: number };
+
+  if ((invalidReturn.n ?? 0) > 0) {
+    throw new Error(
+      `ROI_ALL_FEATURE_RETURN_STATE_INVALID: ${invalidReturn.n} historical BUY row(s) have unknown or returned settlement state`,
+    );
+  }
+
   const row = db.prepare(`
 WITH relevant_hits AS (
   SELECT DISTINCT race_id, selection
