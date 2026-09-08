@@ -19,13 +19,21 @@ test("research drift uses canonical mapped official payouts for realized ROI", (
   assert.doesNotMatch(source, /payoutYen: row\.payout_yen/);
 });
 
-test("research drift fails closed before aggregation on unsupported or ambiguous winning settlements", () => {
+test("research drift validates every non-returned settled BUY denominator against the exact official winning result", () => {
   const integrityCall = source.indexOf("assertOfficialSettlementIntegrity(db, from, to)");
   const query = source.indexOf("const raw = db.prepare", integrityCall);
 
   assert.ok(integrityCall >= 0 && query > integrityCall, "expected settlement preflight before row aggregation");
+  assert.match(source, /dh\.decision = 'BUY'/);
+  assert.match(source, /dh\.returned = 0/);
+  assert.match(source, /dh\.result IS NOT NULL/);
+  assert.match(source, /dh\.result != ''/);
   assert.match(source, /s\.payout_bet_type IS NULL/);
-  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*FROM race_payouts rp/);
+  assert.match(source, /rp\.combination = s\.result/);
+  assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen IS NOT NULL/);
+  assert.match(source, /rp\.payout_yen > 0/);
+  assert.doesNotMatch(source, /s\.selection = s\.result AND/);
   assert.match(source, /RESEARCH_DRIFT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
 });
 

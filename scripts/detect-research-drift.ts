@@ -110,7 +110,6 @@ WITH settled_buy AS (
     dh.race_id,
     dh.bet_type,
     ${payoutBetTypeSql("dh.bet_type")} AS payout_bet_type,
-    dh.selection,
     dh.result
   FROM decision_history dh
   WHERE dh.date >= ? AND dh.date <= ?
@@ -122,22 +121,19 @@ WITH settled_buy AS (
   SELECT s.race_id
   FROM settled_buy s
   WHERE s.payout_bet_type IS NULL
-     OR (s.selection = s.result AND (
-       (SELECT COUNT(*)
-        FROM race_payouts rp
-        WHERE rp.race_id = s.race_id
-          AND rp.bet_type = s.payout_bet_type
-          AND rp.combination = s.selection) != 1
-       OR
-       (SELECT COUNT(*)
-        FROM race_payouts rp
-        WHERE rp.race_id = s.race_id
-          AND rp.bet_type = s.payout_bet_type
-          AND rp.combination = s.selection
-          AND rp.returned = 0
-          AND rp.payout_yen IS NOT NULL
-          AND rp.payout_yen > 0) != 1
-     ))
+     OR (SELECT COUNT(*)
+         FROM race_payouts rp
+         WHERE rp.race_id = s.race_id
+           AND rp.bet_type = s.payout_bet_type
+           AND rp.combination = s.result) != 1
+     OR (SELECT COUNT(*)
+         FROM race_payouts rp
+         WHERE rp.race_id = s.race_id
+           AND rp.bet_type = s.payout_bet_type
+           AND rp.combination = s.result
+           AND rp.returned = 0
+           AND rp.payout_yen IS NOT NULL
+           AND rp.payout_yen > 0) != 1
 )
 SELECT COUNT(*) AS invalid FROM invalid
 `).get(from, to) as { invalid: number | bigint | null };
