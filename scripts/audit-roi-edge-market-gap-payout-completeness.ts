@@ -5,8 +5,8 @@
  * market-gap analyzer has trustworthy official trifecta settlement data before
  * 1-2-3 ROI, 1-3-2 missed-opportunity ROI, or payout-based verdicts are interpreted.
  * Legitimate multi-line winners are allowed; malformed, duplicate-combination,
- * refund rows, or decision-cohort drift fail closed because the downstream scalar
- * payout lookups do not model those ambiguities explicitly.
+ * refund/unknown-return rows, or decision-cohort drift fail closed because the
+ * downstream scalar payout lookups do not model those ambiguities explicitly.
  */
 
 import { existsSync } from "node:fs";
@@ -99,7 +99,7 @@ SELECT
   (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
   (SELECT COUNT(*)
    FROM target_settlements ts
-   WHERE ts.returned = 1
+   WHERE ts.returned IS NULL OR ts.returned != 0
   ) AS returnedRows
 `).get(FORWARD_START) as IntegrityRow;
 
@@ -126,7 +126,7 @@ if ((row.duplicateCombinationKeys ?? 0) > 0) {
 }
 
 if ((row.returnedRows ?? 0) > 0) {
-  console.error("[roi-edge-market-gap-payout-preflight] FAIL: target cohort contains trifecta refund rows, but the downstream analyzer does not model refund semantics explicitly");
+  console.error("[roi-edge-market-gap-payout-preflight] FAIL: target cohort contains trifecta refund or unknown-return settlement rows, but the downstream analyzer does not model those semantics explicitly");
   process.exit(2);
 }
 
