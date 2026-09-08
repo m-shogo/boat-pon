@@ -19,6 +19,17 @@ test("payout sensitivity uses mapped exact positive non-refund official settleme
   assert.doesNotMatch(source, /rp\.bet_type = decision_history\.bet_type/);
 });
 
+test("payout sensitivity rejects unsupported bet types across the full report population before ROI", () => {
+  assert.match(source, /function assertSupportedBetTypeMapping\(\)/);
+  assert.match(source, /PAYOUT_SENSITIVITY_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /\(\$\{payoutBetTypeSql\("bet_type"\)\}\) IS NULL/);
+
+  const mapping = source.indexOf("assertSupportedBetTypeMapping();");
+  const integrity = source.indexOf("assertOfficialSettlementIntegrity();");
+  const query = source.indexOf("const rows = queryRows();");
+  assert.ok(mapping >= 0 && integrity > mapping && query > integrity);
+});
+
 test("payout sensitivity fails closed on unsupported or ambiguous winning settlement keys before ranking ROI", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity\(\)/);
   assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*selection/);
