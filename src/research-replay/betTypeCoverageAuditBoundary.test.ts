@@ -15,7 +15,7 @@ test("bet-type coverage audit verifies canonical read-only DB identity", () => {
 test("bet-type coverage audit fails closed on unknown completed BUY return states and analyzes only returned=0 BUYs", () => {
   assert.match(source, /returned IS NULL/);
   assert.match(source, /unknown historical BUY return states exist in completed coverage population/);
-  assert.ok((source.match(/dh?\.?returned=0/g) ?? []).length >= 2, "denominator and joinable population must require returned=0");
+  assert.ok((source.match(/\b(?:dh\.)?returned=0/g) ?? []).length >= 2, "denominator and joinable population must require returned=0");
 
   const unknownGuard = source.indexOf("const unknownHistoricalBuyReturns");
   const rawRows = source.indexOf("const rawRows = db.prepare");
