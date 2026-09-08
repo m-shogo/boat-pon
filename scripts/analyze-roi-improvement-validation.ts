@@ -30,7 +30,7 @@ type SettlementIntegrityRow = {
   total: number;
   covered: number;
   invalidNonRefundRows: number;
-  returnedRows: number;
+  invalidReturnStateRows: number;
   duplicateKeys: number;
 };
 
@@ -78,7 +78,7 @@ SELECT
    WHERE ts.returned=0
      AND (ts.combination IS NULL OR ts.combination='' OR ts.payout_yen IS NULL OR ts.payout_yen<=0)
   ) AS invalidNonRefundRows,
-  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned=1) AS returnedRows,
+  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned IS NULL OR ts.returned != 0) AS invalidReturnStateRows,
   (SELECT COUNT(*) FROM duplicate_keys) AS duplicateKeys
 `).get() as SettlementIntegrityRow;
 
@@ -99,8 +99,8 @@ if ((settlementIntegrity.invalidNonRefundRows ?? 0) > 0) {
   db.close();
   process.exit(2);
 }
-if ((settlementIntegrity.returnedRows ?? 0) > 0) {
-  console.error("[roi-validation] FAIL CLOSED: target-cohort trifecta refund rows require explicit refund semantics before ROI validation");
+if ((settlementIntegrity.invalidReturnStateRows ?? 0) > 0) {
+  console.error("[roi-validation] FAIL CLOSED: target-cohort trifecta settlement rows require returned=0 before ROI validation");
   db.close();
   process.exit(2);
 }
