@@ -10,7 +10,19 @@ test("exacta closing odds audit uses canonical read-only database identity", () 
   assert.match(source, /PRAGMA query_only\s*=\s*ON/u);
 });
 
-test("exacta closing odds audit excludes returned historical BUY rows", () => {
+test("exacta closing odds audit rejects unknown or returned historical BUY rows before candidate sampling", () => {
+  assert.match(source, /function assertDecisionReturnStateIntegrity\(\): void/u);
+  assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/u);
+  assert.match(source, /EXACTA_CLOSING_ODDS_AUDIT_RETURN_STATE_INVALID/u);
+  const returnGate = source.indexOf("assertDecisionReturnStateIntegrity();");
+  const buyRaces = source.indexOf("const buyRaces = db.prepare");
+  const candidates = source.indexOf("requireExactaClosingOddsAuditCandidates");
+  assert.ok(returnGate >= 0, "return-state guard must be invoked");
+  assert.ok(buyRaces > returnGate, "candidate population must load only after return-state guard");
+  assert.ok(candidates > buyRaces, "candidate validation must run only after guarded population load");
+});
+
+test("exacta closing odds audit keeps candidate and settlement cohorts fixed to non-returned historical BUY rows", () => {
   const returnedGuards = source.match(/dh\.returned=0/g) ?? [];
   assert.ok(returnedGuards.length >= 3, "candidate and settlement cohorts must all exclude returned rows");
 });
