@@ -31,6 +31,7 @@ db.exec("PRAGMA query_only = ON");
 db.exec("PRAGMA busy_timeout = 5000");
 
 try {
+  assertSupportedBetTypeMapping();
   assertOfficialSettlementIntegrity();
   const rows = queryRows();
   if (args.json) {
@@ -87,6 +88,22 @@ function payoutBetTypeSql(column: string) {
     WHEN 'wide' THEN 'wide'
     ELSE NULL
   END`;
+}
+
+function assertSupportedBetTypeMapping() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("bet_type")}) IS NULL
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `PAYOUT_SENSITIVITY_BET_TYPE_MAPPING_FAILED: ${row.n} decision row(s) use an unsupported or unknown payout bet type mapping`,
+    );
+  }
 }
 
 function assertOfficialSettlementIntegrity() {
@@ -295,5 +312,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-payout-sensitivity.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--group-by decision|venue|month|venue-month|all] [--json]
 
-Read-only. No external access. ROI uses mapped official race_payouts.payout_yen; groups with missing hit payout data return null payout-derived metrics fail-closed.`);
+Read-only. No external access. ROI uses mapped official race_payouts.payout_yen; unsupported decision bet types fail closed before aggregation, and groups with missing hit payout data return null payout-derived metrics fail-closed.`);
 }
