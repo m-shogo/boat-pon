@@ -4,16 +4,26 @@ import assert from "node:assert/strict";
 
 const entrypoint = readFileSync("scripts/report-paper-forward-monitor.ts", "utf-8");
 const raw = readFileSync("scripts/report-paper-forward-monitor-raw.ts", "utf-8");
+const internal = readFileSync("scripts/report-paper-forward-monitor-internal.ts", "utf-8");
 const audit = readFileSync("scripts/audit-paper-forward-monitor-payout-completeness.ts", "utf-8");
 const pkg = readFileSync("package.json", "utf-8");
 
-test("paper-forward monitor entrypoint fails closed before raw report generation", () => {
+test("paper-forward monitor entrypoint fails closed before internal report generation", () => {
   const preflight = entrypoint.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
-  const report = entrypoint.indexOf('run("scripts/report-paper-forward-monitor-raw.ts")');
+  const report = entrypoint.indexOf('run("scripts/report-paper-forward-monitor-internal.ts")');
   assert.ok(preflight >= 0);
   assert.ok(report > preflight);
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
+});
+
+test("paper-forward monitor raw compatibility entrypoint is independently guarded and DB-free", () => {
+  const preflight = raw.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
+  const report = raw.indexOf('run("scripts/report-paper-forward-monitor-internal.ts")');
+  assert.ok(preflight >= 0);
+  assert.ok(report > preflight);
+  assert.match(raw, /FAIL CLOSED: official trifecta settlement coverage\/integrity did not pass/);
+  assert.doesNotMatch(raw, /new DatabaseSync/);
 });
 
 test("paper-forward monitor payout preflight covers only settled historical trifecta 1-2-3 BUY rows and stays read-only", () => {
@@ -64,11 +74,13 @@ test("paper-forward monitor settlement gate accepts legitimate multi-line races 
   assert.doesNotMatch(audit, /HAVING COUNT\(\*\) = 1/);
 });
 
-test("paper-forward monitor raw report remains payout dependent", () => {
-  assert.match(raw, /COALESCE/);
-  assert.match(raw, /payoutRoi132/);
-  assert.match(raw, /switchVerdict/);
-  assert.match(raw, /upgradeVerdict/);
+test("paper-forward monitor internal report remains payout dependent and read-only", () => {
+  assert.match(internal, /COALESCE/);
+  assert.match(internal, /payoutRoi132/);
+  assert.match(internal, /switchVerdict/);
+  assert.match(internal, /upgradeVerdict/);
+  assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
+  assert.doesNotMatch(internal, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
 });
 
 test("paper-forward monitor npm command stays on the fail-closed entrypoint", () => {
