@@ -34,12 +34,27 @@ type SettlementIntegrityRow = {
   duplicateKeys: number;
 };
 
+const invalidReturnedBuy = db.prepare(`
+  SELECT COUNT(*) AS count
+  FROM decision_history dh
+  WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+    AND (dh.returned IS NULL OR dh.returned != 0)
+    AND dh.result IS NOT NULL AND dh.result!='' AND dh.selection='1-2-3'
+    AND dh.venue NOT IN (${EXCL_V}) AND dh.race_no NOT IN (${EXCL_R})
+`).get() as { count: number };
+
+if (Number(invalidReturnedBuy.count) > 0) {
+  console.error("[roi-validation] FAIL CLOSED: unknown or returned historical BUY rows exist in the target cohort");
+  db.close();
+  process.exit(2);
+}
+
 const settlementIntegrity = db.prepare(`
 WITH target_races AS (
   SELECT DISTINCT dh.race_id
   FROM decision_history dh
   WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-    AND COALESCE(dh.returned,0)=0
+    AND dh.returned=0
     AND dh.result IS NOT NULL AND dh.result!='' AND dh.selection='1-2-3'
     AND dh.venue NOT IN (${EXCL_V}) AND dh.race_no NOT IN (${EXCL_R})
 ), target_settlements AS (
@@ -115,7 +130,7 @@ const rows = db.prepare(`
     CASE WHEN ${BOAT3_FASTER} THEN 1 ELSE 0 END boat3faster
   FROM decision_history dh
   WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-    AND COALESCE(dh.returned,0)=0
+    AND dh.returned=0
     AND dh.result IS NOT NULL AND dh.result!='' AND dh.selection='1-2-3'
     AND dh.venue NOT IN (${EXCL_V}) AND dh.race_no NOT IN (${EXCL_R})
   ORDER BY dh.date, dh.venue, dh.race_no
