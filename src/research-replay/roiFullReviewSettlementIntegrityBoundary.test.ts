@@ -14,6 +14,15 @@ test("ROI full review verifies all-feature settlement integrity before search an
   assert.ok(finalDecision > searchCommand);
 });
 
+test("all-feature settlement gate rejects unknown or returned historical BUY rows before official payout integrity", () => {
+  assert.match(gate, /returned IS NULL OR returned != 0/);
+  assert.match(gate, /ROI_ALL_FEATURE_RETURN_STATE_INVALID/);
+  const returnGate = gate.indexOf("const invalidReturn = db.prepare");
+  const settlementGate = gate.indexOf("WITH relevant_hits AS");
+  assert.ok(returnGate >= 0);
+  assert.ok(settlementGate > returnGate);
+});
+
 test("all-feature settlement gate is canonical, read-only, query-only, and maps decision 3連単 to trifecta", () => {
   assert.match(gate, /assertCanonicalSingleLinkRegularFile\(/);
   assert.match(gate, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
