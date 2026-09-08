@@ -55,7 +55,7 @@ WHERE dh.run_kind='historical-backfill'
   AND dh.bet_type='3連単'
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
-  AND dh.returned != 0
+  AND (dh.returned IS NULL OR dh.returned != 0)
 `).get() as { count: number | bigint | null };
   const count = Number(row.count ?? 0);
   if (!Number.isInteger(count) || count < 0) throw new Error("NO_BUY_NEXT_RETURNED_BUY_COUNT_INVALID");
