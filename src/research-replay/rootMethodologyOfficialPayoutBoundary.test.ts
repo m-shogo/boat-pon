@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 test("root methodology calibration uses canonical official settlements", () => {
-  const source = readFileSync("scripts/audit-root-methodology.ts", "utf8");
+  const source = readFileSync("scripts/audit-root-methodology-internal.ts", "utf8");
 
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(/);
   assert.match(source, /new DatabaseSync\(primaryDbPath, \{ readOnly: true \}\)/);
