@@ -28,6 +28,7 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertOfficialSettlementIntegrity();
   const summary = {
     generatedAt: new Date().toISOString(),
     filters: args,
@@ -103,6 +104,51 @@ function payoutBetTypeSql(column: string) {
     WHEN 'wide' THEN 'wide'
     ELSE NULL
   END`;
+}
+
+function assertOfficialSettlementIntegrity(): void {
+  const where = makeWhere("returned = 0 AND result IS NOT NULL AND selection = result", []);
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT
+    race_id,
+    bet_type,
+    ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
+    selection
+  FROM decision_history
+  WHERE ${where.sql}
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE h.payout_bet_type IS NULL
+     OR (
+       SELECT COUNT(*)
+       FROM race_payouts rp
+       WHERE rp.race_id = h.race_id
+         AND rp.bet_type = h.payout_bet_type
+         AND rp.combination = h.selection
+     ) != 1
+     OR (
+       SELECT COUNT(*)
+       FROM race_payouts rp
+       WHERE rp.race_id = h.race_id
+         AND rp.bet_type = h.payout_bet_type
+         AND rp.combination = h.selection
+         AND rp.returned = 0
+         AND rp.payout_yen IS NOT NULL
+         AND rp.payout_yen > 0
+     ) != 1
+)
+SELECT COUNT(*) AS invalid FROM invalid
+`).get(...where.params) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("REVIEW_SUMMARY_SETTLEMENT_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("REVIEW_SUMMARY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED");
+  }
 }
 
 function queryTotals(): TotalRow {
@@ -335,5 +381,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-review-summary.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--limit 10] [--json]
 
-Read-only. No external access. Decision ROI uses mapped official race_payouts.payout_yen; decision groups with missing hit payout data return null payout-derived metrics fail-closed.`);
+Read-only. No external access. Decision ROI uses mapped official race_payouts.payout_yen; unsupported mappings or ambiguous/non-positive winning settlements fail closed before summary aggregation.`);
 }
