@@ -14,16 +14,16 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
-  const returnedBuy = db.prepare(`
+  const invalidReturnedBuy = db.prepare(`
     SELECT COUNT(*) AS count
     FROM decision_history dh
     WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-      AND dh.returned != 0
+      AND (dh.returned IS NULL OR dh.returned != 0)
       AND dh.result IS NOT NULL AND dh.result != ''
   `).get() as { count: number };
 
-  if (Number(returnedBuy.count) > 0) {
-    throw new Error(`ALL_BET_TYPE_SCREENING_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(returnedBuy.count) })}`);
+  if (Number(invalidReturnedBuy.count) > 0) {
+    throw new Error(`ALL_BET_TYPE_SCREENING_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(invalidReturnedBuy.count) })}`);
   }
 
   const rows = db.prepare(`
