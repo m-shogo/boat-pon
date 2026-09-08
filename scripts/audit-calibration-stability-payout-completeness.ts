@@ -10,6 +10,23 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
+  const invalidReturn = db.prepare(`
+    SELECT COUNT(*) AS invalid
+    FROM decision_history
+    WHERE decision='BUY'
+      AND run_kind='historical-backfill'
+      AND model_version=?
+      AND bet_type='3連単'
+      AND result IS NOT NULL
+      AND result!=''
+      AND current_odds IS NOT NULL
+      AND (returned IS NULL OR returned != 0)
+  `).get(MODEL) as { invalid: number };
+
+  if (Number(invalidReturn.invalid) > 0) {
+    throw new Error(`CALIBRATION_STABILITY_RETURN_STATE_INVALID ${JSON.stringify({ invalid: Number(invalidReturn.invalid) })}`);
+  }
+
   const duplicateOrInvalid = db.prepare(`
     WITH winners AS (
       SELECT DISTINCT race_id, selection
