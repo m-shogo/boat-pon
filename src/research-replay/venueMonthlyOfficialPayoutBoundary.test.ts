@@ -20,6 +20,17 @@ test("venue monthly ROI uses mapped exact positive non-refund official settlemen
   assert.doesNotMatch(source, /THEN current_odds ELSE 0 END AS payout_odds/);
 });
 
+test("venue monthly rejects unsupported bet types across the full report population before ROI", () => {
+  assert.match(source, /function assertSupportedBetTypeMapping\(\)/);
+  assert.match(source, /VENUE_MONTHLY_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /\(\$\{payoutBetTypeSql\("bet_type"\)\}\) IS NULL/);
+
+  const mapping = source.indexOf("assertSupportedBetTypeMapping();");
+  const integrity = source.indexOf("assertOfficialSettlementIntegrity();");
+  const query = source.indexOf("const rows = queryRows();");
+  assert.ok(mapping >= 0 && integrity > mapping && query > integrity);
+});
+
 test("venue monthly fails closed on unsupported or ambiguous winning settlement keys before grouped ROI generation", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity\(\)/);
   assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*selection/);
