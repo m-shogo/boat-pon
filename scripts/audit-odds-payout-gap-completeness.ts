@@ -33,7 +33,7 @@ type IntegrityRow = {
   cohortInvalidRows: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
-  returnedRows: number;
+  invalidSettlementReturnRows: number;
   invalidWinningKeys: number;
 };
 
@@ -111,8 +111,8 @@ SELECT
   (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
   (SELECT COUNT(*)
    FROM target_settlements ts
-   WHERE ts.returned = 1
-  ) AS returnedRows,
+   WHERE ts.returned IS NULL OR ts.returned != 0
+  ) AS invalidSettlementReturnRows,
   (SELECT COUNT(*) FROM invalid_winning_keys) AS invalidWinningKeys
 `).get() as IntegrityRow;
 
@@ -120,7 +120,7 @@ const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covere
 db.close();
 
 console.log(
-  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0} invalidWinningKeys=${row.invalidWinningKeys ?? 0}`,
+  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} invalidSettlementReturns=${row.invalidSettlementReturnRows ?? 0} invalidWinningKeys=${row.invalidWinningKeys ?? 0}`,
 );
 
 if ((row.cohortInvalidRows ?? 0) > 0) {
@@ -138,8 +138,8 @@ if ((row.duplicateCombinationKeys ?? 0) > 0) {
   process.exit(2);
 }
 
-if ((row.returnedRows ?? 0) > 0) {
-  console.error("[odds-payout-gap-preflight] FAIL: target cohort contains trifecta refund rows, but downstream payout-rebase consumers do not model refund semantics explicitly");
+if ((row.invalidSettlementReturnRows ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: target cohort contains refunded or unknown-return trifecta settlement rows, but downstream payout-rebase consumers require unambiguous non-refund settlements");
   process.exit(2);
 }
 
@@ -153,4 +153,4 @@ if (!result.complete) {
   process.exit(2);
 }
 
-console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage, exact winning-key integrity, and line integrity are complete for the analysis population");
+console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage, exact winning-key integrity, return-state integrity, and line integrity are complete for the analysis population");

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("payout rebase settlement preflight rejects cohort drift, malformed, duplicate, and refund trifecta lines", () => {
+test("payout rebase settlement preflight rejects cohort drift, malformed, duplicate, refund, and unknown-return trifecta lines", () => {
   const source = readFileSync("scripts/audit-odds-payout-gap-completeness.ts", "utf8");
 
   assert.match(source, /WITH target_rows AS \(/);
@@ -21,9 +21,10 @@ test("payout rebase settlement preflight rejects cohort drift, malformed, duplic
   assert.match(source, /ts\.payout_yen > 0/);
   assert.match(source, /ts\.payout_yen <= 0/);
   assert.match(source, /ts\.combination IS NULL OR ts\.combination = ''/);
-  assert.match(source, /WHERE ts\.returned = 1/);
+  assert.match(source, /ts\.returned IS NULL OR ts\.returned != 0/);
+  assert.match(source, /invalidSettlementReturnRows/);
   assert.match(source, /duplicate race_id × trifecta × combination settlement keys/);
-  assert.match(source, /do not model refund semantics explicitly/);
+  assert.match(source, /refunded or unknown-return trifecta settlement rows/);
 });
 
 test("normal payout rebase still runs settlement preflight before LIMIT 1 consumers", () => {
