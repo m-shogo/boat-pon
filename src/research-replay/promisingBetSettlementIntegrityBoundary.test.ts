@@ -7,9 +7,10 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
 
   assert.equal(pkg.scripts["analyze:promising-bet-types"], "tsx scripts/analyze-promising-bet-type-strategies.ts");
-  assert.match(source, /returned != 0/);
+  assert.match(source, /returned IS NULL OR returned != 0/);
   assert.match(source, /returned = 0/);
   assert.match(source, /PROMISING_BET_RETURNED_BUY_UNSUPPORTED/);
+  assert.ok(source.indexOf("returned IS NULL OR returned != 0") < source.indexOf("const rows = db.prepare"));
   assert.match(source, /seenSettlementKeys\.has\(key\)/);
   assert.match(source, /PROMISING_BET_PAYOUT_DUPLICATE_COMBINATION/);
   assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
