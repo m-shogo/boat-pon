@@ -13,17 +13,19 @@
 
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[report-review-summary] DB not found: ${DB_PATH}`);
+  console.error("[report-review-summary] DB not found");
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "REVIEW_SUMMARY_RAW_PRIMARY_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
   const summary = {
@@ -87,6 +89,22 @@ type DetailRow = {
   estimatedHitRate: number | null;
 };
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
 function queryTotals(): TotalRow {
   const where = makeWhere("", []);
   return db.prepare(`
@@ -118,8 +136,10 @@ WITH base AS (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
-          AND rp.bet_type = decision_history.bet_type
+          AND rp.bet_type = ${payoutBetTypeSql("decision_history.bet_type")}
           AND rp.combination = decision_history.selection
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
         LIMIT 1
       )
       ELSE 0
@@ -219,7 +239,7 @@ function printSummary(summary: {
   console.log("=== boat-pon review summary ===");
   console.log(`generated: ${summary.generatedAt}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
-  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching mapped decision bet_type/selection)");
   console.log("");
   console.log(`decisions=${summary.totals.decisions} settled=${summary.totals.settled} BUY=${summary.totals.buy} WATCH=${summary.totals.watch} SKIP=${summary.totals.skip}`);
   console.log(`buyMisses=${summary.totals.buyMisses} missedHits(WATCH/SKIP)=${summary.totals.missedHits}`);
@@ -315,5 +335,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-review-summary.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--limit 10] [--json]
 
-Read-only. No external access. Decision ROI uses official race_payouts.payout_yen; decision groups with missing hit payout data return null payout-derived metrics fail-closed.`);
+Read-only. No external access. Decision ROI uses mapped official race_payouts.payout_yen; decision groups with missing hit payout data return null payout-derived metrics fail-closed.`);
 }
