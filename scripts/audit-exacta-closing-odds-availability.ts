@@ -45,12 +45,12 @@ const VENUE_CODES: Record<string, string> = {
 type Race = { race_id: string; date: string; venue: string; race_no: number; quarter: string };
 type SettlementIssue = { race_id: string; combination: string | null; row_count: number; valid_count: number };
 
-function assertDecisionReturnStateIntegrity(): void {
+function assertDecisionCohortIntegrity(): void {
   const row = db.prepare(`
     SELECT COUNT(*) AS invalid
     FROM decision_history dh
     WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-      AND (dh.returned IS NULL OR dh.returned != 0)
+      AND (dh.bet_type IS NULL OR dh.bet_type != '3連単' OR dh.returned IS NULL OR dh.returned != 0)
       AND dh.result IS NOT NULL AND dh.result != ''
       AND dh.current_odds IS NOT NULL
       AND dh.venue NOT IN (${exclV}) AND dh.race_no NOT IN (${exclR})
@@ -58,17 +58,18 @@ function assertDecisionReturnStateIntegrity(): void {
       AND dh.date >= '2024-01-01'
   `).get() as { invalid: number };
   if (Number(row.invalid ?? 0) > 0) {
-    throw new Error("EXACTA_CLOSING_ODDS_AUDIT_RETURN_STATE_INVALID");
+    throw new Error("EXACTA_CLOSING_ODDS_AUDIT_DECISION_COHORT_INVALID");
   }
 }
 
-assertDecisionReturnStateIntegrity();
+assertDecisionCohortIntegrity();
 
 const buyRaces = db.prepare(`
   SELECT DISTINCT dh.race_id, dh.date, dh.venue, dh.race_no,
     substr(dh.date, 1, 4) || '-Q' || ((CAST(substr(dh.date, 6, 2) AS INTEGER) + 2) / 3) quarter
   FROM decision_history dh
   WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+    AND dh.bet_type='3連単'
     AND dh.returned=0
     AND dh.result IS NOT NULL AND dh.result != ''
     AND dh.current_odds IS NOT NULL
@@ -92,6 +93,7 @@ function assertExactaSettlementIntegrity(): void {
       SELECT DISTINCT dh.race_id
       FROM decision_history dh
       WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+        AND dh.bet_type='3連単'
         AND dh.returned=0
         AND dh.result IS NOT NULL AND dh.result != ''
         AND dh.current_odds IS NOT NULL
@@ -122,6 +124,7 @@ function assertExactaSettlementIntegrity(): void {
       SELECT DISTINCT dh.race_id
       FROM decision_history dh
       WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+        AND dh.bet_type='3連単'
         AND dh.returned=0
         AND dh.result IS NOT NULL AND dh.result != ''
         AND dh.current_odds IS NOT NULL
