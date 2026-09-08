@@ -4,23 +4,32 @@ import test from "node:test";
 
 const source = readFileSync("scripts/report-payout-sensitivity.ts", "utf8");
 
-test("payout sensitivity uses exact positive non-refund official settlements", () => {
+test("payout sensitivity uses mapped exact positive non-refund official settlements", () => {
   assert.match(source, /FROM race_payouts rp/);
   assert.match(source, /rp\.payout_yen \/ 100\.0/);
-  assert.match(source, /rp\.bet_type = decision_history\.bet_type/);
+  assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
+  assert.match(source, /WHEN '3連複' THEN 'trio'/);
+  assert.match(source, /WHEN '2連単' THEN 'exacta'/);
+  assert.match(source, /WHEN '2連複' THEN 'quinella'/);
+  assert.match(source, /WHEN '拡連複' THEN 'wide'/);
+  assert.match(source, /rp\.bet_type = \$\{payoutBetTypeSql\("decision_history\.bet_type"\)\}/);
   assert.match(source, /rp\.combination = decision_history\.selection/);
   assert.match(source, /rp\.returned = 0/);
   assert.match(source, /rp\.payout_yen > 0/);
+  assert.doesNotMatch(source, /rp\.bet_type = decision_history\.bet_type/);
 });
 
-test("payout sensitivity fails closed on ambiguous winning settlement keys before ranking ROI", () => {
+test("payout sensitivity fails closed on unsupported or ambiguous winning settlement keys before ranking ROI", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity\(\)/);
-  assert.match(source, /SELECT DISTINCT race_id, bet_type, selection/);
+  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*selection/);
   assert.match(source, /selection = result/);
   assert.match(source, /returned = 0/);
+  assert.match(source, /h\.payout_bet_type IS NULL/);
+  assert.match(source, /rp\.bet_type = h\.payout_bet_type/);
   assert.match(source, /SELECT COUNT\(\*\)[\s\S]*rp\.combination = h\.selection/);
   assert.match(source, /\) != 1/);
   assert.match(source, /PAYOUT_SENSITIVITY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
+  assert.doesNotMatch(source, /rp\.bet_type = h\.bet_type/);
 
   const integrity = source.indexOf("assertOfficialSettlementIntegrity();");
   const query = source.indexOf("const rows = queryRows();");
