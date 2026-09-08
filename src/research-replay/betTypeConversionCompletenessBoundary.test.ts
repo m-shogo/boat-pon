@@ -16,6 +16,15 @@ test("123 bet-type conversion command fails closed before cross-bet analysis", (
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-123-bet-type-conversion-core.ts")), false);
 });
 
+test("123 bet-type preflight rejects returned or unknown-return historical BUY rows before coverage analysis", () => {
+  assert.match(audit, /dh\.returned IS NULL OR dh\.returned != 0/);
+  assert.match(audit, /target historical BUY cohort contains returned or unknown-return rows/);
+  const returnGate = audit.indexOf("const invalidReturnState = db.prepare");
+  const coverage = audit.indexOf("const row = db.prepare");
+  assert.ok(returnGate >= 0 && coverage > returnGate, "return-state integrity must gate coverage analysis");
+  assert.match(audit, /WHERE \$\{populationWhere\}[\s\S]*AND dh\.returned = 0/);
+});
+
 test("123 bet-type preflight requires every settlement type compared by the analyzer", () => {
   for (const betType of ["trifecta", "trio", "exacta", "quinella", "wide"]) {
     assert.ok(audit.includes(`"${betType}"`), `missing required bet type: ${betType}`);
@@ -27,9 +36,10 @@ test("123 bet-type preflight requires every settlement type compared by the anal
   assert.match(audit, /process\.exit\(2\)/);
 });
 
-test("123 bet-type preflight rejects malformed, refunded, and duplicate settlement keys", () => {
+test("123 bet-type preflight rejects malformed, unknown-return, refunded, and duplicate settlement keys", () => {
   assert.match(audit, /WITH population AS/);
   assert.match(audit, /SELECT DISTINCT dh\.race_id/);
+  assert.match(audit, /returned IS NULL/);
   assert.match(audit, /returned != 0/);
   assert.match(audit, /payout_yen IS NULL/);
   assert.match(audit, /payout_yen <= 0/);

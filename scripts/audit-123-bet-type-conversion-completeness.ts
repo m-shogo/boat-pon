@@ -41,6 +41,21 @@ const populationWhere = `
   AND dh.selection = '1-2-3'
 `;
 
+const invalidReturnState = db.prepare(`
+  SELECT COUNT(*) AS invalid
+  FROM decision_history dh
+  WHERE ${populationWhere}
+    AND (dh.returned IS NULL OR dh.returned != 0)
+`).get() as { invalid: number };
+
+if ((invalidReturnState.invalid ?? 0) > 0) {
+  db.close();
+  console.error(
+    `[123-bet-type-preflight] FAIL: target historical BUY cohort contains returned or unknown-return rows (invalid=${invalidReturnState.invalid ?? 0}); cross-bet ROI/verdict interpretation must remain unavailable`,
+  );
+  process.exit(2);
+}
+
 const row = db.prepare(`
   SELECT
     COUNT(*) AS total,
@@ -55,6 +70,7 @@ const row = db.prepare(`
     ) THEN 1 ELSE 0 END) AS ${betType}`).join(",\n    ")}
   FROM decision_history dh
   WHERE ${populationWhere}
+    AND dh.returned = 0
 `).get() as CoverageRow;
 
 let complete = true;
@@ -71,6 +87,7 @@ WITH population AS (
   SELECT DISTINCT dh.race_id
   FROM decision_history dh
   WHERE ${populationWhere}
+    AND dh.returned = 0
 ), relevant AS (
   SELECT rp.race_id, rp.bet_type, rp.combination, rp.payout_yen, rp.returned
   FROM race_payouts rp
@@ -79,7 +96,8 @@ WITH population AS (
 ), malformed AS (
   SELECT race_id, bet_type, combination
   FROM relevant
-  WHERE returned != 0
+  WHERE returned IS NULL
+     OR returned != 0
      OR payout_yen IS NULL
      OR payout_yen <= 0
      OR TRIM(COALESCE(combination, '')) = ''
