@@ -60,6 +60,8 @@ try {
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec("PRAGMA query_only = ON;");
 
+  assertOfficialSettlementIntegrity();
+
   const payoutCompleteness = verifyOfficialPayoutCompleteness();
   if (!payoutCompleteness.complete) {
     console.error(
@@ -90,6 +92,63 @@ try {
   }
 } finally {
   db.close();
+}
+
+function assertOfficialSettlementIntegrity() {
+  const invalidReturn = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history dh
+WHERE dh.run_kind = 'historical-backfill'
+  AND dh.decision = 'BUY'
+  AND dh.bet_type = ?
+  AND dh.current_odds IS NOT NULL
+  AND dh.result IS NOT NULL
+  AND dh.result != ''
+  AND (dh.returned IS NULL OR dh.returned != 0)
+`).get(DECISION_BET_TYPE) as { n: number };
+
+  if ((invalidReturn.n ?? 0) > 0) {
+    throw new Error(`ROI_HYPOTHESIS_INVALID_RETURN_STATE: ${invalidReturn.n} historical BUY row(s) have unknown or returned settlement state`);
+  }
+
+  const integrity = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT dh.race_id, dh.selection
+  FROM decision_history dh
+  WHERE dh.run_kind = 'historical-backfill'
+    AND dh.decision = 'BUY'
+    AND dh.bet_type = ?
+    AND dh.current_odds IS NOT NULL
+    AND dh.result IS NOT NULL
+    AND dh.result != ''
+    AND dh.returned = 0
+    AND dh.selection = dh.result
+), invalid AS (
+  SELECT h.race_id, h.selection
+  FROM relevant_hits h
+  WHERE (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = ?
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = ?
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+`).get(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE) as { n: number };
+
+  if ((integrity.n ?? 0) > 0) {
+    throw new Error(`ROI_HYPOTHESIS_SETTLEMENT_INTEGRITY: ${integrity.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`);
+  }
 }
 
 function verifyOfficialPayoutCompleteness() {
