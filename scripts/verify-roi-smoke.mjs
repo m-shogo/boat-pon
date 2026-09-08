@@ -3,16 +3,10 @@
  * Dependency-free smoke test for scripts/explore-roi.ts.
  *
  * Use when node_modules (tsx/typescript) is unavailable. Builds a small
- * throwaway SQLite fixture DB (node:sqlite, a Node built-in), runs a copy of
- * explore-roi.ts against it via `node --experimental-strip-types` (with
- * `.ts` added to extensionless relative imports, same approach as
- * verify-strip-types.mjs), and asserts the JSON output has the required
- * RuleEvaluationResult shape and expected official-payout ROI numbers for a
- * hand-computed fixture. Everything is created under a temp directory and removed after.
- *
- * This is NOT a replacement for `pnpm explore:roi -- --json` against the
- * real project DB — it only proves the CLI and official payout_yen basis logic
- * still work end-to-end without node_modules. See docs/ai/05-VERIFICATION.md.
+ * throwaway SQLite fixture DB (node:sqlite), runs a copy of explore-roi.ts
+ * via `node --experimental-strip-types`, and asserts the JSON output has the
+ * required RuleEvaluationResult shape and expected canonical official-payout
+ * ROI numbers. Everything is created under a temp directory and removed after.
  */
 
 import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -61,6 +55,7 @@ try {
     copyFileSync(join(domainDir, name), join(tempDomainDir, name));
   }
   copyFileSync(join(researchReplayDir, "roiExplorerOptions.ts"), join(tempResearchReplayDir, "roiExplorerOptions.ts"));
+  copyFileSync(join(researchReplayDir, "researchFileIdentity.ts"), join(tempResearchReplayDir, "researchFileIdentity.ts"));
   for (const name of ["researchViewModel.ts", "researchViewModel.adapters.ts"]) {
     copyFileSync(join(repoRoot, "src", "view-models", name), join(tempViewModelsDir, name));
   }
@@ -87,8 +82,8 @@ try {
     for (const field of ["dataWindowStart", "dataWindowEnd", "evaluationRunAt", "sampleSize"]) {
       check(`metadata has field "${field}"`, field in fullResult.metadata);
     }
-    check("sampleSize is 3 (settled BUY rows in window)", fullResult.metadata.sampleSize === 3);
-    check("roi is 5.4 from official payout_yen only", closeTo(fullResult.roi, 5.4));
+    check("sampleSize is 3 (settled non-returned BUY rows in window)", fullResult.metadata.sampleSize === 3);
+    check("roi is 5.4 from canonical race_payouts only", closeTo(fullResult.roi, 5.4));
     check("roi basis is payout_yen", fullResult.reasonSummary.includes("roi basis: payout_yen"));
     check("roi basis does not mention current_odds", !fullResult.reasonSummary.includes("current_odds"));
   }
@@ -113,12 +108,19 @@ try {
   const noDbResult = parseJson(noDb.stdout);
   if (noDbResult) {
     check("missing DB reports 0 sampleSize", noDbResult.metadata.sampleSize === 0);
-    check("missing DB warns about it", noDbResult.warnings.some((w) => w.includes("db not found")));
+    check("missing DB warning is opaque", noDbResult.warnings.some((w) => w.includes("research database not found")));
+    check("missing DB warning does not expose configured path", !noDbResult.warnings.some((w) => w.includes("does-not-exist.sqlite")));
   }
 
   console.log("--- scenario 5: invalid window is rejected before evaluation ---");
   const reversed = runExplore(["--from", "2026-06-02", "--to", "2026-06-01", "--json"]);
   check("reversed window exits non-zero", reversed.status !== 0);
+
+  console.log("--- scenario 6: ambiguous official winning settlement fails closed ---");
+  addDuplicateSettlement(dbPath);
+  const ambiguous = runExplore(["--from", "2026-01-01", "--to", "2026-06-01", "--json"]);
+  check("duplicate official settlement exits non-zero", ambiguous.status !== 0);
+  check("duplicate settlement fails with stable opaque code", ambiguous.stderr.includes("ROI_EXPLORER_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED"));
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
 }
@@ -159,36 +161,56 @@ function runExplore(args, extraEnv = {}) {
 function buildFixtureDb(path) {
   const db = new DatabaseSync(path);
   db.exec(`CREATE TABLE decision_history (
-    id INTEGER PRIMARY KEY, race_id TEXT, date TEXT, venue TEXT, race_no INTEGER, selection TEXT,
+    id INTEGER PRIMARY KEY, race_id TEXT, date TEXT, venue TEXT, race_no INTEGER, bet_type TEXT, selection TEXT,
     estimated_hit_rate REAL, required_odds REAL, current_odds REAL, ev REAL, decision TEXT,
     actually_bought INTEGER, stake_yen INTEGER, recommended_stake_yen INTEGER, sample_size INTEGER,
     result TEXT, payout_yen INTEGER, popularity INTEGER, returned INTEGER, source TEXT,
-    fetched_at TEXT, created_at TEXT)`);
-  const insert = db.prepare(`INSERT INTO decision_history VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    fetched_at TEXT, created_at TEXT);
+    CREATE TABLE race_payouts (
+      race_id TEXT NOT NULL,
+      bet_type TEXT NOT NULL,
+      combination TEXT NOT NULL,
+      payout_yen INTEGER,
+      returned INTEGER NOT NULL DEFAULT 0
+    );`);
+  const insert = db.prepare(`INSERT INTO decision_history VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   const row = (id, overrides) => {
     const base = {
-      raceId: "r" + id, date: "2026-02-0" + id, venue: "桐生", raceNo: id, selection: "1-2-3",
+      raceId: "r" + id, date: "2026-02-0" + id, venue: "桐生", raceNo: id, betType: "3連単", selection: "1-2-3",
       estimatedHitRate: 0.2, requiredOdds: 6, currentOdds: 10, ev: 1.2, decision: "BUY",
       actuallyBought: 0, stakeYen: 0, recommendedStakeYen: 100, sampleSize: 500,
-      result: "1-2-3", payoutYen: null, popularity: 5, returned: 0, source: "fixture",
+      result: "1-2-3", payoutYen: 99999, popularity: 5, returned: 0, source: "fixture",
       fetchedAt: "x", createdAt: "x",
       ...overrides,
     };
     insert.run(
-      id, base.raceId, base.date, base.venue, base.raceNo, base.selection, base.estimatedHitRate,
+      id, base.raceId, base.date, base.venue, base.raceNo, base.betType, base.selection, base.estimatedHitRate,
       base.requiredOdds, base.currentOdds, base.ev, base.decision, base.actuallyBought, base.stakeYen,
       base.recommendedStakeYen, base.sampleSize, base.result, base.payoutYen, base.popularity,
       base.returned, base.source, base.fetchedAt, base.createdAt,
     );
   };
 
-  row(1, { payoutYen: 1620 });
-  row(2, { result: "2-1-3", currentOdds: 30, payoutYen: null });
-  row(3, { venue: "蒲郡", result: "3-1-2", payoutYen: null });
+  row(1, {});
+  row(2, { result: "2-1-3", currentOdds: 30, payoutYen: 88888 });
+  row(3, { venue: "蒲郡", result: "3-1-2", payoutYen: 77777 });
   row(4, { venue: "蒲郡", decision: "SKIP" });
   row(5, { venue: "蒲郡", result: null });
-  row(6, { date: "2027-01-01", venue: "蒲郡", currentOdds: 99, payoutYen: null });
+  row(6, { date: "2027-01-01", venue: "蒲郡", currentOdds: 99 });
 
+  const payout = db.prepare("INSERT INTO race_payouts (race_id, bet_type, combination, payout_yen, returned) VALUES (?,?,?,?,0)");
+  payout.run("r1", "trifecta", "1-2-3", 1620);
+  payout.run("r2", "trifecta", "2-1-3", 2500);
+  payout.run("r3", "trifecta", "3-1-2", 1800);
+  payout.run("r6", "trifecta", "1-2-3", 9900);
+
+  db.close();
+}
+
+function addDuplicateSettlement(path) {
+  const db = new DatabaseSync(path);
+  db.prepare("INSERT INTO race_payouts (race_id, bet_type, combination, payout_yen, returned) VALUES (?,?,?,?,0)")
+    .run("r1", "trifecta", "1-2-3", 1620);
   db.close();
 }
 
