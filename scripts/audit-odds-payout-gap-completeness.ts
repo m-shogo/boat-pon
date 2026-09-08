@@ -34,11 +34,12 @@ type IntegrityRow = {
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
+  invalidWinningKeys: number;
 };
 
 const row = db.prepare(`
 WITH target_rows AS (
-  SELECT dh.race_id, dh.bet_type, dh.returned
+  SELECT dh.race_id, dh.bet_type, dh.returned, dh.result
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -48,6 +49,11 @@ WITH target_rows AS (
     AND dh.race_no NOT IN (${EXCLUDED_RACE_NOS.join(",")})
 ), target_races AS (
   SELECT DISTINCT race_id
+  FROM target_rows
+  WHERE bet_type = '3連単'
+    AND returned = 0
+), target_winning_keys AS (
+  SELECT DISTINCT race_id, result AS combination
   FROM target_rows
   WHERE bet_type = '3連単'
     AND returned = 0
@@ -61,6 +67,23 @@ WITH target_rows AS (
   FROM target_settlements
   GROUP BY race_id, combination
   HAVING COUNT(*) > 1
+), invalid_winning_keys AS (
+  SELECT twk.race_id, twk.combination
+  FROM target_winning_keys twk
+  WHERE (
+    SELECT COUNT(*)
+    FROM target_settlements ts
+    WHERE ts.race_id = twk.race_id
+      AND ts.combination = twk.combination
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM target_settlements ts
+    WHERE ts.race_id = twk.race_id
+      AND ts.combination = twk.combination
+      AND ts.returned = 0
+      AND ts.payout_yen > 0
+  ) != 1
 )
 SELECT
   (SELECT COUNT(*) FROM target_races) AS total,
@@ -89,14 +112,15 @@ SELECT
   (SELECT COUNT(*)
    FROM target_settlements ts
    WHERE ts.returned = 1
-  ) AS returnedRows
+  ) AS returnedRows,
+  (SELECT COUNT(*) FROM invalid_winning_keys) AS invalidWinningKeys
 `).get() as IntegrityRow;
 
 const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covered ?? 0);
 db.close();
 
 console.log(
-  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
+  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0} invalidWinningKeys=${row.invalidWinningKeys ?? 0}`,
 );
 
 if ((row.cohortInvalidRows ?? 0) > 0) {
@@ -119,9 +143,14 @@ if ((row.returnedRows ?? 0) > 0) {
   process.exit(2);
 }
 
+if ((row.invalidWinningKeys ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: one or more historical winning result keys do not have exactly one positive non-refund official trifecta settlement; exact-key payout ROI must remain unavailable");
+  process.exit(2);
+}
+
 if (!result.complete) {
   console.error("[odds-payout-gap-preflight] FAIL: complete positive non-refund official trifecta settlement coverage is required; payout ROI/verdict interpretation must remain unavailable");
   process.exit(2);
 }
 
-console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage and line integrity are complete for the analysis population");
+console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage, exact winning-key integrity, and line integrity are complete for the analysis population");
