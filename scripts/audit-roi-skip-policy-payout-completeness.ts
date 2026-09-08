@@ -4,9 +4,9 @@
  * Verify that every race in the forward BUY population used by the monitor-only
  * ROI skip-policy simulation has unambiguous official trifecta settlement coverage
  * before payout ROI or policy verdicts are interpreted. Legitimate multi-line winners
- * are allowed; malformed, duplicate-combination, refund settlement rows, returned
- * decision rows, unknown-return rows, or non-trifecta decision rows fail closed because
- * the downstream scalar payout lookup does not model those ambiguities explicitly.
+ * are allowed; malformed, duplicate-combination, refund/unknown-return settlement rows,
+ * returned decision rows, unknown-return rows, or non-trifecta decision rows fail closed
+ * because the downstream scalar payout lookup does not model those ambiguities explicitly.
  */
 
 import { existsSync } from "node:fs";
@@ -99,7 +99,10 @@ SELECT
      )
   ) AS invalidNonRefundRows,
   (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
-  (SELECT COUNT(*) FROM target_settlements ts WHERE ts.returned = 1) AS returnedRows
+  (SELECT COUNT(*)
+   FROM target_settlements ts
+   WHERE ts.returned IS NULL OR ts.returned != 0
+  ) AS returnedRows
 `).get(FORWARD_START) as IntegrityRow;
 
 const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covered ?? 0);
@@ -125,7 +128,7 @@ if ((row.duplicateCombinationKeys ?? 0) > 0) {
 }
 
 if ((row.returnedRows ?? 0) > 0) {
-  console.error("[roi-skip-policy-payout-preflight] FAIL: target cohort contains trifecta refund rows, but the downstream skip-policy analyzer does not model refund semantics explicitly");
+  console.error("[roi-skip-policy-payout-preflight] FAIL: target cohort contains trifecta refund or unknown-return settlement rows, but the downstream skip-policy analyzer does not model those semantics explicitly");
   process.exit(2);
 }
 
