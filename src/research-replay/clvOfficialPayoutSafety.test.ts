@@ -4,6 +4,17 @@ import test from "node:test";
 
 const source = readFileSync("scripts/report-clv.ts", "utf8");
 
+test("CLV report rejects unsupported bet types across the full report population before CLV/ROI aggregation", () => {
+  assert.match(source, /function assertSupportedBetTypeMapping/u);
+  assert.match(source, /CLV_REPORT_BET_TYPE_MAPPING_FAILED/u);
+  assert.match(source, /\(\$\{payoutBetTypeSql\("dh\.bet_type"\)\}\) IS NULL/u);
+
+  const mapping = source.indexOf("assertSupportedBetTypeMapping();");
+  const settlement = source.indexOf("assertOfficialSettlementIntegrity();");
+  const query = source.indexOf("const rows = queryRows();");
+  assert.ok(mapping >= 0 && settlement > mapping && query > settlement);
+});
+
 test("CLV report maps payout bet types and fails closed on unsupported or ambiguous official winning settlements", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity/u);
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/u);
