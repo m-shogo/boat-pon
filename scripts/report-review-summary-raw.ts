@@ -114,7 +114,7 @@ SELECT
   SUM(CASE WHEN decision = 'BUY' THEN 1 ELSE 0 END) AS buy,
   SUM(CASE WHEN decision = 'WATCH' THEN 1 ELSE 0 END) AS watch,
   SUM(CASE WHEN decision = 'SKIP' THEN 1 ELSE 0 END) AS skip,
-  SUM(CASE WHEN decision = 'BUY' AND returned = 0 AND (result IS NULL OR selection != result) THEN 1 ELSE 0 END) AS buyMisses,
+  SUM(CASE WHEN decision = 'BUY' AND returned = 0 AND result IS NOT NULL AND selection != result THEN 1 ELSE 0 END) AS buyMisses,
   SUM(CASE WHEN decision IN ('WATCH', 'SKIP') AND returned = 0 AND selection = result THEN 1 ELSE 0 END) AS missedHits
 FROM decision_history
 WHERE ${where.sql}
@@ -194,7 +194,7 @@ WHERE ${where.sql}
 
 function queryTopRows(kind: "buy-misses" | "missed-hits"): DetailRow[] {
   const extra = kind === "buy-misses"
-    ? "decision = 'BUY' AND returned = 0 AND (result IS NULL OR selection != result)"
+    ? "decision = 'BUY' AND returned = 0 AND result IS NOT NULL AND selection != result"
     : "decision IN ('WATCH', 'SKIP') AND returned = 0 AND selection = result";
   const where = makeWhere(extra, []);
 

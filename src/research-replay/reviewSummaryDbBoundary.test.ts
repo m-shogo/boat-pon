@@ -21,3 +21,9 @@ test("raw review summary independently verifies the canonical DB and remains que
   assert.doesNotMatch(raw, /DB not found: \$\{DB_PATH\}/);
   assert.match(raw, /missing_payout_hits > 0 THEN NULL ELSE ROUND/);
 });
+
+test("review summary counts and lists only settled BUY misses", () => {
+  const settledMiss = /decision = 'BUY' AND returned = 0 AND result IS NOT NULL AND selection != result/g;
+  assert.equal(raw.match(settledMiss)?.length, 2);
+  assert.doesNotMatch(raw, /result IS NULL OR selection != result/);
+});
