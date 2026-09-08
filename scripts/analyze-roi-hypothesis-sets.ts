@@ -19,6 +19,23 @@ db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 try {
+  const invalidReturn = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history dh
+WHERE dh.run_kind = 'historical-backfill'
+  AND dh.decision = 'BUY'
+  AND dh.bet_type = ?
+  AND dh.current_odds IS NOT NULL
+  AND dh.result IS NOT NULL
+  AND dh.result != ''
+  AND (dh.returned IS NULL OR dh.returned != 0)
+`).get(DECISION_BET_TYPE) as { n: number };
+
+  if ((invalidReturn.n ?? 0) > 0) {
+    console.error(`[analyze-roi-hypothesis-sets] FAIL CLOSED: ${invalidReturn.n} historical BUY row(s) have unknown or returned settlement state`);
+    process.exit(2);
+  }
+
   const integrity = db.prepare(`
 WITH relevant_hits AS (
   SELECT DISTINCT dh.race_id, dh.selection
