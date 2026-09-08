@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { parseRollingReportOptions } from "../src/research-replay/rollingReportOptions";
 
-type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; required_odds: number | null; ev: number | null; sample_size?: number | null };
+type Row = { date: string; venue: string; race_no: number; decision: string; selection: string; result: string | null; returned: number; current_odds: number | null; official_payout_yen: number | null; required_odds: number | null; ev: number | null; sample_size?: number | null };
 type Summary = { rows: number; buy: number; watch: number; skip: number; settledBuy: number; hits: number; hitRate: number | null; roi: number | null; avgEv: number | null; avgOddsRatio: number | null };
 type Group = Summary & { key: string };
 type WeakSignal = { key: string; settledBuy: number; roi: number | null; reason: string };
@@ -29,7 +29,7 @@ const to = parsed.to ?? todayTokyo();
 const from = parsed.from ?? addDays(to, -(parsed.days - 1));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`DB not found: ${DB_PATH}`);
+  console.error("QUALITY_REPORT_DB_MISSING");
   process.exit(1);
 }
 
@@ -40,22 +40,98 @@ const primaryDbPath = assertCanonicalSingleLinkRegularFile(
 const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 try {
+  assertOfficialSettlementIntegrity(db, from, to);
   const rows = listRows(db, from, to);
   const report = buildReport(rows);
-  if (parsed.json) console.log(JSON.stringify({ generatedAt: new Date().toISOString(), from, to, ...report }, null, 2));
+  if (parsed.json) console.log(JSON.stringify({ generatedAt: new Date().toISOString(), from, to, roiSource: "official race_payouts.payout_yen", ...report }, null, 2));
   else printReport(from, to, report);
 } finally {
   db.close();
 }
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
+function assertOfficialSettlementIntegrity(db: DatabaseSync, from: string, to: string): void {
+  const row = db.prepare(`
+WITH settled_buy AS (
+  SELECT DISTINCT
+    dh.race_id,
+    dh.bet_type,
+    ${payoutBetTypeSql("dh.bet_type")} AS payout_bet_type,
+    dh.selection,
+    dh.result
+  FROM decision_history dh
+  WHERE dh.date >= ? AND dh.date <= ?
+    AND dh.decision = 'BUY'
+    AND dh.returned = 0
+    AND dh.result IS NOT NULL
+), invalid AS (
+  SELECT s.race_id, s.bet_type, s.selection
+  FROM settled_buy s
+  WHERE s.payout_bet_type IS NULL
+     OR (s.selection = s.result AND (
+       (SELECT COUNT(*)
+        FROM race_payouts rp
+        WHERE rp.race_id = s.race_id
+          AND rp.bet_type = s.payout_bet_type
+          AND rp.combination = s.selection) != 1
+       OR
+       (SELECT COUNT(*)
+        FROM race_payouts rp
+        WHERE rp.race_id = s.race_id
+          AND rp.bet_type = s.payout_bet_type
+          AND rp.combination = s.selection
+          AND rp.returned = 0
+          AND rp.payout_yen IS NOT NULL
+          AND rp.payout_yen > 0) != 1
+     ))
+)
+SELECT COUNT(*) AS invalid FROM invalid
+`).get(from, to) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("QUALITY_REPORT_SETTLEMENT_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("QUALITY_REPORT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED");
+  }
+}
+
 function listRows(db: DatabaseSync, from: string, to: string): Row[] {
   if (!tableExists(db, "decision_history")) return [];
-  const sample = hasColumn(db, "decision_history", "sample_size") ? "sample_size" : "0 AS sample_size";
+  const sample = hasColumn(db, "decision_history", "sample_size") ? "dh.sample_size" : "0 AS sample_size";
   return db.prepare(`
-SELECT date, venue, race_no, decision, selection, result, returned, current_odds, required_odds, ev, ${sample}
-FROM decision_history
-WHERE date >= ? AND date <= ?
-ORDER BY date, venue, race_no
+SELECT dh.date, dh.venue, dh.race_no, dh.decision, dh.selection, dh.result, dh.returned, dh.current_odds,
+       CASE WHEN dh.decision = 'BUY' AND dh.returned = 0 AND dh.result IS NOT NULL AND dh.selection = dh.result THEN (
+         SELECT rp.payout_yen
+         FROM race_payouts rp
+         WHERE rp.race_id = dh.race_id
+           AND rp.bet_type = ${payoutBetTypeSql("dh.bet_type")}
+           AND rp.combination = dh.selection
+           AND rp.returned = 0
+           AND rp.payout_yen IS NOT NULL
+           AND rp.payout_yen > 0
+         LIMIT 1
+       ) ELSE 0 END AS official_payout_yen,
+       dh.required_odds, dh.ev, ${sample}
+FROM decision_history dh
+WHERE dh.date >= ? AND dh.date <= ?
+ORDER BY dh.date, dh.venue, dh.race_no
 `).all(from, to) as Row[];
 }
 
@@ -95,7 +171,7 @@ function summarize(rows: Row[]): Summary {
   const buyRows = rows.filter((r) => r.decision === "BUY");
   const settled = buyRows.filter((r) => r.returned === 0 && r.result != null);
   const hits = settled.filter((r) => r.selection === r.result);
-  const payoutOdds = hits.reduce((sum, r) => sum + (r.current_odds ?? 0), 0);
+  const payoutUnits = hits.reduce((sum, r) => sum + Number(r.official_payout_yen ?? 0) / 100, 0);
   return {
     rows: rows.length,
     buy: buyRows.length,
@@ -104,7 +180,7 @@ function summarize(rows: Row[]): Summary {
     settledBuy: settled.length,
     hits: hits.length,
     hitRate: settled.length ? hits.length / settled.length : null,
-    roi: settled.length ? payoutOdds / settled.length : null,
+    roi: settled.length ? payoutUnits / settled.length : null,
     avgEv: avg(rows.map((r) => r.ev)),
     avgOddsRatio: avg(rows.map(oddsRatio)),
   };
@@ -162,6 +238,7 @@ function buildRuleSuggestions(report: Omit<QualityReport, "ruleSuggestions">) {
 function printReport(from: string, to: string, report: QualityReport) {
   console.log("# Boat Pon quality report");
   console.log(`period: ${from}..${to}`);
+  console.log("roiSource: official race_payouts.payout_yen");
   console.log(line("overall", report.summary));
   printTable("By signal band", report.byBand);
   printTable("By venue", report.byVenue);
