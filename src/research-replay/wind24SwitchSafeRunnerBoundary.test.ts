@@ -61,14 +61,16 @@ test("wind24 payout preflight rejects decision cohort drift before deep-dive", (
   assert.ok(cohortGuard >= 0 && cohortGuard < completenessGuard, "cohort drift must fail closed before promotion/demotion completeness is accepted");
 });
 
-test("wind24 payout preflight rejects ambiguous or malformed settlement lines", () => {
+test("wind24 payout preflight rejects ambiguous, malformed, refund, or unknown-return settlement lines", () => {
   assert.match(auditSource, /ts\.returned = 0/);
+  assert.match(auditSource, /ts\.returned IS NULL OR ts\.returned != 0/);
   assert.match(auditSource, /ts\.payout_yen > 0/);
   assert.match(auditSource, /ts\.combination IS NULL OR ts\.combination = ''/);
   assert.match(auditSource, /ts\.payout_yen IS NULL OR ts\.payout_yen <= 0/);
   assert.match(auditSource, /GROUP BY race_id, combination/);
   assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
   assert.match(auditSource, /returnedRows > 0/);
+  assert.match(auditSource, /refund or unknown-return settlement rows/);
   assert.match(auditSource, /duplicateCombinationKeys > 0/);
   assert.match(auditSource, /invalidNonRefundRows > 0/);
 });
