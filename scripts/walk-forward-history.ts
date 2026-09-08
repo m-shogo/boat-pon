@@ -26,6 +26,7 @@ db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000");
 try {
   const range = resolveRange(db, args.from, args.to);
+  assertSupportedBuyBetTypeMapping(db, range.from, range.to);
   assertWinningSettlementIntegrity(db, range.from, range.to);
   const rows = listRows(db, range.from, range.to);
   const windows = buildWindows(rows, range.from, range.to, args.windowDays, args.stepDays, args.minBuys);
@@ -43,10 +44,46 @@ function resolveRange(db: DatabaseSync, from: string | null, to: string | null) 
   return { from: start, to: end };
 }
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
+function assertSupportedBuyBetTypeMapping(db: DatabaseSync, from: string, to: string) {
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE date >= ? AND date <= ?
+  AND decision = 'BUY'
+  AND (${payoutBetTypeSql("bet_type")}) IS NULL
+`).get(from, to) as { n: number };
+
+  if ((row.n ?? 0) > 0) {
+    throw new Error(
+      `WALK_FORWARD_BET_TYPE_MAPPING_FAILED: ${row.n} BUY decision row(s) use an unsupported or unknown payout bet type mapping`,
+    );
+  }
+}
+
 function assertWinningSettlementIntegrity(db: DatabaseSync, from: string, to: string) {
   const row = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT race_id, bet_type, selection
+  SELECT DISTINCT
+    race_id,
+    bet_type,
+    ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
+    selection
   FROM decision_history
   WHERE date >= ? AND date <= ?
     AND decision = 'BUY'
@@ -56,18 +93,19 @@ WITH relevant_hits AS (
 ), invalid AS (
   SELECT h.race_id, h.bet_type, h.selection
   FROM relevant_hits h
-  WHERE (
+  WHERE h.payout_bet_type IS NULL
+  OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen > 0
@@ -101,7 +139,7 @@ SELECT
       SELECT rp.payout_yen / 100.0
       FROM race_payouts rp
       WHERE rp.race_id = decision_history.race_id
-        AND rp.bet_type = decision_history.bet_type
+        AND rp.bet_type = ${payoutBetTypeSql("decision_history.bet_type")}
         AND rp.combination = decision_history.selection
         AND rp.returned = 0
         AND rp.payout_yen > 0
@@ -181,7 +219,7 @@ function printReport(payload: { generatedAt: string; range: { from: string; to: 
   console.log("# Boat Pon walk-forward history report");
   console.log(`period: ${payload.range.from}..${payload.range.to}`);
   console.log(`windowDays=${payload.args.windowDays} stepDays=${payload.args.stepDays} minBuys=${payload.args.minBuys}`);
-  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching mapped decision bet_type/selection)");
   console.log(`verdict: ${payload.verdict.message}`);
   console.log(`evaluated=${payload.verdict.evaluatedWindows} incomplete=${payload.verdict.incompleteWindows} pass=${payload.verdict.pass} watch=${payload.verdict.watch} fail=${payload.verdict.fail} avgRoi=${fmt(payload.verdict.avgRoi)}`);
   console.log("\n| from | to | status | rows | BUY | settledBUY | hits | missingPayoutHits | hitRate | ROI | avgEV |");
