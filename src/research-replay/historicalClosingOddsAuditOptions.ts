@@ -72,6 +72,9 @@ export function parseHistoricalClosingOddsAuditOptions(
   if (raw.fromDate && raw.fromDate < HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START) {
     throw new Error(`HISTORICAL_CLOSING_ODDS_AUDIT_FROM_DATE_INVALID:${raw.fromDate}`);
   }
+  if (raw.toDate && raw.toDate < HISTORICAL_CLOSING_ODDS_AUDIT_FORWARD_START) {
+    throw new Error(`HISTORICAL_CLOSING_ODDS_AUDIT_TO_DATE_INVALID:${raw.toDate}`);
+  }
   if (raw.fromDate && raw.toDate && raw.fromDate > raw.toDate) {
     throw new Error("HISTORICAL_CLOSING_ODDS_AUDIT_DATE_RANGE_INVALID");
   }
