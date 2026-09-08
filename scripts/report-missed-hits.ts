@@ -19,7 +19,7 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const args = parseArgs(process.argv.slice(2));
 
 if (!existsSync(DB_PATH)) {
-  console.error(`[report-missed-hits] DB not found: ${DB_PATH}`);
+  console.error("MISSED_HITS_REPORT_PRIMARY_DB_MISSING");
   process.exit(1);
 }
 
