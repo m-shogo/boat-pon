@@ -5,7 +5,8 @@
  * 1-2-3 BUY population and computes counterfactual 1-3-2 payout ROI. Prove the
  * entire target race settlement is trustworthy before any payout-derived monitor
  * verdict can be emitted: legitimate multi-line winners are allowed, but malformed,
- * duplicate-combination, or refund rows are fail-closed because the downstream
+ * duplicate-combination, refund/unknown-return settlement rows, returned/unknown-return
+ * decision rows, or non-trifecta decision rows are fail-closed because the downstream
  * scalar payout lookups do not model those ambiguities explicitly.
  */
 
@@ -32,6 +33,7 @@ db.exec("PRAGMA busy_timeout = 5000;");
 type IntegrityRow = {
   total: number;
   covered: number;
+  cohortInvalidRows: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
@@ -41,8 +43,8 @@ const excludedVenues = EXCLUDED_VENUES.map((venue) => `'${venue}'`).join(",");
 const excludedRaces = EXCLUDED_RACES.join(",");
 
 const row = db.prepare(`
-WITH target_races AS (
-  SELECT DISTINCT dh.race_id
+WITH target_rows AS (
+  SELECT dh.race_id, dh.bet_type, dh.returned
   FROM decision_history dh
   WHERE dh.decision = 'BUY'
     AND dh.run_kind = 'historical-backfill'
@@ -51,6 +53,11 @@ WITH target_races AS (
     AND dh.venue NOT IN (${excludedVenues})
     AND dh.race_no NOT IN (${excludedRaces})
     AND dh.selection = '1-2-3'
+), target_races AS (
+  SELECT DISTINCT race_id
+  FROM target_rows
+  WHERE bet_type = '3連単'
+    AND returned = 0
 ), target_settlements AS (
   SELECT rp.race_id, rp.combination, rp.payout_yen, rp.returned
   FROM race_payouts rp
@@ -64,6 +71,13 @@ WITH target_races AS (
 )
 SELECT
   (SELECT COUNT(*) FROM target_races) AS total,
+  (SELECT COUNT(*)
+   FROM target_rows tr
+   WHERE tr.bet_type IS NULL
+      OR tr.bet_type != '3連単'
+      OR tr.returned IS NULL
+      OR tr.returned != 0
+  ) AS cohortInvalidRows,
   (SELECT COUNT(*)
    FROM target_races tr
    WHERE EXISTS (
@@ -86,7 +100,7 @@ SELECT
   (SELECT COUNT(*) FROM duplicate_keys) AS duplicateCombinationKeys,
   (SELECT COUNT(*)
    FROM target_settlements ts
-   WHERE ts.returned = 1
+   WHERE ts.returned IS NULL OR ts.returned != 0
   ) AS returnedRows
 `).get() as IntegrityRow;
 
@@ -94,8 +108,13 @@ const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covere
 db.close();
 
 console.log(
-  `[paper-forward-monitor-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
+  `[paper-forward-monitor-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
 );
+
+if ((row.cohortInvalidRows ?? 0) > 0) {
+  console.error("[paper-forward-monitor-payout-preflight] PAPER_FORWARD_MONITOR_COHORT_INVALID: target research cohort contains non-3連単 or returned/unknown-return historical BUY rows, but the downstream monitor does not exclude them explicitly");
+  process.exit(2);
+}
 
 if ((row.invalidNonRefundRows ?? 0) > 0) {
   console.error("[paper-forward-monitor-payout-preflight] FAIL: target cohort contains non-refund trifecta settlement rows without a non-empty combination and positive official payout");
@@ -108,7 +127,7 @@ if ((row.duplicateCombinationKeys ?? 0) > 0) {
 }
 
 if ((row.returnedRows ?? 0) > 0) {
-  console.error("[paper-forward-monitor-payout-preflight] FAIL: target cohort contains trifecta refund rows, but the downstream monitor does not model refund semantics explicitly");
+  console.error("[paper-forward-monitor-payout-preflight] FAIL: target cohort contains trifecta refund or unknown-return settlement rows, but the downstream monitor does not model those semantics explicitly");
   process.exit(2);
 }
 
