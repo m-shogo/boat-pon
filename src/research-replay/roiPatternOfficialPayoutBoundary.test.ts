@@ -5,6 +5,17 @@ import test from "node:test";
 const entrypoint = readFileSync("scripts/search-roi-patterns.ts", "utf8");
 const raw = readFileSync("scripts/search-roi-patterns-raw.ts", "utf8");
 
+test("ROI pattern entrypoint rejects unknown or returned historical BUY rows before settlement and raw analysis", () => {
+  assert.match(entrypoint, /dh\.returned IS NULL OR dh\.returned != 0/);
+  assert.match(entrypoint, /unknown or returned settlement state/);
+  const returnGate = entrypoint.indexOf("const invalidReturn = db.prepare");
+  const integrity = entrypoint.indexOf("WITH relevant_hits AS");
+  const rawLaunch = entrypoint.indexOf("scripts/search-roi-patterns-raw.ts");
+  assert.ok(returnGate >= 0);
+  assert.ok(integrity > returnGate);
+  assert.ok(rawLaunch > integrity);
+});
+
 test("ROI pattern entrypoint maps decision 3連単 rows to canonical trifecta settlements before raw analysis", () => {
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(entrypoint, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
