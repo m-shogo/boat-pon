@@ -111,33 +111,34 @@ WHERE ${where.join(" AND ")}
 function assertOfficialSettlementIntegrity() {
   const { where, params } = reportWhere();
   const row = db.prepare(`
-WITH relevant_hits AS (
+WITH relevant_settled AS (
   SELECT DISTINCT
     race_id,
     bet_type,
     ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
-    selection
+    result
   FROM decision_history
   WHERE ${where.join(" AND ")}
-    AND selection = result
+    AND result IS NOT NULL
+    AND result != ''
     AND returned = 0
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
-  FROM relevant_hits h
-  WHERE h.payout_bet_type IS NULL
+  SELECT s.race_id, s.bet_type, s.result
+  FROM relevant_settled s
+  WHERE s.payout_bet_type IS NULL
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
       AND rp.returned = 0
       AND rp.payout_yen > 0
   ) != 1
@@ -147,7 +148,7 @@ SELECT COUNT(*) AS n FROM invalid
 
   if (row.n > 0) {
     throw new Error(
-      `DATA_QUALITY_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+      `DATA_QUALITY_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled winning-result key(s) do not have exactly one positive non-refund official settlement`,
     );
   }
 }
@@ -311,5 +312,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-data-quality-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
 
-Read-only. No external access. ROI uses official race_payouts.payout_yen; winning ticket keys must have exactly one positive non-refund official settlement before payout-derived metrics are generated.`);
+Read-only. No external access. ROI uses official race_payouts.payout_yen; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement before payout-derived metrics are generated.`);
 }
