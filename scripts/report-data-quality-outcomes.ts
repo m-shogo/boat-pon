@@ -8,6 +8,7 @@
  * 注意:
  * - 読み取り専用
  * - 外部アクセスなし
+ * - ROI主評価は race_payouts.payout_yen の公式実払戻。current_odds は補助特徴として平均のみ表示する。
  */
 
 import { existsSync } from "node:fs";
@@ -30,6 +31,8 @@ const db = new DatabaseSync(primaryDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
+  assertSupportedBetTypeMapping();
+  assertOfficialSettlementIntegrity();
   const rows = [
     ...queryMetric("before_info", beforeInfoBandSql()),
     ...queryMetric("environment", environmentBandSql()),
@@ -59,7 +62,7 @@ type ReportRow = {
   avgCurrentOdds: number | null;
 };
 
-function queryMetric(metric: string, bandExpr: string): ReportRow[] {
+function reportWhere(): { where: string[]; params: Array<string | number> } {
   const where: string[] = ["1=1"];
   const params: Array<string | number> = [];
 
@@ -69,6 +72,88 @@ function queryMetric(metric: string, bandExpr: string): ReportRow[] {
   if (args.venue) { where.push("venue = ?"); params.push(args.venue); }
   if (args.modelVersion) { where.push("model_version = ?"); params.push(args.modelVersion); }
   if (args.runKind) { where.push("run_kind = ?"); params.push(args.runKind); }
+
+  return { where, params };
+}
+
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
+function assertSupportedBetTypeMapping() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("bet_type")}) IS NULL
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `DATA_QUALITY_OUTCOMES_BET_TYPE_MAPPING_FAILED: ${row.n} decision row(s) use an unsupported or unknown payout bet type mapping`,
+    );
+  }
+}
+
+function assertOfficialSettlementIntegrity() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+WITH relevant_hits AS (
+  SELECT DISTINCT
+    race_id,
+    bet_type,
+    ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
+    selection
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND selection = result
+    AND returned = 0
+), invalid AS (
+  SELECT h.race_id, h.bet_type, h.selection
+  FROM relevant_hits h
+  WHERE h.payout_bet_type IS NULL
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.payout_bet_type
+      AND rp.combination = h.selection
+  ) != 1
+  OR (
+    SELECT COUNT(*)
+    FROM race_payouts rp
+    WHERE rp.race_id = h.race_id
+      AND rp.bet_type = h.payout_bet_type
+      AND rp.combination = h.selection
+      AND rp.returned = 0
+      AND rp.payout_yen > 0
+  ) != 1
+)
+SELECT COUNT(*) AS n FROM invalid
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `DATA_QUALITY_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning ticket key(s) do not have exactly one positive non-refund official settlement`,
+    );
+  }
+}
+
+function queryMetric(metric: string, bandExpr: string): ReportRow[] {
+  const { where, params } = reportWhere();
 
   const sql = `
 WITH base AS (
@@ -80,7 +165,19 @@ WITH base AS (
     returned,
     estimated_hit_rate,
     current_odds,
-    CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END AS payout_odds
+    CASE
+      WHEN selection = result AND returned = 0 THEN (
+        SELECT rp.payout_yen / 100.0
+        FROM race_payouts rp
+        WHERE rp.race_id = decision_history.race_id
+          AND rp.bet_type = ${payoutBetTypeSql("decision_history.bet_type")}
+          AND rp.combination = decision_history.selection
+          AND rp.returned = 0
+          AND rp.payout_yen > 0
+        LIMIT 1
+      )
+      ELSE 0
+    END AS payout_units
   FROM decision_history
   WHERE ${where.join(" AND ")}
 ), grouped AS (
@@ -90,8 +187,8 @@ WITH base AS (
     COUNT(*) AS n,
     SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
     SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
-    SUM(payout_odds) AS total_payout_odds,
-    MAX(payout_odds) AS max_payout_odds,
+    SUM(payout_units) AS total_payout_units,
+    MAX(payout_units) AS max_payout_units,
     AVG(estimated_hit_rate) AS avg_estimated_hit_rate,
     AVG(current_odds) AS avg_current_odds
   FROM base
@@ -105,8 +202,8 @@ SELECT
   settled,
   hits,
   ROUND(hits * 1.0 / NULLIF(settled, 0), 4) AS hitRate,
-  ROUND(total_payout_odds * 1.0 / NULLIF(settled, 0), 3) AS roi,
-  ROUND((total_payout_odds - max_payout_odds) * 1.0 / NULLIF(settled - CASE WHEN max_payout_odds > 0 THEN 1 ELSE 0 END, 0), 3) AS roiExMax,
+  ROUND(total_payout_units * 1.0 / NULLIF(settled, 0), 3) AS roi,
+  ROUND((total_payout_units - max_payout_units) * 1.0 / NULLIF(settled - CASE WHEN max_payout_units > 0 THEN 1 ELSE 0 END, 0), 3) AS roiExMax,
   ROUND(avg_estimated_hit_rate, 4) AS avgEstimatedHitRate,
   ROUND(avg_current_odds, 2) AS avgCurrentOdds
 FROM grouped
@@ -147,6 +244,7 @@ function printRows(rows: ReportRow[]) {
   console.log("=== data quality outcomes report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching mapped decision bet_type/selection)");
   console.log("");
   console.log("metric        band              decision  n      settled  hits   hitRate  roi     roiExMax  estAvg  oddsAvg");
   for (const row of rows) {
@@ -213,5 +311,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-data-quality-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
 
-Read-only. No external access.`);
+Read-only. No external access. ROI uses official race_payouts.payout_yen; winning ticket keys must have exactly one positive non-refund official settlement before payout-derived metrics are generated.`);
 }
