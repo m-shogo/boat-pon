@@ -43,6 +43,7 @@ try {
     process.exit(1);
   }
 
+  assertSupportedBetTypeMapping();
   assertOfficialSettlementIntegrity();
   const rows = FACTORS.flatMap((factor) => queryFactor(factor));
   if (args.json) {
@@ -91,6 +92,22 @@ function payoutBetTypeSql(column: string) {
     WHEN 'wide' THEN 'wide'
     ELSE NULL
   END`;
+}
+
+function assertSupportedBetTypeMapping() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("bet_type")}) IS NULL
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `FEATURE_BREAKDOWN_BET_TYPE_MAPPING_FAILED: ${row.n} decision row(s) use an unsupported or unknown payout bet type mapping`,
+    );
+  }
 }
 
 function assertOfficialSettlementIntegrity() {
@@ -262,5 +279,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. ROI uses canonical official race_payouts.payout_yen with canonical bet-type mapping; current_odds is not used as realized return.`);
+  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. Unsupported decision bet types fail closed before aggregation; ROI uses canonical official race_payouts.payout_yen with canonical bet-type mapping and current_odds is not used as realized return.`);
 }
