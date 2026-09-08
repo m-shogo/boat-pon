@@ -32,6 +32,32 @@ try {
     console.error(`SKIP6R_HISTORICAL_COHORT_INVALID invalid=${invalid}`);
     process.exitCode = 2;
   } else {
+    const payoutReturnState = db.prepare(`
+      WITH population AS (
+        SELECT DISTINCT dh.race_id
+        FROM decision_history dh
+        WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+          AND dh.result IS NOT NULL AND dh.result != ''
+          AND dh.current_odds IS NOT NULL
+          AND dh.venue NOT IN (${exclVenues})
+          AND dh.race_no NOT IN (${exclRaces})
+          AND dh.selection='1-2-3'
+          AND dh.date >= '${FORWARD_START}'
+          AND dh.bet_type='3連単'
+          AND dh.returned=0
+      )
+      SELECT COUNT(*) AS invalid
+      FROM race_payouts rp
+      JOIN population p ON p.race_id = rp.race_id
+      WHERE rp.bet_type='trifecta'
+        AND (rp.returned IS NULL OR rp.returned != 0)
+    `).get() as { invalid: number | bigint | null };
+    const invalidPayoutReturnState = Number(payoutReturnState.invalid ?? 0);
+    if (!Number.isSafeInteger(invalidPayoutReturnState) || invalidPayoutReturnState < 0 || invalidPayoutReturnState > 0) {
+      console.error(`SKIP6R_HISTORICAL_PAYOUT_RETURN_STATE_INVALID invalid=${invalidPayoutReturnState}`);
+      process.exit(2);
+    }
+
     const row = db.prepare(`
       WITH population AS (
         SELECT DISTINCT dh.race_id
@@ -49,6 +75,7 @@ try {
         SELECT rp.race_id
         FROM race_payouts rp
         WHERE rp.bet_type='trifecta'
+          AND rp.returned=0
         GROUP BY rp.race_id
         HAVING COUNT(*) >= 1
           AND COUNT(DISTINCT rp.combination) = COUNT(*)
