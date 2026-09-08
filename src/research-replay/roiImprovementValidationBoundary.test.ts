@@ -10,9 +10,10 @@ test("ROI improvement validation verifies canonical read-only DB identity before
   assert.match(source, /PRAGMA query_only = ON/);
 
   const identity = source.indexOf("assertCanonicalSingleLinkRegularFile");
+  const returnIntegrity = source.indexOf("const invalidReturnedBuy = db.prepare");
   const integrity = source.indexOf("const settlementIntegrity = db.prepare");
   const analysis = source.indexOf("const rows = db.prepare");
-  assert.ok(identity >= 0 && integrity > identity && analysis > integrity);
+  assert.ok(identity >= 0 && returnIntegrity > identity && integrity > returnIntegrity && analysis > integrity);
 });
 
 test("ROI improvement validation fails closed on incomplete, malformed, refund, or duplicate settlement truth", () => {
@@ -30,16 +31,17 @@ test("ROI improvement validation fails closed on incomplete, malformed, refund, 
   assert.match(source, /FAIL CLOSED/);
 });
 
-test("ROI improvement validation excludes returned historical BUY rows from both settlement truth and ROI population", () => {
-  const guards = source.match(/COALESCE\(dh\.returned,0\)=0/g) ?? [];
-  assert.equal(guards.length, 2, "returned BUY exclusion must be applied to both settlement-integrity target races and analyzed ROI rows");
+test("ROI improvement validation fails closed on unknown or returned historical BUY rows before settlement truth and ROI analysis", () => {
+  assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
+  assert.match(source, /unknown or returned historical BUY rows exist in the target cohort/);
+  assert.ok((source.match(/dh\.returned=0/g) ?? []).length >= 2, "settlement-integrity and analyzed ROI cohorts must require explicit non-returned truth");
+  assert.doesNotMatch(source, /COALESCE\(dh\.returned,0\)=0/);
 
+  const returnIntegrity = source.indexOf("const invalidReturnedBuy = db.prepare");
+  const failClosed = source.indexOf("unknown or returned historical BUY rows exist in the target cohort");
   const integrity = source.indexOf("const settlementIntegrity = db.prepare");
   const rows = source.indexOf("const rows = db.prepare");
-  const firstGuard = source.indexOf("COALESCE(dh.returned,0)=0", integrity);
-  const secondGuard = source.indexOf("COALESCE(dh.returned,0)=0", rows);
-  assert.ok(firstGuard > integrity && firstGuard < rows, "settlement integrity must exclude returned BUY rows");
-  assert.ok(secondGuard > rows, "ROI population must exclude returned BUY rows");
+  assert.ok(returnIntegrity >= 0 && failClosed > returnIntegrity && integrity > failClosed && rows > integrity);
 });
 
 test("ROI improvement validation permits legitimate multi-line trifecta settlements across distinct combinations", () => {
