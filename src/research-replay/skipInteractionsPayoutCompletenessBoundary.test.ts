@@ -17,7 +17,9 @@ test("skip-interactions command cannot bypass settlement completeness", () => {
 });
 
 test("skip-interactions preflight matches the exact forward population and validates settlement line integrity", () => {
-  assert.match(audit, /SELECT DISTINCT dh\.race_id/);
+  assert.match(audit, /WITH target_rows AS \(/);
+  assert.match(audit, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
+  assert.match(audit, /target_races AS \(\s*SELECT DISTINCT race_id\s*FROM target_rows/);
   assert.match(audit, /dh\.decision = 'BUY'/);
   assert.match(audit, /dh\.run_kind = 'historical-backfill'/);
   assert.match(audit, /dh\.current_odds IS NOT NULL/);
@@ -25,8 +27,17 @@ test("skip-interactions preflight matches the exact forward population and valid
   assert.match(audit, /dh\.date >= \?/);
   assert.match(audit, /EXCLUDED_VENUES/);
   assert.match(audit, /EXCLUDED_RACE_NOS/);
+  assert.match(audit, /bet_type = '3連単'/);
+  assert.match(audit, /returned = 0/);
+  assert.match(audit, /tr\.bet_type IS NULL/);
+  assert.match(audit, /tr\.bet_type != '3連単'/);
+  assert.match(audit, /tr\.returned IS NULL/);
+  assert.match(audit, /tr\.returned != 0/);
+  assert.match(audit, /cohortInvalidRows/);
+  assert.match(audit, /non-3連単 or returned\/unknown-return historical BUY rows/);
   assert.match(audit, /rp\.bet_type = 'trifecta'/);
   assert.match(audit, /ts\.returned = 0/);
+  assert.match(audit, /ts\.returned IS NULL OR ts\.returned != 0/);
   assert.match(audit, /ts\.payout_yen > 0/);
   assert.match(audit, /ts\.payout_yen <= 0/);
   assert.match(audit, /ts\.combination IS NULL/);
@@ -35,6 +46,10 @@ test("skip-interactions preflight matches the exact forward population and valid
   assert.match(audit, /returnedRows/);
   assert.match(audit, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(audit, /process\.exit\(2\)/);
+
+  const cohortGuard = audit.indexOf("if ((row.cohortInvalidRows ?? 0) > 0)");
+  const completenessGuard = audit.indexOf("if (!result.complete)");
+  assert.ok(cohortGuard >= 0 && cohortGuard < completenessGuard, "decision-cohort drift must fail closed before ROI completeness is accepted");
 });
 
 test("skip-interactions preflight permits legitimate multi-line winners rather than enforcing one row per race", () => {
