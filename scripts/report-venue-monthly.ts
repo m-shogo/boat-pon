@@ -29,6 +29,7 @@ db.exec("PRAGMA query_only = ON");
 db.exec("PRAGMA busy_timeout = 5000");
 
 try {
+  assertSupportedBetTypeMapping();
   assertOfficialSettlementIntegrity();
   const rows = queryRows();
   if (args.json) {
@@ -84,6 +85,22 @@ function payoutBetTypeSql(column: string) {
     WHEN 'wide' THEN 'wide'
     ELSE NULL
   END`;
+}
+
+function assertSupportedBetTypeMapping() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE ${where.join(" AND ")}
+  AND (${payoutBetTypeSql("bet_type")}) IS NULL
+`).get(...params) as { n: number };
+
+  if (row.n > 0) {
+    throw new Error(
+      `VENUE_MONTHLY_BET_TYPE_MAPPING_FAILED: ${row.n} decision row(s) use an unsupported or unknown payout bet type mapping`,
+    );
+  }
 }
 
 function assertOfficialSettlementIntegrity() {
@@ -271,5 +288,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-venue-monthly.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--limit 500] [--json]\n\nRead-only. No external access. Winning ticket keys must map to the canonical payout namespace and have exactly one positive non-refund official settlement before payout-derived metrics are generated.`);
+  pnpm exec tsx scripts/report-venue-monthly.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--limit 500] [--json]\n\nRead-only. No external access. Unsupported decision bet types fail closed before aggregation; winning ticket keys must map to the canonical payout namespace and have exactly one positive non-refund official settlement before payout-derived metrics are generated.`);
 }
