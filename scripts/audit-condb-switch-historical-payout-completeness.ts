@@ -29,50 +29,74 @@ db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 try {
   const venuePlaceholders = EXCL_VENUES.map(() => "?").join(",");
   const racePlaceholders = EXCL_RACES.map(() => "?").join(",");
-  const row = db.prepare(`
-    WITH target AS (
-      SELECT DISTINCT dh.race_id
-      FROM decision_history dh
-      WHERE dh.decision = 'BUY'
-        AND dh.run_kind = 'historical-backfill'
-        AND dh.result IS NOT NULL
-        AND dh.result != ''
-        AND dh.current_odds IS NOT NULL
-        AND dh.venue NOT IN (${venuePlaceholders})
-        AND dh.race_no NOT IN (${racePlaceholders})
-        AND dh.selection = '1-2-3'
-        AND dh.date >= ?
-    ), settled AS (
-      SELECT rp.race_id
-      FROM race_payouts rp
-      WHERE rp.bet_type = 'trifecta'
-      GROUP BY rp.race_id
-      HAVING COUNT(*) >= 1
-        AND COUNT(DISTINCT rp.combination) = COUNT(*)
-        AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = COUNT(*)
-    )
-    SELECT
-      COUNT(*) AS total,
-      SUM(CASE WHEN settled.race_id IS NOT NULL THEN 1 ELSE 0 END) AS covered
-    FROM target
-    LEFT JOIN settled ON settled.race_id = target.race_id
-  `).get(...EXCL_VENUES, ...EXCL_RACES, FORWARD_START) as { total: number; covered: number };
+  const parameters = [...EXCL_VENUES, ...EXCL_RACES, FORWARD_START] as const;
 
-  const total = Number(row.total ?? 0);
-  const covered = Number(row.covered ?? 0);
-  const missing = total - covered;
+  const contamination = db.prepare(`
+    SELECT COUNT(*) AS invalid
+    FROM decision_history dh
+    WHERE dh.decision = 'BUY'
+      AND dh.run_kind = 'historical-backfill'
+      AND dh.result IS NOT NULL
+      AND dh.result != ''
+      AND dh.current_odds IS NOT NULL
+      AND dh.venue NOT IN (${venuePlaceholders})
+      AND dh.race_no NOT IN (${racePlaceholders})
+      AND dh.selection = '1-2-3'
+      AND dh.date >= ?
+      AND (dh.bet_type != '3連単' OR dh.returned IS NULL OR dh.returned != 0)
+  `).get(...parameters) as { invalid: number | bigint | null };
+  const invalid = Number(contamination.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0 || invalid > 0) {
+    console.error(`[condb-payout-preflight] CONDB_SWITCH_HISTORICAL_COHORT_INVALID invalid=${invalid}`);
+    process.exitCode = 2;
+  } else {
+    const row = db.prepare(`
+      WITH target AS (
+        SELECT DISTINCT dh.race_id
+        FROM decision_history dh
+        WHERE dh.decision = 'BUY'
+          AND dh.run_kind = 'historical-backfill'
+          AND dh.result IS NOT NULL
+          AND dh.result != ''
+          AND dh.current_odds IS NOT NULL
+          AND dh.venue NOT IN (${venuePlaceholders})
+          AND dh.race_no NOT IN (${racePlaceholders})
+          AND dh.selection = '1-2-3'
+          AND dh.date >= ?
+          AND dh.bet_type = '3連単'
+          AND dh.returned = 0
+      ), settled AS (
+        SELECT rp.race_id
+        FROM race_payouts rp
+        WHERE rp.bet_type = 'trifecta'
+        GROUP BY rp.race_id
+        HAVING COUNT(*) >= 1
+          AND COUNT(DISTINCT rp.combination) = COUNT(*)
+          AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = COUNT(*)
+      )
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN settled.race_id IS NOT NULL THEN 1 ELSE 0 END) AS covered
+      FROM target
+      LEFT JOIN settled ON settled.race_id = target.race_id
+    `).get(...parameters) as { total: number; covered: number };
 
-  if (!Number.isSafeInteger(total) || !Number.isSafeInteger(covered) || total <= 0 || covered < 0 || covered > total) {
-    console.error("[condb-payout-preflight] invalid settlement coverage state");
-    process.exit(2);
+    const total = Number(row.total ?? 0);
+    const covered = Number(row.covered ?? 0);
+    const missing = total - covered;
+
+    if (!Number.isSafeInteger(total) || !Number.isSafeInteger(covered) || total <= 0 || covered < 0 || covered > total) {
+      console.error("[condb-payout-preflight] invalid settlement coverage state");
+      process.exit(2);
+    }
+
+    if (missing !== 0) {
+      console.error(`[condb-payout-preflight] incomplete official trifecta settlement coverage: covered=${covered}/${total}, missing=${missing}`);
+      process.exit(2);
+    }
+
+    console.log(`[condb-payout-preflight] PASS official trifecta settlement coverage=${covered}/${total}`);
   }
-
-  if (missing !== 0) {
-    console.error(`[condb-payout-preflight] incomplete official trifecta settlement coverage: covered=${covered}/${total}, missing=${missing}`);
-    process.exit(2);
-  }
-
-  console.log(`[condb-payout-preflight] PASS official trifecta settlement coverage=${covered}/${total}`);
 } finally {
   db.close();
 }
