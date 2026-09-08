@@ -13,6 +13,20 @@ test("model version simple report verifies primary database identity before open
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
 });
 
+test("model version comparison rejects unsupported bet types across the full report population before ROI", () => {
+  assert.match(source, /function assertSupportedBetTypeMapping\(\)/);
+  assert.match(source, /MODEL_VERSION_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /\(\$\{payoutBetTypeSql\("bet_type"\)\}\) IS NULL/);
+
+  const mappingIndex = source.indexOf("assertSupportedBetTypeMapping();");
+  const settlementIndex = source.indexOf("assertOfficialSettlementIntegrity();");
+  const queryIndex = source.indexOf("const rows = queryRows();");
+  assert.ok(
+    mappingIndex >= 0 && settlementIndex > mappingIndex && queryIndex > settlementIndex,
+    "full-population bet type mapping preflight must run before settlement integrity and aggregation",
+  );
+});
+
 test("model version comparison maps payout bet types and fails closed before ROI when official settlement is unsupported, incomplete, or ambiguous", () => {
   const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
   const queryIndex = source.indexOf("const rows = queryRows();");
