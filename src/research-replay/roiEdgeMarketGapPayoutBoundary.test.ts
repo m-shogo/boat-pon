@@ -46,13 +46,15 @@ test("ROI edge market-gap preflight fails closed on decision cohort drift before
   assert.match(auditSource, /process\.exit\(2\)/);
 });
 
-test("ROI edge market-gap settlement gate permits legitimate multi-line races but rejects ambiguous lines", () => {
+test("ROI edge market-gap settlement gate permits legitimate multi-line races but rejects ambiguous or unknown-return lines", () => {
   assert.match(auditSource, /target_settlements/);
   assert.match(auditSource, /GROUP BY race_id, combination/);
   assert.match(auditSource, /HAVING COUNT\(\*\) > 1/);
   assert.match(auditSource, /duplicateCombinationKeys/);
   assert.match(auditSource, /invalidNonRefundRows/);
   assert.match(auditSource, /returnedRows/);
+  assert.match(auditSource, /ts\.returned IS NULL OR ts\.returned != 0/);
+  assert.match(auditSource, /refund or unknown-return settlement rows/);
   assert.match(auditSource, /ts\.combination IS NULL/);
   assert.match(auditSource, /ts\.combination = ''/);
   assert.match(auditSource, /ts\.payout_yen IS NULL/);
