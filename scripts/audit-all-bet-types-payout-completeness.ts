@@ -20,11 +20,11 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
-  const returnedBuy = db.prepare(`
+  const invalidReturnedBuy = db.prepare(`
     SELECT COUNT(*) AS count
     FROM decision_history dh
     WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-      AND dh.returned != 0
+      AND (dh.returned IS NULL OR dh.returned != 0)
       AND dh.result IS NOT NULL AND dh.result != ''
       AND dh.current_odds IS NOT NULL
       AND dh.venue NOT IN (${exclVenues})
@@ -33,8 +33,8 @@ try {
       AND dh.date >= '${FORWARD_START}'
   `).get() as { count: number };
 
-  if (Number(returnedBuy.count) > 0) {
-    console.error(`ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(returnedBuy.count) })}`);
+  if (Number(invalidReturnedBuy.count) > 0) {
+    console.error(`ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(invalidReturnedBuy.count) })}`);
     process.exitCode = 2;
   } else {
     const rows = db.prepare(`
