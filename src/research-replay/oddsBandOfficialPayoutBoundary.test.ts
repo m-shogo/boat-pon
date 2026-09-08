@@ -31,6 +31,17 @@ test("odds-band ROI uses a mapped exact positive non-refund official settlement"
   assert.match(source, /CASE WHEN missing_payout_hits = 0[\s\S]*?ELSE NULL[\s\S]*?END AS roiExMax/);
 });
 
+test("odds-band outcomes rejects unsupported bet types across the full report population before band ROI", () => {
+  assert.match(source, /function assertSupportedBetTypeMapping\(\)/);
+  assert.match(source, /ODDS_BAND_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /\(\$\{payoutBetTypeSql\("bet_type"\)\}\) IS NULL/);
+
+  const mapping = source.indexOf("assertSupportedBetTypeMapping();");
+  const integrity = source.indexOf("assertOfficialSettlementIntegrity();");
+  const rows = source.indexOf("const rows = [");
+  assert.ok(mapping >= 0 && integrity > mapping && rows > integrity);
+});
+
 test("odds-band outcomes fails closed on unsupported or ambiguous winning settlement keys before band ROI generation", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity\(\)/);
   assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*selection/);
