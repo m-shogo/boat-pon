@@ -88,36 +88,36 @@ function payoutBetTypeSql(column: string) {
 
 function assertOfficialSettlementIntegrity(db: DatabaseSync, from: string, to: string): void {
   const row = db.prepare(`
-WITH relevant_hits AS (
+WITH relevant_settled AS (
   SELECT DISTINCT
     dh.race_id,
     dh.bet_type,
     ${payoutBetTypeSql("dh.bet_type")} AS payout_bet_type,
-    dh.selection
+    dh.result
   FROM decision_history dh
   WHERE dh.date >= ? AND dh.date <= ?
     AND dh.model_version = ?
     AND dh.decision = 'BUY'
     AND dh.returned = 0
     AND dh.result IS NOT NULL
-    AND dh.selection = dh.result
+    AND dh.result != ''
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
-  FROM relevant_hits h
-  WHERE h.payout_bet_type IS NULL
+  SELECT s.race_id, s.bet_type, s.result
+  FROM relevant_settled s
+  WHERE s.payout_bet_type IS NULL
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
       AND rp.returned = 0
       AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
@@ -159,7 +159,7 @@ function listRows(db: DatabaseSync, from: string, to: string): Row[] {
   const weatherJoin = hasWeather ? "LEFT JOIN race_weather w ON w.race_id = dh.race_id" : "";
   return db.prepare(`
 SELECT dh.decision, dh.selection, dh.result, dh.returned, dh.current_odds,
-       CASE WHEN dh.decision = 'BUY' AND dh.returned = 0 AND dh.result IS NOT NULL AND dh.selection = dh.result THEN (
+       CASE WHEN dh.decision = 'BUY' AND dh.returned = 0 AND dh.result IS NOT NULL AND dh.result != '' AND dh.selection = dh.result THEN (
          SELECT rp.payout_yen
          FROM race_payouts rp
          WHERE rp.race_id = dh.race_id
@@ -198,7 +198,7 @@ function groups(rows: Row[], keyFor: (row: Row) => string): Group[] {
 
 function summarize(rows: Row[]): Summary {
   const buyRows = rows.filter((r) => r.decision === "BUY");
-  const settled = buyRows.filter((r) => r.returned === 0 && r.result != null);
+  const settled = buyRows.filter((r) => r.returned === 0 && r.result != null && r.result !== "");
   const hits = settled.filter((r) => r.selection === r.result);
   const payoutUnits = hits.reduce((sum, r) => sum + Number(r.official_payout_yen ?? 0) / 100, 0);
   return {
