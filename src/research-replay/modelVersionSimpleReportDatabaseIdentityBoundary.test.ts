@@ -27,21 +27,26 @@ test("model version comparison rejects unsupported bet types across the full rep
   );
 });
 
-test("model version comparison maps payout bet types and fails closed before ROI when official settlement is unsupported, incomplete, or ambiguous", () => {
+test("model version comparison validates every settled denominator against the canonical winning-result settlement before ROI", () => {
   const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
   const queryIndex = source.indexOf("const rows = queryRows();");
 
   assert.ok(guardIndex >= 0 && guardIndex < queryIndex, "official settlement preflight must run before model ROI comparison");
   assert.match(source, /MODEL_VERSION_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
+  assert.match(source, /WITH relevant_settled AS/);
+  assert.match(source, /AND result IS NOT NULL/);
+  assert.match(source, /AND result != ''/);
+  assert.match(source, /AND returned = 0/);
+  assert.doesNotMatch(source, /relevant_hits AS/);
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
   assert.match(source, /WHEN '3連複' THEN 'trio'/);
   assert.match(source, /WHEN '2連単' THEN 'exacta'/);
   assert.match(source, /WHEN '2連複' THEN 'quinella'/);
   assert.match(source, /WHEN '拡連複' THEN 'wide'/);
-  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*selection/);
-  assert.match(source, /h\.payout_bet_type IS NULL/);
-  assert.match(source, /rp\.bet_type = h\.payout_bet_type/);
-  assert.match(source, /rp\.combination = h\.selection/);
+  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*result/);
+  assert.match(source, /s\.payout_bet_type IS NULL/);
+  assert.match(source, /rp\.bet_type = s\.payout_bet_type/);
+  assert.match(source, /rp\.combination = s\.result/);
   assert.match(source, /rp\.returned = 0/);
   assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /rp\.payout_yen \/ 100\.0/);
