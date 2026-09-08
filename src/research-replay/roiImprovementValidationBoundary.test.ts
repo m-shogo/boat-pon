@@ -10,10 +10,10 @@ test("ROI improvement validation verifies canonical read-only DB identity before
   assert.match(source, /PRAGMA query_only = ON/);
 
   const identity = source.indexOf("assertCanonicalSingleLinkRegularFile");
-  const returnIntegrity = source.indexOf("const invalidReturnedBuy = db.prepare");
+  const cohortIntegrity = source.indexOf("const invalidCohortBuy = db.prepare");
   const integrity = source.indexOf("const settlementIntegrity = db.prepare");
   const analysis = source.indexOf("const rows = db.prepare");
-  assert.ok(identity >= 0 && returnIntegrity > identity && integrity > returnIntegrity && analysis > integrity);
+  assert.ok(identity >= 0 && cohortIntegrity > identity && integrity > cohortIntegrity && analysis > integrity);
 });
 
 test("ROI improvement validation fails closed on incomplete, malformed, invalid-return-state, or duplicate settlement truth", () => {
@@ -33,17 +33,18 @@ test("ROI improvement validation fails closed on incomplete, malformed, invalid-
   assert.match(source, /FAIL CLOSED/);
 });
 
-test("ROI improvement validation fails closed on unknown or returned historical BUY rows before settlement truth and ROI analysis", () => {
-  assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
-  assert.match(source, /unknown or returned historical BUY rows exist in the target cohort/);
+test("ROI improvement validation fails closed on bet-type or return-state cohort drift before settlement truth and ROI analysis", () => {
+  assert.match(source, /dh\.bet_type IS NULL OR dh\.bet_type != '3連単' OR dh\.returned IS NULL OR dh\.returned != 0/);
+  assert.match(source, /non-3連単 or returned\/unknown-return historical BUY rows exist in the target cohort/);
+  assert.ok((source.match(/dh\.bet_type='3連単'/g) ?? []).length >= 2, "settlement-integrity and analyzed ROI cohorts must require explicit trifecta decision truth");
   assert.ok((source.match(/dh\.returned=0/g) ?? []).length >= 2, "settlement-integrity and analyzed ROI cohorts must require explicit non-returned truth");
   assert.doesNotMatch(source, /COALESCE\(dh\.returned,0\)=0/);
 
-  const returnIntegrity = source.indexOf("const invalidReturnedBuy = db.prepare");
-  const failClosed = source.indexOf("unknown or returned historical BUY rows exist in the target cohort");
+  const cohortIntegrity = source.indexOf("const invalidCohortBuy = db.prepare");
+  const failClosed = source.indexOf("non-3連単 or returned/unknown-return historical BUY rows exist in the target cohort");
   const integrity = source.indexOf("const settlementIntegrity = db.prepare");
   const rows = source.indexOf("const rows = db.prepare");
-  assert.ok(returnIntegrity >= 0 && failClosed > returnIntegrity && integrity > failClosed && rows > integrity);
+  assert.ok(cohortIntegrity >= 0 && failClosed > cohortIntegrity && integrity > failClosed && rows > integrity);
 });
 
 test("ROI improvement validation permits legitimate multi-line trifecta settlements across distinct combinations", () => {
