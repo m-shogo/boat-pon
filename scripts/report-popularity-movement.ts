@@ -65,6 +65,22 @@ type ReportRow = {
   roiExMax: number | null;
 };
 
+function payoutBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
 function reportWhere(): { where: string[]; params: Array<string | number> } {
   const where: string[] = ["1=1"];
   const params: Array<string | number> = [];
@@ -83,7 +99,11 @@ function assertOfficialSettlementIntegrity(): void {
   const { where, params } = reportWhere();
   const row = db.prepare(`
 WITH relevant_hits AS (
-  SELECT DISTINCT dh.race_id, dh.bet_type, dh.selection
+  SELECT DISTINCT
+    dh.race_id,
+    dh.bet_type,
+    ${payoutBetTypeSql("dh.bet_type")} AS payout_bet_type,
+    dh.selection
   FROM decision_history dh
   WHERE ${where.join(" AND ")}
     AND dh.result IS NOT NULL
@@ -92,18 +112,19 @@ WITH relevant_hits AS (
 ), invalid AS (
   SELECT h.race_id, h.bet_type, h.selection
   FROM relevant_hits h
-  WHERE (
+  WHERE h.payout_bet_type IS NULL
+  OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
     WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.bet_type
+      AND rp.bet_type = h.payout_bet_type
       AND rp.combination = h.selection
       AND rp.returned = 0
       AND rp.payout_yen IS NOT NULL
@@ -177,7 +198,7 @@ WITH ranked AS (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = dh.race_id
-          AND rp.bet_type = dh.bet_type
+          AND rp.bet_type = ${payoutBetTypeSql("dh.bet_type")}
           AND rp.combination = dh.selection
           AND rp.returned = 0
           AND rp.payout_yen IS NOT NULL
@@ -241,7 +262,7 @@ function printRows(rows: ReportRow[]) {
   console.log("=== popularity movement report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
-  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching decision bet_type/selection)");
+  console.log("roi basis: race_payouts.payout_yen (official payout per 100 yen, matching mapped decision bet_type/selection)");
   console.log("");
   console.log("movement       decision  n      settled  hits   hitRate  T30pop  T5pop   popΔ    T30odds T5odds  roi     roiExMax");
   for (const row of rows) {
@@ -305,5 +326,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-popularity-movement.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
 
-Read-only. Popularity uses aggregate checkpoint data; ROI uses canonical official race_payouts.payout_yen.`);
+Read-only. Popularity uses aggregate checkpoint data; ROI uses mapped canonical official race_payouts.payout_yen.`);
 }
