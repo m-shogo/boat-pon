@@ -26,7 +26,7 @@ const returnedBuy = db.prepare(`
   SELECT COUNT(*) AS count
   FROM decision_history
   WHERE decision='BUY' AND run_kind='historical-backfill'
-    AND returned != 0
+    AND (returned IS NULL OR returned != 0)
     AND result IS NOT NULL AND result != ''
 `).get() as { count: number };
 

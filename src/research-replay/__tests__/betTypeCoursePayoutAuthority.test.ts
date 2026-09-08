@@ -12,9 +12,10 @@ test("bet type course normal entrypoint validates settlement integrity before ra
   assert.match(source, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
   assert.match(source, /const BET_TYPES = \["trifecta", "trio", "exacta", "quinella"\] as const/);
-  assert.match(source, /returned != 0/);
+  assert.match(source, /returned IS NULL OR returned != 0/);
   assert.match(source, /returned = 0/);
   assert.match(source, /BET_TYPE_COURSE_RETURNED_BUY_UNSUPPORTED/);
+  assert.ok(source.indexOf("returned IS NULL OR returned != 0") < source.indexOf("const rows = db.prepare"));
   assert.match(source, /seenSettlementKeys\.has\(key\)/);
   assert.match(source, /BET_TYPE_COURSE_PAYOUT_DUPLICATE_COMBINATION/);
   assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
