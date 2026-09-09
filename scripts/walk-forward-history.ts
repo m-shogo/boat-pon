@@ -27,6 +27,7 @@ db.exec("PRAGMA busy_timeout = 5000");
 try {
   const range = resolveRange(db, args.from, args.to);
   assertSupportedBetTypeMapping(db, range.from, range.to);
+  assertReturnStateIntegrity(db, range.from, range.to);
   assertWinningSettlementIntegrity(db, range.from, range.to);
   const rows = listRows(db, range.from, range.to);
   const windows = buildWindows(rows, range.from, range.to, args.windowDays, args.stepDays, args.minBuys);
@@ -73,6 +74,24 @@ WHERE date >= ? AND date <= ?
     throw new Error(
       `WALK_FORWARD_BET_TYPE_MAPPING_FAILED: ${row.n} BUY row(s) use an unsupported or unknown payout bet type mapping`,
     );
+  }
+}
+
+function assertReturnStateIntegrity(db: DatabaseSync, from: string, to: string) {
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE date >= ? AND date <= ?
+  AND decision = 'BUY'
+  AND (returned IS NULL OR returned NOT IN (0, 1))
+`).get(from, to) as { n: number | bigint | null };
+
+  const invalid = Number(row.n ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("WALK_FORWARD_RETURN_STATE_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("WALK_FORWARD_RETURN_STATE_INTEGRITY_FAILED");
   }
 }
 
@@ -237,4 +256,4 @@ function minDate(a: string, b: string) { return a < b ? a : b; }
 function todayTokyo() { return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 function fmt(value: number | null) { return value == null ? "-" : value.toFixed(3); }
 function pct(value: number | null) { return value == null ? "-" : `${(value * 100).toFixed(1)}%`; }
-function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]\n\nRead-only. ROI uses official race_payouts.payout_yen; blank settled BUY results and ambiguous/missing official settlements fail closed before window verdicts are generated."); }
+function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]\n\nRead-only. ROI uses official race_payouts.payout_yen; unknown BUY return states, blank settled BUY results, and ambiguous/missing official settlements fail closed before window verdicts are generated."); }

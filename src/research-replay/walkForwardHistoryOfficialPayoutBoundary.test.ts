@@ -27,6 +27,21 @@ test("walk-forward history uses official payouts and excludes missing-payout win
   assert.doesNotMatch(source, /row\.current_odds \?\? 0/);
 });
 
+test("walk-forward history fails closed on unknown BUY return states before settlement and window aggregation", () => {
+  const mappingIndex = source.indexOf("assertSupportedBetTypeMapping(db, range.from, range.to)");
+  const returnIndex = source.indexOf("assertReturnStateIntegrity(db, range.from, range.to)");
+  const settlementIndex = source.indexOf("assertWinningSettlementIntegrity(db, range.from, range.to)");
+  const rowsIndex = source.indexOf("listRows(db, range.from, range.to)");
+
+  assert.ok(mappingIndex >= 0);
+  assert.ok(returnIndex > mappingIndex);
+  assert.ok(settlementIndex > returnIndex);
+  assert.ok(rowsIndex > settlementIndex);
+  assert.match(source, /returned IS NULL OR returned NOT IN \(0, 1\)/);
+  assert.match(source, /WALK_FORWARD_RETURN_STATE_COUNT_INVALID/);
+  assert.match(source, /WALK_FORWARD_RETURN_STATE_INTEGRITY_FAILED/);
+});
+
 test("walk-forward history fail-closes blank results and validates every settled BUY denominator before LIMIT 1 or window verdicts", () => {
   const mappingIndex = source.indexOf("assertSupportedBetTypeMapping(db, range.from, range.to)");
   const integrityIndex = source.indexOf("assertWinningSettlementIntegrity(db, range.from, range.to)");
