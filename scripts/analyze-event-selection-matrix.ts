@@ -25,7 +25,7 @@ try {
   const odds = db.prepare(`
     SELECT h.race_id, h.race_date AS date, h.combination, h.odds, p.combination AS winner, p.payout_yen
     FROM historical_alternative_odds h
-    LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
+    LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta' AND p.returned=0 AND p.payout_yen>0
     WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
       AND h.combination IN ('1-2','1-3','1-4','1-5','1-6')
       AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
@@ -77,7 +77,8 @@ function assertSettlementCompleteness(): void {
       HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
     ), settlement AS (
       SELECT race_id,
-        MAX(CASE WHEN payout_yen IS NOT NULL AND payout_yen > 0 THEN 1 ELSE 0 END) AS settled
+        COUNT(*) AS payout_rows,
+        SUM(CASE WHEN returned = 0 AND payout_yen IS NOT NULL AND payout_yen > 0 AND combination IS NOT NULL AND trim(combination) != '' THEN 1 ELSE 0 END) AS valid_rows
       FROM race_payouts
       WHERE bet_type='exacta'
       GROUP BY race_id
@@ -85,23 +86,25 @@ function assertSettlementCompleteness(): void {
     SELECT
       CASE WHEN p.date <= '2024-12-31' THEN 'discovery' ELSE 'forward' END AS period,
       COUNT(*) AS total,
-      SUM(COALESCE(s.settled, 0)) AS settled
+      SUM(CASE WHEN s.payout_rows = 1 AND s.valid_rows = 1 THEN 1 ELSE 0 END) AS settled,
+      SUM(CASE WHEN COALESCE(s.payout_rows, 0) > 1 THEN 1 ELSE 0 END) AS ambiguous
     FROM population p
     LEFT JOIN settlement s ON s.race_id=p.race_id
     GROUP BY period
     ORDER BY period
-  `).all() as Array<{ period: string; total: number; settled: number }>;
+  `).all() as Array<{ period: string; total: number; settled: number; ambiguous: number }>;
 
   const byPeriod = Object.fromEntries(["discovery", "forward"].map(period => {
     const row = rows.find(candidate => candidate.period === period);
     const total = Number(row?.total ?? 0);
     const settled = Number(row?.settled ?? 0);
-    return [period, { total, settled, missing: total - settled }];
+    const ambiguous = Number(row?.ambiguous ?? 0);
+    return [period, { total, settled, missing: total - settled, ambiguous }];
   }));
 
   const invalid = ["discovery", "forward"].some(period => {
-    const { total, settled, missing } = byPeriod[period];
-    return !Number.isInteger(total) || !Number.isInteger(settled) || total <= 0 || settled !== total || missing !== 0;
+    const { total, settled, missing, ambiguous } = byPeriod[period];
+    return !Number.isInteger(total) || !Number.isInteger(settled) || !Number.isInteger(ambiguous) || total <= 0 || settled !== total || missing !== 0 || ambiguous !== 0;
   });
 
   if (invalid) {
