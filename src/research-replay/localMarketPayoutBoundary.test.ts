@@ -21,13 +21,13 @@ test("local market anomaly entrypoint fails closed before raw analysis", () => {
   assert.ok(analysisIndex > coverageIndex, "raw analysis must not run before settlement coverage passes");
 });
 
-test("local market settlement gate permits legitimate multi-line exacta winners only", () => {
-  assert.match(source, /CASE WHEN COUNT\(\*\)>=1/);
+test("local market settlement gate rejects ambiguous multi-line exacta winners", () => {
+  assert.match(source, /CASE WHEN COUNT\(\*\)=1/);
   assert.match(source, /rp\.returned=0/);
   assert.match(source, /rp\.combination IS NOT NULL AND rp\.combination!=''/);
   assert.match(source, /rp\.payout_yen IS NOT NULL AND rp\.payout_yen>0/);
-  assert.match(source, /THEN 1 ELSE 0 END\)=COUNT\(\*\)/);
-  assert.doesNotMatch(source, /CASE WHEN COUNT\(\*\)=1/);
+  assert.match(source, /THEN 1 ELSE 0 END\)=1/);
+  assert.doesNotMatch(source, /CASE WHEN COUNT\(\*\)>=1/);
 });
 
 test("local market entrypoint does not expose configured database paths in missing-db errors", () => {
