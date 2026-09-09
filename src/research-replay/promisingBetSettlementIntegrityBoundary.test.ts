@@ -22,6 +22,13 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   assert.match(source, /PROMISING_BET_PAYOUT_INVALID_LINE/);
   assert.match(source, /p\.returned === 0 && isPositivePayout/);
   assert.match(source, /settledRaceByType\.get\(p\.bet_type\)\?\.add\(p\.race_id\)/);
+  assert.match(source, /p\.returned === 1/);
+  assert.match(source, /returnedRaceByType\.get\(p\.bet_type\)\?\.add\(p\.race_id\)/);
+  assert.match(source, /PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED/);
+  assert.ok(
+    source.indexOf("PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED")
+      < source.indexOf("PROMISING_BET_PAYOUT_COVERAGE_INCOMPLETE"),
+  );
   assert.match(source, /assertPayoutCompleteness\(\)/);
   assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-raw"\)/);
   assert.ok(
@@ -30,6 +37,10 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   );
   assert.ok(
     source.indexOf("PROMISING_BET_PAYOUT_RETURN_STATE_INVALID")
+      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
+  );
+  assert.ok(
+    source.indexOf("PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED")
       < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
   );
   assert.ok(
