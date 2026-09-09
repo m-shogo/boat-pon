@@ -7,6 +7,8 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Reco
 
 test("H011 verdict cannot run before canonical settlement coverage passes", () => {
   assert.equal(pkg.scripts?.["analyze:h011-implied-vs-frequency"], "tsx scripts/analyze-h011-implied-vs-frequency.ts");
+  assert.match(source, /throw new Error\("H011_PRIMARY_DB_MISSING"\)/);
+  assert.doesNotMatch(source, /H011_PRIMARY_DB_MISSING \$\{DB_PATH\}/);
   assert.match(source, /H011_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
