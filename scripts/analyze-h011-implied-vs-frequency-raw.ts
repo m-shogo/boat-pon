@@ -28,16 +28,24 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
 import { historicalExactaCanonicalSourcePredicate } from "../src/research-replay/historicalExactaMarketAuthority";
+
+const rawEntrypointPath = resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
+if (invokedPath === rawEntrypointPath) {
+  throw new Error("H011_RAW_DIRECT_EXECUTION_FORBIDDEN");
+}
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/h011-implied-vs-frequency.md";
 const OUT_JSON = "reports/h011-implied-vs-frequency.json";
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
+if (!existsSync(DB_PATH)) throw new Error("H011_PRIMARY_DB_MISSING");
 const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCL_RACES  = [10, 11, 12];
@@ -51,27 +59,18 @@ const FORWARD_START  = "2025-01-01";
 console.log("=== H011 implied確率 vs 実頻度 分析 ===\n");
 console.log("目的: 市場価格 (exacta closing odds) が 4号艇2着の頻度の傾きを織り込んでいるか\n");
 
-// ─── データ取得 ───────────────────────────────────────────────────────────────
-
-// BUY レースで exacta 全30通りが保存済み & F返還なし & 欠場なし (通常6艇レース)
-// これが主評価の母数
 type RaceRow = {
   race_id: string;
   date: string;
   period: "heldout" | "forward";
-  // exacta odds (1号艇1着の6通り)
   odds_12: number | null; odds_13: number | null; odds_14: number | null;
   odds_15: number | null; odds_16: number | null;
-  // overround (全30通り)
   overround: number;
   combo_count: number;
-  // 実際の当選組番
   winning_combo: string | null;
-  // F返還フラグ
   has_f: number;
 };
 
-// 全30通りが保存済みのレースについて overround を計算
 const raceData = db.prepare(`
   SELECT
     hao_base.race_id,
@@ -80,18 +79,14 @@ const raceData = db.prepare(`
       WHEN hao_base.race_date >= '${FORWARD_START}' THEN 'forward'
       ELSE 'heldout'
     END as period,
-    -- 1号艇1着の各組番のodds
     MAX(CASE WHEN hao_base.combination='1-2' THEN hao_base.odds END) odds_12,
     MAX(CASE WHEN hao_base.combination='1-3' THEN hao_base.odds END) odds_13,
     MAX(CASE WHEN hao_base.combination='1-4' THEN hao_base.odds END) odds_14,
     MAX(CASE WHEN hao_base.combination='1-5' THEN hao_base.odds END) odds_15,
     MAX(CASE WHEN hao_base.combination='1-6' THEN hao_base.odds END) odds_16,
-    -- overround = sum(1/odds) for all valid combinations (odds=0 は除外: 投票なしのプレースホルダー)
     SUM(CASE WHEN hao_base.odds > 0 THEN 1.0 / hao_base.odds ELSE 0 END) as overround,
     COUNT(*) as combo_count,
-    -- 実際の当選 exacta
     rp.combination as winning_combo,
-    -- F返還フラグ
     COALESCE((
       SELECT COUNT(*) FROM race_entries re
       WHERE re.race_id = hao_base.race_id AND re.status_code = 'F'
@@ -112,8 +107,6 @@ const raceData = db.prepare(`
 
 console.log(`取得レース数: ${raceData.length}`);
 
-// ─── 通常/特殊 を分離 ────────────────────────────────────────────────────────
-
 const normalRaces  = raceData.filter(r => r.combo_count === 30 && r.has_f === 0);
 const absentRaces  = raceData.filter(r => r.combo_count < 30);
 const fRefundRaces = raceData.filter(r => r.has_f > 0 && r.combo_count === 30);
@@ -123,28 +116,20 @@ console.log(`  欠場あり: ${absentRaces.length}件`);
 console.log(`  F返還あり: ${fRefundRaces.length}件`);
 console.log();
 
-// ─── implied vs actual の計算 ────────────────────────────────────────────────
-
 type ImpliedResult = {
   combination: string;
   period: string;
   n: number;
-  // implied probability (overround正規化済み)
   avg_implied: number;
   median_implied: number;
-  // actual hit rate (race_payouts から)
   actual_hits: number;
   actual_rate: number;
-  // 差: implied - actual (正なら市場過大評価、負なら市場過小評価)
   gap: number;
-  // 実際の avg odds
   avg_odds: number;
 };
 
-// races は呼び出し側で period フィルタ済みのものを渡す
 function calcImplied(races: RaceRow[], combo: "1-2" | "1-3" | "1-4", period: string): ImpliedResult {
   const oddsKey = combo === "1-2" ? "odds_12" : combo === "1-3" ? "odds_13" : "odds_14";
-  // odds=0.0 (投票なしプレースホルダー) は implied計算から除外
   const validRaces = races.filter(r => r[oddsKey] != null && (r[oddsKey] as number) > 0 && r.overround > 0);
 
   const impliedValues = validRaces.map(r => (1.0 / r[oddsKey]!) / r.overround);
@@ -169,13 +154,11 @@ function calcImplied(races: RaceRow[], combo: "1-2" | "1-3" | "1-4", period: str
   };
 }
 
-// 主評価: 通常レース (6艇・返還なし)
 const periods = ["heldout", "forward", "all"] as const;
 const combos  = ["1-2", "1-3", "1-4"] as const;
 
 const results: ImpliedResult[] = [];
 for (const period of periods) {
-  // period フィルタを呼び出し側で適用してから calcImplied に渡す
   const rows = period === "all"
     ? normalRaces
     : normalRaces.filter(r => r.period === period);
@@ -183,8 +166,6 @@ for (const period of periods) {
     results.push(calcImplied(rows, combo, period));
   }
 }
-
-// ─── 結果出力 ────────────────────────────────────────────────────────────────
 
 console.log("=== 主評価: 通常レース (6艇・F返還なし) ===\n");
 
@@ -205,8 +186,6 @@ for (const period of periods) {
   }
   console.log();
 }
-
-// ─── H011 判定 ────────────────────────────────────────────────────────────────
 
 const all14 = results.find(r => r.combination === "1-4" && r.period === "all");
 const all12 = results.find(r => r.combination === "1-2" && r.period === "all");
@@ -232,15 +211,12 @@ if (all14) {
 }
 console.log();
 
-// 参考: F返還・欠場レースの概要
 if (fRefundRaces.length > 0 || absentRaces.length > 0) {
   console.log("=== 参考: 特殊レース (主評価から除外) ===");
   console.log(`  F返還 ${fRefundRaces.length}件: closing odds は有効だが払戻との検算は不一致 (pool再計算のため)`);
   console.log(`  欠場あり ${absentRaces.length}件: overround は20通りベースで計算可能だが主評価から分離`);
   console.log();
 }
-
-// ─── レポート出力 ─────────────────────────────────────────────────────────────
 
 const now = new Date().toISOString();
 const lines: string[] = [];
