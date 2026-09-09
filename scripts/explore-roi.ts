@@ -4,7 +4,7 @@
  * decision_history を期間で絞り、RuleEvaluationResult 型
  * （src/domain/researchRule.ts）で出力する。
  *
- * - DBやテーブルが無い環境では空の評価結果 + warnings を返して正常終了する
+ * - DBや必須テーブルが無い環境では研究結果を作らずfail-closeする
  * - realized ROI は canonical race_payouts.payout_yen のみを使う
  * - unsupported/ambiguous official settlement は集計前にfail-closeする
  * - 探索用なので isForwardTested / isProductionEligible は常に false
@@ -145,7 +145,7 @@ SELECT COUNT(*) AS invalid FROM invalid
 
 function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourceWarnings: string[] } {
   if (!existsSync(DB_PATH)) {
-    return { rows: [], sourceWarnings: ["research database not found; produced empty evaluation"] };
+    throw new Error("ROI_EXPLORER_PRIMARY_DB_MISSING");
   }
 
   const primaryDbPath = assertCanonicalSingleLinkRegularFile(
@@ -157,7 +157,7 @@ function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourc
   try {
     const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='decision_history'").get() != null;
     if (!hasTable) {
-      return { rows: [], sourceWarnings: ["decision_history table not found; produced empty evaluation"] };
+      throw new Error("ROI_EXPLORER_DECISION_HISTORY_TABLE_MISSING");
     }
     const hasPayoutTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='race_payouts'").get() != null;
     if (!hasPayoutTable) {
@@ -241,10 +241,10 @@ function printHelp() {
 
 Read-only. Aggregates decision_history into a RuleEvaluationResult.
 ROI uses canonical race_payouts.payout_yen for settled non-returned BUY rows.
-Blank settled BUY results and every denominator row must map to exactly one positive
-non-refund official winning-result settlement; evaluation fails closed on invalid,
-unsupported, or ambiguous settlement data instead of falling back to current_odds
-or legacy decision payout.
+Missing required research sources, blank settled BUY results, and every denominator
+row must fail closed or map to exactly one positive non-refund official winning-result
+settlement; evaluation never fabricates an empty result for a missing source and never
+falls back to current_odds or legacy decision payout.
 
   --from              data window start (default 1970-01-01)
   --to                data window end (default today)
