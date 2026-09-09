@@ -11,6 +11,23 @@ test("canonical calibration remains research-only and uses the fixed BUY populat
   assert.match(source, /returned=0/);
 });
 
+test("canonical calibration rejects blank historical BUY results before return-state and settlement analysis", () => {
+  const source = readFileSync("scripts/analyze-canonical-calibration.ts", "utf8");
+  assert.match(source, /assertNonblankResultIntegrity\(\);/);
+  assert.match(source, /TRIM\(result\)=''/);
+  assert.match(source, /CANONICAL_CALIBRATION_BLANK_SETTLED_RESULT_UNSUPPORTED/);
+  assert.match(source, /AND result IS NOT NULL AND TRIM\(result\)!=''/);
+
+  const blankGate = source.indexOf("assertNonblankResultIntegrity();");
+  const returnGate = source.indexOf("assertReturnStateIntegrity();");
+  const settlementGate = source.indexOf("assertOfficialSettlementIntegrity();");
+  const rowQuery = source.indexOf("const rows = db.prepare(`");
+  assert.ok(blankGate >= 0);
+  assert.ok(returnGate > blankGate);
+  assert.ok(settlementGate > returnGate);
+  assert.ok(rowQuery > settlementGate);
+});
+
 test("canonical calibration rejects unknown or returned BUY rows before settlement and row loading", () => {
   const source = readFileSync("scripts/analyze-canonical-calibration.ts", "utf8");
   assert.match(source, /returned IS NULL OR returned != 0/);
