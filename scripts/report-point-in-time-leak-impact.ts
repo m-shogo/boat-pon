@@ -22,13 +22,21 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/point-in-time-leak-impact.md";
 const OUT_JSON = "reports/point-in-time-leak-impact.json";
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+if (!existsSync(DB_PATH)) {
+  throw new Error("POINT_IN_TIME_LEAK_IMPACT_PRIMARY_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "POINT_IN_TIME_LEAK_IMPACT_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 type DecisionRow = {
   race_id: string;
@@ -59,8 +67,6 @@ FROM decision_history
 WHERE feature_adjustment_breakdown IS NOT NULL
 ORDER BY date ASC
 `).all() as DecisionRow[];
-
-db.close();
 
 // ─── 集計 ─────────────────────────────────────────────────────────────────────
 
@@ -139,15 +145,12 @@ for (const row of rows) {
 
 // ─── breakdown なし BUY の件数（参考） ───────────────────────────────────────
 
-const totalBuyNoBreakdown = (() => {
-  const d2 = new DatabaseSync(DB_PATH, { readOnly: true });
-  const r = d2.prepare(`
+const totalBuyNoBreakdown = (db.prepare(`
 SELECT COUNT(*) as n FROM decision_history
 WHERE decision = 'BUY' AND feature_adjustment_breakdown IS NULL
-`).get() as { n: number };
-  d2.close();
-  return r.n;
-})();
+`).get() as { n: number }).n;
+
+db.close();
 
 // ─── サマリー ─────────────────────────────────────────────────────────────────
 
