@@ -9,29 +9,32 @@ test("ROI pattern entrypoint rejects unknown or returned historical BUY rows bef
   assert.match(entrypoint, /dh\.returned IS NULL OR dh\.returned != 0/);
   assert.match(entrypoint, /unknown or returned settlement state/);
   const returnGate = entrypoint.indexOf("const invalidReturn = db.prepare");
-  const integrity = entrypoint.indexOf("WITH relevant_hits AS");
+  const integrity = entrypoint.indexOf("WITH relevant_settled AS");
   const rawLaunch = entrypoint.indexOf("scripts/search-roi-patterns-raw.ts");
   assert.ok(returnGate >= 0);
   assert.ok(integrity > returnGate);
   assert.ok(rawLaunch > integrity);
 });
 
-test("ROI pattern entrypoint maps decision 3連単 rows to canonical trifecta settlements before raw analysis", () => {
+test("ROI pattern entrypoint validates every settled denominator against the canonical trifecta winning result", () => {
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(entrypoint, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(entrypoint, /PRAGMA query_only = ON/);
   assert.match(entrypoint, /const DECISION_BET_TYPE = "3連単"/);
   assert.match(entrypoint, /const PAYOUT_BET_TYPE = "trifecta"/);
-  assert.match(entrypoint, /SELECT DISTINCT dh\.race_id, dh\.selection/);
+  assert.match(entrypoint, /WITH relevant_settled AS/);
+  assert.match(entrypoint, /SELECT DISTINCT dh\.race_id, dh\.result/);
+  assert.doesNotMatch(entrypoint, /WITH relevant_hits AS/);
   assert.match(entrypoint, /dh\.bet_type = \?/);
   assert.match(entrypoint, /rp\.bet_type = \?/);
   assert.match(entrypoint, /\.get\(DECISION_BET_TYPE, PAYOUT_BET_TYPE, PAYOUT_BET_TYPE\)/);
-  assert.match(entrypoint, /rp\.combination = h\.selection/);
+  assert.match(entrypoint, /rp\.combination = s\.result/);
   assert.match(entrypoint, /rp\.returned = 0/);
+  assert.match(entrypoint, /rp\.payout_yen IS NOT NULL/);
   assert.match(entrypoint, /rp\.payout_yen > 0/);
   assert.doesNotMatch(entrypoint, /rp\.bet_type = h\.bet_type/);
   assert.match(entrypoint, /\) != 1/);
-  const integrity = entrypoint.indexOf("WITH relevant_hits AS");
+  const integrity = entrypoint.indexOf("WITH relevant_settled AS");
   const rawLaunch = entrypoint.indexOf("scripts/search-roi-patterns-raw.ts");
   assert.ok(integrity >= 0);
   assert.ok(rawLaunch > integrity);
