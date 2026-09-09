@@ -4,7 +4,6 @@ import test from "node:test";
 
 test("bet type course normal entrypoint validates settlement integrity before raw analysis", () => {
   const source = readFileSync("scripts/analyze-bet-type-course-edge.ts", "utf8");
-  const raw = readFileSync("scripts/analyze-bet-type-course-edge-raw.ts", "utf8");
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
 
   assert.equal(pkg.scripts["analyze:bet-type-course-edge"], "tsx scripts/analyze-bet-type-course-edge.ts");
@@ -41,8 +40,23 @@ test("bet type course normal entrypoint validates settlement integrity before ra
     source.indexOf("assertPayoutCompleteness();")
       < source.indexOf('await import("./analyze-bet-type-course-edge-raw")'),
   );
+});
 
-  assert.match(raw, /const payoutIndex = new Map<string, number>\(\)/);
-  assert.match(raw, /const groups = new Map<string, GroupAgg>\(\)/);
-  assert.match(raw, /writeFileSync\(OUT_JSON/);
+test("bet type course raw compatibility module blocks direct CLI bypass", () => {
+  const raw = readFileSync("scripts/analyze-bet-type-course-edge-raw.ts", "utf8");
+  assert.match(raw, /BET_TYPE_COURSE_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(raw, /process\.argv\[1\]/);
+  assert.match(raw, /await import\("\.\/analyze-bet-type-course-edge-internal"\)/);
+  assert.doesNotMatch(raw, /DatabaseSync/);
+  assert.doesNotMatch(raw, /DB_PATH/);
+  assert.doesNotMatch(raw, /const payoutIndex = new Map<string, number>\(\)/);
+});
+
+test("bet type course internal analyzer retains the read-only research implementation", () => {
+  const internal = readFileSync("scripts/analyze-bet-type-course-edge-internal.ts", "utf8");
+  assert.match(internal, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
+  assert.match(internal, /PRAGMA query_only=ON/);
+  assert.match(internal, /const payoutIndex = new Map<string, number>\(\)/);
+  assert.match(internal, /const groups = new Map<string, GroupAgg>\(\)/);
+  assert.match(internal, /writeFileSync\(OUT_JSON/);
 });
