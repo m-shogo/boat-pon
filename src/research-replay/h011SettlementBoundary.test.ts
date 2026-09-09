@@ -13,6 +13,8 @@ test("H011 verdict cannot run before canonical settlement coverage passes", () =
   assert.match(source, /dh\.run_kind='historical-backfill'/);
   assert.match(source, /dh\.selection='1-2-3'/);
   assert.match(source, /HAVING COUNT\(\*\)=30 AND has_f=0/);
+  assert.match(source, /CASE WHEN COUNT\(\*\)=1/);
+  assert.match(source, /rp\.returned=0 AND rp\.payout_yen IS NOT NULL AND rp\.payout_yen>0/);
   assert.match(source, /H011_EXACTA_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /settled !== total/);
   assert.match(source, /total <= 0/);
