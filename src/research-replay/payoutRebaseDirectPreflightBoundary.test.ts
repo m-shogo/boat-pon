@@ -5,15 +5,24 @@ import test from "node:test";
 const entrypointSource = readFileSync("scripts/analyze-payout-rebase.ts", "utf-8");
 const internalSource = readFileSync("scripts/analyze-payout-rebase-internal.ts", "utf-8");
 
-test("direct payout-rebase invocation runs settlement integrity preflight before internal analysis", () => {
+test("direct payout-rebase invocation runs settlement integrity preflight before verified internal analysis", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts")');
   const guard = entrypointSource.indexOf("if (preflight !== 0)");
+  const verify = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
 
   assert.ok(preflight >= 0, "direct entrypoint must invoke settlement integrity preflight");
-  assert.ok(guard > preflight, "preflight result must be checked before internal analysis");
-  assert.ok(analysis > guard, "internal payout analysis must remain downstream of the fail-closed preflight guard");
+  assert.ok(guard > preflight, "preflight result must be checked before DB identity verification");
+  assert.ok(verify > guard, "DB identity must be re-verified only after settlement integrity passes");
+  assert.ok(analysis > verify, "internal payout analysis must remain downstream of DB identity verification");
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
+});
+
+test("canonical payout-rebase entrypoint passes only a verified opaque DB identity to internal analysis", () => {
+  assert.match(entrypointSource, /PAYOUT_REBASE_PRIMARY_DB_MISSING/);
+  assert.match(entrypointSource, /PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.doesNotMatch(entrypointSource, /DB not found:/);
+  assert.match(entrypointSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
 test("internal payout-rebase analysis keeps canonical read-only database boundaries", () => {
