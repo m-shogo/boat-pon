@@ -5,16 +5,19 @@ import test from "node:test";
 const matrixSource = readFileSync("scripts/run-roi-search-matrix.ts", "utf-8");
 const searchEntrypoint = readFileSync("scripts/search-roi-patterns.ts", "utf-8");
 const searchRaw = readFileSync("scripts/search-roi-patterns-raw.ts", "utf-8");
+const searchInternal = readFileSync("scripts/search-roi-patterns-internal.ts", "utf-8");
 
 test("ROI search matrix accepts only realized-payout pattern search output", () => {
-  assert.doesNotMatch(searchRaw, /hitOdds\.reduce\(\(sum, odds\) => sum \+ odds \* STAKE_YEN, 0\)/);
-  assert.match(searchRaw, /metricBasis: "official_payout_yen"/);
-  assert.match(searchRaw, /FROM race_payouts rp/);
-  assert.match(searchRaw, /rp\.payout_yen/);
-  assert.match(searchEntrypoint, /scripts\/search-roi-patterns-raw\.ts/);
+  assert.doesNotMatch(searchInternal, /hitOdds\.reduce\(\(sum, odds\) => sum \+ odds \* STAKE_YEN, 0\)/);
+  assert.match(searchInternal, /metricBasis: "official_payout_yen"/);
+  assert.match(searchInternal, /FROM race_payouts rp/);
+  assert.match(searchInternal, /rp\.payout_yen/);
+  assert.match(searchEntrypoint, /await import\("\.\/search-roi-patterns-raw"\)/);
+  assert.match(searchRaw, /ROI_PATTERN_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(searchRaw, /await import\("\.\/search-roi-patterns-internal"\)/);
   assert.match(searchEntrypoint, /FROM race_payouts rp/);
   assert.match(searchEntrypoint, /rp\.payout_yen > 0/);
-  assert.match(matrixSource, /const SEARCH_METRIC_SOURCE = "scripts\/search-roi-patterns-raw\.ts"/);
+  assert.match(matrixSource, /const SEARCH_METRIC_SOURCE = "scripts\/search-roi-patterns-internal\.ts"/);
   assert.match(matrixSource, /readFileSync\(SEARCH_METRIC_SOURCE, "utf8"\)/);
   assert.match(matrixSource, /assertRealizedPayoutMetricBasis\(\);/);
   assert.match(matrixSource, /ROI_SEARCH_MATRIX_METRIC_BASIS_UNSAFE/);
