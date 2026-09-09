@@ -167,11 +167,12 @@ function queryRows(): ReportRow[] {
 WITH odds_by_checkpoint AS (
   SELECT
     race_id,
+    bet_type,
     selection,
     checkpoint_label,
     odds,
     ROW_NUMBER() OVER (
-      PARTITION BY race_id, selection, checkpoint_label
+      PARTITION BY race_id, bet_type, selection, checkpoint_label
       ORDER BY captured_at DESC
     ) AS rn
   FROM odds_timeseries_snapshots
@@ -179,6 +180,7 @@ WITH odds_by_checkpoint AS (
 ), pivoted AS (
   SELECT
     race_id,
+    bet_type,
     selection,
     MAX(CASE WHEN checkpoint_label = 'T-30' THEN odds END) AS t30,
     MAX(CASE WHEN checkpoint_label = 'T-20' THEN odds END) AS t20,
@@ -186,7 +188,7 @@ WITH odds_by_checkpoint AS (
     MAX(CASE WHEN checkpoint_label = 'T-5' THEN odds END) AS t5
   FROM odds_by_checkpoint
   WHERE rn = 1
-  GROUP BY race_id, selection
+  GROUP BY race_id, bet_type, selection
 ), joined AS (
   SELECT
     dh.decision,
@@ -218,6 +220,7 @@ WITH odds_by_checkpoint AS (
   FROM decision_history dh
   LEFT JOIN pivoted p
     ON p.race_id = dh.race_id
+   AND p.bet_type = ${payoutBetTypeSql("dh.bet_type")}
    AND p.selection = dh.selection
   WHERE ${where.join(" AND ")}
 )
@@ -275,5 +278,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-clv.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]
 
-Read-only. Unsupported decision bet types or incomplete canonical official winning settlements fail closed before CLV/ROI aggregation; CLV uses aggregate checkpoint odds and ROI uses mapped canonical official race_payouts.payout_yen.`);
+Read-only. Unsupported decision bet types or incomplete canonical official winning settlements fail closed before CLV/ROI aggregation; CLV checkpoints are matched by canonical bet type + selection and ROI uses mapped canonical official race_payouts.payout_yen.`);
 }
