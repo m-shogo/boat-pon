@@ -3,25 +3,32 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const runnerSource = readFileSync("scripts/analyze-odds-payout-gap.ts", "utf-8");
+const rawSource = readFileSync("scripts/analyze-odds-payout-gap-raw.ts", "utf-8");
 const auditSource = readFileSync("scripts/audit-odds-payout-gap-completeness.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
-test("odds-payout-gap normal entrypoint executes settlement preflight before raw analysis", () => {
+test("odds-payout-gap normal entrypoint executes settlement preflight before guarded analysis", () => {
   assert.equal(pkg.scripts?.["analyze:odds-payout-gap"], "tsx scripts/analyze-odds-payout-gap.ts");
   const preflight = runnerSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const analysis = runnerSource.indexOf('run("scripts/analyze-odds-payout-gap-raw.ts")');
+  const analysis = runnerSource.indexOf('await import("./analyze-odds-payout-gap-raw")');
 
   assert.ok(preflight >= 0, "normal entrypoint must invoke payout completeness preflight");
-  assert.ok(analysis > preflight, "raw analysis must run only after the payout completeness preflight");
+  assert.ok(analysis > preflight, "guarded analysis must run only after the payout completeness preflight");
 });
 
-test("odds-payout-gap normal entrypoint fails closed before raw analysis when preflight fails", () => {
+test("odds-payout-gap normal entrypoint fails closed before guarded analysis when preflight fails", () => {
   assert.match(runnerSource, /if \(preflight !== 0\)/);
   assert.match(runnerSource, /process\.exit\(preflight\)/);
 
   const guard = runnerSource.indexOf("if (preflight !== 0)");
-  const analysis = runnerSource.indexOf('run("scripts/analyze-odds-payout-gap-raw.ts")');
-  assert.ok(guard >= 0 && guard < analysis, "preflight failure guard must precede raw analysis execution");
+  const analysis = runnerSource.indexOf('await import("./analyze-odds-payout-gap-raw")');
+  assert.ok(guard >= 0 && guard < analysis, "preflight failure guard must precede guarded analysis execution");
+});
+
+test("odds-payout-gap raw compatibility module forbids direct CLI execution", () => {
+  assert.match(rawSource, /ODDS_PAYOUT_GAP_RAW_DIRECT_EXECUTION_FORBIDDEN/u);
+  assert.match(rawSource, /if \(invokedPath === rawEntrypointPath\)/u);
+  assert.match(rawSource, /await import\("\.\/analyze-odds-payout-gap-internal"\)/u);
 });
 
 test("odds-payout-gap completeness audit covers the full research population and remains read-only", () => {
