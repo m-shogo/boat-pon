@@ -21,3 +21,16 @@ test("racer relationship ROI fails closed on incomplete official payouts", () =>
   assert.match(source, /map\(requiredPayout\)/);
   assert.doesNotMatch(source, /row\.payout_yen \?\? 0/);
 });
+
+test("racer relationship exacta settlement is unambiguous before market aggregation", () => {
+  const source = readFileSync("scripts/analyze-racer-relationship-market.ts", "utf8");
+
+  assert.match(source, /JOIN race_payouts p ON p\.race_id=h\.race_id AND p\.bet_type='exacta'/);
+  assert.match(source, /SELECT COUNT\(\*\) FROM race_payouts rp WHERE rp\.race_id=h\.race_id AND rp\.bet_type='exacta'\)=1/);
+  assert.match(source, /p\.returned=0/);
+  assert.match(source, /p\.combination IS NOT NULL AND p\.combination!=''/);
+  assert.match(source, /p\.payout_yen IS NOT NULL AND p\.payout_yen>0/);
+  assert.match(source, /historicalExactaCanonicalSourcePredicate\("winner_h"\)/);
+  assert.match(source, /winner_h\.combination=p\.combination/);
+  assert.doesNotMatch(source, /LEFT JOIN race_payouts p/);
+});
