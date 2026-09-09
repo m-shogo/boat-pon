@@ -20,7 +20,7 @@ const query = db.prepare(`
   SELECT
     COUNT(*) AS rows,
     COUNT(DISTINCT race_id) AS races,
-    COUNT(DISTINCT race_id || char(47) || COALESCE(checkpoint_label, '') || char(47) || selection) AS unique_keys
+    COUNT(DISTINCT race_id || char(47) || COALESCE(bet_type, '') || char(47) || COALESCE(checkpoint_label, '') || char(47) || selection) AS unique_keys
   FROM odds_timeseries_snapshots
   WHERE race_id >= ? AND race_id < ?
 `);
@@ -77,7 +77,7 @@ const lines = [
   "",
   `- DBファイル: ${gib(report.databaseBytes)} GiB`,
   `- 対象期間rows: ${integer(report.totals.rows)}`,
-  `- race/checkpoint/selectionの一意キー: ${integer(report.totals.uniqueKeys)}`,
+  `- race/bet_type/checkpoint/selectionの一意キー: ${integer(report.totals.uniqueKeys)}`,
   `- 重複相当rows: ${integer(report.totals.redundantRows)}`,
   `- 重複率: ${number(report.totals.redundancyRatio)}x`,
   `- 時系列table: ${gib(report.knownPhysicalBreakdown.oddsTimeseriesTableBytes)} GiB / index: ${gib(report.knownPhysicalBreakdown.oddsTimeseriesIndexBytes)} GiB`,
