@@ -40,12 +40,12 @@ SELECT
   COALESCE(run_kind, '(null)') AS run_kind,
   COALESCE(model_version, '(null)') AS model_version,
   COUNT(*) AS buy_n,
-  SUM(CASE WHEN returned = 0 AND result IS NOT NULL THEN 1 ELSE 0 END) AS settled_n,
+  SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' THEN 1 ELSE 0 END) AS settled_n,
   SUM(CASE WHEN result IS NULL THEN 1 ELSE 0 END) AS pending_n,
-  SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND selection = result THEN 1 ELSE 0 END) AS hits,
-  ROUND(1.0 * SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND selection = result THEN 1 ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN returned = 0 AND result IS NOT NULL THEN 1 ELSE 0 END), 0), 4) AS hit_rate,
-  ROUND(SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND selection = result THEN
+  SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection = result THEN 1 ELSE 0 END) AS hits,
+  ROUND(1.0 * SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection = result THEN 1 ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' THEN 1 ELSE 0 END), 0), 4) AS hit_rate,
+  ROUND(SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection = result THEN
       (SELECT rp.payout_yen / 100.0
        FROM race_payouts rp
        WHERE rp.race_id = buys.race_id
@@ -55,9 +55,9 @@ SELECT
          AND rp.payout_yen IS NOT NULL
          AND rp.payout_yen > 0)
     ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN returned = 0 AND result IS NOT NULL THEN 1 ELSE 0 END), 0), 3) AS roi,
-  MAX(CASE WHEN returned = 0 AND result IS NOT NULL AND selection = result THEN current_odds ELSE 0 END) AS max_hit_odds,
-  MAX(CASE WHEN returned = 0 AND result IS NOT NULL AND selection = result THEN
+    / NULLIF(SUM(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' THEN 1 ELSE 0 END), 0), 3) AS roi,
+  MAX(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection = result THEN current_odds ELSE 0 END) AS max_hit_odds,
+  MAX(CASE WHEN returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection = result THEN
       (SELECT rp.payout_yen / 100.0
        FROM race_payouts rp
        WHERE rp.race_id = buys.race_id
@@ -125,7 +125,16 @@ function payoutBetTypeSql(column: string) {
 
 function assertOfficialSettlementIntegrity(db: DatabaseSync, runKindValue: string, modelVersionValue: string): void {
   const row = db.prepare(`
-WITH settled_buy AS (
+WITH blank_settled_buy AS (
+  SELECT COUNT(*) AS n
+  FROM decision_history dh
+  WHERE dh.decision = 'BUY'
+    AND dh.returned = 0
+    AND dh.result IS NOT NULL
+    AND TRIM(dh.result) = ''
+    AND (? = 'all' OR dh.run_kind = ?)
+    AND (? = 'all' OR dh.model_version = ?)
+), settled_buy AS (
   SELECT DISTINCT
     dh.race_id,
     dh.bet_type,
@@ -136,6 +145,7 @@ WITH settled_buy AS (
   WHERE dh.decision = 'BUY'
     AND dh.returned = 0
     AND dh.result IS NOT NULL
+    AND TRIM(dh.result) != ''
     AND (? = 'all' OR dh.run_kind = ?)
     AND (? = 'all' OR dh.model_version = ?)
 ), invalid AS (
@@ -159,12 +169,21 @@ WITH settled_buy AS (
           AND rp.payout_yen > 0) != 1
      ))
 )
-SELECT COUNT(*) AS invalid FROM invalid
-`).get(runKindValue, runKindValue, modelVersionValue, modelVersionValue) as { invalid: number | bigint | null };
+SELECT
+  (SELECT n FROM blank_settled_buy) AS blankResults,
+  (SELECT COUNT(*) FROM invalid) AS invalid
+`).get(
+    runKindValue, runKindValue, modelVersionValue, modelVersionValue,
+    runKindValue, runKindValue, modelVersionValue, modelVersionValue,
+  ) as { blankResults: number | bigint | null; invalid: number | bigint | null };
 
+  const blankResults = Number(row.blankResults ?? 0);
   const invalid = Number(row.invalid ?? 0);
-  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+  if (!Number.isSafeInteger(blankResults) || blankResults < 0 || !Number.isSafeInteger(invalid) || invalid < 0) {
     throw new Error("BUY_AUDIT_SETTLEMENT_COUNT_INVALID");
+  }
+  if (blankResults > 0) {
+    throw new Error("BUY_AUDIT_BLANK_SETTLED_RESULT_UNSUPPORTED");
   }
   if (invalid > 0) {
     throw new Error("BUY_AUDIT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED");
