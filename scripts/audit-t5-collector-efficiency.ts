@@ -11,6 +11,7 @@ import { n2CanonicalT5SelectionSql } from "../src/research-replay/n2T5CollectorS
 import { n2CanonicalT10CollectorTimingSql } from "../src/research-replay/n2T10CollectorTimingSql";
 import { n2CanonicalT5CoverageTimingSql } from "../src/research-replay/n2T5MarketCoverageTimingSql";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const inputs = resolveN2T5CollectorEfficiencyInputs({
@@ -23,8 +24,9 @@ const NOW = new Date();
 const FIX_EFFECTIVE_AT = new Date(inputs.fixEffectiveAt);
 const NETWORK_ONLY_EFFECTIVE_AT = new Date(inputs.networkOnlyEffectiveAt);
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) throw new Error("T5_COLLECTOR_EFFICIENCY_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "T5_COLLECTOR_EFFICIENCY_DB_IDENTITY_INVALID");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
 type RaceRow = {
