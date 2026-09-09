@@ -1,7 +1,7 @@
 /**
  * Fail-closed ROI mechanism skip-filter entrypoint.
  * Research-only: require complete official trifecta settlement coverage before
- * the raw exclusion-effect analyzer can emit payout-ROI-based verdicts.
+ * the internal exclusion-effect analyzer can emit payout-ROI-based verdicts.
  */
 import { spawnSync } from "node:child_process";
 
@@ -23,10 +23,5 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-roi-mechanism-skip-filters-raw.ts");
-if (analysis !== 0) {
-  console.error("[roi-mechanism-skip-filter] raw analysis failed after a successful payout completeness preflight");
-  process.exit(analysis);
-}
-
-console.log("[roi-mechanism-skip-filter] PASS: payout completeness preflight passed before raw analysis");
+await import("./analyze-roi-mechanism-skip-filters-raw");
+console.log("[roi-mechanism-skip-filter] PASS: payout completeness preflight passed before internal analysis");
