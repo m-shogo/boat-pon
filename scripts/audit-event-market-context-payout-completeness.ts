@@ -27,38 +27,50 @@ try {
       HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
         AND MAX(CASE WHEN h.combination = '1-4' THEN h.odds END) IS NOT NULL
     ), settlement AS (
-      SELECT race_id,
-        MAX(CASE WHEN payout_yen IS NOT NULL AND payout_yen > 0 THEN 1 ELSE 0 END) AS settled
-      FROM race_payouts
-      WHERE bet_type = 'exacta'
-      GROUP BY race_id
+      SELECT rp.race_id,
+        COUNT(*) AS payout_rows,
+        SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 AND rp.combination IS NOT NULL AND trim(rp.combination) != ''
+          AND EXISTS (
+            SELECT 1 FROM historical_alternative_odds winner_h
+            WHERE winner_h.race_id = rp.race_id
+              AND winner_h.bet_type = 'exacta'
+              AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+              AND winner_h.combination = rp.combination
+          ) THEN 1 ELSE 0 END) AS valid_rows
+      FROM race_payouts rp
+      WHERE rp.bet_type = 'exacta'
+      GROUP BY rp.race_id
     )
     SELECT
       CASE WHEN p.date <= '2024-12-31' THEN 'discovery' ELSE 'forward' END AS period,
       COUNT(*) AS total,
-      SUM(COALESCE(s.settled, 0)) AS settled
+      SUM(CASE WHEN s.payout_rows = 1 AND s.valid_rows = 1 THEN 1 ELSE 0 END) AS settled,
+      SUM(CASE WHEN COALESCE(s.payout_rows, 0) > 1 THEN 1 ELSE 0 END) AS ambiguous
     FROM market_population p
     LEFT JOIN settlement s ON s.race_id = p.race_id
     GROUP BY period
     ORDER BY period
-  `).all() as Array<{ period: string; total: number; settled: number }>;
+  `).all() as Array<{ period: string; total: number; settled: number; ambiguous: number }>;
 
   const byPeriod = Object.fromEntries(["discovery", "forward"].map((period) => {
     const row = rows.find((candidate) => candidate.period === period);
     const total = Number(row?.total ?? 0);
     const settled = Number(row?.settled ?? 0);
-    return [period, { total, settled, missing: total - settled }];
+    const ambiguous = Number(row?.ambiguous ?? 0);
+    return [period, { total, settled, missing: total - settled, ambiguous }];
   }));
 
   console.log(JSON.stringify({ betType: "exacta", combination: "1-4", byPeriod }));
 
   const invalid = ["discovery", "forward"].some((period) => {
-    const { total, settled, missing } = byPeriod[period];
+    const { total, settled, missing, ambiguous } = byPeriod[period];
     return !Number.isInteger(total)
       || !Number.isInteger(settled)
+      || !Number.isInteger(ambiguous)
       || total <= 0
       || settled !== total
-      || missing !== 0;
+      || missing !== 0
+      || ambiguous !== 0;
   });
 
   if (invalid) {
