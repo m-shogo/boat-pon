@@ -24,15 +24,18 @@ test("feature breakdown rejects unsupported bet types across the full report pop
   assert.ok(mappingIndex >= 0 && guardIndex > mappingIndex && reportIndex > guardIndex);
 });
 
-test("feature breakdown validates every settled denominator against the canonical winning-result settlement before ROI", () => {
+test("feature breakdown rejects blank settled results and validates every remaining denominator against canonical settlement before ROI", () => {
   const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
   const reportIndex = source.indexOf("const rows = FACTORS.flatMap");
 
   assert.ok(guardIndex >= 0 && guardIndex < reportIndex, "official settlement preflight must run before feature ROI reporting");
+  assert.match(source, /FEATURE_BREAKDOWN_BLANK_SETTLED_RESULT_UNSUPPORTED/);
   assert.match(source, /FEATURE_BREAKDOWN_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
-  assert.match(source, /WITH relevant_settled AS/);
+  assert.match(source, /WITH blank_settled AS/);
   assert.match(source, /AND result IS NOT NULL/);
-  assert.match(source, /AND result != ''/);
+  assert.match(source, /AND TRIM\(result\) = ''/);
+  assert.match(source, /relevant_settled AS/);
+  assert.match(source, /AND TRIM\(result\) != ''/);
   assert.match(source, /AND returned = 0/);
   assert.doesNotMatch(source, /relevant_hits AS/);
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
@@ -48,6 +51,9 @@ test("feature breakdown validates every settled denominator against the canonica
   assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /rp\.bet_type = \$\{payoutBetTypeSql\("decision_history\.bet_type"\)\}/);
   assert.match(source, /rp\.payout_yen \/ 100\.0/);
+  assert.match(source, /SUM\(CASE WHEN result IS NOT NULL AND TRIM\(result\) != '' AND returned = 0 THEN 1 ELSE 0 END\) AS settled/);
+  assert.match(source, /SUM\(CASE WHEN result IS NOT NULL AND TRIM\(result\) != '' AND selection = result AND returned = 0 THEN 1 ELSE 0 END\) AS hits/);
+  assert.doesNotMatch(source, /SUM\(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END\) AS settled/);
   assert.doesNotMatch(source, /rp\.bet_type = decision_history\.bet_type/);
   assert.doesNotMatch(source, /SUM\(CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END\)/);
 });
