@@ -52,11 +52,15 @@ test("bet type course raw compatibility module blocks direct CLI bypass", () => 
   assert.doesNotMatch(raw, /const payoutIndex = new Map<string, number>\(\)/);
 });
 
-test("bet type course internal analyzer retains the read-only research implementation", () => {
+test("bet type course internal analyzer retains read-only behavior without exposing configured database paths", () => {
   const internal = readFileSync("scripts/analyze-bet-type-course-edge-internal.ts", "utf8");
   assert.match(internal, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
   assert.match(internal, /PRAGMA query_only=ON/);
   assert.match(internal, /const payoutIndex = new Map<string, number>\(\)/);
-  assert.match(internal, /const groups = new Map<string, GroupAgg>\(\)/);
+  assert.match(internal, /const courseGroups: CourseEdgeGroup\[\] =/);
   assert.match(internal, /writeFileSync\(OUT_JSON/);
+  assert.match(internal, /BET_TYPE_COURSE_PRIMARY_DB_MISSING/);
+  assert.match(internal, /DB: canonical research database \(path redacted\)/);
+  assert.doesNotMatch(internal, /DB not found: \$\{DB_PATH\}/);
+  assert.doesNotMatch(internal, /DB: \$\{DB_PATH\}/);
 });
