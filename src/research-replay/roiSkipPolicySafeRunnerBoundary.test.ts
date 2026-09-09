@@ -5,23 +5,35 @@ import assert from "node:assert/strict";
 const runnerSource = readFileSync("scripts/run-roi-skip-policy-simulation-safe.ts", "utf-8");
 const entrypointSource = readFileSync("scripts/analyze-roi-skip-policy-simulation.ts", "utf-8");
 const rawSource = readFileSync("scripts/analyze-roi-skip-policy-simulation-raw.ts", "utf-8");
+const internalSource = readFileSync("scripts/analyze-roi-skip-policy-simulation-internal.ts", "utf-8");
 const auditSource = readFileSync("scripts/audit-roi-skip-policy-payout-completeness.ts", "utf-8");
 const packageSource = readFileSync("package.json", "utf-8");
 
-test("ROI skip-policy normal entrypoint checks payout completeness before raw simulation", () => {
+test("ROI skip-policy normal entrypoint checks payout completeness before guarded raw import", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
-  const analysis = entrypointSource.indexOf('run("scripts/analyze-roi-skip-policy-simulation-raw.ts")');
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-skip-policy-simulation-raw")');
   assert.ok(preflight >= 0);
   assert.ok(analysis > preflight);
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
+  assert.doesNotMatch(entrypointSource, /run\("scripts\/analyze-roi-skip-policy-simulation-raw\.ts"\)/);
 });
 
-test("ROI skip-policy legacy safe runner checks payout completeness before raw simulation", () => {
+test("ROI skip-policy raw compatibility module rejects direct CLI execution", () => {
+  const guard = rawSource.indexOf("invokedPath === rawEntrypointPath");
+  const failure = rawSource.indexOf("ROI_SKIP_POLICY_RAW_DIRECT_EXECUTION_FORBIDDEN");
+  const internal = rawSource.indexOf('await import("./analyze-roi-skip-policy-simulation-internal")');
+  assert.ok(guard >= 0);
+  assert.ok(failure > guard);
+  assert.ok(internal > failure);
+});
+
+test("ROI skip-policy legacy safe runner checks payout completeness before internal simulation", () => {
   const preflight = runnerSource.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
-  const analysis = runnerSource.indexOf('run("scripts/analyze-roi-skip-policy-simulation-raw.ts")');
+  const analysis = runnerSource.indexOf('run("scripts/analyze-roi-skip-policy-simulation-internal.ts")');
   assert.ok(preflight >= 0);
   assert.ok(analysis > preflight);
+  assert.doesNotMatch(runnerSource, /run\("scripts\/analyze-roi-skip-policy-simulation-raw\.ts"\)/);
   assert.doesNotMatch(runnerSource, /run\("scripts\/analyze-roi-skip-policy-simulation\.ts"\)/);
 });
 
@@ -57,10 +69,10 @@ test("ROI skip-policy payout preflight matches simulator population and validate
   assert.match(auditSource, /invalidNonRefundRows/);
   assert.match(auditSource, /evaluatePaperForwardPayoutCompleteness/);
   assert.match(auditSource, /process\.exit\(2\)/);
-  assert.match(rawSource, /主評価: race_payouts\.payout_yen 実払戻ベース/);
-  assert.match(rawSource, /COALESCE/);
-  assert.match(rawSource, /deriveVerdict/);
-  assert.match(rawSource, /LIMIT 1/);
+  assert.match(internalSource, /主評価: race_payouts\.payout_yen 実払戻ベース/);
+  assert.match(internalSource, /COALESCE/);
+  assert.match(internalSource, /deriveVerdict/);
+  assert.match(internalSource, /LIMIT 1/);
 });
 
 test("ROI skip-policy payout preflight permits legitimate multi-line winners instead of enforcing one settlement per race", () => {
