@@ -11,12 +11,16 @@ test("track mood market uses canonical historical exacta source and completeness
   assert.doesNotMatch(source, /COUNT\(\*\) FROM historical_alternative_odds a WHERE a\.race_id=h\.race_id AND a\.bet_type='exacta'\)\s*=\s*30/);
 });
 
-test("track mood ROI fails closed on incomplete official payouts", () => {
+test("track mood ROI fails closed on incomplete or ambiguous official payouts", () => {
   const source = readFileSync("scripts/analyze-track-mood-market.ts", "utf8");
 
   assert.match(source, /assertCanonicalSingleLinkRegularFile/);
   assert.match(source, /new DatabaseSync\(dbPath,\{readOnly:true\}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
+  assert.match(source, /COUNT\(\*\) AS payout_rows/);
+  assert.match(source, /returned=0 AND payout_yen IS NOT NULL AND payout_yen>0/);
+  assert.match(source, /row\.payout_rows===1&&row\.valid_rows===1/);
+  assert.match(source, /row\.payout_rows>1/);
   assert.match(source, /assertPayoutCompleteness\(oddsByRace\)/);
   assert.match(source, /TRACK_MOOD_EXACTA_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /map\(requiredPayout\)/);

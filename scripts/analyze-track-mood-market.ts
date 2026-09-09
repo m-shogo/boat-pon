@@ -8,7 +8,7 @@ import {
 } from "../src/research-replay/historicalExactaMarketAuthority";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-type OddsRow={race_id:string;date:string;venue:string;combination:string;odds:number;winner:string|null;payout_yen:number|null};
+type OddsRow={race_id:string;date:string;venue:string;combination:string;odds:number;winner:string|null;payout_yen:number|null;payout_rows:number;valid_rows:number};
 type ProgramRow={race_id:string;date:string;venue:string;race_no:number;trifecta:string|null;trifecta_payout:number|null};
 type EntryRow={race_id:string;boat:number;finish_pos:number|null;entry_course:number|null;st:number|null;st_flying:number};
 type TrackState={races:number;oneWins:number;outerWins:number;course4Top2:number;course4FinishSum:number;course4FinishN:number;course1StSum:number;course1StN:number;course4StSum:number;course4StN:number;lastWinners:number[];highPayouts:number;flyingRaces:number};
@@ -26,8 +26,15 @@ const moods=[
 const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite","RESEARCH_DB_IDENTITY_INVALID");
 const db=new DatabaseSync(dbPath,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try{
-  const odds=db.prepare(`SELECT h.race_id,h.race_date AS date,h.venue,h.combination,h.odds,p.combination AS winner,p.payout_yen FROM historical_alternative_odds h
-    LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
+  const odds=db.prepare(`SELECT h.race_id,h.race_date AS date,h.venue,h.combination,h.odds,p.winner,p.payout_yen,COALESCE(p.payout_rows,0) AS payout_rows,COALESCE(p.valid_rows,0) AS valid_rows FROM historical_alternative_odds h
+    LEFT JOIN (
+      SELECT race_id,
+        COUNT(*) AS payout_rows,
+        SUM(CASE WHEN returned=0 AND payout_yen IS NOT NULL AND payout_yen>0 AND combination IS NOT NULL AND trim(combination)!='' THEN 1 ELSE 0 END) AS valid_rows,
+        MAX(CASE WHEN returned=0 AND payout_yen IS NOT NULL AND payout_yen>0 AND combination IS NOT NULL AND trim(combination)!='' THEN combination END) AS winner,
+        MAX(CASE WHEN returned=0 AND payout_yen IS NOT NULL AND payout_yen>0 AND combination IS NOT NULL AND trim(combination)!='' THEN payout_yen END) AS payout_yen
+      FROM race_payouts WHERE bet_type='exacta' GROUP BY race_id
+    ) p ON p.race_id=h.race_id
     WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND h.combination IN('1-2','1-3','1-4','1-5','1-6')
       AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
       AND ${historicalExactaCompleteMarketPredicate("h.race_id")}`).all() as OddsRow[];
@@ -53,7 +60,7 @@ try{
   writeFileSync("reports/track-mood-market-screen.md",`${lines.join("\n")}\n`);console.log(`track mood market: races=${report.coverage.races} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 }finally{db.close();}
 
-function assertPayoutCompleteness(byRace:Map<string,OddsRow[]>):void{const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}};for(const race of byRace.values()){const row=race[0];if(!row)continue;const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;}const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total;if(invalid)throw new Error(`TRACK_MOOD_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);}
+function assertPayoutCompleteness(byRace:Map<string,OddsRow[]>):void{const counts={discovery:{total:0,settled:0,ambiguous:0},forward:{total:0,settled:0,ambiguous:0}};for(const race of byRace.values()){const row=race[0];if(!row)continue;const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.payout_rows===1&&row.valid_rows===1&&row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;if(row.payout_rows>1)counts[period].ambiguous+=1;}const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total||counts.discovery.ambiguous!==0||counts.forward.ambiguous!==0;if(invalid)throw new Error(`TRACK_MOOD_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);}
 function requiredPayout(row:EvalRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`TRACK_MOOD_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function emptyState():TrackState{return{races:0,oneWins:0,outerWins:0,course4Top2:0,course4FinishSum:0,course4FinishN:0,course1StSum:0,course1StN:0,course4StSum:0,course4StN:0,lastWinners:[],highPayouts:0,flyingRaces:0};}
 function trackFlags(s:TrackState){const f:string[]=[];if(s.races>=3)f.push("prior3");if(s.races>=3&&s.oneWins/s.races<=1/3)f.push("inner_cold");if(s.outerWins>=2)f.push("outer_hot");const last=s.lastWinners.at(-1);if(last!=null&&last>=4)f.push("last_outer");if(last===4)f.push("last_course4");if(s.lastWinners.length>=2&&s.lastWinners.slice(-2).every(v=>v>=4))f.push("two_outer_streak");if(s.course4Top2>=2)f.push("course4_top2_twice");if(s.races>=3&&s.course4FinishN>=3&&s.course4FinishSum/s.course4FinishN<=3)f.push("course4_finish_hot");if(s.races>=3&&s.course1StN>=3&&s.course4StN>=3&&s.course1StSum/s.course1StN-s.course4StSum/s.course4StN>=0.03)f.push("course4_st_edge");if(s.highPayouts>=2)f.push("rough_payout");if(s.flyingRaces>=1)f.push("after_flying");return f;}
