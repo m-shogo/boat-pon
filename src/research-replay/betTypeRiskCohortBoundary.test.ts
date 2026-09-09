@@ -25,6 +25,15 @@ test("bet type risk cohort is fixed to unique settled trifecta historical BUY ro
   assert.match(preflight, /HAVING COUNT\(\*\) != 1/);
 });
 
+test("bet type risk cohort rejects malformed or duplicate-boat three-boat selections before substring analysis", () => {
+  assert.match(preflight, /length\(dh\.selection\) != 5/);
+  assert.match(preflight, /dh\.selection NOT GLOB '\[1-6\]-\[1-6\]-\[1-6\]'/);
+  assert.match(preflight, /substr\(dh\.selection, 1, 1\) = substr\(dh\.selection, 3, 1\)/);
+  assert.match(preflight, /substr\(dh\.selection, 1, 1\) = substr\(dh\.selection, 5, 1\)/);
+  assert.match(preflight, /substr\(dh\.selection, 3, 1\) = substr\(dh\.selection, 5, 1\)/);
+  assert.match(preflight, /malformed three-boat selection/);
+});
+
 test("bet type risk cohort preflight verifies canonical read-only DB identity without configured path disclosure", () => {
   const identity = preflight.indexOf("assertCanonicalSingleLinkRegularFile");
   const open = preflight.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
