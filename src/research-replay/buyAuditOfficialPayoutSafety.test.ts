@@ -39,3 +39,9 @@ test("buy audit ROI uses official payout units and only nonblank settled non-ret
   assert.match(source, /max_hit_payout_units/u);
   assert.doesNotMatch(source, /THEN current_odds ELSE 0 END\) \* 1\.0[\s\S]*AS roi/u);
 });
+
+test("buy audit roiExMax removes both the largest payout and its settled race from the denominator", () => {
+  assert.match(source, /settled > 1 && maxHitPayoutUnits > 0/u);
+  assert.match(source, /\(\(roi \* settled\) - maxHitPayoutUnits\) \/ \(settled - 1\)/u);
+  assert.doesNotMatch(source, /roi - maxHitPayoutUnits \/ settled/u);
+});
