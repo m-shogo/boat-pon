@@ -2,14 +2,19 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { selectRetainedCaptures, type OddsCaptureSummary } from "../src/domain/oddsTimeseriesCompaction";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const argv = process.argv.slice(2);
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = valueOf("--from") ?? "2026-06-01";
 const TO = valueOf("--to") ?? todayJst();
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("ODDS_TIMESERIES_COMPACTION_PLAN_DB_UNAVAILABLE");
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ODDS_TIMESERIES_COMPACTION_PLAN_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000; PRAGMA temp_store=MEMORY;");
 const query = db.prepare(`
   SELECT
@@ -64,7 +69,7 @@ const totals = days.reduce((acc, day) => ({
   completeGroupsAfter: acc.completeGroupsAfter + day.completeGroupsAfter,
 }), { captures: 0, retainedCaptures: 0, originalRows: 0, retainedRows: 0, removableRows: 0, completeGroupsBefore: 0, completeGroupsAfter: 0 });
 const retentionRatio = totals.originalRows > 0 ? totals.retainedRows / totals.originalRows : null;
-const databaseBytes = statSync(DB_PATH).size;
+const databaseBytes = statSync(verifiedDbPath).size;
 const timeseriesPhysicalBytes = 5_204_979_712 + 3_527_729_152;
 const estimatedCompactBytes = databaseBytes - timeseriesPhysicalBytes + timeseriesPhysicalBytes * (retentionRatio ?? 1);
 const report = {
