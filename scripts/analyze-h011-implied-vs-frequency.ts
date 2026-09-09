@@ -46,7 +46,7 @@ try {
     ), settlement AS (
       SELECT rp.race_id,
         CASE WHEN COUNT(*)=1
-          AND SUM(CASE WHEN rp.payout_yen IS NOT NULL AND rp.payout_yen>0 THEN 1 ELSE 0 END)=1
+          AND SUM(CASE WHEN rp.returned=0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0 THEN 1 ELSE 0 END)=1
           AND MAX(CASE WHEN EXISTS (
             SELECT 1 FROM historical_alternative_odds winner_h
             WHERE winner_h.race_id=rp.race_id
