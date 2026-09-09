@@ -6,7 +6,7 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
 
 if (!existsSync(DB_PATH)) {
-  throw new Error(`MISS_RECOVERY_DB_NOT_FOUND ${DB_PATH}`);
+  throw new Error("MISS_RECOVERY_DB_NOT_FOUND");
 }
 
 const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
