@@ -10,7 +10,7 @@ import {
 } from "../src/research-replay/historicalExactaMarketAuthority";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-type Row = { race_id:string; date:string; raw_json:string; overround:number; odds14:number; winner:string|null; payout_yen:number|null };
+type Row = { race_id:string; date:string; raw_json:string; overround:number; odds14:number; winner:string|null; payout_yen:number|null; payout_rows:number; valid_rows:number };
 type EvalRow = Row & { period:"discovery"|"forward"; hit:boolean; implied:number; flags:string[] };
 type Metric = { n:number; hits:number; edgePp:number; roi:number; max2HitExclRoi:number };
 const mechanisms = [
@@ -27,8 +27,15 @@ const mechanisms = [
 const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite","RESEARCH_DB_IDENTITY_INVALID");
 const db=new DatabaseSync(dbPath,{readOnly:true}); db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
-  const rows=db.prepare(`SELECT h.race_id,h.race_date AS date,op.raw_json,SUM(1.0/h.odds) AS overround,MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,p.combination AS winner,p.payout_yen
-    FROM historical_alternative_odds h JOIN official_programs op ON op.race_id=h.race_id LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
+  const rows=db.prepare(`SELECT h.race_id,h.race_date AS date,op.raw_json,SUM(1.0/h.odds) AS overround,MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,p.winner,p.payout_yen,COALESCE(p.payout_rows,0) AS payout_rows,COALESCE(p.valid_rows,0) AS valid_rows
+    FROM historical_alternative_odds h JOIN official_programs op ON op.race_id=h.race_id LEFT JOIN (
+      SELECT race_id,
+        COUNT(*) AS payout_rows,
+        SUM(CASE WHEN returned=0 AND payout_yen IS NOT NULL AND payout_yen>0 AND combination IS NOT NULL AND trim(combination)!='' THEN 1 ELSE 0 END) AS valid_rows,
+        MAX(CASE WHEN returned=0 AND payout_yen IS NOT NULL AND payout_yen>0 AND combination IS NOT NULL AND trim(combination)!='' THEN combination END) AS winner,
+        MAX(CASE WHEN returned=0 AND payout_yen IS NOT NULL AND payout_yen>0 AND combination IS NOT NULL AND trim(combination)!='' THEN payout_yen END) AS payout_yen
+      FROM race_payouts WHERE bet_type='exacta' GROUP BY race_id
+    ) p ON p.race_id=h.race_id
     WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
     GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL`).all() as Row[];
   const evaluations:EvalRow[]=[];
@@ -41,7 +48,7 @@ try {
   writeFileSync("reports/rookie-event-edge-decomposition.md",lines.join("\n"));console.log(`rookie event edge: races=${evaluations.length}`);
 }finally{db.close();}
 
-function assertPayoutCompleteness(rows:EvalRow[]):void{const byPeriod=Object.fromEntries((["discovery","forward"] as const).map(period=>{const periodRows=rows.filter(row=>row.period===period);const settled=periodRows.filter(row=>row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0);return[period,{total:periodRows.length,settled:settled.length,missing:periodRows.length-settled.length}];}));const invalid=(byPeriod.discovery.total<=0||byPeriod.forward.total<=0||byPeriod.discovery.missing!==0||byPeriod.forward.missing!==0);if(invalid)throw new Error(`ROOKIE_EVENT_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(byPeriod)}`);}
+function assertPayoutCompleteness(rows:EvalRow[]):void{const byPeriod=Object.fromEntries((["discovery","forward"] as const).map(period=>{const periodRows=rows.filter(row=>row.period===period);const settled=periodRows.filter(row=>row.payout_rows===1&&row.valid_rows===1&&row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0);const ambiguous=periodRows.filter(row=>row.payout_rows>1).length;return[period,{total:periodRows.length,settled:settled.length,missing:periodRows.length-settled.length,ambiguous}];}));const invalid=(byPeriod.discovery.total<=0||byPeriod.forward.total<=0||byPeriod.discovery.missing!==0||byPeriod.forward.missing!==0||byPeriod.discovery.ambiguous!==0||byPeriod.forward.ambiguous!==0);if(invalid)throw new Error(`ROOKIE_EVENT_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(byPeriod)}`);}
 function requiredPayout(row:EvalRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`ROOKIE_EVENT_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function mechanismFlags(boats:UnconventionalBoat[],one:UnconventionalBoat,four:UnconventionalBoat){const flags:string[]=[];const others=boats.filter(b=>b.course!==1&&b.course!==4);const own=four.nationalWinRate;if(own!=null&&others.every(b=>own>=(b.nationalWinRate??Infinity)))flags.push("boat4_top_rival");if(own!=null&&others.every(b=>own-(b.nationalWinRate??Infinity)>=0.5))flags.push("boat4_gap05");if((four.className??"").startsWith("A"))flags.push("boat4_a_class");const a=boats.filter(b=>(b.className??"").startsWith("A")).map(b=>b.course);if(a.length===2&&a.includes(1)&&a.includes(4))flags.push("head4_only_a");if(four.localWinRate!=null&&own!=null&&four.localWinRate-own>=1)flags.push("boat4_local_up");if((four.motorTop2Rate??-1)>=40)flags.push("boat4_good_motor");const oneReg=Number(one.registrationNo),fourReg=Number(four.registrationNo);if(Number.isFinite(oneReg)&&Number.isFinite(fourReg)&&fourReg-oneReg>=200)flags.push("boat4_newer_head200");const regs=boats.map(b=>Number(b.registrationNo));if(Number.isFinite(fourReg)&&regs.every(reg=>Number.isFinite(reg)&&fourReg>=reg))flags.push("boat4_newest_field");return flags;}
 function readTitle(raceId:string,date:string){const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;if(!existsSync(path))return"";const $=load(readFileSync(path,"utf8"));return $(".rname a").first().text().replace(/\s+/g," ").trim();}
