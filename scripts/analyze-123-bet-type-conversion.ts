@@ -28,10 +28,6 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-123-bet-type-conversion-core.ts");
-if (analysis !== 0) {
-  console.error("[123-bet-type-conversion] analysis failed after a successful settlement completeness preflight");
-  process.exit(analysis);
-}
+await import("./analyze-123-bet-type-conversion-core");
 
 console.log("[123-bet-type-conversion] PASS: all required official settlement types were complete before analysis");
