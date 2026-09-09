@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
@@ -22,8 +23,10 @@ const NOW = new Date();
 const OUT_MD = "reports/t5-historical-market-forward.md";
 const OUT_JSON = "reports/t5-historical-market-forward.json";
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
-if (!existsSync(MODEL_PATH)) throw new Error(`model artifact not found: ${MODEL_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("T5_HISTORICAL_MARKET_DB_MISSING");
+if (!existsSync(MODEL_PATH)) throw new Error("T5_HISTORICAL_MARKET_MODEL_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "T5_HISTORICAL_MARKET_DB_IDENTITY_INVALID");
+const verifiedModelPath = assertCanonicalSingleLinkRegularFile(MODEL_PATH, "T5_HISTORICAL_MARKET_MODEL_IDENTITY_INVALID");
 if (Number.isNaN(NETWORK_ONLY_FROM.getTime())) throw new Error("invalid BOAT_PON_T5_NETWORK_ONLY_FROM");
 
 type ProgramBoat = {
@@ -73,7 +76,7 @@ type Race = {
 };
 type ProbabilityModel = (race: Race) => Map<string, number>;
 
-const artifact = JSON.parse(readFileSync(MODEL_PATH, "utf8")) as ModelArtifact;
+const artifact = JSON.parse(readFileSync(verifiedModelPath, "utf8")) as ModelArtifact;
 if (artifact.modelId !== "program-exhibition"
   || artifact.featureNames.length !== 14
   || artifact.weights.length !== 3
@@ -81,7 +84,7 @@ if (artifact.modelId !== "program-exhibition"
   throw new Error("invalid historical model artifact");
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
 const calibrationData = loadCohort(CALIBRATION_FROM, CALIBRATION_TO, null, null);
@@ -148,7 +151,7 @@ const report = {
   },
   contract: {
     historicalModel: {
-      artifact: MODEL_PATH,
+      artifact: "historical-ranking-model",
       generatedAt: artifact.generatedAt,
       trainedOn: artifact.trainedOn,
     },
