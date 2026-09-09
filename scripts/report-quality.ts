@@ -80,25 +80,23 @@ WITH settled_buy AS (
     AND dh.returned = 0
     AND dh.result IS NOT NULL
 ), invalid AS (
-  SELECT s.race_id, s.bet_type, s.selection
+  SELECT s.race_id, s.bet_type, s.result
   FROM settled_buy s
-  WHERE s.payout_bet_type IS NULL
-     OR (s.selection = s.result AND (
-       (SELECT COUNT(*)
-        FROM race_payouts rp
-        WHERE rp.race_id = s.race_id
-          AND rp.bet_type = s.payout_bet_type
-          AND rp.combination = s.selection) != 1
-       OR
-       (SELECT COUNT(*)
-        FROM race_payouts rp
-        WHERE rp.race_id = s.race_id
-          AND rp.bet_type = s.payout_bet_type
-          AND rp.combination = s.selection
-          AND rp.returned = 0
-          AND rp.payout_yen IS NOT NULL
-          AND rp.payout_yen > 0) != 1
-     ))
+  WHERE trim(s.result) = ''
+     OR s.payout_bet_type IS NULL
+     OR (SELECT COUNT(*)
+         FROM race_payouts rp
+         WHERE rp.race_id = s.race_id
+           AND rp.bet_type = s.payout_bet_type
+           AND rp.combination = s.result) != 1
+     OR (SELECT COUNT(*)
+         FROM race_payouts rp
+         WHERE rp.race_id = s.race_id
+           AND rp.bet_type = s.payout_bet_type
+           AND rp.combination = s.result
+           AND rp.returned = 0
+           AND rp.payout_yen IS NOT NULL
+           AND rp.payout_yen > 0) != 1
 )
 SELECT COUNT(*) AS invalid FROM invalid
 `).get(from, to) as { invalid: number | bigint | null };
@@ -169,7 +167,7 @@ function groups(rows: Row[], keyFor: (row: Row) => string): Group[] {
 
 function summarize(rows: Row[]): Summary {
   const buyRows = rows.filter((r) => r.decision === "BUY");
-  const settled = buyRows.filter((r) => r.returned === 0 && r.result != null);
+  const settled = buyRows.filter((r) => r.returned === 0 && r.result != null && r.result.trim() !== "");
   const hits = settled.filter((r) => r.selection === r.result);
   const payoutUnits = hits.reduce((sum, r) => sum + Number(r.official_payout_yen ?? 0) / 100, 0);
   return {

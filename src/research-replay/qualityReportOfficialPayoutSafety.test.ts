@@ -14,18 +14,24 @@ test("quality report computes ROI from mapped canonical official payouts, not de
   assert.match(source, /roiSource: official race_payouts\.payout_yen/u);
 });
 
-test("quality report fails closed before aggregation when a settled BUY has unsupported mapping or an invalid winning settlement", () => {
+test("quality report fails closed before aggregation when any settled BUY result is blank, unsupported, or lacks one official winning settlement", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity/u);
   assert.match(source, /QUALITY_REPORT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/u);
+  assert.match(source, /trim\(s\.result\) = ''/u);
   assert.match(source, /s\.payout_bet_type IS NULL/u);
-  assert.match(source, /s\.selection = s\.result/u);
+  assert.match(source, /rp\.combination = s\.result/u);
   assert.match(source, /rp\.returned = 0/u);
   assert.match(source, /rp\.payout_yen IS NOT NULL/u);
   assert.match(source, /rp\.payout_yen > 0/u);
+  assert.doesNotMatch(source, /s\.selection = s\.result/u);
 
   const guard = source.indexOf("assertOfficialSettlementIntegrity(db, from, to);");
   const query = source.indexOf("const rows = listRows(db, from, to);");
   assert.ok(guard >= 0 && query > guard);
+});
+
+test("quality report settled denominator excludes blank result text", () => {
+  assert.match(source, /r\.returned === 0 && r\.result != null && r\.result\.trim\(\) !== ""/u);
 });
 
 test("quality report does not expose the configured database path when the primary database is missing", () => {
