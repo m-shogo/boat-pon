@@ -39,6 +39,7 @@ db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
 try {
   assertSupportedBetTypeMapping();
+  assertReturnStateIntegrity();
   assertOfficialSettlementIntegrity();
   const rows = [
     ...queryBand("estimated_hit_rate", hitRateBandSql()),
@@ -112,6 +113,24 @@ WHERE ${where.join(" AND ")}
     throw new Error(
       `CALIBRATION_BET_TYPE_MAPPING_FAILED: ${row.n} decision row(s) use an unsupported or unknown payout bet type mapping`,
     );
+  }
+}
+
+function assertReturnStateIntegrity() {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE ${where.join(" AND ")}
+  AND (returned IS NULL OR returned NOT IN (0, 1))
+`).get(...params) as { n: number | bigint | null };
+
+  const invalid = Number(row.n ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("CALIBRATION_RETURN_STATE_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("CALIBRATION_RETURN_STATE_INTEGRITY_FAILED");
   }
 }
 
@@ -278,5 +297,5 @@ function format(value: number | null) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-calibration.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. ROI uses complete canonical official winning settlements for non-empty settled rows; current_odds remains a banding/quote feature only.`);
+  pnpm exec tsx scripts/report-calibration.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. Unknown return states fail closed before aggregation. ROI uses complete canonical official winning settlements for non-empty settled rows; current_odds remains a banding/quote feature only.`);
 }
