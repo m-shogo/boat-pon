@@ -2,14 +2,19 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { resolveN2OddsTimeseriesStorageWindow } from "../src/research-replay/n2OddsTimeseriesStorageWindow";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = process.env.BOAT_PON_FROM ?? "2026-06-01";
 const TO = process.env.BOAT_PON_TO ?? todayJst();
 const window = resolveN2OddsTimeseriesStorageWindow(FROM, TO);
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("ODDS_TIMESERIES_STORAGE_AUDIT_DB_UNAVAILABLE");
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ODDS_TIMESERIES_STORAGE_AUDIT_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000; PRAGMA temp_store=MEMORY;");
 const query = db.prepare(`
   SELECT
@@ -46,7 +51,7 @@ const report = {
   generatedAt: new Date().toISOString(),
   window: { from: window.from, to: window.to },
   safety: { readOnly: true, dbWrites: false, compactionPerformed: false },
-  databaseBytes: statSync(DB_PATH).size,
+  databaseBytes: statSync(verifiedDbPath).size,
   totals: {
     ...totals,
     redundantRows: totals.rows - totals.uniqueKeys,
