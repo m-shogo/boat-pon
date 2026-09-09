@@ -1,9 +1,23 @@
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+
+if (!existsSync(DB_PATH)) {
+  throw new Error("CONDB_SWITCH_HISTORICAL_PRIMARY_DB_MISSING");
+}
+
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "CONDB_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID",
+);
+const childEnv = { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath };
 
 function run(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
-    env: process.env,
+    env: childEnv,
   });
   if (result.error) throw result.error;
   return result.status ?? 1;
@@ -15,4 +29,5 @@ if (audit !== 0) {
   process.exit(audit);
 }
 
+process.env.BOAT_PON_DB_PATH = verifiedDbPath;
 await import("./analyze-condb-switch-historical-closing-odds-raw");
