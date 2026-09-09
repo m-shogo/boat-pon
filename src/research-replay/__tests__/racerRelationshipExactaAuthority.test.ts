@@ -24,7 +24,12 @@ test("racer relationship ROI fails closed on incomplete official payouts", () =>
 
 test("racer relationship exacta settlement is unambiguous before market aggregation", () => {
   const source = readFileSync("scripts/analyze-racer-relationship-market.ts", "utf8");
+  const preflight = source.indexOf("assertSettlementCoverage(coverage)");
+  const analysis = source.indexOf("const exacta = db.prepare");
 
+  assert.ok(preflight >= 0 && analysis > preflight, "settlement integrity must pass before market aggregation");
+  assert.match(source, /CASE WHEN COUNT\(\*\)=1/);
+  assert.match(source, /RACER_RELATIONSHIP_EXACTA_SETTLEMENT_INTEGRITY_INVALID/);
   assert.match(source, /JOIN race_payouts p ON p\.race_id=h\.race_id AND p\.bet_type='exacta'/);
   assert.match(source, /SELECT COUNT\(\*\) FROM race_payouts rp WHERE rp\.race_id=h\.race_id AND rp\.bet_type='exacta'\)=1/);
   assert.match(source, /p\.returned=0/);
