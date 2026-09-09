@@ -1,7 +1,7 @@
 /**
  * Fail-closed ROI skip-filter robustness entrypoint.
  * Research-only: require complete official trifecta settlement coverage before
- * the raw robustness analyzer can emit payout-ROI-based final verdicts.
+ * the internal robustness analyzer can emit payout-ROI-based final verdicts.
  */
 import { spawnSync } from "node:child_process";
 
@@ -23,10 +23,5 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-roi-skip-filter-robustness-raw.ts");
-if (analysis !== 0) {
-  console.error("[skip-filter-robustness] raw analysis failed after a successful payout completeness preflight");
-  process.exit(analysis);
-}
-
-console.log("[skip-filter-robustness] PASS: payout completeness preflight passed before raw analysis");
+await import("./analyze-roi-skip-filter-robustness-raw");
+console.log("[skip-filter-robustness] PASS: payout completeness preflight passed before internal analysis");
