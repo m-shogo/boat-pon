@@ -12,7 +12,14 @@ db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 try {
   const { where, params } = reportWhere(rawArgs);
   const row = db.prepare(`
-WITH relevant_settled AS (
+WITH blank_settled AS (
+  SELECT COUNT(*) AS n
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND result IS NOT NULL
+    AND TRIM(result) = ''
+    AND returned = 0
+), relevant_settled AS (
   SELECT DISTINCT
     race_id,
     bet_type,
@@ -21,7 +28,7 @@ WITH relevant_settled AS (
   FROM decision_history
   WHERE ${where.join(" AND ")}
     AND result IS NOT NULL
-    AND result != ''
+    AND TRIM(result) != ''
     AND returned = 0
 ), invalid AS (
   SELECT s.race_id, s.bet_type, s.result
@@ -45,12 +52,19 @@ WITH relevant_settled AS (
       AND rp.payout_yen > 0
   ) != 1
 )
-SELECT COUNT(*) AS n FROM invalid
-`).get(...params) as { n: number };
+SELECT
+  (SELECT n FROM blank_settled) AS blankResults,
+  (SELECT COUNT(*) FROM invalid) AS invalid
+`).get(...params, ...params) as { blankResults: number; invalid: number };
 
-  if ((row.n ?? 0) > 0) {
+  if ((row.blankResults ?? 0) > 0) {
     console.error(
-      `REVIEW_SUMMARY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled decision denominator race(s) do not have a supported payout mapping and exactly one positive non-refund official winning settlement`,
+      `REVIEW_SUMMARY_BLANK_SETTLED_RESULT_UNSUPPORTED: ${row.blankResults} settled decision row(s) have a blank result and would otherwise enter the raw report denominator`,
+    );
+    process.exitCode = 2;
+  } else if ((row.invalid ?? 0) > 0) {
+    console.error(
+      `REVIEW_SUMMARY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.invalid} settled decision denominator race(s) do not have a supported payout mapping and exactly one positive non-refund official winning settlement`,
     );
     process.exitCode = 2;
   }
