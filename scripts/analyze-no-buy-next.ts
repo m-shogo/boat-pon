@@ -64,28 +64,28 @@ WHERE dh.run_kind='historical-backfill'
 
 function assertOfficialWinningSettlements(): void {
   const row = db.prepare(`
-WITH winners AS (
-  SELECT DISTINCT dh.race_id, dh.selection
+WITH settled AS (
+  SELECT DISTINCT dh.race_id, dh.result
   FROM decision_history dh
   WHERE dh.run_kind='historical-backfill'
     AND dh.decision='BUY'
     AND dh.bet_type='3連単'
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
+    AND dh.result != ''
     AND dh.returned = 0
-    AND dh.selection = dh.result
 ), exact_settlements AS (
   SELECT
-    w.race_id,
-    w.selection,
+    s.race_id,
+    s.result,
     COUNT(rp.race_id) AS total_rows,
     SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) AS valid_rows
-  FROM winners w
+  FROM settled s
   LEFT JOIN race_payouts rp
-    ON rp.race_id = w.race_id
+    ON rp.race_id = s.race_id
    AND rp.bet_type = 'trifecta'
-   AND rp.combination = w.selection
-  GROUP BY w.race_id, w.selection
+   AND rp.combination = s.result
+  GROUP BY s.race_id, s.result
 )
 SELECT COUNT(*) AS invalid
 FROM exact_settlements
