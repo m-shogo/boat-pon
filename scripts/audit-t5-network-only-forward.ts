@@ -17,6 +17,7 @@ import {
 } from "../src/domain/t5ResidualModel";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
@@ -30,7 +31,8 @@ const NOW = new Date();
 const OUT_MD = "reports/t5-network-only-forward.md";
 const OUT_JSON = "reports/t5-network-only-forward.json";
 
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("T5_NETWORK_ONLY_FORWARD_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "T5_NETWORK_ONLY_FORWARD_DB_IDENTITY_INVALID");
 if (Number.isNaN(NETWORK_ONLY_FROM.getTime())) throw new Error("invalid BOAT_PON_T5_NETWORK_ONLY_FROM");
 
 type OddsRow = { id: number; race_id: string; selection: string; odds: number; captured_at: string };
@@ -45,7 +47,7 @@ type ResultRow = {
   returned: number;
 };
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
 const trainOdds = loadLatestCompleteCaptures(TRAIN_FROM, TRAIN_TO, null);
