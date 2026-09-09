@@ -248,13 +248,17 @@ function renderMarkdown(s: typeof summary): string {
     lines.push("");
   }
 
+  const nonNeutral = s.factorDistribution.positive + s.factorDistribution.negative;
+  const nonNeutralPct = s.scope.rowsWithBreakdown > 0
+    ? Math.round((nonNeutral / s.scope.rowsWithBreakdown) * 1000) / 10
+    : 0;
   lines.push("## まとめ");
   lines.push("");
-  lines.push("- breakdown データを持つ行（2025-01-01〜2025-01-12 の 2975 行）のうち、**live-only factor が中立ではないものが 98%超**存在した（現在値スナップショットが注入されていた証拠）。");
-  lines.push("- しかし、**BUY → SKIP に変わったケースはゼロ**。唯一の BUY（徳山R8 2025-01-05）はリーク除去後も required_odds < current_odds であり、BUY のまま。");
-  lines.push("- これは「リークがあったが BUY 判定への実害はなかった」ことを意味する（breakdown 列追加直後の少数期間のみ影響範囲）。");
-  lines.push("- **重要な補足**: 2025年の BUY 2,272件のうち 2,271件は breakdown 列追加前に生成されており、live-only feature の影響を受けていない。リスクは「今後 historical 再生成を行う場合」に集中していた。");
-  lines.push("- 今回の hardening により、将来の historical 再生成では live-only feature は null になり、本問題は再発しない。");
+  lines.push(`- breakdown データを持つ **${s.scope.rowsWithBreakdown} 行**のうち、live-only factor が中立ではないものは **${nonNeutral} 行 (${nonNeutralPct}%)**。`);
+  lines.push(`- 判定差分は **BUY→SKIP ${s.decisionImpact.buyChangedToSkip} 件 / SKIP→BUY ${s.decisionImpact.skipChangedToBuy} 件 / WATCH要件変化 ${s.decisionImpact.watchChanged} 件**。`);
+  lines.push(`- **結論は上記集計から生成**: ${s.decisionImpact.conclusion}`);
+  lines.push(`- BUY決定は breakdown付き **${s.scope.buyDecisionsWithBreakdown} 件**、breakdown無し **${s.scope.buyDecisionsWithoutBreakdown} 件**。固定された過去件数ではなく、現在のDB集計を表示する。`);
+  lines.push("- 本レポートは影響の監査のみを行い、historical再生成、BUY条件、候補、production設定は変更しない。");
   lines.push("");
   return `${lines.join("\n")}\n`;
 }
