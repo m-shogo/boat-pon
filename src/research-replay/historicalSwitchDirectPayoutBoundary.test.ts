@@ -6,6 +6,7 @@ const CASES = [
   {
     alias: "analyze:condb-switch-historical",
     entry: "scripts/analyze-condb-switch-historical-closing-odds.ts",
+    safeRunner: "scripts/run-condb-switch-historical-closing-odds-safe.ts",
     auditPath: "scripts/audit-condb-switch-historical-payout-completeness.ts",
     audit: "audit-condb-switch-historical-payout-completeness.ts",
     raw: "analyze-condb-switch-historical-closing-odds-raw.ts",
@@ -13,6 +14,7 @@ const CASES = [
   {
     alias: "analyze:skip6r-switch-historical",
     entry: "scripts/analyze-skip6r-switch-historical-closing-odds.ts",
+    safeRunner: "scripts/run-skip6r-switch-historical-closing-odds-safe.ts",
     auditPath: "scripts/audit-skip6r-historical-payout-completeness.ts",
     audit: "audit-skip6r-historical-payout-completeness.ts",
     raw: "analyze-skip6r-switch-historical-closing-odds-raw.ts",
@@ -20,6 +22,7 @@ const CASES = [
   {
     alias: "analyze:skipvenue-switch-historical",
     entry: "scripts/analyze-skipvenue-switch-historical-closing-odds.ts",
+    safeRunner: "scripts/run-skipvenue-switch-historical-closing-odds-safe.ts",
     auditPath: "scripts/audit-skipvenue-historical-payout-completeness.ts",
     audit: "audit-skipvenue-historical-payout-completeness.ts",
     raw: "analyze-skipvenue-switch-historical-closing-odds-raw.ts",
@@ -41,6 +44,13 @@ for (const c of CASES) {
     assert.ok(rawIndex > gateIndex);
     assert.doesNotMatch(source, /DatabaseSync/);
     assert.equal(pkg.scripts?.[c.alias], `tsx ${c.entry}`);
+  });
+
+  test(`${c.alias} compatibility safe runner delegates to the canonical entrypoint`, () => {
+    const source = readFileSync(c.safeRunner, "utf8");
+    assert.ok(source.includes(c.entry), "safe runner must invoke the canonical fail-closed entrypoint");
+    assert.ok(!source.includes(c.raw), "safe runner must not invoke the guarded raw module directly");
+    assert.ok(!source.includes(c.audit), "safe runner must not duplicate the canonical preflight sequence");
   });
 
   test(`${c.alias} payout audit allows legitimate multi-line trifecta settlements but rejects duplicate or invalid lines`, () => {
