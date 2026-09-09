@@ -31,6 +31,7 @@ type IntegrityRow = {
   total: number;
   covered: number;
   cohortInvalidRows: number;
+  invalidWinningKeyShapes: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   invalidSettlementReturnRows: number;
@@ -95,6 +96,18 @@ SELECT
       OR tr.returned != 0
   ) AS cohortInvalidRows,
   (SELECT COUNT(*)
+   FROM target_rows tr
+   WHERE tr.bet_type = '3連単'
+     AND tr.returned = 0
+     AND (
+       length(tr.result) != 5
+       OR tr.result NOT GLOB '[1-6]-[1-6]-[1-6]'
+       OR substr(tr.result, 1, 1) = substr(tr.result, 3, 1)
+       OR substr(tr.result, 1, 1) = substr(tr.result, 5, 1)
+       OR substr(tr.result, 3, 1) = substr(tr.result, 5, 1)
+     )
+  ) AS invalidWinningKeyShapes,
+  (SELECT COUNT(*)
    FROM target_races tr
    WHERE EXISTS (
      SELECT 1
@@ -120,11 +133,16 @@ const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covere
 db.close();
 
 console.log(
-  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} invalidSettlementReturns=${row.invalidSettlementReturnRows ?? 0} invalidWinningKeys=${row.invalidWinningKeys ?? 0}`,
+  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidWinningKeyShapes=${row.invalidWinningKeyShapes ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} invalidSettlementReturns=${row.invalidSettlementReturnRows ?? 0} invalidWinningKeys=${row.invalidWinningKeys ?? 0}`,
 );
 
 if ((row.cohortInvalidRows ?? 0) > 0) {
   console.error("[odds-payout-gap-preflight] FAIL: target research cohort contains non-3連単 or returned/unknown-return historical BUY rows, but downstream ROI consumers do not exclude them explicitly");
+  process.exit(2);
+}
+
+if ((row.invalidWinningKeyShapes ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: target cohort contains malformed historical 3連単 winning result keys; exact-key payout ROI and payout rebase must remain unavailable");
   process.exit(2);
 }
 
