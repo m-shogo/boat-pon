@@ -1,18 +1,12 @@
 /**
- * Fail-closed runner for the condB historical closing-odds research analysis.
- * The analyzer must not run unless official trifecta settlement coverage is complete.
+ * Compatibility runner for condB historical closing-odds research.
+ * Delegate to the canonical entrypoint so settlement preflight cannot diverge
+ * from the analyzer boundary.
  */
 
 import { execFileSync } from "node:child_process";
 
-const env = { ...process.env };
-
-execFileSync("pnpm", ["tsx", "scripts/audit-condb-switch-historical-payout-completeness.ts"], {
+execFileSync("pnpm", ["tsx", "scripts/analyze-condb-switch-historical-closing-odds.ts"], {
   stdio: "inherit",
-  env,
-});
-
-execFileSync("pnpm", ["tsx", "scripts/analyze-condb-switch-historical-closing-odds-raw.ts"], {
-  stdio: "inherit",
-  env,
+  env: { ...process.env },
 });

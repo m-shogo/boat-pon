@@ -4,6 +4,7 @@ import test from "node:test";
 
 const preflight = readFileSync("scripts/audit-condb-switch-historical-payout-completeness.ts", "utf8");
 const runner = readFileSync("scripts/run-condb-switch-historical-closing-odds-safe.ts", "utf8");
+const entrypoint = readFileSync("scripts/analyze-condb-switch-historical-closing-odds.ts", "utf8");
 
 test("condB historical payout preflight uses verified read-only positive official trifecta settlements", () => {
   assert.match(preflight, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH/);
@@ -36,10 +37,15 @@ test("condB historical payout preflight fails closed on empty or incomplete cove
   assert.match(preflight, /process\.exit\(2\)/);
 });
 
-test("safe runner executes payout preflight before the raw analyzer", () => {
-  const audit = runner.indexOf("audit-condb-switch-historical-payout-completeness.ts");
-  const analyzer = runner.indexOf("analyze-condb-switch-historical-closing-odds-raw.ts");
+test("canonical entrypoint completes payout preflight before importing the guarded analyzer", () => {
+  const audit = entrypoint.indexOf("audit-condb-switch-historical-payout-completeness.ts");
+  const analyzer = entrypoint.indexOf("await import(\"./analyze-condb-switch-historical-closing-odds-raw\")");
   assert.ok(audit >= 0);
   assert.ok(analyzer > audit);
-  assert.doesNotMatch(runner, /try\s*\{[\s\S]*audit-condb-switch-historical-payout-completeness/);
+});
+
+test("compatibility safe runner delegates to the canonical fail-closed entrypoint", () => {
+  assert.match(runner, /analyze-condb-switch-historical-closing-odds\.ts/);
+  assert.doesNotMatch(runner, /analyze-condb-switch-historical-closing-odds-raw\.ts/);
+  assert.doesNotMatch(runner, /audit-condb-switch-historical-payout-completeness\.ts/);
 });
