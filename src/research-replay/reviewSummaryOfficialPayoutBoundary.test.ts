@@ -34,7 +34,7 @@ test("review summary normal entrypoint cannot run raw ROI report before settleme
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
 });
 
-test("review summary payout audit maps decision bet types and rejects ambiguous or malformed winning keys while preserving multi-line races", () => {
+test("review summary payout audit maps decision bet types and validates every settled denominator winning result while preserving multi-line races", () => {
   const source = readFileSync("scripts/audit-review-summary-payout-integrity.ts", "utf8");
 
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
@@ -42,19 +42,23 @@ test("review summary payout audit maps decision bet types and rejects ambiguous 
   assert.match(source, /WHEN '2連単' THEN 'exacta'/);
   assert.match(source, /WHEN '2連複' THEN 'quinella'/);
   assert.match(source, /WHEN '拡連複' THEN 'wide'/);
-  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*selection/);
-  assert.match(source, /selection = result/);
+  assert.match(source, /WITH relevant_settled AS/);
+  assert.match(source, /SELECT DISTINCT[\s\S]*payout_bet_type,[\s\S]*result/);
+  assert.match(source, /result IS NOT NULL/);
+  assert.match(source, /result != ''/);
   assert.match(source, /returned = 0/);
-  assert.match(source, /h\.payout_bet_type IS NULL/);
-  assert.match(source, /rp\.bet_type = h\.payout_bet_type/);
-  assert.match(source, /rp\.combination = h\.selection/);
+  assert.doesNotMatch(source, /selection = result/);
+  assert.match(source, /s\.payout_bet_type IS NULL/);
+  assert.match(source, /rp\.bet_type = s\.payout_bet_type/);
+  assert.match(source, /rp\.combination = s\.result/);
   assert.match(source, /\) != 1/);
   assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen IS NOT NULL/);
   assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /REVIEW_SUMMARY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
-  assert.doesNotMatch(source, /rp\.bet_type = h\.bet_type/);
+  assert.doesNotMatch(source, /rp\.bet_type = s\.bet_type/);
   assert.doesNotMatch(source, /GROUP BY rp\.race_id[\s\S]*COUNT\(\*\) = 1/);
 });
 

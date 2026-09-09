@@ -12,35 +12,36 @@ db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 try {
   const { where, params } = reportWhere(rawArgs);
   const row = db.prepare(`
-WITH relevant_hits AS (
+WITH relevant_settled AS (
   SELECT DISTINCT
     race_id,
     bet_type,
     ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
-    selection
+    result
   FROM decision_history
   WHERE ${where.join(" AND ")}
     AND result IS NOT NULL
+    AND result != ''
     AND returned = 0
-    AND selection = result
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
-  FROM relevant_hits h
-  WHERE h.payout_bet_type IS NULL
+  SELECT s.race_id, s.bet_type, s.result
+  FROM relevant_settled s
+  WHERE s.payout_bet_type IS NULL
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
       AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
   ) != 1
 )
@@ -49,7 +50,7 @@ SELECT COUNT(*) AS n FROM invalid
 
   if ((row.n ?? 0) > 0) {
     console.error(
-      `REVIEW_SUMMARY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning decision key(s) do not have a supported payout mapping and exactly one positive non-refund official settlement`,
+      `REVIEW_SUMMARY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled decision denominator race(s) do not have a supported payout mapping and exactly one positive non-refund official winning settlement`,
     );
     process.exitCode = 2;
   }
