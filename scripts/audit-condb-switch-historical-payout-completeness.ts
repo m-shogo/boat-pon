@@ -78,6 +78,41 @@ try {
       process.exit(2);
     }
 
+    const payoutCombinationShape = db.prepare(`
+      WITH target AS (
+        SELECT DISTINCT dh.race_id
+        FROM decision_history dh
+        WHERE dh.decision = 'BUY'
+          AND dh.run_kind = 'historical-backfill'
+          AND dh.result IS NOT NULL
+          AND dh.result != ''
+          AND dh.current_odds IS NOT NULL
+          AND dh.venue NOT IN (${venuePlaceholders})
+          AND dh.race_no NOT IN (${racePlaceholders})
+          AND dh.selection = '1-2-3'
+          AND dh.date >= ?
+          AND dh.bet_type = '3連単'
+          AND dh.returned = 0
+      )
+      SELECT COUNT(*) AS invalid
+      FROM race_payouts rp
+      JOIN target ON target.race_id = rp.race_id
+      WHERE rp.bet_type = 'trifecta'
+        AND rp.returned = 0
+        AND (
+          rp.combination IS NULL
+          OR rp.combination NOT GLOB '[1-6]-[1-6]-[1-6]'
+          OR substr(rp.combination, 1, 1) = substr(rp.combination, 3, 1)
+          OR substr(rp.combination, 1, 1) = substr(rp.combination, 5, 1)
+          OR substr(rp.combination, 3, 1) = substr(rp.combination, 5, 1)
+        )
+    `).get(...parameters) as { invalid: number | bigint | null };
+    const invalidPayoutCombinationShape = Number(payoutCombinationShape.invalid ?? 0);
+    if (!Number.isSafeInteger(invalidPayoutCombinationShape) || invalidPayoutCombinationShape < 0 || invalidPayoutCombinationShape > 0) {
+      console.error(`[condb-payout-preflight] CONDB_SWITCH_HISTORICAL_PAYOUT_COMBINATION_INVALID invalid=${invalidPayoutCombinationShape}`);
+      process.exit(2);
+    }
+
     const row = db.prepare(`
       WITH target AS (
         SELECT DISTINCT dh.race_id
