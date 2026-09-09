@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 const entrypointSource = readFileSync("scripts/analyze-roi-edge-market-gap.ts", "utf-8");
 const rawSource = readFileSync("scripts/analyze-roi-edge-market-gap-raw.ts", "utf-8");
+const dbBoundarySource = readFileSync("scripts/assert-roi-edge-market-gap-db-boundary.ts", "utf-8");
 const internalSource = readFileSync("scripts/analyze-roi-edge-market-gap-internal.ts", "utf-8");
 const auditSource = readFileSync("scripts/audit-roi-edge-market-gap-payout-completeness.ts", "utf-8");
 const packageSource = readFileSync("package.json", "utf-8");
@@ -21,8 +22,20 @@ test("ROI edge market-gap raw compatibility module cannot be executed directly",
   assert.match(rawSource, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(rawSource, /process\.argv\[1\]/);
   assert.match(rawSource, /ROI_EDGE_MARKET_GAP_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(rawSource, /await import\("\.\/analyze-roi-edge-market-gap-internal"\)/);
+  const dbBoundary = rawSource.indexOf('await import("./assert-roi-edge-market-gap-db-boundary")');
+  const analysis = rawSource.indexOf('await import("./analyze-roi-edge-market-gap-internal")');
+  assert.ok(dbBoundary >= 0);
+  assert.ok(analysis > dbBoundary);
   assert.doesNotMatch(rawSource, /new DatabaseSync/);
+});
+
+test("ROI edge market-gap guarded path canonicalizes its DB identity without exposing the configured path", () => {
+  assert.match(dbBoundarySource, /ROI_EDGE_MARKET_GAP_PRIMARY_DB_MISSING/);
+  assert.match(dbBoundarySource, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(dbBoundarySource, /ROI_EDGE_MARKET_GAP_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.match(dbBoundarySource, /process\.env\.BOAT_PON_DB_PATH = verifiedDbPath/);
+  assert.doesNotMatch(dbBoundarySource, /DB not found:/);
+  assert.doesNotMatch(dbBoundarySource, /`[^`]*\$\{configuredDbPath\}[^`]*`/);
 });
 
 test("ROI edge market-gap payout preflight matches analyzer population and stays read-only", () => {
