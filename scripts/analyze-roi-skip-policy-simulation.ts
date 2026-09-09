@@ -26,10 +26,5 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-roi-skip-policy-simulation-raw.ts");
-if (analysis !== 0) {
-  console.error("[roi-skip-policy-entrypoint] skip-policy simulation failed after a successful payout completeness preflight");
-  process.exit(analysis);
-}
-
+await import("./analyze-roi-skip-policy-simulation-raw");
 console.log("[roi-skip-policy-entrypoint] PASS: payout completeness preflight passed before skip-policy simulation");
