@@ -48,4 +48,4 @@ function run(script: string): number {
   return result.status ?? 1;
 }
 
-process.exit(run("scripts/report-bet-type-selector-summary-raw.ts"));
+process.exit(run("scripts/report-bet-type-selector-summary-internal.ts"));
