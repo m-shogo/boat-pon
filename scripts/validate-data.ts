@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type Severity = "ok" | "warning" | "error";
 type Check = { id: string; severity: Severity; message: string; action?: string };
@@ -7,6 +8,7 @@ type CountRow = { value: number | bigint | null };
 type TextRow = { value: string | null };
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const DB_SOURCE = "primary research database";
 const args = new Set(process.argv.slice(2));
 const json = args.has("--json");
 const failOnWarning = args.has("--fail-on-warning");
@@ -14,21 +16,25 @@ const failOnWarning = args.has("--fail-on-warning");
 if (!existsSync(DB_PATH)) {
   const payload = {
     ok: false,
-    error: "db_not_found",
-    dbPath: DB_PATH,
+    error: "DATA_VALIDATION_DB_MISSING",
+    dbPath: DB_SOURCE,
     nextCommands: ["npm run db:init", "npm run readiness"],
   };
   if (json) console.log(JSON.stringify(payload, null, 2));
   else {
-    console.error(`DB not found: ${DB_PATH}`);
+    console.error("DATA_VALIDATION_DB_MISSING");
     console.error("Next commands:");
     for (const command of payload.nextCommands) console.error(`  ${command}`);
   }
   process.exit(1);
 }
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "DATA_VALIDATION_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 try {
   const report = buildReport(db);
   const nextCommands = buildNextCommands(report.checks);
@@ -88,7 +94,7 @@ function buildReport(db: DatabaseSync) {
 
   const errorCount = checks.filter((c) => c.severity === "error").length;
   const warningCount = checks.filter((c) => c.severity === "warning").length;
-  return { generatedAt: new Date().toISOString(), dbPath: DB_PATH, ok: errorCount === 0, errorCount, warningCount, checks };
+  return { generatedAt: new Date().toISOString(), dbPath: DB_SOURCE, ok: errorCount === 0, errorCount, warningCount, checks };
 }
 
 function freshness(db: DatabaseSync, checks: Check[], table: string, column: string, missingIsError: boolean, warningDays = 14, errorDays = 45) {
