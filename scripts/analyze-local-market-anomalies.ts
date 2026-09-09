@@ -40,7 +40,7 @@ try {
         AND MAX(CASE WHEN h.combination='1-4' THEN h.odds END) IS NOT NULL
     ), settlement AS (
       SELECT rp.race_id,
-        CASE WHEN COUNT(*)>=1
+        CASE WHEN COUNT(*)=1
           AND SUM(CASE WHEN rp.returned=0
             AND rp.combination IS NOT NULL AND rp.combination!=''
             AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
@@ -50,7 +50,7 @@ try {
                 AND winner_h.bet_type='exacta'
                 AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
                 AND winner_h.combination=rp.combination
-            ) THEN 1 ELSE 0 END)=COUNT(*)
+            ) THEN 1 ELSE 0 END)=1
         THEN 1 ELSE 0 END AS settled
       FROM race_payouts rp
       WHERE rp.bet_type='exacta'
