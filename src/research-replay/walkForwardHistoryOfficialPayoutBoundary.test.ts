@@ -27,7 +27,7 @@ test("walk-forward history uses official payouts and excludes missing-payout win
   assert.doesNotMatch(source, /row\.current_odds \?\? 0/);
 });
 
-test("walk-forward history validates every settled BUY denominator before LIMIT 1 or window verdicts", () => {
+test("walk-forward history fail-closes blank results and validates every settled BUY denominator before LIMIT 1 or window verdicts", () => {
   const mappingIndex = source.indexOf("assertSupportedBetTypeMapping(db, range.from, range.to)");
   const integrityIndex = source.indexOf("assertWinningSettlementIntegrity(db, range.from, range.to)");
   const rowsIndex = source.indexOf("listRows(db, range.from, range.to)");
@@ -40,7 +40,8 @@ test("walk-forward history validates every settled BUY denominator before LIMIT 
   assert.match(source, /decision = 'BUY'/);
   assert.match(source, /returned = 0/);
   assert.match(source, /result IS NOT NULL/);
-  assert.match(source, /result != ''/);
+  assert.match(source, /WHERE TRIM\(s\.result\) = ''/);
+  assert.doesNotMatch(source, /AND result != ''\n\), invalid AS/);
   assert.doesNotMatch(source, /relevant_hits AS/);
   assert.doesNotMatch(source, /selection = result[\s\S]*\), invalid AS/);
   assert.match(source, /s\.payout_bet_type IS NULL/);
@@ -50,9 +51,11 @@ test("walk-forward history validates every settled BUY denominator before LIMIT 
   assert.match(source, /rp\.payout_yen IS NOT NULL/);
   assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /WALK_FORWARD_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
+  assert.match(source, /row\.result != null && row\.result\.trim\(\) !== ""/);
 });
 
 test("walk-forward payout scalar lookup is constrained to the validated positive non-refund winning key", () => {
+  assert.match(source, /result IS NOT NULL AND TRIM\(result\) != '' AND selection = result AND returned = 0/);
   assert.match(source, /rp\.combination = decision_history\.selection\n        AND rp\.returned = 0\n        AND rp\.payout_yen > 0\n      LIMIT 1/);
   assert.match(source, /new DatabaseSync\(primaryDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
