@@ -29,7 +29,9 @@ test("exacta backfill quality rejects decision cohort drift before implementatio
 });
 
 test("exacta backfill quality implementation remains read-only historical research", () => {
-  assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/u);
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "EXACTA_BACKFILL_QUALITY_DB_IDENTITY_INVALID"\)/u);
+  assert.match(internal, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/u);
+  assert.match(internal, /PRAGMA query_only\s*=\s*ON/u);
   assert.match(internal, /historical_alternative_odds/u);
   assert.match(internal, /run_kind='historical-backfill'/u);
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\([^)]*(?:INSERT|UPDATE|DELETE|DROP|ALTER)/iu);
