@@ -36,10 +36,15 @@ test("no-buy next research scopes return, settlement, and ROI cohorts to trifect
   assert.match(source, /rp\.bet_type = 'trifecta'/);
 });
 
-test("no-buy next ROI uses unique positive non-refund official trifecta settlements", () => {
+test("no-buy next ROI validates every settled denominator against its unique positive non-refund official trifecta winning result", () => {
+  assert.match(source, /WITH settled AS/);
+  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.result/);
+  assert.match(source, /dh\.result != ''/);
+  assert.doesNotMatch(source, /WITH winners AS/);
   assert.match(source, /rp\.bet_type = 'trifecta'/);
-  assert.match(source, /rp\.combination = w\.selection/);
+  assert.match(source, /rp\.combination = s\.result/);
   assert.match(source, /total_rows != 1 OR valid_rows != 1/);
+  assert.match(source, /rp\.payout_yen IS NOT NULL/);
   assert.match(source, /NO_BUY_NEXT_OFFICIAL_SETTLEMENT_INVALID/);
   assert.match(source, /official_payout_yen/);
   assert.match(source, /const ret = rows\.reduce\(\(sum, row\) => sum \+ row\.payoutYen, 0\)/);
