@@ -5,17 +5,21 @@ import test from "node:test";
 const entrypoint = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8");
 const raw = readFileSync("scripts/analyze-roi-hypothesis-sets-raw.ts", "utf8");
 
-test("ROI hypothesis entrypoint verifies the database and settlement integrity before raw analysis", () => {
+test("ROI hypothesis entrypoint verifies the database and every settled denominator before raw analysis", () => {
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(entrypoint, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(entrypoint, /PRAGMA query_only = ON/);
+  assert.match(entrypoint, /WITH relevant_settled AS/);
+  assert.match(entrypoint, /SELECT DISTINCT dh\.race_id, dh\.result/);
+  assert.doesNotMatch(entrypoint, /WITH relevant_hits AS/);
   assert.match(entrypoint, /FROM race_payouts rp/);
   assert.match(entrypoint, /rp\.bet_type = \?/);
+  assert.match(entrypoint, /rp\.payout_yen IS NOT NULL/);
   assert.match(entrypoint, /rp\.payout_yen > 0/);
-  assert.match(entrypoint, /rp\.combination = h\.selection/);
+  assert.match(entrypoint, /rp\.combination = s\.result/);
   assert.match(entrypoint, /rp\.returned = 0/);
-  assert.doesNotMatch(entrypoint, /rp\.bet_type = h\.bet_type/);
-  const integrity = entrypoint.indexOf("WITH relevant_hits AS");
+  assert.doesNotMatch(entrypoint, /rp\.bet_type = s\.bet_type/);
+  const integrity = entrypoint.indexOf("WITH relevant_settled AS");
   const rawLaunch = entrypoint.indexOf("analyze-roi-hypothesis-sets-raw.ts");
   assert.ok(integrity >= 0);
   assert.ok(rawLaunch > integrity);
