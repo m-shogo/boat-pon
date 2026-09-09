@@ -49,9 +49,20 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   );
 });
 
-test("promising bet core remains separated from the guarded normal entrypoint", () => {
+test("promising bet raw compatibility module blocks direct CLI bypass", () => {
   const raw = readFileSync("scripts/analyze-promising-bet-type-strategies-raw.ts", "utf8");
-  assert.match(raw, /const STRATEGIES: StrategyDef\[\] =/);
-  assert.match(raw, /const results = STRATEGIES\.map\(evaluate\)/);
-  assert.match(raw, /writeFileSync\(OUT_JSON/);
+  assert.match(raw, /PROMISING_BET_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(raw, /process\.argv\[1\]/);
+  assert.match(raw, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
+  assert.doesNotMatch(raw, /DatabaseSync/);
+  assert.doesNotMatch(raw, /const STRATEGIES: StrategyDef\[\] =/);
+});
+
+test("promising bet internal analyzer retains the read-only research implementation", () => {
+  const internal = readFileSync("scripts/analyze-promising-bet-type-strategies-internal.ts", "utf8");
+  assert.match(internal, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
+  assert.match(internal, /PRAGMA query_only=ON/);
+  assert.match(internal, /const STRATEGIES: StrategyDef\[\] =/);
+  assert.match(internal, /const results = STRATEGIES\.map\(evaluate\)/);
+  assert.match(internal, /writeFileSync\(OUT_JSON/);
 });
