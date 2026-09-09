@@ -30,11 +30,22 @@ try {
       MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,
       p.combination AS winner, p.payout_yen, w.wind_speed_mps, c.wind_dir
     FROM historical_alternative_odds h
-    LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
+    JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
     LEFT JOIN race_weather w ON w.race_id=h.race_id
     LEFT JOIN race_conditions c ON c.race_id=h.race_id
     WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
       AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+      AND (SELECT COUNT(*) FROM race_payouts rp WHERE rp.race_id=h.race_id AND rp.bet_type='exacta')=1
+      AND p.returned=0
+      AND p.combination IS NOT NULL AND p.combination!=''
+      AND p.payout_yen IS NOT NULL AND p.payout_yen>0
+      AND EXISTS (
+        SELECT 1 FROM historical_alternative_odds winner_h
+        WHERE winner_h.race_id=h.race_id
+          AND winner_h.bet_type='exacta'
+          AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+          AND winner_h.combination=p.combination
+      )
     GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING} AND odds14 IS NOT NULL
   `).all() as ExactaRow[];
   assertPayoutCompleteness(exacta);
