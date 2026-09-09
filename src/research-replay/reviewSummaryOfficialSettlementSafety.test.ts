@@ -8,6 +8,7 @@ test("review summary validates mapped exact official winning-result settlements 
   assert.match(source, /function assertOfficialSettlementIntegrity/u);
   assert.match(source, /REVIEW_SUMMARY_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/u);
   assert.match(source, /WITH relevant_settled AS/u);
+  assert.match(source, /TRIM\(s\.result\) = ''/u);
   assert.match(source, /s\.payout_bet_type IS NULL/u);
   assert.match(source, /SELECT COUNT\(\*\)[\s\S]*rp\.race_id = s\.race_id[\s\S]*rp\.bet_type = s\.payout_bet_type[\s\S]*rp\.combination = s\.result/u);
   assert.match(source, /rp\.returned = 0/u);
@@ -19,8 +20,9 @@ test("review summary validates mapped exact official winning-result settlements 
   assert.ok(guard >= 0 && summary > guard);
 });
 
-test("review summary settlement guard covers the full filtered settled denominator, not only hits", () => {
-  assert.match(source, /makeWhere\("returned = 0 AND result IS NOT NULL AND result != ''", \[\]\)/u);
+test("review summary settlement guard covers blank and nonblank full filtered settled denominator, not only hits", () => {
+  assert.match(source, /makeWhere\("returned = 0 AND result IS NOT NULL", \[\]\)/u);
+  assert.doesNotMatch(source, /makeWhere\("returned = 0 AND result IS NOT NULL AND result != ''", \[\]\)/u);
   assert.match(source, /SELECT DISTINCT[\s\S]*race_id,[\s\S]*payout_bet_type,[\s\S]*result/u);
   assert.doesNotMatch(source, /relevant_hits AS/u);
   assert.doesNotMatch(source, /makeWhere\("returned = 0 AND result IS NOT NULL AND selection = result"/u);
