@@ -35,7 +35,7 @@ try{
   const flagsByRace=new Map<string,string[]>();let stageCoverage=0;
   for(const row of odds){if(flagsByRace.has(row.race_id))continue;const start=readStartDate(row.race_id,row.date),day=eventDayIndex(row.date,start),flags:string[]=[];if(day!=null)stageCoverage+=1;if(day===1)flags.push("day1");if(day===2)flags.push("day2");if(day!=null&&day>=3&&day<=4)flags.push("day3_4");if(day!=null&&day>=5)flags.push("day5_plus");const key=`${row.venue}/${row.date}`;if(semifinalDays.has(key))flags.push("semifinal_day");if(finalDays.has(key))flags.push("final_day");const type=row.race_type??"";if(/ドリーム/.test(type))flags.push("dream_race");if(/準優勝戦/.test(type))flags.push("semifinal_race");if(/優勝戦/.test(type)&&!/準優勝戦/.test(type))flags.push("final_race");if(/進入固定/.test(type))flags.push("fixed_entry");flagsByRace.set(row.race_id,flags);}
   const rows:EvalRow[]=odds.map(r=>({...r,period:r.date<="2024-12-31"?"discovery":"forward",implied:(1/r.odds)/(overround.get(r.race_id)??1),hit:r.winner===r.combination,flags:flagsByRace.get(r.race_id)??[]}));
-  const cells=stages.flatMap(([id,label])=>selections.map(selection=>{const inside=rows.filter(r=>r.combination===selection&&r.flags.includes(id));const outside=rows.filter(r=>r.combination===selection&&!r.flags.includes(id));return{id,label,selection,inside:byPeriod(inside),outside:byPeriod(outside)};}));
+  const cells=stages.flatMap(([id,label])=>selections.map(selection=>{const inside=rows.filter(r=>r.combination===selection&&r.flags.includes(id)),outside=rows.filter(r=>r.combination===selection&&!r.flags.includes(id));return{id,label,selection,inside:byPeriod(inside),outside:byPeriod(outside)};}));
   const eligible=cells.filter(c=>c.inside.discovery.n>=30&&c.inside.forward.n>=30);const stable=eligible.filter(c=>c.inside.discovery.edgePp>0&&c.inside.forward.edgePp>0).sort((a,b)=>Math.min(b.inside.discovery.edgePp,b.inside.forward.edgePp)-Math.min(a.inside.discovery.edgePp,a.inside.forward.edgePp));const robust=stable.filter(c=>c.inside.discovery.max2HitExclRoi>=1&&c.inside.forward.max2HitExclRoi>=1);
   const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,preRaceStage:true,productionConnected:false},coverage:{races:flagsByRace.size,eventStage:stageCoverage},family:{stages:stages.length,selections:selections.length,cells:cells.length,eligible:eligible.length},stable,robust,caveats:["開催初日は保存HTMLのリンクから復元","準優日・最終日は同日の公式race_typeから識別","50セル探索後の順位でfamily-wise補正前","historical closing oddsでT-5と非同等"]};
   mkdirSync("reports",{recursive:true});writeFileSync("reports/event-stage-market-screen.json",`${JSON.stringify(report,null,2)}\n`);
@@ -50,10 +50,17 @@ function assertSettlementCompleteness(){
       AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
     GROUP BY h.race_id HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
   ),settlement AS(
-    SELECT race_id,
+    SELECT rp.race_id,
       COUNT(*) AS payout_rows,
-      SUM(CASE WHEN returned=0 AND payout_yen IS NOT NULL AND payout_yen>0 AND combination IS NOT NULL AND trim(combination)!='' THEN 1 ELSE 0 END) AS valid_rows
-    FROM race_payouts WHERE bet_type='exacta' GROUP BY race_id
+      SUM(CASE WHEN rp.returned=0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0 AND rp.combination IS NOT NULL AND trim(rp.combination)!=''
+        AND EXISTS(
+          SELECT 1 FROM historical_alternative_odds winner_h
+          WHERE winner_h.race_id=rp.race_id
+            AND winner_h.bet_type='exacta'
+            AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+            AND winner_h.combination=rp.combination
+        ) THEN 1 ELSE 0 END) AS valid_rows
+    FROM race_payouts rp WHERE rp.bet_type='exacta' GROUP BY rp.race_id
   )SELECT CASE WHEN p.date<='2024-12-31' THEN 'discovery' ELSE 'forward' END AS period,COUNT(*) AS total,
       SUM(CASE WHEN s.payout_rows=1 AND s.valid_rows=1 THEN 1 ELSE 0 END) AS settled,
       SUM(CASE WHEN COALESCE(s.payout_rows,0)>1 THEN 1 ELSE 0 END) AS ambiguous
