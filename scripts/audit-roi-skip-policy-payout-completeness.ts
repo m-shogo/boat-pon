@@ -34,6 +34,7 @@ type IntegrityRow = {
   total: number;
   covered: number;
   cohortInvalidRows: number;
+  invalidSettlementKeyShapes: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
@@ -80,6 +81,18 @@ SELECT
       OR tr.returned != 0
   ) AS cohortInvalidRows,
   (SELECT COUNT(*)
+   FROM target_settlements ts
+   WHERE ts.returned = 0
+     AND (
+       ts.combination IS NULL
+       OR length(ts.combination) != 5
+       OR ts.combination NOT GLOB '[1-6]-[1-6]-[1-6]'
+       OR substr(ts.combination, 1, 1) = substr(ts.combination, 3, 1)
+       OR substr(ts.combination, 1, 1) = substr(ts.combination, 5, 1)
+       OR substr(ts.combination, 3, 1) = substr(ts.combination, 5, 1)
+     )
+  ) AS invalidSettlementKeyShapes,
+  (SELECT COUNT(*)
    FROM target_races tr
    WHERE EXISTS (
      SELECT 1
@@ -109,11 +122,16 @@ const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covere
 db.close();
 
 console.log(
-  `[roi-skip-policy-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
+  `[roi-skip-policy-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidSettlementKeyShapes=${row.invalidSettlementKeyShapes ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
 );
 
 if ((row.cohortInvalidRows ?? 0) > 0) {
   console.error("[roi-skip-policy-payout-preflight] FAIL: target research cohort contains non-3連単 or returned/unknown-return historical BUY rows, but the downstream skip-policy simulator does not exclude them explicitly");
+  process.exit(2);
+}
+
+if ((row.invalidSettlementKeyShapes ?? 0) > 0) {
+  console.error("[roi-skip-policy-payout-preflight] FAIL: target cohort contains malformed official trifecta settlement keys; skip-policy payout ROI and policy verdicts must remain unavailable");
   process.exit(2);
 }
 
@@ -137,4 +155,4 @@ if (!result.complete) {
   process.exit(2);
 }
 
-console.log("[roi-skip-policy-payout-preflight] PASS: official trifecta settlement coverage and line integrity are complete for the skip-policy population");
+console.log("[roi-skip-policy-payout-preflight] PASS: official trifecta settlement coverage, settlement shape, and line integrity are complete for the skip-policy population");
