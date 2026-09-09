@@ -5,7 +5,7 @@
  * それぞれを RuleEvaluationResult（src/domain/researchRule.ts）に変換したうえで
  * DriftDetectionResult（src/domain/researchDrift.ts）を出力する。
  *
- * - scripts/explore-roi.ts と同じくDB/テーブルが無い環境でも空評価+warningsで正常終了する
+ * - 必須DB/テーブルが無い環境ではdrift結果を作らずfail-closeする
  * - DBへの書き込みは一切行わない（canonical identity検証 + readOnly + query_only）
  * - realized ROI は canonical race_payouts.payout_yen のみを使い、unsupported/ambiguous settlement は fail-close
  * - data/research-rules.json は --rule-id 指定時に read-only で参照するだけ（Phase 4.1）。
@@ -149,7 +149,7 @@ SELECT COUNT(*) AS invalid FROM invalid
 
 function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourceWarnings: string[] } {
   if (!existsSync(DB_PATH)) {
-    return { rows: [], sourceWarnings: ["research database not found; produced empty evaluation"] };
+    throw new Error("RESEARCH_DRIFT_PRIMARY_DB_MISSING");
   }
 
   const primaryDbPath = assertCanonicalSingleLinkRegularFile(
@@ -161,7 +161,7 @@ function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourc
   try {
     const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='decision_history'").get() != null;
     if (!hasTable) {
-      return { rows: [], sourceWarnings: ["decision_history table not found; produced empty evaluation"] };
+      throw new Error("RESEARCH_DRIFT_DECISION_HISTORY_TABLE_MISSING");
     }
     const hasPayoutTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='race_payouts'").get() != null;
     if (!hasPayoutTable) {
@@ -246,9 +246,9 @@ function printHelp() {
 
 Read-only. Compares two decision_history windows (baseline vs recent) as
 RuleEvaluationResult and reports a DriftDetectionResult (roi/hitRate delta,
-severity, signals, warnings). Realized ROI uses canonical race_payouts.payout_yen;
-unsupported or ambiguous winning settlements fail closed. Does not write to the
-DB or to any rule store.
+severity, signals, warnings). Missing required research sources fail closed.
+Realized ROI uses canonical race_payouts.payout_yen; unsupported or ambiguous
+winning settlements fail closed. Does not write to the DB or to any rule store.
 
   --baseline-from     baseline window start (default 1970-01-01)
   --baseline-to       baseline window end (default 1970-01-01; must be set explicitly)
