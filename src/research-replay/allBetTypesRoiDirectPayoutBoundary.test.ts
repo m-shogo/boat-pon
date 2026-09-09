@@ -38,11 +38,12 @@ test("direct all-bet-types ROI entrypoint cannot bypass payout completeness audi
   const source = readFileSync("scripts/analyze-all-bet-types-roi.ts", "utf8");
   const auditIndex = source.indexOf("audit-all-bet-types-payout-completeness.ts");
   const gateIndex = source.indexOf("audit !== 0");
-  const rawIndex = source.indexOf("analyze-all-bet-types-roi-raw.ts");
+  const rawIndex = source.indexOf('await import("./analyze-all-bet-types-roi-raw")');
 
   assert.ok(auditIndex >= 0);
   assert.ok(gateIndex > auditIndex);
   assert.ok(rawIndex > gateIndex);
+  assert.doesNotMatch(source, /run\("scripts\/analyze-all-bet-types-roi-raw\.ts"\)/);
   assert.doesNotMatch(source, /DatabaseSync/);
 });
 

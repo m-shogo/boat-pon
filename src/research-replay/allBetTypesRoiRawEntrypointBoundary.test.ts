@@ -6,8 +6,17 @@ const wrapper = readFileSync("scripts/analyze-all-bet-types-roi.ts", "utf8");
 const raw = readFileSync("scripts/analyze-all-bet-types-roi-raw.ts", "utf8");
 const internal = readFileSync("scripts/analyze-all-bet-types-roi-internal.ts", "utf8");
 
+test("all-bet-types ROI canonical entrypoint imports guarded raw module after payout audit", () => {
+  const audit = wrapper.indexOf("audit-all-bet-types-payout-completeness.ts");
+  const gate = wrapper.indexOf("audit !== 0");
+  const guardedImport = wrapper.indexOf('await import("./analyze-all-bet-types-roi-raw")');
+  assert.ok(audit >= 0);
+  assert.ok(gate > audit);
+  assert.ok(guardedImport > gate, "guarded raw module must be imported only after payout audit passes");
+  assert.doesNotMatch(wrapper, /run\("scripts\/analyze-all-bet-types-roi-raw\.ts"\)/);
+});
+
 test("all-bet-types ROI raw compatibility module cannot be invoked directly", () => {
-  assert.match(wrapper, /audit-all-bet-types-payout-completeness\.ts/);
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
   assert.match(raw, /ALL_BET_TYPES_ROI_RAW_DIRECT_EXECUTION_FORBIDDEN/);

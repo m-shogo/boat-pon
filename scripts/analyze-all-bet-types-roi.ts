@@ -15,5 +15,4 @@ if (audit !== 0) {
   process.exit(audit);
 }
 
-const analysis = run("scripts/analyze-all-bet-types-roi-raw.ts");
-process.exit(analysis);
+await import("./analyze-all-bet-types-roi-raw");
