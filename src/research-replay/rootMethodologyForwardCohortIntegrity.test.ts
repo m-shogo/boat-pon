@@ -5,6 +5,19 @@ import test from "node:test";
 const entrypoint = readFileSync("scripts/audit-root-methodology.ts", "utf8");
 const internal = readFileSync("scripts/audit-root-methodology-internal.ts", "utf8");
 
+test("root methodology rejects blank historical BUY results before implementation load", () => {
+  assert.match(entrypoint, /const blankHistoricalResults = db\.prepare/);
+  assert.match(entrypoint, /TRIM\(dh\.result\)=''/u);
+  assert.match(entrypoint, /ROOT_METHODOLOGY_BLANK_HISTORICAL_RESULT_UNSUPPORTED/u);
+
+  const blankGuard = entrypoint.indexOf("const blankHistoricalResults = db.prepare");
+  const cohortGuard = entrypoint.indexOf("const invalidForwardCohort = db.prepare");
+  const implementationImport = entrypoint.indexOf("audit-root-methodology-internal");
+  assert.ok(blankGuard >= 0, "blank historical result guard must exist");
+  assert.ok(cohortGuard > blankGuard, "forward cohort guard must follow blank-result validation");
+  assert.ok(implementationImport > cohortGuard, "methodology implementation must load only after both guards");
+});
+
 test("root methodology fails closed on governor-forward cohort drift before implementation load", () => {
   assert.match(entrypoint, /dh\.bet_type IS NULL OR dh\.bet_type != '3連単'/u);
   assert.match(entrypoint, /dh\.returned IS NULL OR dh\.returned != 0/u);
