@@ -6,7 +6,7 @@ test("one-four structure direct entrypoint cannot bypass official payout audit",
   const source = readFileSync("scripts/analyze-one-four-structure.ts", "utf8");
   const auditIndex = source.indexOf("audit-all-bet-types-payout-completeness.ts");
   const gateIndex = source.indexOf("audit !== 0");
-  const rawIndex = source.indexOf("analyze-one-four-structure-raw.ts");
+  const rawIndex = source.indexOf('await import("./analyze-one-four-structure-raw")');
 
   assert.ok(auditIndex >= 0);
   assert.ok(gateIndex > auditIndex);
@@ -14,8 +14,19 @@ test("one-four structure direct entrypoint cannot bypass official payout audit",
   assert.doesNotMatch(source, /DatabaseSync/);
 });
 
-test("one-four structure uses the same forward BUY population covered by the shared payout audit", () => {
+test("one-four structure raw compatibility module rejects direct CLI execution", () => {
   const raw = readFileSync("scripts/analyze-one-four-structure-raw.ts", "utf8");
+  const directGuard = raw.indexOf("invokedPath === rawEntrypointPath");
+  const failure = raw.indexOf("ONE_FOUR_STRUCTURE_RAW_DIRECT_EXECUTION_FORBIDDEN");
+  const internal = raw.indexOf('await import("./analyze-one-four-structure-internal")');
+
+  assert.ok(directGuard >= 0, "raw compatibility module must detect direct CLI execution");
+  assert.ok(failure > directGuard, "direct execution must fail closed at the guard");
+  assert.ok(internal > failure, "internal analyzer may load only after the direct-execution guard");
+});
+
+test("one-four structure uses the same forward BUY population covered by the shared payout audit", () => {
+  const internal = readFileSync("scripts/analyze-one-four-structure-internal.ts", "utf8");
   const audit = readFileSync("scripts/audit-all-bet-types-payout-completeness.ts", "utf8");
 
   for (const fragment of [
@@ -25,7 +36,7 @@ test("one-four structure uses the same forward BUY population covered by the sha
     "dh.selection='1-2-3'",
     "dh.date >= '${FORWARD_START}'",
   ]) {
-    assert.ok(raw.includes(fragment), `raw analyzer missing shared population fragment: ${fragment}`);
+    assert.ok(internal.includes(fragment), `internal analyzer missing shared population fragment: ${fragment}`);
     assert.ok(audit.includes(fragment), `audit missing shared population fragment: ${fragment}`);
   }
   assert.match(audit, /rp\.payout_yen IS NOT NULL/);
