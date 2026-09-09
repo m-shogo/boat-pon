@@ -10,6 +10,22 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
+  const blankResult = db.prepare(`
+    SELECT COUNT(*) AS invalid
+    FROM decision_history
+    WHERE decision='BUY'
+      AND run_kind='historical-backfill'
+      AND model_version=?
+      AND bet_type='3連単'
+      AND result IS NOT NULL
+      AND TRIM(result)=''
+      AND current_odds IS NOT NULL
+  `).get(MODEL) as { invalid: number };
+
+  if (Number(blankResult.invalid) > 0) {
+    throw new Error(`CALIBRATION_STABILITY_BLANK_SETTLED_RESULT_UNSUPPORTED ${JSON.stringify({ invalid: Number(blankResult.invalid) })}`);
+  }
+
   const invalidReturn = db.prepare(`
     SELECT COUNT(*) AS invalid
     FROM decision_history
@@ -18,7 +34,7 @@ try {
       AND model_version=?
       AND bet_type='3連単'
       AND result IS NOT NULL
-      AND result!=''
+      AND TRIM(result)!=''
       AND current_odds IS NOT NULL
       AND (returned IS NULL OR returned != 0)
   `).get(MODEL) as { invalid: number };
@@ -35,7 +51,7 @@ try {
         AND run_kind='historical-backfill'
         AND model_version=?
         AND bet_type='3連単'
-        AND result IS NOT NULL AND result!=''
+        AND result IS NOT NULL AND TRIM(result)!=''
         AND returned=0
         AND current_odds IS NOT NULL
         AND selection=result
@@ -83,7 +99,7 @@ try {
           AND dh.model_version=?
           AND dh.bet_type='3連単'
           AND dh.result IS NOT NULL
-          AND dh.result!=''
+          AND TRIM(dh.result)!=''
           AND dh.returned=0
           AND dh.current_odds IS NOT NULL
       )
