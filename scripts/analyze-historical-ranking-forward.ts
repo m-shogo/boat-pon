@@ -12,6 +12,7 @@ import {
   parseHistoricalRankingEpochs,
   validateHistoricalRankingForwardCohorts,
 } from "../src/research-replay/historicalRankingForwardOptions";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5MarketCoverageProgramIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -19,7 +20,8 @@ const EPOCHS = parseHistoricalRankingEpochs(process.env.BOAT_PON_RANKING_EPOCHS)
 const OUT_MD = "reports/historical-ranking-forward.md";
 const OUT_JSON = "reports/historical-ranking-forward.json";
 const OUT_MODEL = "reports/historical-ranking-model.json";
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("HISTORICAL_RANKING_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "HISTORICAL_RANKING_DB_IDENTITY_INVALID");
 
 type ProgramBoat = {
   course: number;
@@ -62,7 +64,7 @@ type Race = { raceId: string; date: string; order: number[]; payoutYen: number; 
 type FeatureSet = { id: string; label: string; dimensions: number; vector: (boat: Boat) => number[] };
 type RankingModel = { featureSet: FeatureSet; weights: number[][] };
 
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 const sourceRows = validateHistoricalRankingSettlementRows(validateHistoricalRankingPayoutIdentityRows(validateHistoricalRankingResultIdentityRows(validateT5MarketCoverageProgramRows(db.prepare(`
   SELECT
