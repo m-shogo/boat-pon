@@ -77,8 +77,8 @@ ORDER BY run_kind, model_version
     const settled = Number(row.settled_n ?? 0);
     const roi = nullableNumber(row.roi);
     const maxHitPayoutUnits = Number(row.max_hit_payout_units ?? 0);
-    const roiExMax = roi != null && settled > 0 && maxHitPayoutUnits > 0
-      ? Math.round((roi - maxHitPayoutUnits / settled) * 1000) / 1000
+    const roiExMax = roi != null && settled > 1 && maxHitPayoutUnits > 0
+      ? Math.round((((roi * settled) - maxHitPayoutUnits) / (settled - 1)) * 1000) / 1000
       : null;
     return { ...row, roi_ex_max: roiExMax };
   });
