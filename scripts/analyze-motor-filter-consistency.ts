@@ -19,6 +19,7 @@ db.exec("PRAGMA busy_timeout = 5000;");
 db.exec("PRAGMA query_only = ON;");
 
 try {
+  assertSettledResultIntegrity();
   assertReturnStateIntegrity();
   assertWinningSettlementIntegrity();
   const rows = loadRows();
@@ -58,6 +59,23 @@ type Row = {
   nationalMotor: number | null;
   venueMotor: number | null;
 };
+
+function assertSettledResultIntegrity() {
+  const invalid = db.prepare(`
+SELECT COUNT(*) AS n
+FROM decision_history
+WHERE run_kind = 'historical-backfill'
+  AND decision = 'BUY'
+  AND bet_type = ?
+  AND current_odds IS NOT NULL
+  AND returned = 0
+  AND (result IS NULL OR trim(result) = '')
+  `).get(DECISION_BET_TYPE) as { n: number };
+
+  if ((invalid.n ?? 0) > 0) {
+    throw new Error(`MOTOR_FILTER_SETTLED_RESULT_INVALID count=${invalid.n}`);
+  }
+}
 
 function assertReturnStateIntegrity() {
   const invalid = db.prepare(`
@@ -153,6 +171,7 @@ WHERE dh.run_kind='historical-backfill'
   AND dh.bet_type = ?
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
+  AND dh.result != ''
   AND dh.returned = 0
 `).all(PAYOUT_BET_TYPE, PAYOUT_BET_TYPE, DECISION_BET_TYPE) as Array<Record<string, unknown>>;
   return rows.map((row) => {
