@@ -10,6 +10,7 @@ import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-repl
 import { isCanonicalT5TrifectaResult } from "../src/research-replay/t5MarketBaselineResult";
 import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
 import { assertT5MarketBaselineWindow } from "../src/research-replay/t5MarketBaselineWindow";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = process.env.BOAT_PON_FROM ?? "2026-06-01";
@@ -18,13 +19,14 @@ const BOUNDARY = process.env.BOAT_PON_BOUNDARY ?? "2026-07-01";
 const OUT_MD = "reports/t5-market-baseline.md";
 const OUT_JSON = "reports/t5-market-baseline.json";
 assertT5MarketBaselineWindow({ from: FROM, to: TO, boundary: BOUNDARY });
-if (!existsSync(DB_PATH)) throw new Error(`DB not found: ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("T5_MARKET_BASELINE_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "T5_MARKET_BASELINE_DB_IDENTITY_INVALID");
 
 type OddsRow = { id:number; race_id:string; selection:string; odds:number };
 type ResultRow = { race_id:string; date:string; venue:string; race_no:number; trifecta:string|null; payout_yen:number|null; returned:number };
 type RaceEval = ResultRow & { overround:number; favorite:string; favoriteOdds:number; favoriteProbability:number; hit:boolean; logLoss:number; brier:number };
 
-const db = new DatabaseSync(DB_PATH,{readOnly:true});
+const db = new DatabaseSync(verifiedDbPath,{readOnly:true});
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 const fromId=FROM.replaceAll("-",""); const toExclusive=addDays(TO,1).replaceAll("-","");
 const canonicalSelectionHavingSql = n2CanonicalT5CompleteCaptureSelectionHavingSql("selection");
