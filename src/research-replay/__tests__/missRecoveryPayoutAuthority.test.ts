@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("miss recovery normal entrypoint validates official settlement integrity before raw analysis", () => {
+test("miss recovery normal entrypoint validates official settlement integrity before guarded analysis", () => {
   const source = readFileSync("scripts/analyze-miss-to-bet-type-recovery.ts", "utf8");
   const raw = readFileSync("scripts/analyze-miss-to-bet-type-recovery-raw.ts", "utf8");
+  const internal = readFileSync("scripts/analyze-miss-to-bet-type-recovery-internal.ts", "utf8");
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
 
   assert.equal(pkg.scripts["analyze:miss-recovery"], "tsx scripts/analyze-miss-to-bet-type-recovery.ts");
@@ -33,7 +34,12 @@ test("miss recovery normal entrypoint validates official settlement integrity be
       < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
   );
 
-  assert.match(raw, /const payoutIndex = new Map<string, number>\(\)/);
-  assert.match(raw, /const analyzed: RecoveryRow\[\] = \[\]/);
-  assert.match(raw, /writeFileSync\(OUT_JSON/);
+  assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
+  assert.match(raw, /process\.argv\[1\]/);
+  assert.match(raw, /MISS_RECOVERY_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(raw, /await import\("\.\/analyze-miss-to-bet-type-recovery-internal"\)/);
+  assert.match(internal, /const payoutIndex = new Map<string, number>\(\)/);
+  assert.match(internal, /const analyzed: RecoveryRow\[\] = \[\]/);
+  assert.match(internal, /writeFileSync\(OUT_JSON/);
+  assert.match(internal, /readOnly: true/);
 });
