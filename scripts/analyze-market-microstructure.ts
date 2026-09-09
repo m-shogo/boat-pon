@@ -3,12 +3,14 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { adjacentSecondRatio, buildExactaMarketShape } from "../src/domain/exactaMarketShape";
 import {
+  HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
   historicalExactaCompleteMarketPredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type DbRow={race_id:string;date:string;combination:string;odds:number;winner:string|null;payout_yen:number|null};
+type CoverageRow={period:string;total:number;settled:number};
 type Metric={n:number;hits:number;edgePp:number;roi:number;max2HitExclRoi:number};
 type EvalRow={period:"discovery"|"forward";selection:string;implied:number;hit:boolean;payout:number;flags:string[]};
 const selections=["1-2","1-3","1-4","1-5","1-6"];
@@ -30,11 +32,44 @@ const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??
 const db=new DatabaseSync(dbPath,{readOnly:true});
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
+  const coverage=db.prepare(`
+    WITH population AS (
+      SELECT h.race_id,h.race_date AS date
+      FROM historical_alternative_odds h
+      WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")}
+        AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+        AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+        AND ${historicalExactaCompleteMarketPredicate("h.race_id")}
+      GROUP BY h.race_id
+    ), settlement AS (
+      SELECT rp.race_id,
+        CASE WHEN COUNT(*)=1
+          AND SUM(CASE WHEN rp.returned=0
+            AND rp.combination IS NOT NULL AND rp.combination!=''
+            AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
+            AND EXISTS(SELECT 1 FROM historical_alternative_odds winner_h
+              WHERE winner_h.race_id=rp.race_id AND winner_h.bet_type='exacta'
+                AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+                AND winner_h.combination=rp.combination)
+          THEN 1 ELSE 0 END)=1
+        THEN 1 ELSE 0 END AS settled
+      FROM race_payouts rp WHERE rp.bet_type='exacta' GROUP BY rp.race_id
+    )
+    SELECT CASE WHEN p.date<='2024-12-31' THEN 'discovery' ELSE 'forward' END AS period,
+      COUNT(*) AS total,SUM(COALESCE(s.settled,0)) AS settled
+    FROM population p LEFT JOIN settlement s ON s.race_id=p.race_id
+    GROUP BY period ORDER BY period
+  `).all() as CoverageRow[];
+  assertSettlementCoverage(coverage);
+
   const rows=db.prepare(`SELECT h.race_id,h.race_date AS date,h.combination,h.odds,p.combination AS winner,p.payout_yen
-    FROM historical_alternative_odds h LEFT JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
+    FROM historical_alternative_odds h JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta'
     WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
       AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
       AND ${historicalExactaCompleteMarketPredicate("h.race_id")}
+      AND (SELECT COUNT(*) FROM race_payouts rp WHERE rp.race_id=h.race_id AND rp.bet_type='exacta')=1
+      AND p.returned=0 AND p.combination IS NOT NULL AND p.combination!='' AND p.payout_yen IS NOT NULL AND p.payout_yen>0
+      AND EXISTS(SELECT 1 FROM historical_alternative_odds winner_h WHERE winner_h.race_id=h.race_id AND winner_h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("winner_h")} AND winner_h.combination=p.combination)
     ORDER BY h.race_id,h.combination`).all() as DbRow[];
   const byRace=new Map<string,DbRow[]>();for(const row of rows){const race=byRace.get(row.race_id)??[];race.push(row);byRace.set(row.race_id,race);}
   assertPayoutCompleteness(byRace);
@@ -60,6 +95,7 @@ try {
   writeFileSync("reports/market-microstructure-screen.md",`${lines.join("\n")}\n`);console.log(`market microstructure: candidates=${byRace.size} evaluated=${evaluatedRaces} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 } finally {db.close();}
 
+function assertSettlementCoverage(rows:CoverageRow[]):void{const byPeriod=Object.fromEntries(["discovery","forward"].map(period=>{const row=rows.find(candidate=>candidate.period===period);const total=Number(row?.total??0),settled=Number(row?.settled??0);return[period,{total,settled,missing:total-settled}];}));const invalid=["discovery","forward"].some(period=>{const {total,settled,missing}=byPeriod[period];return!Number.isInteger(total)||!Number.isInteger(settled)||total<=0||settled!==total||missing!==0;});if(invalid)throw new Error(`MARKET_MICROSTRUCTURE_EXACTA_SETTLEMENT_INTEGRITY_INVALID ${JSON.stringify(byPeriod)}`);}
 function assertPayoutCompleteness(byRace:Map<string,DbRow[]>):void{const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}};for(const race of byRace.values()){const row=race[0];if(!row)continue;const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;}const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total;if(invalid)throw new Error(`MARKET_MICROSTRUCTURE_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);}
 function requiredPayout(row:DbRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`MARKET_MICROSTRUCTURE_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(r=>r.payout).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
