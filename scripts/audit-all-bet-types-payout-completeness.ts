@@ -20,11 +20,11 @@ const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 try {
-  const invalidReturnedBuy = db.prepare(`
+  const invalidBuyCohort = db.prepare(`
     SELECT COUNT(*) AS count
     FROM decision_history dh
     WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
-      AND (dh.returned IS NULL OR dh.returned != 0)
+      AND (dh.bet_type IS NULL OR dh.bet_type != '3連単' OR dh.returned IS NULL OR dh.returned != 0)
       AND dh.result IS NOT NULL AND dh.result != ''
       AND dh.current_odds IS NOT NULL
       AND dh.venue NOT IN (${exclVenues})
@@ -33,8 +33,8 @@ try {
       AND dh.date >= '${FORWARD_START}'
   `).get() as { count: number };
 
-  if (Number(invalidReturnedBuy.count) > 0) {
-    console.error(`ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(invalidReturnedBuy.count) })}`);
+  if (Number(invalidBuyCohort.count) > 0) {
+    console.error(`ALL_BET_TYPES_BUY_COHORT_UNSUPPORTED ${JSON.stringify({ count: Number(invalidBuyCohort.count) })}`);
     process.exitCode = 2;
   } else {
     const rows = db.prepare(`
@@ -42,6 +42,7 @@ try {
         SELECT DISTINCT dh.race_id
         FROM decision_history dh
         WHERE dh.decision='BUY' AND dh.run_kind='historical-backfill'
+          AND dh.bet_type='3連単'
           AND dh.returned = 0
           AND dh.result IS NOT NULL AND dh.result != ''
           AND dh.current_odds IS NOT NULL

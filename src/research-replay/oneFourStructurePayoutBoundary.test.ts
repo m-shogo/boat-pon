@@ -32,6 +32,18 @@ test("one-four structure uses the same forward BUY population covered by the sha
   assert.match(audit, /rp\.payout_yen > 0/);
 });
 
+test("one-four payout audit fails closed on decision bet-type or return-state drift", () => {
+  const audit = readFileSync("scripts/audit-all-bet-types-payout-completeness.ts", "utf8");
+  const invalidCohort = audit.indexOf("dh.bet_type IS NULL OR dh.bet_type != '3連単' OR dh.returned IS NULL OR dh.returned != 0");
+  const failure = audit.indexOf("ALL_BET_TYPES_BUY_COHORT_UNSUPPORTED");
+  const population = audit.indexOf("AND dh.bet_type='3連単'");
+
+  assert.ok(invalidCohort >= 0, "audit must detect unsupported decision bet-type/return-state rows");
+  assert.ok(failure > invalidCohort, "cohort drift must fail closed before payout coverage is used");
+  assert.ok(population > failure, "validated payout population must explicitly remain trifecta after the guard");
+  assert.doesNotMatch(audit, /ALL_BET_TYPES_RETURNED_BUY_UNSUPPORTED/);
+});
+
 test("npm one-four structure alias points at the guarded normal entrypoint", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Record<string, string> };
   assert.equal(pkg.scripts?.["analyze:one-four-structure"], "tsx scripts/analyze-one-four-structure.ts");
