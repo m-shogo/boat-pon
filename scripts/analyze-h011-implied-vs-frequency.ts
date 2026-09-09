@@ -13,7 +13,7 @@ const EXCL_RACES = [10, 11, 12];
 const exclV = EXCL_VENUES.map(value => `'${value}'`).join(",");
 const exclR = EXCL_RACES.join(",");
 
-if (!existsSync(DB_PATH)) throw new Error(`H011_PRIMARY_DB_MISSING ${DB_PATH}`);
+if (!existsSync(DB_PATH)) throw new Error("H011_PRIMARY_DB_MISSING");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "H011_PRIMARY_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=5000;");
