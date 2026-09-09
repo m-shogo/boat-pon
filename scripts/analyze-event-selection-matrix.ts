@@ -76,12 +76,19 @@ function assertSettlementCompleteness(): void {
       GROUP BY h.race_id
       HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
     ), settlement AS (
-      SELECT race_id,
+      SELECT rp.race_id,
         COUNT(*) AS payout_rows,
-        SUM(CASE WHEN returned = 0 AND payout_yen IS NOT NULL AND payout_yen > 0 AND combination IS NOT NULL AND trim(combination) != '' THEN 1 ELSE 0 END) AS valid_rows
-      FROM race_payouts
-      WHERE bet_type='exacta'
-      GROUP BY race_id
+        SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 AND rp.combination IS NOT NULL AND trim(rp.combination) != ''
+          AND EXISTS (
+            SELECT 1 FROM historical_alternative_odds winner_h
+            WHERE winner_h.race_id=rp.race_id
+              AND winner_h.bet_type='exacta'
+              AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+              AND winner_h.combination=rp.combination
+          ) THEN 1 ELSE 0 END) AS valid_rows
+      FROM race_payouts rp
+      WHERE rp.bet_type='exacta'
+      GROUP BY rp.race_id
     )
     SELECT
       CASE WHEN p.date <= '2024-12-31' THEN 'discovery' ELSE 'forward' END AS period,
