@@ -169,12 +169,13 @@ function queryRows(): ReportRow[] {
 WITH ranked AS (
   SELECT
     race_id,
+    bet_type,
     selection,
     checkpoint_label,
     odds,
     popularity,
     ROW_NUMBER() OVER (
-      PARTITION BY race_id, selection, checkpoint_label
+      PARTITION BY race_id, bet_type, selection, checkpoint_label
       ORDER BY captured_at DESC
     ) AS rn
   FROM odds_timeseries_snapshots
@@ -182,6 +183,7 @@ WITH ranked AS (
 ), pivoted AS (
   SELECT
     race_id,
+    bet_type,
     selection,
     MAX(CASE WHEN checkpoint_label = 'T-30' THEN popularity END) AS t30_popularity,
     MAX(CASE WHEN checkpoint_label = 'T-5' THEN popularity END) AS t5_popularity,
@@ -189,7 +191,7 @@ WITH ranked AS (
     MAX(CASE WHEN checkpoint_label = 'T-5' THEN odds END) AS t5_odds
   FROM ranked
   WHERE rn = 1
-  GROUP BY race_id, selection
+  GROUP BY race_id, bet_type, selection
 ), joined AS (
   SELECT
     dh.decision,
@@ -229,6 +231,7 @@ WITH ranked AS (
   FROM decision_history dh
   LEFT JOIN pivoted p
     ON p.race_id = dh.race_id
+   AND p.bet_type = ${payoutBetTypeSql("dh.bet_type")}
    AND p.selection = dh.selection
   WHERE ${where.join(" AND ")}
 ), grouped AS (
@@ -345,5 +348,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-popularity-movement.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
 
-Read-only. Unsupported decision bet types fail closed before popularity/ROI aggregation; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement, popularity uses aggregate checkpoint data, and ROI uses mapped canonical official race_payouts.payout_yen.`);
+Read-only. Unsupported decision bet types fail closed before popularity/ROI aggregation; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement, popularity checkpoints are matched by canonical bet type + selection, and ROI uses mapped canonical official race_payouts.payout_yen.`);
 }
