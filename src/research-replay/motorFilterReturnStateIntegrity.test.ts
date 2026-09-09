@@ -34,6 +34,14 @@ test("motor filter report rejects unknown or returned historical BUY rows before
   assert.ok(loadRows > settlementGate, "analysis population must load only after both fail-closed guards");
 });
 
+test("motor filter validates every settled decision result against one official winning settlement", () => {
+  assert.match(source, /WITH relevant_settled AS \([\s\S]*SELECT DISTINCT dh\.race_id, dh\.result/u);
+  assert.match(source, /rp\.combination = s\.result/u);
+  assert.match(source, /rp\.returned = 0[\s\S]*rp\.payout_yen IS NOT NULL[\s\S]*rp\.payout_yen > 0/u);
+  assert.match(source, /MOTOR_FILTER_PAYOUT_SETTLEMENT_AMBIGUOUS/u);
+  assert.doesNotMatch(source, /WITH relevant_hits AS/u);
+});
+
 test("motor filter analysis population remains fixed to settled non-returned historical BUY rows", () => {
   assert.match(source, /WHERE dh\.run_kind='historical-backfill'[\s\S]*AND dh\.decision='BUY'[\s\S]*AND dh\.bet_type = \?[\s\S]*AND dh\.result IS NOT NULL[\s\S]*AND dh\.result != ''[\s\S]*AND dh\.returned = 0/u);
 });

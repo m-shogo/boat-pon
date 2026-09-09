@@ -97,33 +97,34 @@ WHERE run_kind = 'historical-backfill'
 
 function assertWinningSettlementIntegrity() {
   const invalid = db.prepare(`
-WITH relevant_hits AS (
-  SELECT DISTINCT dh.race_id, dh.selection
+WITH relevant_settled AS (
+  SELECT DISTINCT dh.race_id, dh.result
   FROM decision_history dh
   WHERE dh.run_kind = 'historical-backfill'
     AND dh.decision = 'BUY'
     AND dh.bet_type = ?
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
+    AND dh.result != ''
     AND dh.returned = 0
-    AND dh.selection = dh.result
 ), invalid AS (
-  SELECT h.race_id, h.selection
-  FROM relevant_hits h
+  SELECT s.race_id, s.result
+  FROM relevant_settled s
   WHERE (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
+    WHERE rp.race_id = s.race_id
       AND rp.bet_type = ?
-      AND rp.combination = h.selection
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
+    WHERE rp.race_id = s.race_id
       AND rp.bet_type = ?
-      AND rp.combination = h.selection
+      AND rp.combination = s.result
       AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
   ) != 1
 )
