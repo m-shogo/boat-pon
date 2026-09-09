@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -79,12 +78,4 @@ SELECT COUNT(*) AS n FROM invalid
   db.close();
 }
 
-const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/search-roi-patterns-raw.ts"], {
-  stdio: "inherit",
-  env: process.env,
-});
-if (result.error) {
-  console.error(`[search-roi-patterns] failed to start raw analyzer: ${result.error.message}`);
-  process.exit(1);
-}
-process.exit(result.status ?? 1);
+await import("./search-roi-patterns-raw");
