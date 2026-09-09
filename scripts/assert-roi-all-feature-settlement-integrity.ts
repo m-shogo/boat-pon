@@ -41,8 +41,8 @@ WHERE run_kind = 'historical-backfill'
   }
 
   const row = db.prepare(`
-WITH relevant_hits AS (
-  SELECT DISTINCT race_id, selection
+WITH relevant_settled AS (
+  SELECT DISTINCT race_id, result
   FROM decision_history
   WHERE run_kind = 'historical-backfill'
     AND decision = 'BUY'
@@ -51,24 +51,24 @@ WITH relevant_hits AS (
     AND result IS NOT NULL
     AND result != ''
     AND returned = 0
-    AND selection = result
 ), invalid AS (
-  SELECT h.race_id, h.selection
-  FROM relevant_hits h
+  SELECT s.race_id, s.result
+  FROM relevant_settled s
   WHERE (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
+    WHERE rp.race_id = s.race_id
       AND rp.bet_type = ?
-      AND rp.combination = h.selection
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
+    WHERE rp.race_id = s.race_id
       AND rp.bet_type = ?
-      AND rp.combination = h.selection
+      AND rp.combination = s.result
       AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
   ) != 1
 )
@@ -77,7 +77,7 @@ SELECT COUNT(*) AS n FROM invalid
 
   if ((row.n ?? 0) > 0) {
     throw new Error(
-      `ROI_ALL_FEATURE_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning historical BUY ticket key(s) do not have exactly one positive non-refund official settlement`,
+      `ROI_ALL_FEATURE_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled historical BUY denominator race(s) do not have exactly one positive non-refund official winning settlement`,
     );
   }
 
