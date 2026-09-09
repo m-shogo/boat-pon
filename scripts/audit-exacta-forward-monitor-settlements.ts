@@ -39,7 +39,34 @@ try {
   `).get(...params) as { n: number };
   if ((invalidSettlement.n ?? 0) > 0) throw new Error("EXACTA_FORWARD_MONITOR_SETTLEMENT_RETURN_INVALID");
 
-  console.log("[exacta-forward-monitor-preflight] PASS: locked decision cohort and exacta settlement return states are valid");
+  const ambiguousSettlement = db.prepare(`
+    WITH target_races AS (SELECT DISTINCT race_id FROM (${targetRows})),
+    exacta_lines AS (
+      SELECT
+        tr.race_id,
+        COUNT(rp.race_id) AS line_count,
+        SUM(CASE WHEN rp.race_id IS NOT NULL
+          AND rp.returned = 0
+          AND rp.combination IS NOT NULL
+          AND rp.combination != ''
+          AND rp.payout_yen IS NOT NULL
+          AND rp.payout_yen > 0
+        THEN 1 ELSE 0 END) AS valid_count
+      FROM target_races tr
+      LEFT JOIN race_payouts rp
+        ON rp.race_id = tr.race_id AND rp.bet_type='exacta'
+      GROUP BY tr.race_id
+    )
+    SELECT COUNT(*) AS n
+    FROM exacta_lines
+    WHERE line_count > 0
+      AND (line_count != 1 OR valid_count != 1)
+  `).get(...params) as { n: number };
+  if ((ambiguousSettlement.n ?? 0) > 0) {
+    throw new Error("EXACTA_FORWARD_MONITOR_SETTLEMENT_LINE_INTEGRITY_INVALID");
+  }
+
+  console.log("[exacta-forward-monitor-preflight] PASS: locked decision cohort and exacta settlement return/line integrity are valid");
 } finally {
   db.close();
 }

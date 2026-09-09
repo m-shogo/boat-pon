@@ -14,7 +14,7 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   assert.match(entrypoint, /process\.exit\(preflight\)/);
 });
 
-test("exacta forward preflight fails closed on decision cohort drift and non-zero or unknown settlement return states", () => {
+test("exacta forward preflight fails closed on decision cohort drift and invalid settlement lines", () => {
   assert.match(preflight, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(preflight, /readOnly: true/);
   assert.match(preflight, /PRAGMA query_only = ON/);
@@ -22,8 +22,12 @@ test("exacta forward preflight fails closed on decision cohort drift and non-zer
   assert.match(preflight, /t\.returned IS NULL OR t\.returned != 0/);
   assert.match(preflight, /rp\.bet_type='exacta'/);
   assert.match(preflight, /rp\.returned IS NULL OR rp\.returned != 0/);
+  assert.match(preflight, /rp\.combination != ''/);
+  assert.match(preflight, /rp\.payout_yen > 0/);
+  assert.match(preflight, /line_count != 1 OR valid_count != 1/);
   assert.match(preflight, /EXACTA_FORWARD_MONITOR_DECISION_COHORT_INVALID/);
   assert.match(preflight, /EXACTA_FORWARD_MONITOR_SETTLEMENT_RETURN_INVALID/);
+  assert.match(preflight, /EXACTA_FORWARD_MONITOR_SETTLEMENT_LINE_INTEGRITY_INVALID/);
 });
 
 test("legacy exacta monitor stays research-only behind the guard", () => {
