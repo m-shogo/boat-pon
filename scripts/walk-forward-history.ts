@@ -78,36 +78,37 @@ WHERE date >= ? AND date <= ?
 
 function assertWinningSettlementIntegrity(db: DatabaseSync, from: string, to: string) {
   const row = db.prepare(`
-WITH relevant_hits AS (
+WITH relevant_settled AS (
   SELECT DISTINCT
     race_id,
     bet_type,
     ${payoutBetTypeSql("bet_type")} AS payout_bet_type,
-    selection
+    result
   FROM decision_history
   WHERE date >= ? AND date <= ?
     AND decision = 'BUY'
     AND returned = 0
     AND result IS NOT NULL
-    AND selection = result
+    AND result != ''
 ), invalid AS (
-  SELECT h.race_id, h.bet_type, h.selection
-  FROM relevant_hits h
-  WHERE h.payout_bet_type IS NULL
+  SELECT s.race_id, s.bet_type, s.result
+  FROM relevant_settled s
+  WHERE s.payout_bet_type IS NULL
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
-      AND rp.bet_type = h.payout_bet_type
-      AND rp.combination = h.selection
+    WHERE rp.race_id = s.race_id
+      AND rp.bet_type = s.payout_bet_type
+      AND rp.combination = s.result
       AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
   ) != 1
 )
@@ -116,7 +117,7 @@ SELECT COUNT(*) AS n FROM invalid
 
   if ((row.n ?? 0) > 0) {
     throw new Error(
-      `WALK_FORWARD_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} winning BUY ticket key(s) do not have exactly one positive non-refund official settlement`,
+      `WALK_FORWARD_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled BUY race key(s) do not have exactly one positive non-refund official winning-result settlement`,
     );
   }
 }
@@ -236,4 +237,4 @@ function minDate(a: string, b: string) { return a < b ? a : b; }
 function todayTokyo() { return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
 function fmt(value: number | null) { return value == null ? "-" : value.toFixed(3); }
 function pct(value: number | null) { return value == null ? "-" : `${(value * 100).toFixed(1)}%`; }
-function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]\n\nRead-only. ROI uses official race_payouts.payout_yen; winning BUY ticket keys must have exactly one positive non-refund official settlement after canonical bet-type mapping before window verdicts are generated."); }
+function printUsage() { console.log("Usage: npx tsx scripts/walk-forward-history.ts --from YYYY-MM-DD --to YYYY-MM-DD [--window-days 30] [--step-days 7] [--min-buys 5] [--json]\n\nRead-only. ROI uses official race_payouts.payout_yen; every settled BUY denominator must reconcile to exactly one positive non-refund official winning-result settlement after canonical bet-type mapping before window verdicts are generated."); }
