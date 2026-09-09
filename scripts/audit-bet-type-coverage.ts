@@ -82,6 +82,18 @@ if (Number(unknownHistoricalBuyReturns) > 0) {
   process.exit(2);
 }
 
+const unknownOfficialPayoutReturns = (db.prepare(`
+  SELECT COUNT(*) AS n
+  FROM race_payouts
+  WHERE returned IS NULL OR returned NOT IN (0, 1)
+`).get() as { n: number }).n;
+
+if (Number(unknownOfficialPayoutReturns) > 0) {
+  console.error("[coverage-audit] FAIL CLOSED: unknown official payout return states exist in coverage population");
+  db.close();
+  process.exit(2);
+}
+
 const rawRows = db.prepare(`
   SELECT bet_type, COUNT(*) AS n
   FROM race_payouts

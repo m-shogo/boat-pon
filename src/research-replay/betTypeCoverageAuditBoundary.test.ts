@@ -23,6 +23,17 @@ test("bet-type coverage audit fails closed on unknown completed BUY return state
   assert.ok(unknownGuard >= 0 && rawRows > unknownGuard && totalBuyRaces > unknownGuard);
 });
 
+test("bet-type coverage audit fails closed on unknown official payout return states before coverage aggregation", () => {
+  assert.match(source, /const unknownOfficialPayoutReturns/);
+  assert.match(source, /FROM race_payouts\s+WHERE returned IS NULL OR returned NOT IN \(0, 1\)/);
+  assert.match(source, /unknown official payout return states exist in coverage population/);
+
+  const payoutReturnGuard = source.indexOf("const unknownOfficialPayoutReturns");
+  const rawRows = source.indexOf("const rawRows = db.prepare");
+  const totalPayoutRaces = source.indexOf("const totalPayoutRaces =");
+  assert.ok(payoutReturnGuard >= 0 && rawRows > payoutReturnGuard && totalPayoutRaces > payoutReturnGuard);
+});
+
 test("bet-type coverage joinability requires usable non-refund official settlement data", () => {
   assert.match(source, /rp\.returned=0/);
   assert.match(source, /rp\.payout_yen IS NOT NULL AND rp\.payout_yen>0/);
