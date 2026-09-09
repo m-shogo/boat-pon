@@ -33,7 +33,7 @@ try {
       SELECT
         rp.race_id,
         CASE
-          WHEN COUNT(*) >= 1
+          WHEN COUNT(*) = 1
             AND COUNT(DISTINCT rp.combination) = COUNT(*)
             AND SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 THEN 1 ELSE 0 END) = COUNT(*)
             AND SUM(CASE WHEN rp.returned = 0 AND rp.payout_yen IS NOT NULL AND rp.payout_yen > 0 AND EXISTS (
