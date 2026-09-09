@@ -3,17 +3,30 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const entrypoint = readFileSync("scripts/analyze-123-bet-type-conversion.ts", "utf-8");
+const core = readFileSync("scripts/analyze-123-bet-type-conversion-core.ts", "utf-8");
+const internal = readFileSync("scripts/analyze-123-bet-type-conversion-internal.ts", "utf-8");
 const audit = readFileSync("scripts/audit-123-bet-type-conversion-completeness.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
-test("123 bet-type conversion command fails closed before cross-bet analysis", () => {
+test("123 bet-type conversion command fails closed before guarded cross-bet analysis", () => {
   assert.equal(pkg.scripts?.["analyze:123-bet-type-conversion"], "tsx scripts/analyze-123-bet-type-conversion.ts");
   const preflight = entrypoint.indexOf('run("scripts/audit-123-bet-type-conversion-completeness.ts")');
-  const core = entrypoint.indexOf('run("scripts/analyze-123-bet-type-conversion-core.ts")');
+  const analysis = entrypoint.indexOf('await import("./analyze-123-bet-type-conversion-core")');
   assert.ok(preflight >= 0);
-  assert.ok(core > preflight, "cross-bet analysis must remain downstream of the completeness preflight");
+  assert.ok(analysis > preflight, "cross-bet analysis must remain downstream of the completeness preflight");
   assert.match(entrypoint, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-123-bet-type-conversion-core.ts")), false);
+  assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-123-bet-type-conversion-internal.ts")), false);
+});
+
+test("123 bet-type conversion core cannot bypass the canonical settlement preflight", () => {
+  assert.match(core, /fileURLToPath\(import\.meta\.url\)/);
+  assert.match(core, /process\.argv\[1\]/);
+  assert.match(core, /BET_TYPE_CONVERSION_CORE_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(core, /await import\("\.\/analyze-123-bet-type-conversion-internal"\)/);
+  assert.doesNotMatch(core, /new DatabaseSync/);
+  assert.match(internal, /race_payouts/);
+  assert.match(internal, /switch候補/);
 });
 
 test("123 bet-type preflight rejects returned or unknown-return historical BUY rows before coverage analysis", () => {
