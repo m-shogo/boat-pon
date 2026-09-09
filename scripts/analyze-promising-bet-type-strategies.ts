@@ -44,6 +44,7 @@ const rows = db.prepare(`
 
 const seenSettlementKeys = new Set<string>();
 const settledRaceByType = new Map<string, Set<string>>(BET_TYPES.map(bt => [bt, new Set<string>()]));
+const returnedRaceByType = new Map<string, Set<string>>(BET_TYPES.map(bt => [bt, new Set<string>()]));
 
 for (const p of db.prepare(`
   SELECT race_id, bet_type, combination, payout_yen, returned
@@ -66,6 +67,9 @@ for (const p of db.prepare(`
   if (p.returned === 0 && isPositivePayout) {
     settledRaceByType.get(p.bet_type)?.add(p.race_id);
   }
+  if (p.returned === 1) {
+    returnedRaceByType.get(p.bet_type)?.add(p.race_id);
+  }
 }
 
 assertPayoutCompleteness();
@@ -74,6 +78,14 @@ db.close();
 function assertPayoutCompleteness(): void {
   const raceIds = new Set(rows.map(row => row.race_id));
   if (raceIds.size <= 0) throw new Error("PROMISING_BET_BUY_POPULATION_EMPTY");
+
+  const partialReturns = Object.fromEntries(BET_TYPES.map(bt => {
+    const affected = [...raceIds].filter(raceId => returnedRaceByType.get(bt)?.has(raceId)).length;
+    return [bt, affected];
+  }));
+  if (BET_TYPES.some(bt => partialReturns[bt] > 0)) {
+    throw new Error(`PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED ${JSON.stringify(partialReturns)}`);
+  }
 
   const coverage = Object.fromEntries(BET_TYPES.map(bt => {
     const settled = [...raceIds].filter(raceId => settledRaceByType.get(bt)?.has(raceId)).length;
