@@ -19,9 +19,13 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const DB_SOURCE = "primary research database";
 const OUT_MD  = "reports/123-bet-type-conversion.md";
 const OUT_JSON = "reports/123-bet-type-conversion.json";
 const STAKE = 100;
@@ -29,9 +33,21 @@ const STAKE = 100;
 const EXCLUDED_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCLUDED_RACE_NOS = [10, 11, 12];
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
+const modulePath = resolve(fileURLToPath(import.meta.url));
+if (invokedPath === modulePath) {
+  throw new Error("BET_TYPE_CONVERSION_INTERNAL_DIRECT_EXECUTION_FORBIDDEN");
+}
+
+if (!existsSync(DB_PATH)) {
+  throw new Error("BET_TYPE_CONVERSION_PRIMARY_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "BET_TYPE_CONVERSION_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 // ─── 型 ──────────────────────────────────────────────────────────────────────
 
@@ -256,7 +272,7 @@ const baselinePayout = baselineResult?.trifecta123.roi ?? 0;
 let md = `# 1-2-3 券種変換 ROI 比較レポート
 
 生成日時: ${new Date().toISOString()}
-DB: ${DB_PATH}
+DB: ${DB_SOURCE}
 
 > 現行除外条件（5会場 + race_no 10,11,12）適用後 / selection=1-2-3 のみ対象。
 > **ROI は race_payouts 実際払戻金ベース**（current_odds ではなく実際の払戻倍率）で統一。
@@ -370,6 +386,8 @@ ${[
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
 writeFileSync(OUT_MD, md, "utf-8");
 writeFileSync(OUT_JSON, JSON.stringify({ generatedAt: new Date().toISOString(), results }, null, 2), "utf-8");
+
+db.close();
 
 console.log(`\n[123-bet-type-conversion] 完了 → ${OUT_MD}`);
 console.log(`\n【switch候補】`);
