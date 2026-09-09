@@ -12,6 +12,7 @@ import {
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type ExactaRow = { race_id: string; date: string; venue: string; overround: number; odds14: number; winner: string | null; payout_yen: number | null; wind_speed_mps: number | null; wind_dir: string | null };
+type CoverageRow = { period: string; total: number; settled: number };
 type ProgramRow = { race_id: string; date: string; venue: string; raw_json: string; trifecta: string };
 type PairState = { meetings: number; wins: Map<string, number>; lastWinner: string | null };
 type EvalRow = ExactaRow & { period: "discovery" | "forward"; hit: boolean; implied: number; flags: string[] };
@@ -25,6 +26,45 @@ const dbPath = assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH
 const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
+  const coverage = db.prepare(`
+    WITH population AS (
+      SELECT h.race_id, h.race_date AS date
+      FROM historical_alternative_odds h
+      WHERE h.bet_type='exacta'
+        AND ${historicalExactaCanonicalSourcePredicate("h")}
+        AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+        AND NOT EXISTS (SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+      GROUP BY h.race_id
+      HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
+        AND MAX(CASE WHEN h.combination='1-4' THEN h.odds END) IS NOT NULL
+    ), settlement AS (
+      SELECT rp.race_id,
+        CASE WHEN COUNT(*)=1
+          AND SUM(CASE WHEN rp.returned=0
+            AND rp.combination IS NOT NULL AND rp.combination!=''
+            AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
+            AND EXISTS (
+              SELECT 1 FROM historical_alternative_odds winner_h
+              WHERE winner_h.race_id=rp.race_id
+                AND winner_h.bet_type='exacta'
+                AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+                AND winner_h.combination=rp.combination
+            ) THEN 1 ELSE 0 END)=1
+        THEN 1 ELSE 0 END AS settled
+      FROM race_payouts rp
+      WHERE rp.bet_type='exacta'
+      GROUP BY rp.race_id
+    )
+    SELECT CASE WHEN p.date<'2025-01-01' THEN 'discovery' ELSE 'forward' END AS period,
+      COUNT(*) AS total,
+      SUM(COALESCE(s.settled,0)) AS settled
+    FROM population p
+    LEFT JOIN settlement s ON s.race_id=p.race_id
+    GROUP BY period
+    ORDER BY period
+  `).all() as CoverageRow[];
+  assertSettlementCoverage(coverage);
+
   const exacta = db.prepare(`
     SELECT h.race_id, h.race_date AS date, h.venue, SUM(1.0/h.odds) AS overround,
       MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,
@@ -113,6 +153,7 @@ try {
   console.log(`relationship market screen: exacta=${evaluations.length}`);
 } finally { db.close(); }
 
+function assertSettlementCoverage(rows: CoverageRow[]): void { const byPeriod=Object.fromEntries(["discovery","forward"].map(period=>{const row=rows.find(candidate=>candidate.period===period);const total=Number(row?.total??0),settled=Number(row?.settled??0);return[period,{total,settled,missing:total-settled}];})); const invalid=["discovery","forward"].some(period=>{const {total,settled,missing}=byPeriod[period];return !Number.isInteger(total)||!Number.isInteger(settled)||total<=0||settled!==total||missing!==0;}); if(invalid)throw new Error(`RACER_RELATIONSHIP_EXACTA_SETTLEMENT_INTEGRITY_INVALID ${JSON.stringify(byPeriod)}`); }
 function assertPayoutCompleteness(rows: ExactaRow[]): void { const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}}; for(const row of rows){const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;} const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total; if(invalid)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`); }
 function requiredPayout(row: EvalRow): number { if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_MISSING race=${row.race_id}`); return row.payout_yen; }
 function byPeriod(rows: EvalRow[]) { return { discovery: metric(rows.filter(row => row.period === "discovery")), forward: metric(rows.filter(row => row.period === "forward")) }; }
