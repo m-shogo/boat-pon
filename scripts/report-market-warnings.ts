@@ -25,6 +25,7 @@ db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 try {
+  assertSupportedBetTypeMapping();
   const rows = queryRows();
   if (args.json) {
     console.log(JSON.stringify({ generatedAt: new Date().toISOString(), args, rows }, null, 2));
@@ -49,7 +50,23 @@ type ReportRow = {
   popularityDelta: number | null;
 };
 
-function queryRows(): ReportRow[] {
+function canonicalBetTypeSql(column: string) {
+  return `CASE ${column}
+    WHEN '3連単' THEN 'trifecta'
+    WHEN '3連複' THEN 'trio'
+    WHEN '2連単' THEN 'exacta'
+    WHEN '2連複' THEN 'quinella'
+    WHEN '拡連複' THEN 'wide'
+    WHEN 'trifecta' THEN 'trifecta'
+    WHEN 'trio' THEN 'trio'
+    WHEN 'exacta' THEN 'exacta'
+    WHEN 'quinella' THEN 'quinella'
+    WHEN 'wide' THEN 'wide'
+    ELSE NULL
+  END`;
+}
+
+function reportWhere(): { where: string[]; params: Array<string | number> } {
   const where: string[] = ["1=1"];
   const params: Array<string | number> = [];
 
@@ -59,18 +76,43 @@ function queryRows(): ReportRow[] {
   if (args.decision) { where.push("dh.decision = ?"); params.push(args.decision); }
   if (args.modelVersion) { where.push("dh.model_version = ?"); params.push(args.modelVersion); }
   if (args.runKind) { where.push("dh.run_kind = ?"); params.push(args.runKind); }
+
+  return { where, params };
+}
+
+function assertSupportedBetTypeMapping(): void {
+  const { where, params } = reportWhere();
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history dh
+WHERE ${where.join(" AND ")}
+  AND (${canonicalBetTypeSql("dh.bet_type")}) IS NULL
+`).get(...params) as { invalid: number | bigint | null };
+
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isSafeInteger(invalid) || invalid < 0) {
+    throw new Error("MARKET_WARNINGS_BET_TYPE_MAPPING_COUNT_INVALID");
+  }
+  if (invalid > 0) {
+    throw new Error("MARKET_WARNINGS_BET_TYPE_MAPPING_FAILED");
+  }
+}
+
+function queryRows(): ReportRow[] {
+  const { where, params } = reportWhere();
   params.push(args.limit);
 
   const sql = `
 WITH ranked AS (
   SELECT
     race_id,
+    bet_type,
     selection,
     checkpoint_label,
     odds,
     popularity,
     ROW_NUMBER() OVER (
-      PARTITION BY race_id, selection, checkpoint_label
+      PARTITION BY race_id, bet_type, selection, checkpoint_label
       ORDER BY captured_at DESC
     ) AS rn
   FROM odds_timeseries_snapshots
@@ -78,6 +120,7 @@ WITH ranked AS (
 ), pivoted AS (
   SELECT
     race_id,
+    bet_type,
     selection,
     MAX(CASE WHEN checkpoint_label = 'T-30' THEN odds END) AS t30_odds,
     MAX(CASE WHEN checkpoint_label = 'T-5' THEN odds END) AS t5_odds,
@@ -85,7 +128,7 @@ WITH ranked AS (
     MAX(CASE WHEN checkpoint_label = 'T-5' THEN popularity END) AS t5_popularity
   FROM ranked
   WHERE rn = 1
-  GROUP BY race_id, selection
+  GROUP BY race_id, bet_type, selection
 ), joined AS (
   SELECT
     dh.date,
@@ -107,6 +150,7 @@ WITH ranked AS (
   FROM decision_history dh
   LEFT JOIN pivoted p
     ON p.race_id = dh.race_id
+   AND p.bet_type = ${canonicalBetTypeSql("dh.bet_type")}
    AND p.selection = dh.selection
   WHERE ${where.join(" AND ")}
 ), warnings AS (
@@ -209,5 +253,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-market-warnings.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--limit 100] [--json]
 
-Read-only. Row-level private checkpoint odds/popularity are not emitted. No external access.`);
+Read-only. Unsupported decision bet types fail closed; checkpoint movement is matched by canonical bet type + selection. Row-level private checkpoint odds/popularity are not emitted. No external access.`);
 }
