@@ -15,4 +15,4 @@ if (audit !== 0) {
   process.exit(audit);
 }
 
-process.exit(run("scripts/analyze-one-four-structure-raw.ts"));
+await import("./analyze-one-four-structure-raw");
