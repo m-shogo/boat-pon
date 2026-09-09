@@ -33,7 +33,8 @@ for (const c of CASES) {
     const source = readFileSync(c.entry, "utf8");
     const auditIndex = source.indexOf(c.audit);
     const gateIndex = source.indexOf("audit !== 0");
-    const rawIndex = source.indexOf(c.raw);
+    const rawModule = c.raw.replace(/\.ts$/u, "");
+    const rawIndex = Math.max(source.indexOf(c.raw), source.indexOf(rawModule));
 
     assert.ok(auditIndex >= 0);
     assert.ok(gateIndex > auditIndex);
