@@ -12,6 +12,7 @@ import { isCanonicalT5TrifectaResult } from "../src/research-replay/t5MarketBase
 import { validateT5MarketBaselineResultIdentityRows } from "../src/research-replay/t5MarketBaselineResultIdentity";
 import { assertT5MarketBaselineWindow } from "../src/research-replay/t5MarketBaselineWindow";
 import { isCanonicalT5CompleteMarketSelections } from "../src/research-replay/t5ResidualForwardMarket";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH=process.env.BOAT_PON_DB_PATH??"data/boat.sqlite";
 const FROM=process.env.BOAT_PON_FROM??"2026-06-01";
@@ -19,8 +20,9 @@ const TO=process.env.BOAT_PON_TO??todayJst();
 const BOUNDARY=process.env.BOAT_PON_BOUNDARY??"2026-07-01";
 const OUT_MD="reports/t5-residual-forward.md",OUT_JSON="reports/t5-residual-forward.json";
 assertT5MarketBaselineWindow({from:FROM,to:TO,boundary:BOUNDARY});
-if(!existsSync(DB_PATH))throw new Error(`DB not found: ${DB_PATH}`);
-const db=new DatabaseSync(DB_PATH,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+if(!existsSync(DB_PATH))throw new Error("T5_RESIDUAL_FORWARD_DB_MISSING");
+const verifiedDbPath=assertCanonicalSingleLinkRegularFile(DB_PATH,"T5_RESIDUAL_FORWARD_DB_IDENTITY_INVALID");
+const db=new DatabaseSync(verifiedDbPath,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 type O={id:number;race_id:string;selection:string;odds:number}; type R={race_id:string;date:string;venue:string;race_no:number;trifecta:string|null;payout_yen:number|null;returned:number};
 const fromId=FROM.replaceAll("-","");const toId=addDays(TO,1).replaceAll("-","");
 const canonicalSelectionHavingSql=n2CanonicalT5CompleteCaptureSelectionHavingSql("selection");
