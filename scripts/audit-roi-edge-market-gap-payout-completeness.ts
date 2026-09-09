@@ -35,6 +35,7 @@ type IntegrityRow = {
   covered: number;
   cohortInvalidRows: number;
   invalidResultKeyShapes: number;
+  invalidSettlementKeyShapes: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   returnedRows: number;
@@ -90,6 +91,18 @@ SELECT
      )
   ) AS invalidResultKeyShapes,
   (SELECT COUNT(*)
+   FROM target_settlements ts
+   WHERE ts.returned = 0
+     AND (
+       ts.combination IS NULL
+       OR length(ts.combination) != 5
+       OR ts.combination NOT GLOB '[1-6]-[1-6]-[1-6]'
+       OR substr(ts.combination, 1, 1) = substr(ts.combination, 3, 1)
+       OR substr(ts.combination, 1, 1) = substr(ts.combination, 5, 1)
+       OR substr(ts.combination, 3, 1) = substr(ts.combination, 5, 1)
+     )
+  ) AS invalidSettlementKeyShapes,
+  (SELECT COUNT(*)
    FROM target_races tr
    WHERE EXISTS (
      SELECT 1
@@ -119,7 +132,7 @@ const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covere
 db.close();
 
 console.log(
-  `[roi-edge-market-gap-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidResultKeyShapes=${row.invalidResultKeyShapes ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
+  `[roi-edge-market-gap-payout-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidResultKeyShapes=${row.invalidResultKeyShapes ?? 0} invalidSettlementKeyShapes=${row.invalidSettlementKeyShapes ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} returnedRows=${row.returnedRows ?? 0}`,
 );
 
 if ((row.cohortInvalidRows ?? 0) > 0) {
@@ -129,6 +142,11 @@ if ((row.cohortInvalidRows ?? 0) > 0) {
 
 if ((row.invalidResultKeyShapes ?? 0) > 0) {
   console.error("[roi-edge-market-gap-payout-preflight] FAIL: target analyzer population contains malformed historical 3連単 result keys; hit-rate, market-gap, missed-opportunity ROI, and edge/skip verdicts must remain unavailable");
+  process.exit(2);
+}
+
+if ((row.invalidSettlementKeyShapes ?? 0) > 0) {
+  console.error("[roi-edge-market-gap-payout-preflight] FAIL: target cohort contains malformed official trifecta settlement keys; scalar payout ROI and edge/skip verdicts must remain unavailable");
   process.exit(2);
 }
 
@@ -152,4 +170,4 @@ if (!result.complete) {
   process.exit(2);
 }
 
-console.log("[roi-edge-market-gap-payout-preflight] PASS: historical result shape, official trifecta settlement coverage, and line integrity are complete for the market-gap population");
+console.log("[roi-edge-market-gap-payout-preflight] PASS: historical result shape, official settlement shape, trifecta settlement coverage, and line integrity are complete for the market-gap population");
