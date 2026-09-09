@@ -16,6 +16,8 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/alternative-odds-coverage.md";
 const OUT_JSON = "reports/alternative-odds-coverage.json";
@@ -25,8 +27,10 @@ const EXCL_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCL_RACES    = [10, 11, 12];
 const TARGET_SELECTIONS = ["1-2-3", "1-3-2", "1-2-4", "1-4-2", "1-3-4"] as const;
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) throw new Error("ALT_ODDS_COVERAGE_RESEARCH_DB_UNAVAILABLE");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "alternative odds coverage primary database");
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 const excl_v = EXCL_VENUES.map(v => `'${v}'`).join(",");
