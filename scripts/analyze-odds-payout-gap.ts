@@ -27,10 +27,6 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-odds-payout-gap-raw.ts");
-if (analysis !== 0) {
-  console.error("[odds-payout-gap-safe-runner] odds-payout-gap analysis failed after a successful payout completeness preflight");
-  process.exit(analysis);
-}
+await import("./analyze-odds-payout-gap-raw");
 
 console.log("[odds-payout-gap-safe-runner] PASS: completeness preflight passed before odds-payout-gap analysis");
