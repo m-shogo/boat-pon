@@ -8,6 +8,15 @@ test("bettor-calendar ROI fails closed on incomplete official exacta payouts", (
   assert.match(source, /assertCanonicalSingleLinkRegularFile/);
   assert.match(source, /new DatabaseSync\(dbPath,\{readOnly:true\}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
+  assert.match(source, /assertSettlementCompleteness\(\)/);
+  assert.match(source, /COUNT\(\*\) AS payout_rows/);
+  assert.match(source, /rp\.returned=0 AND rp\.payout_yen IS NOT NULL AND rp\.payout_yen>0/);
+  assert.match(source, /winner_h\.race_id=rp\.race_id/);
+  assert.match(source, /historicalExactaCanonicalSourcePredicate\("winner_h"\)/);
+  assert.match(source, /winner_h\.combination=rp\.combination/);
+  assert.match(source, /s\.payout_rows=1 AND s\.valid_rows=1/);
+  assert.match(source, /ambiguous!==0/);
+  assert.match(source, /BETTOR_CALENDAR_EXACTA_SETTLEMENT_INTEGRITY_INVALID/);
   assert.match(source, /assertPayoutCompleteness\(rows\)/);
   assert.match(source, /BETTOR_CALENDAR_EXACTA_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /map\(requiredPayout\)/);
