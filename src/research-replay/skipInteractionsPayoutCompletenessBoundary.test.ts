@@ -9,11 +9,25 @@ const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Rec
 test("skip-interactions command cannot bypass settlement completeness", () => {
   assert.equal(pkg.scripts?.["analyze:roi-skip-interactions"], "tsx scripts/analyze-roi-skip-interactions.ts");
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
-  const core = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-core.ts")');
+  const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const core = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-core.ts"');
   assert.ok(preflight >= 0);
-  assert.ok(core > preflight);
+  assert.ok(verify > preflight);
+  assert.ok(core > verify);
   assert.match(entrypoint, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-roi-skip-interactions-core.ts")), false);
+});
+
+test("skip-interactions canonical entrypoint re-verifies DB identity before the core reopens SQLite", () => {
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIMARY_DB_MISSING/);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.doesNotMatch(entrypoint, /DB not found:/);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: verifiedDbPath/);
+
+  const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
+  const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const analysis = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-core.ts"');
+  assert.ok(preflight >= 0 && verify > preflight && analysis > verify);
 });
 
 test("skip-interactions preflight matches the exact forward population and validates settlement line integrity", () => {
