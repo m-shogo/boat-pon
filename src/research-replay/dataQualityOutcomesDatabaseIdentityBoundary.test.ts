@@ -14,22 +14,25 @@ test("data quality outcomes report verifies primary database identity before ope
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
 });
 
-test("data quality outcomes report keeps ROI denominators restricted to settled non-returned rows", () => {
+test("data quality outcomes report keeps ROI denominators restricted to nonblank settled non-returned rows", () => {
   const source = readFileSync("scripts/report-data-quality-outcomes.ts", "utf8");
 
-  assert.match(source, /SUM\(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END\) AS settled/);
-  assert.match(source, /SUM\(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END\) AS hits/);
+  assert.match(source, /SUM\(CASE WHEN result IS NOT NULL AND TRIM\(result\) != '' AND returned = 0 THEN 1 ELSE 0 END\) AS settled/);
+  assert.match(source, /SUM\(CASE WHEN result IS NOT NULL AND TRIM\(result\) != '' AND selection = result AND returned = 0 THEN 1 ELSE 0 END\) AS hits/);
   assert.match(source, /NULLIF\(settled, 0\)/);
 });
 
-test("data quality outcomes validates every settled denominator against exact official payouts before ROI", () => {
+test("data quality outcomes rejects blank settled results and validates every remaining denominator against exact official payouts", () => {
   const source = readFileSync("scripts/report-data-quality-outcomes.ts", "utf8");
 
   assert.match(source, /DATA_QUALITY_OUTCOMES_BET_TYPE_MAPPING_FAILED/);
+  assert.match(source, /DATA_QUALITY_OUTCOMES_BLANK_SETTLED_RESULT_UNSUPPORTED/);
   assert.match(source, /DATA_QUALITY_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
-  assert.match(source, /WITH relevant_settled AS/);
+  assert.match(source, /WITH blank_settled AS/);
+  assert.match(source, /TRIM\(result\) = ''/);
+  assert.match(source, /relevant_settled AS/);
   assert.match(source, /AND result IS NOT NULL/);
-  assert.match(source, /AND result != ''/);
+  assert.match(source, /TRIM\(result\) != ''/);
   assert.match(source, /AND returned = 0/);
   assert.doesNotMatch(source, /relevant_hits AS/);
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
