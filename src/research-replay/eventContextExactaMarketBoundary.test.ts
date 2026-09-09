@@ -17,8 +17,12 @@ test("event-context screen fails closed on database identity and settlement comp
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
   assert.match(source, /assertSettlementCompleteness\(\);/);
+  assert.match(source, /COUNT\(\*\) AS payout_rows/);
+  assert.match(source, /returned = 0 AND payout_yen IS NOT NULL AND payout_yen > 0/);
+  assert.match(source, /s\.payout_rows = 1 AND s\.valid_rows = 1/);
+  assert.match(source, /ambiguous !== 0/);
+  assert.match(source, /p\.bet_type='exacta' AND p\.returned=0 AND p\.payout_yen>0/);
   assert.match(source, /EVENT_MARKET_CONTEXT_PAYOUT_COVERAGE_INCOMPLETE/);
-  assert.match(source, /payout_yen IS NOT NULL AND payout_yen > 0/);
   assert.match(source, /requiredPayout\(row\)/);
   assert.match(source, /EVENT_MARKET_CONTEXT_HIT_PAYOUT_MISSING/);
   assert.doesNotMatch(source, /row\.payout_yen \?\? 0/);
