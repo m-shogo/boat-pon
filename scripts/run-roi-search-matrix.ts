@@ -17,7 +17,7 @@ const SOURCE_JSON = "reports/roi-pattern-search.json";
 const SOURCE_MD = "reports/roi-pattern-search.md";
 const SUMMARY_JSON = "reports/roi-search-matrix.json";
 const SUMMARY_MD = "reports/roi-search-matrix.md";
-const SEARCH_METRIC_SOURCE = "scripts/search-roi-patterns-raw.ts";
+const SEARCH_METRIC_SOURCE = "scripts/search-roi-patterns-internal.ts";
 
 type MatrixCase = {
   name: string;
