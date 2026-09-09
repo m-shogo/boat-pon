@@ -37,10 +37,14 @@ test("research drift validates every non-returned settled BUY denominator agains
   assert.match(source, /RESEARCH_DRIFT_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
 });
 
-test("research drift keeps database access read-only and does not expose configured missing path", () => {
+test("research drift keeps database access read-only and fails closed on missing required sources", () => {
   assert.match(source, /assertCanonicalSingleLinkRegularFile/);
   assert.match(source, /new DatabaseSync\(primaryDbPath, \{ readOnly: true \}\)/);
   assert.match(source, /PRAGMA query_only = ON/);
-  assert.match(source, /research database not found; produced empty evaluation/);
+  assert.match(source, /RESEARCH_DRIFT_PRIMARY_DB_MISSING/);
+  assert.match(source, /RESEARCH_DRIFT_DECISION_HISTORY_TABLE_MISSING/);
+  assert.match(source, /RESEARCH_DRIFT_OFFICIAL_PAYOUT_TABLE_MISSING/);
+  assert.doesNotMatch(source, /research database not found; produced empty evaluation/);
+  assert.doesNotMatch(source, /decision_history table not found; produced empty evaluation/);
   assert.doesNotMatch(source, /db not found at \$\{DB_PATH\}/);
 });
