@@ -19,7 +19,7 @@ type PayoutRow = {
   bet_type: string;
   combination: string;
   payout_yen: number | null;
-  returned: number;
+  returned: number | null;
 };
 
 const returnedBuy = db.prepare(`
@@ -56,11 +56,14 @@ for (const p of db.prepare(`
   }
   seenSettlementKeys.add(key);
 
+  if (p.returned !== 0 && p.returned !== 1) {
+    throw new Error(`MISS_RECOVERY_PAYOUT_RETURN_STATE_INVALID ${key}`);
+  }
   const isPositivePayout = p.payout_yen != null && p.payout_yen > 0;
-  if (p.returned !== 1 && !isPositivePayout) {
+  if (p.returned === 0 && !isPositivePayout) {
     throw new Error(`MISS_RECOVERY_PAYOUT_INVALID_LINE ${key}`);
   }
-  if (p.returned !== 1 && isPositivePayout) {
+  if (p.returned === 0 && isPositivePayout) {
     settledRaceByType.get(p.bet_type)?.add(p.race_id);
   }
 }

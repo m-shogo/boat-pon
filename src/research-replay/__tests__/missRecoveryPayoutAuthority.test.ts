@@ -18,15 +18,21 @@ test("miss recovery normal entrypoint validates official settlement integrity be
   assert.ok(source.indexOf("returned IS NULL OR returned != 0") < source.indexOf("const rows = db.prepare"));
   assert.match(source, /seenSettlementKeys\.has\(key\)/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_DUPLICATE_COMBINATION/);
+  assert.match(source, /p\.returned !== 0 && p\.returned !== 1/);
+  assert.match(source, /MISS_RECOVERY_PAYOUT_RETURN_STATE_INVALID/);
   assert.match(source, /const isPositivePayout = p\.payout_yen != null && p\.payout_yen > 0/);
-  assert.match(source, /p\.returned !== 1 && !isPositivePayout/);
-  assert.match(source, /p\.returned !== 1 && isPositivePayout/);
+  assert.match(source, /p\.returned === 0 && !isPositivePayout/);
+  assert.match(source, /p\.returned === 0 && isPositivePayout/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_INVALID_LINE/);
   assert.match(source, /MISS_RECOVERY_BUY_POPULATION_EMPTY/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_COVERAGE_INCOMPLETE/);
   assert.match(source, /await import\("\.\/analyze-miss-to-bet-type-recovery-raw"\)/);
   assert.ok(
     source.indexOf("MISS_RECOVERY_RETURNED_BUY_UNSUPPORTED")
+      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
+  );
+  assert.ok(
+    source.indexOf("MISS_RECOVERY_PAYOUT_RETURN_STATE_INVALID")
       < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
   );
   assert.ok(
