@@ -1,8 +1,17 @@
+import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = "data/boat.sqlite";
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000");
+if (!existsSync(DB_PATH)) {
+  throw new Error("RACER_STATS_COVERAGE_PRIMARY_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "RACER_STATS_COVERAGE_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 try {
   run(db);
