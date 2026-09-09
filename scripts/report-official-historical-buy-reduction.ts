@@ -97,6 +97,7 @@ WHERE dh.run_kind = 'historical-backfill'
   AND dh.bet_type = ?
   AND dh.current_odds IS NOT NULL
   AND dh.result IS NOT NULL
+  AND dh.result != ''
   AND (dh.returned IS NULL OR dh.returned != 0)
   AND EXISTS (
     SELECT 1 FROM race_weather rw
@@ -122,8 +123,8 @@ WHERE dh.run_kind = 'historical-backfill'
 
 function assertOfficialSettlementIntegrity(): void {
   const row = db.prepare(`
-WITH relevant_hits AS (
-  SELECT DISTINCT dh.race_id, dh.selection
+WITH relevant_settled AS (
+  SELECT DISTINCT dh.race_id, dh.result
   FROM decision_history dh
   WHERE dh.run_kind = 'historical-backfill'
     AND dh.decision = 'BUY'
@@ -131,7 +132,7 @@ WITH relevant_hits AS (
     AND dh.returned = 0
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
-    AND dh.result = dh.selection
+    AND dh.result != ''
     AND EXISTS (
       SELECT 1 FROM race_weather rw
       WHERE rw.race_id = dh.race_id
@@ -148,22 +149,23 @@ WITH relevant_hits AS (
         AND re.source_type = 'official_historical'
     )
 ), invalid AS (
-  SELECT h.race_id, h.selection
-  FROM relevant_hits h
+  SELECT s.race_id, s.result
+  FROM relevant_settled s
   WHERE (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
+    WHERE rp.race_id = s.race_id
       AND rp.bet_type = ?
-      AND rp.combination = h.selection
+      AND rp.combination = s.result
   ) != 1
   OR (
     SELECT COUNT(*)
     FROM race_payouts rp
-    WHERE rp.race_id = h.race_id
+    WHERE rp.race_id = s.race_id
       AND rp.bet_type = ?
-      AND rp.combination = h.selection
+      AND rp.combination = s.result
       AND rp.returned = 0
+      AND rp.payout_yen IS NOT NULL
       AND rp.payout_yen > 0
   ) != 1
 )
@@ -348,6 +350,7 @@ WITH race_avg_st AS (
     AND dh.returned = 0
     AND dh.current_odds IS NOT NULL
     AND dh.result IS NOT NULL
+    AND dh.result != ''
     ${extraDecisionWhere}
     AND EXISTS (SELECT 1 FROM exhibition_data ed WHERE ed.race_id = dh.race_id AND ed.source_type = 'official_historical')
     AND EXISTS (SELECT 1 FROM race_equipment re WHERE re.race_id = dh.race_id AND re.source_type = 'official_historical')
