@@ -12,4 +12,5 @@ if (invokedPath === rawEntrypointPath) {
   throw new Error("ROI_EDGE_MARKET_GAP_RAW_DIRECT_EXECUTION_FORBIDDEN");
 }
 
+await import("./assert-roi-edge-market-gap-db-boundary");
 await import("./analyze-roi-edge-market-gap-internal");
