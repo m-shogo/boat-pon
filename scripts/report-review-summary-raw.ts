@@ -107,7 +107,7 @@ function payoutBetTypeSql(column: string) {
 }
 
 function assertOfficialSettlementIntegrity(): void {
-  const where = makeWhere("returned = 0 AND result IS NOT NULL AND result != ''", []);
+  const where = makeWhere("returned = 0 AND result IS NOT NULL", []);
   const row = db.prepare(`
 WITH relevant_settled AS (
   SELECT DISTINCT
@@ -120,7 +120,8 @@ WITH relevant_settled AS (
 ), invalid AS (
   SELECT s.race_id, s.bet_type, s.result
   FROM relevant_settled s
-  WHERE s.payout_bet_type IS NULL
+  WHERE TRIM(s.result) = ''
+     OR s.payout_bet_type IS NULL
      OR (
        SELECT COUNT(*)
        FROM race_payouts rp
@@ -156,12 +157,12 @@ function queryTotals(): TotalRow {
   return db.prepare(`
 SELECT
   COUNT(*) AS decisions,
-  SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
+  SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND returned = 0 THEN 1 ELSE 0 END) AS settled,
   SUM(CASE WHEN decision = 'BUY' THEN 1 ELSE 0 END) AS buy,
   SUM(CASE WHEN decision = 'WATCH' THEN 1 ELSE 0 END) AS watch,
   SUM(CASE WHEN decision = 'SKIP' THEN 1 ELSE 0 END) AS skip,
-  SUM(CASE WHEN decision = 'BUY' AND returned = 0 AND result IS NOT NULL AND selection != result THEN 1 ELSE 0 END) AS buyMisses,
-  SUM(CASE WHEN decision IN ('WATCH', 'SKIP') AND returned = 0 AND selection = result THEN 1 ELSE 0 END) AS missedHits
+  SUM(CASE WHEN decision = 'BUY' AND returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection != result THEN 1 ELSE 0 END) AS buyMisses,
+  SUM(CASE WHEN decision IN ('WATCH', 'SKIP') AND returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection = result THEN 1 ELSE 0 END) AS missedHits
 FROM decision_history
 WHERE ${where.sql}
 `).get(...where.params) as TotalRow;
@@ -178,7 +179,7 @@ WITH base AS (
     returned,
     current_odds,
     CASE
-      WHEN selection = result AND returned = 0 THEN (
+      WHEN result IS NOT NULL AND TRIM(result) != '' AND selection = result AND returned = 0 THEN (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
@@ -196,9 +197,9 @@ WITH base AS (
   SELECT
     decision,
     COUNT(*) AS n,
-    SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
-    SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
-    SUM(CASE WHEN selection = result AND returned = 0 AND payout_odds IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
+    SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND returned = 0 THEN 1 ELSE 0 END) AS settled,
+    SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND selection = result AND returned = 0 AND payout_odds IS NULL THEN 1 ELSE 0 END) AS missing_payout_hits,
     SUM(payout_odds) AS total_payout_odds,
     MAX(payout_odds) AS max_payout_odds
   FROM base
@@ -240,8 +241,8 @@ WHERE ${where.sql}
 
 function queryTopRows(kind: "buy-misses" | "missed-hits"): DetailRow[] {
   const extra = kind === "buy-misses"
-    ? "decision = 'BUY' AND returned = 0 AND result IS NOT NULL AND selection != result"
-    : "decision IN ('WATCH', 'SKIP') AND returned = 0 AND selection = result";
+    ? "decision = 'BUY' AND returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection != result"
+    : "decision IN ('WATCH', 'SKIP') AND returned = 0 AND result IS NOT NULL AND TRIM(result) != '' AND selection = result";
   const where = makeWhere(extra, []);
 
   return db.prepare(`
@@ -381,5 +382,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-review-summary.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--limit 10] [--json]
 
-Read-only. No external access. Decision ROI uses mapped official race_payouts.payout_yen; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement before summary aggregation.`);
+Read-only. No external access. Decision ROI uses mapped official race_payouts.payout_yen; blank settled results and ambiguous/missing official settlements fail closed before summary aggregation.`);
 }
