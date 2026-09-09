@@ -31,15 +31,20 @@ test("calibration report maps decision bet types into canonical payout namespace
   assert.doesNotMatch(source, /rp\.bet_type = decision_history\.bet_type/);
 });
 
-test("calibration fails closed on unsupported mappings before official settlement and ROI", () => {
+test("calibration fails closed on unsupported mappings and unknown return states before official settlement and ROI", () => {
   assert.match(source, /function assertSupportedBetTypeMapping\(\)/);
   assert.match(source, /CALIBRATION_BET_TYPE_MAPPING_FAILED/);
   assert.match(source, /\(\$\{payoutBetTypeSql\("bet_type"\)\}\) IS NULL/);
+  assert.match(source, /function assertReturnStateIntegrity\(\)/);
+  assert.match(source, /returned IS NULL OR returned NOT IN \(0, 1\)/);
+  assert.match(source, /CALIBRATION_RETURN_STATE_COUNT_INVALID/);
+  assert.match(source, /CALIBRATION_RETURN_STATE_INTEGRITY_FAILED/);
 
   const mappingIndex = source.indexOf("assertSupportedBetTypeMapping();");
+  const returnIndex = source.indexOf("assertReturnStateIntegrity();");
   const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
   const reportIndex = source.indexOf("const rows = [");
-  assert.ok(mappingIndex >= 0 && guardIndex > mappingIndex && reportIndex > guardIndex);
+  assert.ok(mappingIndex >= 0 && returnIndex > mappingIndex && guardIndex > returnIndex && reportIndex > guardIndex);
 });
 
 test("calibration ROI requires complete official settlement for every non-empty settled denominator row", () => {
