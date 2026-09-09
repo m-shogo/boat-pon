@@ -59,11 +59,15 @@ test("promising bet raw compatibility module blocks direct CLI bypass", () => {
   assert.doesNotMatch(raw, /const STRATEGIES: StrategyDef\[\] =/);
 });
 
-test("promising bet internal analyzer retains the read-only research implementation", () => {
+test("promising bet internal analyzer retains read-only behavior without exposing configured database paths", () => {
   const internal = readFileSync("scripts/analyze-promising-bet-type-strategies-internal.ts", "utf8");
   assert.match(internal, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
   assert.match(internal, /PRAGMA query_only=ON/);
   assert.match(internal, /const STRATEGIES: StrategyDef\[\] =/);
   assert.match(internal, /const results = STRATEGIES\.map\(evaluate\)/);
   assert.match(internal, /writeFileSync\(OUT_JSON/);
+  assert.match(internal, /PROMISING_BET_PRIMARY_DB_MISSING/);
+  assert.match(internal, /DB: canonical research database \(path redacted\)/);
+  assert.doesNotMatch(internal, /DB not found: \$\{DB_PATH\}/);
+  assert.doesNotMatch(internal, /DB: \$\{DB_PATH\}/);
 });

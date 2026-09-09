@@ -20,7 +20,7 @@ const OUT_JSON = "reports/bet-type-course-edge.json";
 const STAKE = 100;
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella"] as const;
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
+if (!existsSync(DB_PATH)) throw new Error("BET_TYPE_COURSE_PRIMARY_DB_MISSING");
 const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
@@ -211,7 +211,7 @@ const roi = (v: number) => `**${v}%**`;
 let md = `# コース適性 × 券種 ROI 分析
 
 生成日時: ${new Date().toISOString()}
-DB: ${DB_PATH}
+DB: canonical research database (path redacted)
 
 > **時点整合性未達:** racer_course_stats に snapshot_date がないため、過去レース時点の値とは確認できない。以下は仮説生成専用で、本番接続・ROI証明には使わない。
 
