@@ -18,21 +18,28 @@ test("no-buy next research keeps SQLite query-only and remains analysis-only", (
   assert.match(source, /本番採用しません/);
 });
 
-test("no-buy next research fails closed on unknown or returned historical BUY rows before ranking", () => {
+test("no-buy next research fails closed on return state and trifecta shape before settlement validation and ranking", () => {
   const returnedGate = source.indexOf("assertNoReturnedBuyRows();");
+  const shapeGate = source.indexOf("assertCanonicalTrifectaShapes();");
   const settlementGate = source.indexOf("assertOfficialWinningSettlements();");
   const load = source.indexOf("const rows = loadRows();");
   assert.ok(returnedGate >= 0);
-  assert.ok(settlementGate > returnedGate);
+  assert.ok(shapeGate > returnedGate);
+  assert.ok(settlementGate > shapeGate);
   assert.ok(load > settlementGate);
   assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
   assert.match(source, /NO_BUY_NEXT_RETURNED_BUY_UNSUPPORTED/);
+  assert.match(source, /NO_BUY_NEXT_TRIFECTA_SHAPE_INVALID/);
+  assert.match(source, /dh\.selection NOT GLOB '\[1-6\]-\[1-6\]-\[1-6\]'/);
+  assert.match(source, /dh\.result NOT GLOB '\[1-6\]-\[1-6\]-\[1-6\]'/);
+  assert.match(source, /substr\(dh\.selection,1,1\) = substr\(dh\.selection,3,1\)/);
+  assert.match(source, /substr\(dh\.result,1,1\) = substr\(dh\.result,3,1\)/);
   assert.match(source, /dh\.returned = 0/);
 });
 
-test("no-buy next research scopes return, settlement, and ROI cohorts to trifecta decisions", () => {
+test("no-buy next research scopes return, shape, settlement, and ROI cohorts to trifecta decisions", () => {
   const matches = source.match(/dh\.bet_type='3連単'/g) ?? [];
-  assert.equal(matches.length, 3, "returned gate, settlement gate, and ROI load must share the same 3連単 decision cohort");
+  assert.equal(matches.length, 4, "return gate, shape gate, settlement gate, and ROI load must share the same 3連単 decision cohort");
   assert.match(source, /rp\.bet_type = 'trifecta'/);
 });
 
