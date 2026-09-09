@@ -26,10 +26,6 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-roi-edge-market-gap-raw.ts");
-if (analysis !== 0) {
-  console.error("[roi-edge-market-gap-entrypoint] analysis failed after a successful payout completeness preflight");
-  process.exit(analysis);
-}
+await import("./analyze-roi-edge-market-gap-raw");
 
 console.log("[roi-edge-market-gap-entrypoint] PASS: payout completeness preflight passed before market-gap analysis");

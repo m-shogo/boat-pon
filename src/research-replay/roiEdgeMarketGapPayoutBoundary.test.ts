@@ -4,16 +4,25 @@ import assert from "node:assert/strict";
 
 const entrypointSource = readFileSync("scripts/analyze-roi-edge-market-gap.ts", "utf-8");
 const rawSource = readFileSync("scripts/analyze-roi-edge-market-gap-raw.ts", "utf-8");
+const internalSource = readFileSync("scripts/analyze-roi-edge-market-gap-internal.ts", "utf-8");
 const auditSource = readFileSync("scripts/audit-roi-edge-market-gap-payout-completeness.ts", "utf-8");
 const packageSource = readFileSync("package.json", "utf-8");
 
-test("ROI edge market-gap normal entrypoint fails closed before raw analysis", () => {
+test("ROI edge market-gap normal entrypoint fails closed before guarded analysis", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-edge-market-gap-payout-completeness.ts")');
-  const analysis = entrypointSource.indexOf('run("scripts/analyze-roi-edge-market-gap-raw.ts")');
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-edge-market-gap-raw")');
   assert.ok(preflight >= 0);
   assert.ok(analysis > preflight);
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
+});
+
+test("ROI edge market-gap raw compatibility module cannot be executed directly", () => {
+  assert.match(rawSource, /fileURLToPath\(import\.meta\.url\)/);
+  assert.match(rawSource, /process\.argv\[1\]/);
+  assert.match(rawSource, /ROI_EDGE_MARKET_GAP_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(rawSource, /await import\("\.\/analyze-roi-edge-market-gap-internal"\)/);
+  assert.doesNotMatch(rawSource, /new DatabaseSync/);
 });
 
 test("ROI edge market-gap payout preflight matches analyzer population and stays read-only", () => {
@@ -62,12 +71,12 @@ test("ROI edge market-gap settlement gate permits legitimate multi-line races bu
   assert.doesNotMatch(auditSource, /HAVING COUNT\(\*\) = 1/);
 });
 
-test("ROI edge market-gap raw analyzer retains both payout-dependent combinations", () => {
-  assert.match(rawSource, /combination='1-2-3'/);
-  assert.match(rawSource, /combination='1-3-2'/);
-  assert.match(rawSource, /COALESCE/);
-  assert.match(rawSource, /roi132loss/);
-  assert.match(rawSource, /deriveVerdict/);
+test("ROI edge market-gap internal analyzer retains both payout-dependent combinations", () => {
+  assert.match(internalSource, /combination='1-2-3'/);
+  assert.match(internalSource, /combination='1-3-2'/);
+  assert.match(internalSource, /COALESCE/);
+  assert.match(internalSource, /roi132loss/);
+  assert.match(internalSource, /deriveVerdict/);
 });
 
 test("ROI edge market-gap npm command stays on the fail-closed normal entrypoint", () => {
