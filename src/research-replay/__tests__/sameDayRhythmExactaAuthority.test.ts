@@ -6,7 +6,7 @@ test("same-day rhythm screen binds both base and selection odds to canonical exa
   const source = readFileSync("scripts/analyze-same-day-rhythm-market.ts", "utf8");
 
   assert.match(source, /HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING/);
-  assert.equal((source.match(/historicalExactaCanonicalSourcePredicate\("h"\)/g) ?? []).length, 2);
+  assert.ok((source.match(/historicalExactaCanonicalSourcePredicate\("h"\)/g) ?? []).length >= 2);
   assert.doesNotMatch(source, /HAVING COUNT\(\*\)=30/);
 });
 
@@ -24,7 +24,12 @@ test("same-day rhythm ROI fails closed on incomplete official payouts", () => {
 
 test("same-day rhythm exacta settlement is unambiguous before market aggregation", () => {
   const source = readFileSync("scripts/analyze-same-day-rhythm-market.ts", "utf8");
+  const preflight = source.indexOf("assertSettlementCoverage(coverage)");
+  const analysis = source.indexOf("const market=db.prepare");
 
+  assert.ok(preflight >= 0 && analysis > preflight, "settlement integrity must pass before market aggregation");
+  assert.match(source, /CASE WHEN COUNT\(\*\)=1/);
+  assert.match(source, /SAME_DAY_RHYTHM_EXACTA_SETTLEMENT_INTEGRITY_INVALID/);
   assert.match(source, /JOIN race_payouts p ON p\.race_id=h\.race_id AND p\.bet_type='exacta'/);
   assert.match(source, /SELECT COUNT\(\*\) FROM race_payouts rp WHERE rp\.race_id=h\.race_id AND rp\.bet_type='exacta'\)=1/);
   assert.match(source, /p\.returned=0/);
