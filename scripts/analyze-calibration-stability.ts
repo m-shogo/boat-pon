@@ -22,6 +22,7 @@ type Row = { id:number; date:string; venue:string; race_id:string; selection:str
 type Summary = { n:number; hits:number; hitRate:number|null; estimated:number|null; factor:number|null; roi:number|null; roiExMax:number|null };
 
 try {
+  assertNonblankResultIntegrity();
   assertReturnStateIntegrity();
   assertOfficialSettlementIntegrity();
   const rows = db.prepare(`SELECT id,date,venue,race_id,selection,estimated_hit_rate,current_odds,result,
@@ -36,7 +37,7 @@ try {
       LIMIT 1
     ) ELSE 0 END AS payout_yen
     FROM decision_history WHERE decision='BUY' AND run_kind='historical-backfill' AND model_version=? AND bet_type='3連単'
-    AND result IS NOT NULL AND result!='' AND returned=0 AND current_odds IS NOT NULL ORDER BY date,id`).all(MODEL) as Row[];
+    AND result IS NOT NULL AND TRIM(result)!='' AND returned=0 AND current_odds IS NOT NULL ORDER BY date,id`).all(MODEL) as Row[];
 
   const train = rows.filter(r => r.date < BOUNDARY);
   const forward = rows.filter(r => r.date >= BOUNDARY);
@@ -112,6 +113,23 @@ try {
   db.close();
 }
 
+function assertNonblankResultIntegrity(): void {
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history
+WHERE decision='BUY'
+  AND run_kind='historical-backfill'
+  AND model_version=?
+  AND bet_type='3連単'
+  AND result IS NOT NULL
+  AND TRIM(result)=''
+  AND current_odds IS NOT NULL
+  `).get(MODEL) as { invalid: number };
+  if (row.invalid > 0) {
+    throw new Error(`CALIBRATION_STABILITY_BLANK_SETTLED_RESULT_UNSUPPORTED ${JSON.stringify({ invalid: row.invalid })}`);
+  }
+}
+
 function assertReturnStateIntegrity(): void {
   const row = db.prepare(`
 SELECT COUNT(*) AS invalid
@@ -120,7 +138,7 @@ WHERE decision='BUY'
   AND run_kind='historical-backfill'
   AND model_version=?
   AND bet_type='3連単'
-  AND result IS NOT NULL AND result!=''
+  AND result IS NOT NULL AND TRIM(result)!=''
   AND current_odds IS NOT NULL
   AND (returned IS NULL OR returned != 0)
   `).get(MODEL) as { invalid: number };
@@ -138,7 +156,7 @@ WITH winners AS (
     AND run_kind='historical-backfill'
     AND model_version=?
     AND bet_type='3連単'
-    AND result IS NOT NULL AND result!=''
+    AND result IS NOT NULL AND TRIM(result)!=''
     AND returned=0
     AND current_odds IS NOT NULL
     AND selection=result
