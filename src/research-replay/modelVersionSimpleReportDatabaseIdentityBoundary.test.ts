@@ -27,15 +27,18 @@ test("model version comparison rejects unsupported bet types across the full rep
   );
 });
 
-test("model version comparison validates every settled denominator against the canonical winning-result settlement before ROI", () => {
+test("model version comparison rejects blank settled results and validates every nonblank denominator against official settlement", () => {
   const guardIndex = source.indexOf("assertOfficialSettlementIntegrity();");
   const queryIndex = source.indexOf("const rows = queryRows();");
 
   assert.ok(guardIndex >= 0 && guardIndex < queryIndex, "official settlement preflight must run before model ROI comparison");
+  assert.match(source, /WITH blank_settled AS/);
+  assert.match(source, /TRIM\(result\) = ''/);
+  assert.match(source, /MODEL_VERSION_BLANK_SETTLED_RESULT_UNSUPPORTED/);
   assert.match(source, /MODEL_VERSION_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED/);
-  assert.match(source, /WITH relevant_settled AS/);
+  assert.match(source, /relevant_settled AS/);
   assert.match(source, /AND result IS NOT NULL/);
-  assert.match(source, /AND result != ''/);
+  assert.match(source, /TRIM\(result\) != ''/);
   assert.match(source, /AND returned = 0/);
   assert.doesNotMatch(source, /relevant_hits AS/);
   assert.match(source, /WHEN '3連単' THEN 'trifecta'/);
@@ -51,6 +54,7 @@ test("model version comparison validates every settled denominator against the c
   assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /rp\.payout_yen \/ 100\.0/);
   assert.match(source, /rp\.bet_type = \$\{payoutBetTypeSql\("decision_history\.bet_type"\)\}/);
+  assert.match(source, /SUM\(CASE WHEN result IS NOT NULL AND TRIM\(result\) != '' AND returned = 0 THEN 1 ELSE 0 END\) AS settled/);
   assert.doesNotMatch(source, /rp\.bet_type = decision_history\.bet_type/);
   assert.doesNotMatch(source, /rp\.bet_type = h\.bet_type/);
   assert.doesNotMatch(source, /CASE WHEN selection = result AND returned = 0 THEN current_odds ELSE 0 END AS payout_odds/);
