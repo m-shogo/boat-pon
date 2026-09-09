@@ -2,17 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const source = readFileSync("scripts/analyze-odds-payout-gap-raw.ts", "utf-8");
+const source = readFileSync("scripts/analyze-odds-payout-gap-internal.ts", "utf-8");
 
-test("odds-payout gap raw analyzer verifies the primary DB before opening SQLite", () => {
+test("odds-payout gap internal analyzer verifies the primary DB before opening SQLite", () => {
   const verify = source.indexOf("assertCanonicalSingleLinkRegularFile(DB_PATH");
   const open = source.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
   assert.ok(verify >= 0, "primary DB identity guard must exist");
   assert.ok(open > verify, "SQLite must open only after canonical identity verification");
   assert.match(source, /PRAGMA query_only = ON/);
+  assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/u);
+  assert.doesNotMatch(source, /DB: \$\{DB_PATH\}/u);
 });
 
-test("odds-payout gap raw analyzer fails closed before ROI or verdict generation when settlement coverage is incomplete", () => {
+test("odds-payout gap internal analyzer fails closed before ROI or verdict generation when settlement coverage is incomplete", () => {
   const coverage = source.indexOf("const coverageRow = db.prepare");
   const evaluate = source.indexOf("evaluatePaperForwardPayoutCompleteness(");
   const failClosed = source.indexOf("FAIL CLOSED: official trifecta settlement coverage is incomplete");
@@ -27,7 +29,7 @@ test("odds-payout gap raw analyzer fails closed before ROI or verdict generation
   assert.match(source, /process\.exit\(2\)/);
 });
 
-test("odds-payout gap raw completeness population remains aligned with the analyzer base population", () => {
+test("odds-payout gap internal completeness population remains aligned with the analyzer base population", () => {
   const baseWhere = source.indexOf("const BASE_WHERE = `");
   const coverageWhere = source.indexOf("WHERE ${BASE_WHERE}");
   assert.ok(baseWhere >= 0);
