@@ -19,7 +19,7 @@ const OUT_JSON = "reports/promising-bet-type-strategies.json";
 const STAKE = 100;
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
+if (!existsSync(DB_PATH)) throw new Error("PROMISING_BET_PRIMARY_DB_MISSING");
 const dbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
@@ -286,7 +286,7 @@ const pct = (v: number) => v.toFixed(1) + "%";
 let md = `# 有望券種 深掘りストラテジー分析
 
 生成日時: ${new Date().toISOString()}
-DB: ${DB_PATH}
+DB: canonical research database (path redacted)
 
 - BUY レース: ${rows.length.toLocaleString()}
 - 1点 ${STAKE}円
