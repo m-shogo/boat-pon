@@ -28,6 +28,7 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_D
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try {
+  assertNonblankResultIntegrity();
   assertReturnStateIntegrity();
   assertOfficialSettlementIntegrity();
   const rows = db.prepare(`
@@ -48,7 +49,7 @@ try {
       AND run_kind='historical-backfill'
       AND model_version=?
       AND bet_type='3連単'
-      AND result IS NOT NULL AND result!=''
+      AND result IS NOT NULL AND TRIM(result)!=''
       AND returned=0
       AND current_odds IS NOT NULL
     ORDER BY date, id
@@ -132,6 +133,23 @@ try {
   db.close();
 }
 
+function assertNonblankResultIntegrity(): void {
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history
+WHERE decision='BUY'
+  AND run_kind='historical-backfill'
+  AND model_version=?
+  AND bet_type='3連単'
+  AND result IS NOT NULL
+  AND TRIM(result)=''
+  AND current_odds IS NOT NULL
+  `).get(MODEL) as { invalid: number };
+  if (row.invalid > 0) {
+    throw new Error(`CANONICAL_CALIBRATION_BLANK_SETTLED_RESULT_UNSUPPORTED ${JSON.stringify({ invalid: row.invalid })}`);
+  }
+}
+
 function assertReturnStateIntegrity(): void {
   const row = db.prepare(`
 SELECT COUNT(*) AS invalid
@@ -140,7 +158,7 @@ WHERE decision='BUY'
   AND run_kind='historical-backfill'
   AND model_version=?
   AND bet_type='3連単'
-  AND result IS NOT NULL AND result!=''
+  AND result IS NOT NULL AND TRIM(result)!=''
   AND current_odds IS NOT NULL
   AND (returned IS NULL OR returned != 0)
   `).get(MODEL) as { invalid: number };
@@ -158,7 +176,7 @@ WITH winners AS (
     AND run_kind='historical-backfill'
     AND model_version=?
     AND bet_type='3連単'
-    AND result IS NOT NULL AND result!=''
+    AND result IS NOT NULL AND TRIM(result)!=''
     AND returned=0
     AND current_odds IS NOT NULL
     AND selection=result
