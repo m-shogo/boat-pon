@@ -112,11 +112,11 @@ WITH settled_buy AS (
     AND dh.decision = 'BUY'
     AND dh.returned = 0
     AND dh.result IS NOT NULL
-    AND dh.result != ''
 ), invalid AS (
   SELECT s.race_id
   FROM settled_buy s
-  WHERE s.payout_bet_type IS NULL
+  WHERE TRIM(s.result) = ''
+     OR s.payout_bet_type IS NULL
      OR (SELECT COUNT(*)
          FROM race_payouts rp
          WHERE rp.race_id = s.race_id
@@ -170,7 +170,7 @@ function loadRows(from: string, to: string): { rows: DecisionHistoryRow[]; sourc
 SELECT dh.id, dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, dh.estimated_hit_rate, dh.required_odds, dh.current_odds,
        dh.ev, dh.decision, dh.actually_bought, dh.stake_yen, dh.recommended_stake_yen, dh.sample_size,
        dh.result,
-       CASE WHEN dh.decision = 'BUY' AND dh.returned = 0 AND dh.result IS NOT NULL AND dh.result != '' AND dh.selection = dh.result THEN (
+       CASE WHEN dh.decision = 'BUY' AND dh.returned = 0 AND dh.result IS NOT NULL AND TRIM(dh.result) != '' AND dh.selection = dh.result THEN (
          SELECT rp.payout_yen
          FROM race_payouts rp
          WHERE rp.race_id = dh.race_id
@@ -241,9 +241,10 @@ function printHelp() {
 
 Read-only. Aggregates decision_history into a RuleEvaluationResult.
 ROI uses canonical race_payouts.payout_yen for settled non-returned BUY rows.
-Every denominator row must map to exactly one positive non-refund official
-winning-result settlement; evaluation fails closed on unsupported or ambiguous
-settlement data instead of falling back to current_odds or legacy decision payout.
+Blank settled BUY results and every denominator row must map to exactly one positive
+non-refund official winning-result settlement; evaluation fails closed on invalid,
+unsupported, or ambiguous settlement data instead of falling back to current_odds
+or legacy decision payout.
 
   --from              data window start (default 1970-01-01)
   --to                data window end (default today)
