@@ -55,6 +55,7 @@ test("promising bet raw compatibility module blocks direct CLI bypass", () => {
   assert.match(raw, /process\.argv\[1\]/);
   assert.match(raw, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
   assert.doesNotMatch(raw, /DatabaseSync/);
+  assert.doesNotMatch(raw, /DB_PATH/);
   assert.doesNotMatch(raw, /const STRATEGIES: StrategyDef\[\] =/);
 });
 
