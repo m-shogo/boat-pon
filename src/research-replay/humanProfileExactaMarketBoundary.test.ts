@@ -22,3 +22,21 @@ test("human profile ROI fails closed on incomplete official payouts", () => {
   assert.match(source, /map\(requiredPayout\)/);
   assert.doesNotMatch(source, /payout_yen\?\?0/);
 });
+
+test("human profile exacta settlement integrity is preflighted before selected rows", () => {
+  const source = readFileSync("scripts/analyze-human-profile-market.ts", "utf8");
+  const preflight = source.indexOf("assertSettlementCoverage(coverage)");
+  const analysis = source.indexOf("const odds=db.prepare");
+
+  assert.ok(preflight >= 0 && analysis > preflight, "settlement integrity must pass before selected-row aggregation");
+  assert.match(source, /CASE WHEN COUNT\(\*\)=1/);
+  assert.match(source, /HUMAN_PROFILE_EXACTA_SETTLEMENT_INTEGRITY_INVALID/);
+  assert.match(source, /JOIN race_payouts p ON p\.race_id=h\.race_id AND p\.bet_type='exacta'/);
+  assert.match(source, /SELECT COUNT\(\*\) FROM race_payouts rp WHERE rp\.race_id=h\.race_id AND rp\.bet_type='exacta'\)=1/);
+  assert.match(source, /p\.returned=0/);
+  assert.match(source, /p\.combination IS NOT NULL AND p\.combination!=''/);
+  assert.match(source, /p\.payout_yen IS NOT NULL AND p\.payout_yen>0/);
+  assert.match(source, /historicalExactaCanonicalSourcePredicate\("winner_h"\)/);
+  assert.match(source, /winner_h\.combination=p\.combination/);
+  assert.doesNotMatch(source, /LEFT JOIN race_payouts p/);
+});
