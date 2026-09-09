@@ -24,6 +24,7 @@ type Row = {
 
 try {
   assertNoReturnedBuyRows();
+  assertCanonicalTrifectaShapes();
   assertOfficialWinningSettlements();
   const rows = loadRows();
   const before = metric(rows);
@@ -60,6 +61,34 @@ WHERE dh.run_kind='historical-backfill'
   const count = Number(row.count ?? 0);
   if (!Number.isInteger(count) || count < 0) throw new Error("NO_BUY_NEXT_RETURNED_BUY_COUNT_INVALID");
   if (count > 0) throw new Error(`NO_BUY_NEXT_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count })}`);
+}
+
+function assertCanonicalTrifectaShapes(): void {
+  const row = db.prepare(`
+SELECT COUNT(*) AS invalid
+FROM decision_history dh
+WHERE dh.run_kind='historical-backfill'
+  AND dh.decision='BUY'
+  AND dh.bet_type='3連単'
+  AND dh.current_odds IS NOT NULL
+  AND dh.result IS NOT NULL
+  AND dh.returned = 0
+  AND (
+    length(dh.selection) != 5
+    OR dh.selection NOT GLOB '[1-6]-[1-6]-[1-6]'
+    OR substr(dh.selection,1,1) = substr(dh.selection,3,1)
+    OR substr(dh.selection,1,1) = substr(dh.selection,5,1)
+    OR substr(dh.selection,3,1) = substr(dh.selection,5,1)
+    OR length(dh.result) != 5
+    OR dh.result NOT GLOB '[1-6]-[1-6]-[1-6]'
+    OR substr(dh.result,1,1) = substr(dh.result,3,1)
+    OR substr(dh.result,1,1) = substr(dh.result,5,1)
+    OR substr(dh.result,3,1) = substr(dh.result,5,1)
+  )
+`).get() as { invalid: number | bigint | null };
+  const invalid = Number(row.invalid ?? 0);
+  if (!Number.isInteger(invalid) || invalid < 0) throw new Error("NO_BUY_NEXT_TRIFECTA_SHAPE_COUNT_INVALID");
+  if (invalid > 0) throw new Error(`NO_BUY_NEXT_TRIFECTA_SHAPE_INVALID ${JSON.stringify({ invalid })}`);
 }
 
 function assertOfficialWinningSettlements(): void {
