@@ -32,16 +32,20 @@ const CASES = [
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Record<string, string> };
 
 for (const c of CASES) {
-  test(`${c.alias} direct entrypoint fails closed before raw analysis`, () => {
+  test(`${c.alias} direct entrypoint verifies DB identity and fails closed before raw analysis`, () => {
     const source = readFileSync(c.entry, "utf8");
+    const identityIndex = source.indexOf("assertCanonicalSingleLinkRegularFile");
     const auditIndex = source.indexOf(c.audit);
     const gateIndex = source.indexOf("audit !== 0");
     const rawModule = c.raw.replace(/\.ts$/u, "");
     const rawIndex = Math.max(source.indexOf(c.raw), source.indexOf(rawModule));
 
-    assert.ok(auditIndex >= 0);
+    assert.ok(identityIndex >= 0, "canonical entrypoint must verify primary DB identity");
+    assert.ok(auditIndex > identityIndex, "payout audit must receive only the verified DB path");
     assert.ok(gateIndex > auditIndex);
     assert.ok(rawIndex > gateIndex);
+    assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
+    assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
     assert.doesNotMatch(source, /DatabaseSync/);
     assert.equal(pkg.scripts?.[c.alias], `tsx ${c.entry}`);
   });
