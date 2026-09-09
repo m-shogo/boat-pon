@@ -4,4 +4,5 @@
  * preflight cannot diverge from the supported analyzer path.
  */
 
+export {};
 await import("./analyze-roi-mechanism-skip-filters");
