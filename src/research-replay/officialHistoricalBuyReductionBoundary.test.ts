@@ -25,11 +25,13 @@ test("official historical BUY reduction rejects unknown or returned target rows 
   assert.ok(evaluate > settlementGate);
 });
 
-test("official historical BUY reduction cohort remains fixed to non-returned decisions", () => {
+test("official historical BUY reduction cohort remains fixed to non-returned settled decisions", () => {
   const matches = source.match(/dh\.returned = 0/g) ?? [];
   assert.ok(matches.length >= 2, "returned=0 must guard both settlement preflight and analysis cohort");
   assert.match(source, /run_kind = 'historical-backfill'/);
   assert.match(source, /decision = 'BUY'/);
+  assert.match(source, /dh\.result IS NOT NULL/);
+  assert.match(source, /dh\.result != ''/);
 });
 
 test("official historical BUY reduction maps decision 3連単 rows to canonical trifecta settlements", () => {
@@ -56,9 +58,16 @@ test("official historical BUY reduction ROI uses exact official settlements", ()
   assert.doesNotMatch(source, /SUM\(CASE WHEN result = selection THEN current_odds ELSE 0 END\)/);
 });
 
-test("official historical BUY reduction fails closed on ambiguous winning settlement keys", () => {
+test("official historical BUY reduction validates every settled denominator against the official winning result", () => {
   assert.match(source, /function assertOfficialSettlementIntegrity\(\): void/);
-  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*FROM race_payouts rp[\s\S]*rp\.bet_type = \?[\s\S]*rp\.combination = h\.selection[\s\S]*\) != 1/);
+  assert.match(source, /WITH relevant_settled AS/);
+  assert.match(source, /SELECT DISTINCT dh\.race_id, dh\.result/);
+  assert.doesNotMatch(source, /relevant_hits AS/);
+  assert.doesNotMatch(source, /dh\.result = dh\.selection[\s\S]*\), invalid AS/);
+  assert.match(source, /SELECT COUNT\(\*\)[\s\S]*FROM race_payouts rp[\s\S]*rp\.bet_type = \?[\s\S]*rp\.combination = s\.result[\s\S]*\) != 1/);
+  assert.match(source, /rp\.returned = 0/);
+  assert.match(source, /rp\.payout_yen IS NOT NULL/);
+  assert.match(source, /rp\.payout_yen > 0/);
   assert.match(source, /OFFICIAL_HISTORICAL_BUY_REDUCTION_SETTLEMENT_INTEGRITY_INVALID/);
   const gate = source.indexOf("assertOfficialSettlementIntegrity();");
   const evaluate = source.indexOf("buildConditions().map(evaluateCondition)");
