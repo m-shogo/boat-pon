@@ -37,13 +37,18 @@ const invalid = db.prepare(`
       OR dh.bet_type != '3連単'
       OR dh.returned IS NULL
       OR dh.returned != 0
+      OR length(dh.selection) != 5
+      OR dh.selection NOT GLOB '[1-6]-[1-6]-[1-6]'
+      OR substr(dh.selection, 1, 1) = substr(dh.selection, 3, 1)
+      OR substr(dh.selection, 1, 1) = substr(dh.selection, 5, 1)
+      OR substr(dh.selection, 3, 1) = substr(dh.selection, 5, 1)
     )
   LIMIT 1
 `).get();
 
 if (invalid) {
   db.close();
-  console.error("[bet-type-risk-cohort] FAIL CLOSED: historical BUY cohort contains unsupported bet type or returned/unknown-return rows");
+  console.error("[bet-type-risk-cohort] FAIL CLOSED: historical BUY cohort contains unsupported bet type, returned/unknown-return rows, or malformed three-boat selection");
   process.exit(2);
 }
 
