@@ -33,6 +33,7 @@ type IntegrityRow = {
   cohortInvalidRows: number;
   invalidSelectionKeyShapes: number;
   invalidWinningKeyShapes: number;
+  invalidSettlementKeyShapes: number;
   invalidNonRefundRows: number;
   duplicateCombinationKeys: number;
   invalidSettlementReturnRows: number;
@@ -122,6 +123,18 @@ SELECT
      )
   ) AS invalidWinningKeyShapes,
   (SELECT COUNT(*)
+   FROM target_settlements ts
+   WHERE ts.returned = 0
+     AND (
+       ts.combination IS NULL
+       OR length(ts.combination) != 5
+       OR ts.combination NOT GLOB '[1-6]-[1-6]-[1-6]'
+       OR substr(ts.combination, 1, 1) = substr(ts.combination, 3, 1)
+       OR substr(ts.combination, 1, 1) = substr(ts.combination, 5, 1)
+       OR substr(ts.combination, 3, 1) = substr(ts.combination, 5, 1)
+     )
+  ) AS invalidSettlementKeyShapes,
+  (SELECT COUNT(*)
    FROM target_races tr
    WHERE EXISTS (
      SELECT 1
@@ -147,7 +160,7 @@ const result = evaluatePaperForwardPayoutCompleteness(row.total ?? 0, row.covere
 db.close();
 
 console.log(
-  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidSelectionKeyShapes=${row.invalidSelectionKeyShapes ?? 0} invalidWinningKeyShapes=${row.invalidWinningKeyShapes ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} invalidSettlementReturns=${row.invalidSettlementReturnRows ?? 0} invalidWinningKeys=${row.invalidWinningKeys ?? 0}`,
+  `[odds-payout-gap-preflight] covered=${result.coveredRaces}/${result.totalRaces} (${result.coverageRate}%) missing=${result.missingRaces} cohortInvalid=${row.cohortInvalidRows ?? 0} invalidSelectionKeyShapes=${row.invalidSelectionKeyShapes ?? 0} invalidWinningKeyShapes=${row.invalidWinningKeyShapes ?? 0} invalidSettlementKeyShapes=${row.invalidSettlementKeyShapes ?? 0} invalidNonRefund=${row.invalidNonRefundRows ?? 0} duplicateKeys=${row.duplicateCombinationKeys ?? 0} invalidSettlementReturns=${row.invalidSettlementReturnRows ?? 0} invalidWinningKeys=${row.invalidWinningKeys ?? 0}`,
 );
 
 if ((row.cohortInvalidRows ?? 0) > 0) {
@@ -162,6 +175,11 @@ if ((row.invalidSelectionKeyShapes ?? 0) > 0) {
 
 if ((row.invalidWinningKeyShapes ?? 0) > 0) {
   console.error("[odds-payout-gap-preflight] FAIL: target cohort contains malformed historical 3連単 winning result keys; exact-key payout ROI and payout rebase must remain unavailable");
+  process.exit(2);
+}
+
+if ((row.invalidSettlementKeyShapes ?? 0) > 0) {
+  console.error("[odds-payout-gap-preflight] FAIL: target cohort contains malformed official trifecta settlement keys; exact-key payout ROI and payout rebase must remain unavailable");
   process.exit(2);
 }
 
@@ -190,4 +208,4 @@ if (!result.complete) {
   process.exit(2);
 }
 
-console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage, selection shape, exact winning-key integrity, return-state integrity, and line integrity are complete for the analysis population");
+console.log("[odds-payout-gap-preflight] PASS: official trifecta settlement coverage, selection shape, settlement shape, exact winning-key integrity, return-state integrity, and line integrity are complete for the analysis population");
