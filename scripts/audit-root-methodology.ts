@@ -23,6 +23,20 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
+const blankHistoricalResults = db.prepare(`
+  SELECT COUNT(*) AS invalid
+  FROM decision_history dh
+  WHERE dh.decision='BUY'
+    AND dh.run_kind='historical-backfill'
+    AND dh.result IS NOT NULL
+    AND TRIM(dh.result)=''
+`).get() as { invalid: number };
+
+if (Number(blankHistoricalResults.invalid ?? 0) > 0) {
+  db.close();
+  throw new Error("ROOT_METHODOLOGY_BLANK_HISTORICAL_RESULT_UNSUPPORTED");
+}
+
 const venuePlaceholders = EXCL_VENUES.map(() => "?").join(",");
 const invalidForwardCohort = db.prepare(`
   SELECT COUNT(*) AS invalid
