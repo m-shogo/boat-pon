@@ -111,7 +111,14 @@ WHERE ${where.join(" AND ")}
 function assertOfficialSettlementIntegrity() {
   const { where, params } = reportWhere();
   const row = db.prepare(`
-WITH relevant_settled AS (
+WITH blank_settled AS (
+  SELECT COUNT(*) AS n
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND result IS NOT NULL
+    AND TRIM(result) = ''
+    AND returned = 0
+), relevant_settled AS (
   SELECT DISTINCT
     race_id,
     bet_type,
@@ -120,7 +127,7 @@ WITH relevant_settled AS (
   FROM decision_history
   WHERE ${where.join(" AND ")}
     AND result IS NOT NULL
-    AND result != ''
+    AND TRIM(result) != ''
     AND returned = 0
 ), invalid AS (
   SELECT s.race_id, s.bet_type, s.result
@@ -143,12 +150,19 @@ WITH relevant_settled AS (
       AND rp.payout_yen > 0
   ) != 1
 )
-SELECT COUNT(*) AS n FROM invalid
-`).get(...params) as { n: number };
+SELECT
+  (SELECT n FROM blank_settled) AS blankResults,
+  (SELECT COUNT(*) FROM invalid) AS invalid
+`).get(...params, ...params) as { blankResults: number; invalid: number };
 
-  if (row.n > 0) {
+  if (row.blankResults > 0) {
     throw new Error(
-      `DATA_QUALITY_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled winning-result key(s) do not have exactly one positive non-refund official settlement`,
+      `DATA_QUALITY_OUTCOMES_BLANK_SETTLED_RESULT_UNSUPPORTED: ${row.blankResults} settled decision row(s) have a blank result and cannot enter data-quality ROI denominators`,
+    );
+  }
+  if (row.invalid > 0) {
+    throw new Error(
+      `DATA_QUALITY_OUTCOMES_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.invalid} settled winning-result key(s) do not have exactly one positive non-refund official settlement`,
     );
   }
 }
@@ -167,7 +181,7 @@ WITH base AS (
     estimated_hit_rate,
     current_odds,
     CASE
-      WHEN selection = result AND returned = 0 THEN (
+      WHEN result IS NOT NULL AND TRIM(result) != '' AND selection = result AND returned = 0 THEN (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
@@ -186,8 +200,8 @@ WITH base AS (
     band,
     decision,
     COUNT(*) AS n,
-    SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
-    SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+    SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND returned = 0 THEN 1 ELSE 0 END) AS settled,
+    SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
     SUM(payout_units) AS total_payout_units,
     MAX(payout_units) AS max_payout_units,
     AVG(estimated_hit_rate) AS avg_estimated_hit_rate,
@@ -312,5 +326,5 @@ function printHelp() {
   console.log(`Usage:
   pnpm exec tsx scripts/report-data-quality-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
 
-Read-only. No external access. ROI uses official race_payouts.payout_yen; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement before payout-derived metrics are generated.`);
+Read-only. No external access. ROI uses official race_payouts.payout_yen; blank settled results fail closed and every remaining settled denominator must reconcile to exactly one positive non-refund official winning-result settlement before payout-derived metrics are generated.`);
 }
