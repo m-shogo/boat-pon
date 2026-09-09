@@ -11,6 +11,7 @@ import {
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type MarketRow={race_id:string;date:string;overround:number;odds14:number;winner:string|null;payout_yen:number|null;wind_speed_mps:number|null;wind_dir:string|null};
+type CoverageRow={period:string;total:number;settled:number};
 type ProgramRow={race_id:string;date:string;venue:string;race_no:number;raw_json:string};
 type EntryRow={race_id:string;racer_reg:string;finish_pos:number|null;st:number|null;st_flying:number;entry_course:number|null;boat:number};
 type RacerState={starts:number;wins:number;top2:number;lastFinish:number|null;lastSt:number|null;lastEntryCourse:number|null};
@@ -29,6 +30,37 @@ const mechanisms=[
 const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite","RESEARCH_DB_IDENTITY_INVALID");
 const db=new DatabaseSync(dbPath,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try{
+  const coverage=db.prepare(`
+    WITH population AS (
+      SELECT h.race_id,h.race_date AS date
+      FROM historical_alternative_odds h
+      WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")}
+        AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31'
+        AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
+      GROUP BY h.race_id
+      HAVING ${HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING}
+        AND MAX(CASE WHEN h.combination='1-4' THEN h.odds END) IS NOT NULL
+    ), settlement AS (
+      SELECT rp.race_id,
+        CASE WHEN COUNT(*)=1
+          AND SUM(CASE WHEN rp.returned=0
+            AND rp.combination IS NOT NULL AND rp.combination!=''
+            AND rp.payout_yen IS NOT NULL AND rp.payout_yen>0
+            AND EXISTS(SELECT 1 FROM historical_alternative_odds winner_h
+              WHERE winner_h.race_id=rp.race_id AND winner_h.bet_type='exacta'
+                AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
+                AND winner_h.combination=rp.combination)
+          THEN 1 ELSE 0 END)=1
+        THEN 1 ELSE 0 END AS settled
+      FROM race_payouts rp WHERE rp.bet_type='exacta' GROUP BY rp.race_id
+    )
+    SELECT CASE WHEN p.date<'2025-01-01' THEN 'discovery' ELSE 'forward' END AS period,
+      COUNT(*) AS total,SUM(COALESCE(s.settled,0)) AS settled
+    FROM population p LEFT JOIN settlement s ON s.race_id=p.race_id
+    GROUP BY period ORDER BY period
+  `).all() as CoverageRow[];
+  assertSettlementCoverage(coverage);
+
   const market=db.prepare(`SELECT h.race_id,h.race_date AS date,SUM(1.0/h.odds) AS overround,MAX(CASE WHEN h.combination='1-4' THEN h.odds END) AS odds14,p.combination AS winner,p.payout_yen,w.wind_speed_mps,c.wind_dir
     FROM historical_alternative_odds h JOIN race_payouts p ON p.race_id=h.race_id AND p.bet_type='exacta' LEFT JOIN race_weather w ON w.race_id=h.race_id LEFT JOIN race_conditions c ON c.race_id=h.race_id
     WHERE h.bet_type='exacta' AND ${historicalExactaCanonicalSourcePredicate("h")} AND h.race_date BETWEEN '2024-01-01' AND '2025-12-31' AND NOT EXISTS(SELECT 1 FROM race_entries re WHERE re.race_id=h.race_id AND re.status_code='F')
@@ -62,6 +94,7 @@ try{
   writeFileSync("reports/same-day-rhythm-market-screen.md",`${lines.join("\n")}\n`);console.log(`same-day rhythm market: exacta=${evaluations.length}`);
 }finally{db.close();}
 
+function assertSettlementCoverage(rows:CoverageRow[]):void{const byPeriod=Object.fromEntries(["discovery","forward"].map(period=>{const row=rows.find(candidate=>candidate.period===period);const total=Number(row?.total??0),settled=Number(row?.settled??0);return[period,{total,settled,missing:total-settled}];}));const invalid=["discovery","forward"].some(period=>{const {total,settled,missing}=byPeriod[period];return!Number.isInteger(total)||!Number.isInteger(settled)||total<=0||settled!==total||missing!==0;});if(invalid)throw new Error(`SAME_DAY_RHYTHM_EXACTA_SETTLEMENT_INTEGRITY_INVALID ${JSON.stringify(byPeriod)}`);}
 function assertPayoutCompleteness(rows:MarketRow[]):void{const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}};for(const row of rows){const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;}const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total;if(invalid)throw new Error(`SAME_DAY_RHYTHM_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);}
 function requiredPayout(row:EvalRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`SAME_DAY_RHYTHM_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function applyRace(entries:EntryRow[],racers:Map<string,RacerState>,pairs:Map<string,PairState>){const winner=entries.find(e=>e.finish_pos===1)?.racer_reg??null;for(const e of entries){if(!e.racer_reg)continue;const s=racers.get(e.racer_reg)??{starts:0,wins:0,top2:0,lastFinish:null,lastSt:null,lastEntryCourse:null};s.starts+=1;if(e.finish_pos===1)s.wins+=1;if(e.finish_pos!=null&&e.finish_pos<=2)s.top2+=1;s.lastFinish=e.finish_pos;s.lastSt=e.st_flying?null:e.st;s.lastEntryCourse=e.entry_course??e.boat;racers.set(e.racer_reg,s);}for(let i=0;i<entries.length;i++)for(let j=i+1;j<entries.length;j++){const a=entries[i].racer_reg,b=entries[j].racer_reg;if(!a||!b)continue;const key=pairKey(a,b),s=pairs.get(key)??{meetings:0,lastWinner:null};s.meetings+=1;if(winner===a||winner===b)s.lastWinner=winner;pairs.set(key,s);}}
