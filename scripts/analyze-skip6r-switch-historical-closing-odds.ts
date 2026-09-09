@@ -15,4 +15,4 @@ if (audit !== 0) {
   process.exit(audit);
 }
 
-process.exit(run("scripts/analyze-skip6r-switch-historical-closing-odds-raw.ts"));
+await import("./analyze-skip6r-switch-historical-closing-odds-raw");
