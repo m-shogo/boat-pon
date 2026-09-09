@@ -113,7 +113,14 @@ WHERE ${where.join(" AND ")}
 function assertOfficialSettlementIntegrity() {
   const { where, params } = reportWhere();
   const row = db.prepare(`
-WITH relevant_settled AS (
+WITH blank_settled AS (
+  SELECT COUNT(*) AS n
+  FROM decision_history
+  WHERE ${where.join(" AND ")}
+    AND result IS NOT NULL
+    AND TRIM(result) = ''
+    AND returned = 0
+), relevant_settled AS (
   SELECT DISTINCT
     race_id,
     bet_type,
@@ -122,7 +129,7 @@ WITH relevant_settled AS (
   FROM decision_history
   WHERE ${where.join(" AND ")}
     AND result IS NOT NULL
-    AND result != ''
+    AND TRIM(result) != ''
     AND returned = 0
 ), invalid AS (
   SELECT s.race_id, s.bet_type, s.result
@@ -145,12 +152,19 @@ WITH relevant_settled AS (
       AND rp.payout_yen > 0
   ) != 1
 )
-SELECT COUNT(*) AS n FROM invalid
-`).get(...params) as { n: number };
+SELECT
+  (SELECT n FROM blank_settled) AS blankResults,
+  (SELECT COUNT(*) FROM invalid) AS invalid
+`).get(...params, ...params) as { blankResults: number; invalid: number };
 
-  if (row.n > 0) {
+  if (row.blankResults > 0) {
     throw new Error(
-      `FEATURE_BREAKDOWN_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.n} settled winning-result key(s) do not have a supported payout mapping and exactly one positive non-refund official settlement`,
+      `FEATURE_BREAKDOWN_BLANK_SETTLED_RESULT_UNSUPPORTED: ${row.blankResults} settled decision row(s) have a blank result and cannot enter feature-band ROI denominators`,
+    );
+  }
+  if (row.invalid > 0) {
+    throw new Error(
+      `FEATURE_BREAKDOWN_OFFICIAL_SETTLEMENT_INTEGRITY_FAILED: ${row.invalid} settled winning-result key(s) do not have a supported payout mapping and exactly one positive non-refund official settlement`,
     );
   }
 }
@@ -166,7 +180,7 @@ WITH base AS (
     returned,
     CAST(json_extract(feature_adjustment_breakdown, ?) AS REAL) AS value,
     CASE
-      WHEN selection = result AND returned = 0 THEN (
+      WHEN result IS NOT NULL AND TRIM(result) != '' AND selection = result AND returned = 0 THEN (
         SELECT rp.payout_yen / 100.0
         FROM race_payouts rp
         WHERE rp.race_id = decision_history.race_id
@@ -201,11 +215,11 @@ SELECT
   ? AS factor,
   band,
   COUNT(*) AS n,
-  SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END) AS settled,
-  SUM(CASE WHEN selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
+  SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND returned = 0 THEN 1 ELSE 0 END) AS settled,
+  SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND selection = result AND returned = 0 THEN 1 ELSE 0 END) AS hits,
   ROUND(
     SUM(payout_units) * 1.0
-    / NULLIF(SUM(CASE WHEN result IS NOT NULL AND returned = 0 THEN 1 ELSE 0 END), 0),
+    / NULLIF(SUM(CASE WHEN result IS NOT NULL AND TRIM(result) != '' AND returned = 0 THEN 1 ELSE 0 END), 0),
     3
   ) AS roi,
   ROUND(AVG(value), 4) AS avgValue
@@ -280,5 +294,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. Unsupported decision bet types fail closed before aggregation; ROI uses canonical official race_payouts.payout_yen with canonical bet-type mapping and current_odds is not used as realized return.`);
+  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. Unsupported decision bet types and blank settled results fail closed before aggregation; ROI uses canonical official race_payouts.payout_yen with canonical bet-type mapping and current_odds is not used as realized return.`);
 }
