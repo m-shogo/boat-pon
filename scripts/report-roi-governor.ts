@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -90,12 +89,9 @@ function validateDecisionCriticalShape(reportPath: string, parsed: unknown): voi
   if (reportPath === "reports/roi-skip-policy-simulation.json") return validateSkipPolicy(reportPath, parsed);
 }
 
-for (const path of REQUIRED_REPORTS) {
+function validateRequiredReport(path: string, identityError: string): void {
   if (!existsSync(path)) fail(path, "missing");
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(
-    path,
-    "ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID",
-  );
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityError);
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(verifiedPath, "utf8"));
@@ -106,9 +102,15 @@ for (const path of REQUIRED_REPORTS) {
   validateDecisionCriticalShape(path, parsed);
 }
 
-const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/report-roi-governor-raw.ts"], {
-  stdio: "inherit",
-  env: process.env,
-});
-if (result.error) throw result.error;
-process.exit(result.status ?? 1);
+for (const path of REQUIRED_REPORTS) {
+  validateRequiredReport(path, "ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID");
+}
+
+// Re-read and revalidate the decision-critical artifacts immediately before the
+// raw phase consumes them. This narrows the validation/use window and keeps the
+// canonical command fail-closed if a report is replaced after the first pass.
+for (const path of REQUIRED_REPORTS) {
+  validateRequiredReport(path, "ROI_GOVERNOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID");
+}
+
+await import("./report-roi-governor-raw");
