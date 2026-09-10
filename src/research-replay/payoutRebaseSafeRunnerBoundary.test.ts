@@ -25,7 +25,7 @@ test("payout rebase safe runner fails closed before classifications when preflig
 
 test("direct payout rebase entrypoint independently retains preflight and verified DB handoff boundaries", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const verify = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const verify = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
   const internal = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
   assert.ok(preflight >= 0 && verify > preflight, "direct invocation must verify DB identity only after settlement preflight");
   assert.ok(internal > verify, "internal analysis must run only after the verified DB handoff");
