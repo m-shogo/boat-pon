@@ -9,11 +9,14 @@ const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Rec
 
 test("paper-forward core cannot bypass official settlement completeness when invoked directly", () => {
   const preflight = core.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const internalRun = core.indexOf('run("scripts/report-paper-forward-candidates-internal.ts")');
+  const handoffIdentity = core.indexOf("PAPER_FORWARD_CORE_DB_HANDOFF_IDENTITY_INVALID");
+  const internalRun = core.indexOf('run("scripts/report-paper-forward-candidates-internal.ts", {');
 
   assert.ok(preflight >= 0, "core must invoke the canonical settlement-integrity preflight");
-  assert.ok(internalRun > preflight, "internal aggregation must run only after the preflight");
+  assert.ok(handoffIdentity > preflight, "core must reverify DB identity after the settlement preflight");
+  assert.ok(internalRun > handoffIdentity, "internal aggregation must run only after DB handoff identity verification");
   assert.match(core, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
+  assert.match(core, /BOAT_PON_DB_PATH: handoffDbPath/);
 });
 
 test("paper-forward public raw compatibility entrypoint is guarded and DB-free", () => {
