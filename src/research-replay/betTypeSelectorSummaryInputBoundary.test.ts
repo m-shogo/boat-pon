@@ -79,7 +79,8 @@ test("legacy raw selector summary path cannot bypass prerequisite report validat
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
   assert.match(raw, /BET_TYPE_SELECTOR_SUMMARY_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(raw, /await import\("\.\/report-bet-type-selector-summary-internal"\)/);
+  assert.match(raw, /await import\("\.\/report-bet-type-selector-summary"\)/);
+  assert.doesNotMatch(raw, /report-bet-type-selector-summary-internal/);
 });
 
 test("internal selector summary retains canonical read-only research DB boundary", () => {
