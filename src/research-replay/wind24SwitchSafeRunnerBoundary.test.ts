@@ -23,7 +23,7 @@ test("wind24 switch safe runner fails closed before promotion/demotion analysis"
 
 test("direct wind24 entrypoint cannot bypass payout completeness", () => {
   const preflight = directSource.indexOf('run("scripts/audit-wind24-exh1-switch-payout-completeness.ts")');
-  const verify = directSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const verify = directSource.indexOf('"WIND24_SWITCH_PRIMARY_DB_IDENTITY_INVALID"');
   const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts"');
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight);
@@ -83,6 +83,17 @@ test("direct wind24 entrypoint redacts private DB provenance after successful an
   assert.match(directSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
   assert.match(directSource, /WIND24_SWITCH_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(directSource, /WIND24_SWITCH_PRIVATE_DB_PROVENANCE_MARKER_MISSING/);
+});
+
+test("direct wind24 entrypoint verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = directSource.indexOf('"WIND24_SWITCH_REPORT_IDENTITY_INVALID"');
+  const read = directSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const handoffIdentity = directSource.indexOf('"WIND24_SWITCH_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = directSource.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(directSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(directSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
 });
 
 test("wind24 payout preflight matches the deep-dive population and is read-only", () => {
