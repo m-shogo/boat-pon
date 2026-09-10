@@ -6,13 +6,18 @@ const entrypoint = readFileSync("scripts/audit-alternative-odds-coverage.ts", "u
 const preflight = readFileSync("scripts/audit-alternative-odds-coverage-preflight.ts", "utf-8");
 const internal = readFileSync("scripts/audit-alternative-odds-coverage-internal.ts", "utf-8");
 
-test("alternative odds coverage runs cohort preflight before internal aggregation", () => {
+test("alternative odds coverage runs cohort preflight and DB handoff revalidation before internal aggregation", () => {
   const guard = entrypoint.indexOf('run("scripts/audit-alternative-odds-coverage-preflight.ts")');
-  const internalRun = entrypoint.indexOf('run("scripts/audit-alternative-odds-coverage-internal.ts")');
+  const handoffIdentity = entrypoint.indexOf("ALT_ODDS_COVERAGE_DB_HANDOFF_IDENTITY_INVALID");
+  const internalRun = entrypoint.indexOf('run("scripts/audit-alternative-odds-coverage-internal.ts"');
   assert.ok(guard >= 0, "entrypoint must invoke forward cohort preflight");
-  assert.ok(internalRun > guard, "internal coverage aggregation must run only after preflight");
+  assert.ok(handoffIdentity > guard, "database identity must be reverified after preflight");
+  assert.ok(internalRun > handoffIdentity, "internal coverage aggregation must run only after handoff revalidation");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
+  assert.match(entrypoint, /ALT_ODDS_COVERAGE_DB_MISSING/u);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/u);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: handoffDbPath/u);
 });
 
 test("alternative odds coverage preflight fixes the historical population to settled trifecta rows", () => {
