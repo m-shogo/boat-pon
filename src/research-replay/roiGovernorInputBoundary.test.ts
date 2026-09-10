@@ -16,16 +16,26 @@ test("ROI governor fails closed on missing, non-canonical, or invalid decision-c
   for (const path of requiredReports) assert.match(entry, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(entry, /ROI_GOVERNOR_INPUT_REPORT_INVALID/);
   assert.match(entry, /ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID/);
-  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*path,/u);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(path, identityError\)/u);
   assert.match(entry, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/);
   assert.match(entry, /!isObject\(parsed\)/);
   assert.match(entry, /validateDecisionCriticalShape\(path, parsed\)/);
-  const validation = entry.indexOf("for (const path of REQUIRED_REPORTS)");
+  const validation = entry.indexOf('validateRequiredReport(path, "ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID")');
   const identity = entry.indexOf("ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID");
   const shape = entry.indexOf("validateDecisionCriticalShape(path, parsed)");
-  const rawRun = entry.indexOf("report-roi-governor-raw.ts");
-  assert.ok(validation >= 0 && identity > validation && shape > identity && rawRun > shape);
+  const rawRun = entry.indexOf('await import("./report-roi-governor-raw")');
+  assert.ok(validation >= 0 && identity >= 0 && shape >= 0 && rawRun > validation);
   assert.equal(pkg.scripts?.["report:roi-governor"], "tsx scripts/report-roi-governor.ts");
+});
+
+test("ROI governor revalidates decision-critical report identity and shape immediately before in-process raw handoff", () => {
+  const initialValidation = entry.indexOf('validateRequiredReport(path, "ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID")');
+  const handoffValidation = entry.indexOf('validateRequiredReport(path, "ROI_GOVERNOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID")');
+  const rawImport = entry.indexOf('await import("./report-roi-governor-raw")');
+
+  assert.ok(initialValidation >= 0 && handoffValidation > initialValidation && rawImport > handoffValidation);
+  assert.equal(entry.includes("spawnSync"), false);
+  assert.match(entry, /ROI_GOVERNOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID/);
 });
 
 test("ROI governor validates measured readiness counts and ROI inputs instead of trusting object shape alone", () => {
