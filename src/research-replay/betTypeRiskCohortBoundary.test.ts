@@ -7,11 +7,15 @@ const preflight = readFileSync("scripts/audit-bet-type-risk-factors-cohort.ts", 
 
 test("bet type risk analysis runs canonical cohort preflight before internal analysis", () => {
   const guard = entrypoint.indexOf('run("scripts/audit-bet-type-risk-factors-cohort.ts")');
-  const analysis = entrypoint.indexOf('run("scripts/analyze-bet-type-risk-factors-internal.ts")');
+  const identity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const analysis = entrypoint.indexOf('run("scripts/analyze-bet-type-risk-factors-internal.ts"');
   assert.ok(guard >= 0, "entrypoint must invoke cohort preflight");
-  assert.ok(analysis > guard, "internal analysis must run only after preflight");
+  assert.ok(identity > guard, "primary DB identity must be reverified after preflight");
+  assert.ok(analysis > identity, "internal analysis must run only after verified DB handoff");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
+  assert.match(entrypoint, /BET_TYPE_RISK_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
 test("bet type risk cohort is fixed to unique settled trifecta historical BUY rows", () => {
