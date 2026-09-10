@@ -23,4 +23,5 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
-await import("./analyze-all-bet-types-roi-raw");
+const status = run("scripts/analyze-all-bet-types-roi-internal.ts");
+process.exit(status);
