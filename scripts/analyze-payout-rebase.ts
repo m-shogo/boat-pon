@@ -8,10 +8,12 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_MD = "reports/payout-rebase.md";
+const OPAQUE_DB_SOURCE = "primary research database";
 
 function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -25,6 +27,24 @@ function run(script: string, env = process.env): number {
   }
 
   return result.status ?? 1;
+}
+
+function redactDbProvenance(dbPath: string): void {
+  if (!existsSync(OUT_MD)) {
+    throw new Error("PAYOUT_REBASE_REPORT_MISSING_AFTER_ANALYSIS");
+  }
+
+  const report = readFileSync(OUT_MD, "utf-8");
+  const privateMarker = `DB: ${dbPath}`;
+  if (!report.includes(privateMarker)) {
+    throw new Error("PAYOUT_REBASE_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
+  }
+
+  writeFileSync(
+    OUT_MD,
+    report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
+    "utf-8",
+  );
 }
 
 const preflight = run("scripts/audit-odds-payout-gap-completeness.ts");
@@ -50,4 +70,5 @@ if (analysis !== 0) {
   process.exit(analysis);
 }
 
+redactDbProvenance(verifiedDbPath);
 console.log("[payout-rebase-entrypoint] PASS: settlement integrity preflight and DB identity verification passed before payout rebase analysis");
