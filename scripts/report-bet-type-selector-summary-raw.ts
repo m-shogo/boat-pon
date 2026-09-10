@@ -12,4 +12,4 @@ if (invokedPath === rawEntrypointPath) {
   throw new Error("BET_TYPE_SELECTOR_SUMMARY_RAW_DIRECT_EXECUTION_FORBIDDEN");
 }
 
-await import("./report-bet-type-selector-summary-internal");
+await import("./report-bet-type-selector-summary");
