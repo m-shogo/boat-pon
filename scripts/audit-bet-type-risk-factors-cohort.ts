@@ -24,6 +24,8 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
+// Keep shape and uniqueness checks on one append-only research snapshot.
+db.exec("BEGIN;");
 
 const invalid = db.prepare(`
   SELECT 1
