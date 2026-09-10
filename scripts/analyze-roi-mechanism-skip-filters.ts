@@ -27,14 +27,22 @@ function redactDbProvenance(dbPath: string): void {
     throw new Error("ROI_MECHANISM_SKIP_FILTER_REPORT_MISSING_AFTER_ANALYSIS");
   }
 
-  const report = readFileSync(OUT_MD, "utf-8");
+  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "ROI_MECHANISM_SKIP_FILTER_REPORT_IDENTITY_INVALID",
+  );
+  const report = readFileSync(verifiedReportPath, "utf-8");
   const privateMarker = `DB: ${dbPath}`;
   if (!report.includes(privateMarker)) {
     throw new Error("ROI_MECHANISM_SKIP_FILTER_DB_PROVENANCE_NOT_FOUND");
   }
 
+  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
+    verifiedReportPath,
+    "ROI_MECHANISM_SKIP_FILTER_REPORT_HANDOFF_IDENTITY_INVALID",
+  );
   writeFileSync(
-    OUT_MD,
+    handoffReportPath,
     report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
     "utf-8",
   );
