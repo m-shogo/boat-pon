@@ -32,14 +32,19 @@ import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
   historicalExactaCanonicalSourcePredicate,
 } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/exacta-market-residual-sweep.md";
 const OUT_JSON = "reports/exacta-market-residual-sweep.json";
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+if (!existsSync(DB_PATH)) throw new Error("EXACTA_MARKET_RESIDUAL_RAW_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "EXACTA_MARKET_RESIDUAL_RAW_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 // 主評価: 通常6艇・F返還なし (exacta 30通り保存済み)
 // 欠場あり (COUNT=20) は除外
