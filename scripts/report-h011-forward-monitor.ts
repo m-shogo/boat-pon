@@ -88,9 +88,15 @@ try {
   db.close();
 }
 
+if (!existsSync(DB_PATH)) throw new Error("H011_FORWARD_HANDOFF_DB_MISSING");
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID",
+);
+
 const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/report-h011-forward-monitor-internal.ts"], {
   stdio: "inherit",
-  env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
+  env: { ...process.env, BOAT_PON_DB_PATH: handoffDbPath },
 });
 
 if (result.error) throw result.error;
