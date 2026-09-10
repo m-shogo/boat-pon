@@ -29,7 +29,16 @@ if (!existsSync(REPORT_JSON) || !existsSync(REPORT_MD)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_REPORT_MISSING_AFTER_AUDIT");
 }
 
-const parsed = JSON.parse(readFileSync(REPORT_JSON, "utf8")) as {
+const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+  REPORT_JSON,
+  "ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_IDENTITY_INVALID",
+);
+const verifiedMarkdownPath = assertCanonicalSingleLinkRegularFile(
+  REPORT_MD,
+  "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_IDENTITY_INVALID",
+);
+
+const parsed = JSON.parse(readFileSync(verifiedJsonPath, "utf8")) as {
   safety?: { dbPath?: unknown };
 };
 if (!parsed.safety || parsed.safety.dbPath !== verifiedDbPath) {
@@ -40,9 +49,13 @@ const sanitizedJson = `${JSON.stringify(parsed, null, 2)}\n`;
 if (sanitizedJson.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_PRIVATE_DB_PROVENANCE_REMAINED");
 }
-writeFileSync(REPORT_JSON, sanitizedJson);
+const jsonHandoffPath = assertCanonicalSingleLinkRegularFile(
+  verifiedJsonPath,
+  "ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_HANDOFF_IDENTITY_INVALID",
+);
+writeFileSync(jsonHandoffPath, sanitizedJson);
 
-const markdown = readFileSync(REPORT_MD, "utf8");
+const markdown = readFileSync(verifiedMarkdownPath, "utf8");
 if (!markdown.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_DB_PROVENANCE_NOT_FOUND");
 }
@@ -50,6 +63,10 @@ const sanitizedMarkdown = markdown.replaceAll(verifiedDbPath, OPAQUE_DB_SOURCE);
 if (sanitizedMarkdown.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_PRIVATE_DB_PROVENANCE_REMAINED");
 }
-writeFileSync(REPORT_MD, sanitizedMarkdown);
+const markdownHandoffPath = assertCanonicalSingleLinkRegularFile(
+  verifiedMarkdownPath,
+  "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_HANDOFF_IDENTITY_INVALID",
+);
+writeFileSync(markdownHandoffPath, sanitizedMarkdown);
 
 console.log("[all-bet-type-feasibility] PASS: canonical DB identity verified and persisted provenance redacted");

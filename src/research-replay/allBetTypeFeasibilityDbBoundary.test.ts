@@ -26,6 +26,29 @@ test("all-bet-type feasibility persisted DB provenance is fail-closed and opaque
   assert.doesNotMatch(entry, /`DB not found: \$\{configuredDbPath\}`/);
 });
 
+test("all-bet-type feasibility verifies generated report identity before read and write", () => {
+  const internalImport = entry.indexOf('await import("./audit-all-bet-type-data-feasibility-internal")');
+  const jsonIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_IDENTITY_INVALID");
+  const markdownIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_IDENTITY_INVALID");
+  const jsonRead = entry.indexOf('readFileSync(verifiedJsonPath, "utf8")');
+  const jsonHandoffIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_HANDOFF_IDENTITY_INVALID");
+  const jsonWrite = entry.indexOf("writeFileSync(jsonHandoffPath, sanitizedJson)");
+  const markdownRead = entry.indexOf('readFileSync(verifiedMarkdownPath, "utf8")');
+  const markdownHandoffIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_HANDOFF_IDENTITY_INVALID");
+  const markdownWrite = entry.indexOf("writeFileSync(markdownHandoffPath, sanitizedMarkdown)");
+
+  assert.ok(jsonIdentity > internalImport);
+  assert.ok(markdownIdentity > internalImport);
+  assert.ok(jsonRead > jsonIdentity);
+  assert.ok(jsonHandoffIdentity > jsonRead);
+  assert.ok(jsonWrite > jsonHandoffIdentity);
+  assert.ok(markdownRead > markdownIdentity);
+  assert.ok(markdownHandoffIdentity > markdownRead);
+  assert.ok(markdownWrite > markdownHandoffIdentity);
+  assert.doesNotMatch(entry, /readFileSync\(REPORT_(?:JSON|MD)/);
+  assert.doesNotMatch(entry, /writeFileSync\(REPORT_(?:JSON|MD)/);
+});
+
 test("legacy feasibility implementation stays read-only and is not the npm entrypoint", () => {
   assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
   assert.match(internal, /PRAGMA query_only=ON/);
