@@ -10,6 +10,11 @@ test("H011 raw analyzer cannot be invoked directly outside the settlement wrappe
   assert.match(source, /H011_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(source, /throw new Error\("H011_PRIMARY_DB_MISSING"\)/);
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
-  assert.match(source, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
+
+  const identity = source.indexOf("const verifiedDbPath = assertCanonicalSingleLinkRegularFile(");
+  const open = source.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  assert.ok(identity >= 0, "H011 raw analyzer must verify canonical DB identity");
+  assert.ok(open > identity, "H011 raw analyzer must open only the verified DB path");
+  assert.match(source, /H011_RAW_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(source, /PRAGMA query_only=ON/);
 });
