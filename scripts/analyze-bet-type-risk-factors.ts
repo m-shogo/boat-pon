@@ -29,12 +29,20 @@ function redactDbProvenance(dbPath: string): void {
   if (!existsSync(OUT_MD)) {
     throw new Error("BET_TYPE_RISK_REPORT_MISSING_AFTER_ANALYSIS");
   }
-  const report = readFileSync(OUT_MD, "utf8");
+  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "BET_TYPE_RISK_REPORT_IDENTITY_INVALID",
+  );
+  const report = readFileSync(verifiedReportPath, "utf8");
   const provenance = `DB: ${dbPath}`;
   if (!report.includes(provenance)) {
     throw new Error("BET_TYPE_RISK_DB_PROVENANCE_NOT_FOUND");
   }
-  writeFileSync(OUT_MD, report.replaceAll(provenance, `DB: ${OPAQUE_DB_SOURCE}`));
+  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
+    verifiedReportPath,
+    "BET_TYPE_RISK_REPORT_HANDOFF_IDENTITY_INVALID",
+  );
+  writeFileSync(handoffReportPath, report.replaceAll(provenance, `DB: ${OPAQUE_DB_SOURCE}`));
 }
 
 const preflight = run("scripts/audit-bet-type-risk-factors-cohort.ts");
