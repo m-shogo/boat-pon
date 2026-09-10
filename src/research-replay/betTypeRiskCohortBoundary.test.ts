@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 const entrypoint = readFileSync("scripts/analyze-bet-type-risk-factors.ts", "utf8");
 const preflight = readFileSync("scripts/audit-bet-type-risk-factors-cohort.ts", "utf8");
+const internal = readFileSync("scripts/analyze-bet-type-risk-factors-internal.ts", "utf8");
 
 test("bet type risk analysis runs canonical cohort preflight before internal analysis", () => {
   const guard = entrypoint.indexOf('run("scripts/audit-bet-type-risk-factors-cohort.ts")');
@@ -55,4 +56,43 @@ test("bet type risk cohort shape and uniqueness checks share one read snapshot",
   assert.ok(begin > queryOnly);
   assert.ok(shapeCheck > begin);
   assert.ok(uniquenessCheck > shapeCheck);
+});
+
+test("bet type risk internal ROI fails closed on unknown or returned BUY rows and invalid official settlements", () => {
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(internal, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/);
+  assert.match(internal, /PRAGMA query_only=ON/);
+  assert.match(internal, /assertPayoutCompleteness\(\)/);
+  assert.match(internal, /BET_TYPE_RISK_BUY_RETURN_STATE_INVALID/);
+  assert.match(internal, /returned IS NULL OR returned != 0/);
+  assert.match(internal, /BET_TYPE_RISK_BUY_POPULATION_EMPTY/);
+  assert.match(internal, /BET_TYPE_RISK_PAYOUT_RETURN_STATE_INVALID/);
+  assert.match(internal, /rp\.returned IS NULL OR rp\.returned != 0/);
+  assert.match(internal, /BET_TYPE_RISK_PAYOUT_INVALID_LINE/);
+  assert.match(internal, /BET_TYPE_RISK_PAYOUT_DUPLICATE_KEY/);
+  assert.match(internal, /BET_TYPE_RISK_PAYOUT_COVERAGE_INCOMPLETE/);
+  assert.match(internal, /const BET_TYPES = \["trifecta", "trio", "exacta", "quinella"\] as const/);
+  assert.ok((internal.match(/(?:dh\.)?returned=0/g) ?? []).length >= 4);
+  assert.doesNotMatch(internal, /COALESCE\((?:dh\.)?returned,0\)=0/);
+  assert.ok((internal.match(/rp\.returned = 0/g) ?? []).length >= 2);
+  assert.doesNotMatch(internal, /rp\.returned != 1/);
+  assert.match(internal, /rp\.payout_yen IS NULL OR rp\.payout_yen <= 0/);
+  assert.match(internal, /rp\.payout_yen IS NOT NULL AND rp\.payout_yen > 0/);
+  assert.match(internal, /GROUP BY rp\.race_id, rp\.bet_type, rp\.combination/);
+  assert.match(internal, /HAVING COUNT\(\*\) > 1/);
+
+  const returnCheck = internal.indexOf("BET_TYPE_RISK_BUY_RETURN_STATE_INVALID");
+  const populationCheck = internal.indexOf("BET_TYPE_RISK_BUY_POPULATION_EMPTY");
+  const payoutReturnCheck = internal.indexOf("BET_TYPE_RISK_PAYOUT_RETURN_STATE_INVALID");
+  const malformedCheck = internal.indexOf("BET_TYPE_RISK_PAYOUT_INVALID_LINE");
+  const duplicateCheck = internal.indexOf("BET_TYPE_RISK_PAYOUT_DUPLICATE_KEY");
+  const coverageCheck = internal.indexOf("BET_TYPE_RISK_PAYOUT_COVERAGE_INCOMPLETE");
+  assert.ok(
+    returnCheck >= 0 &&
+      populationCheck > returnCheck &&
+      payoutReturnCheck > populationCheck &&
+      malformedCheck > payoutReturnCheck &&
+      duplicateCheck > malformedCheck &&
+      coverageCheck > duplicateCheck,
+  );
 });
