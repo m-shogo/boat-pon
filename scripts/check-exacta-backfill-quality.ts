@@ -49,5 +49,9 @@ if (Number(invalidTargetCohort.invalid ?? 0) > 0) {
 }
 
 db.close();
-process.env.BOAT_PON_DB_PATH = verifiedDbPath;
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  verifiedDbPath,
+  "EXACTA_BACKFILL_QUALITY_DB_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
 await import("./check-exacta-backfill-quality-internal");
