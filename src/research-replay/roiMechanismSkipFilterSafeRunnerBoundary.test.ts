@@ -35,10 +35,16 @@ test("legacy ROI mechanism safe runner delegates to the canonical fail-closed en
   assert.doesNotMatch(legacyRunnerSource, /analyze-roi-mechanism-skip-filters-raw/);
 });
 
-test("legacy raw module rejects direct CLI execution and only imports the internal analyzer", () => {
+test("legacy raw module rejects direct CLI execution, revalidates DB identity, and only imports the internal analyzer", () => {
   assert.match(rawSource, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(rawSource, /ROI_MECHANISM_SKIP_FILTER_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(rawSource, /await import\("\.\/analyze-roi-mechanism-skip-filters-internal"\)/);
+  assert.match(rawSource, /ROI_MECHANISM_SKIP_FILTER_RAW_DB_MISSING/);
+  assert.match(rawSource, /ROI_MECHANISM_SKIP_FILTER_RAW_DB_IDENTITY_INVALID/);
+  const identity = rawSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const internal = rawSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-internal")');
+  assert.ok(identity >= 0 && internal > identity);
+  assert.match(rawSource, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(rawSource, /DatabaseSync/);
 });
 
 test("ROI mechanism payout preflight matches internal analyzer population and validates settlement line integrity", () => {
