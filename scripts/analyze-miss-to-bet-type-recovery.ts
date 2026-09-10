@@ -85,4 +85,10 @@ function assertPayoutCompleteness(): void {
   }
 }
 
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  dbPath,
+  "MISS_RECOVERY_DB_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
+
 await import("./analyze-miss-to-bet-type-recovery-raw");
