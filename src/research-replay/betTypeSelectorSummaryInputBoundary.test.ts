@@ -50,6 +50,17 @@ test("bet-type selector summary reverifies DB identity at handoff and redacts co
   assert.ok(handoff >= 0 && internalRun > handoff && redact > internalRun);
 });
 
+test("bet-type selector summary verifies generated report identity before redaction read and again before write", () => {
+  const firstIdentity = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_IDENTITY_INVALID"');
+  const read = entry.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const handoffIdentity = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = entry.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
+});
+
 test("legacy raw selector summary path cannot bypass prerequisite report validation", () => {
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
