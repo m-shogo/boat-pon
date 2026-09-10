@@ -16,6 +16,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH   = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const HYP_PATH  = "data/research-hypotheses.json";
@@ -85,8 +86,13 @@ for (const r of [r_condBSwitch, r_altOdds, r_timeseries, r_skipPolicy, r_roiGov,
 
 // ─── DB からデータ準備状況を集計 ─────────────────────────────────────────────
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) throw new Error("RESEARCH_GOVERNOR_INTERNAL_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "RESEARCH_GOVERNOR_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 const EXCL_V = `'戸田','多摩川','桐生','三国','江戸川'`;
