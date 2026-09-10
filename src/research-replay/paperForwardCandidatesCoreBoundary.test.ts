@@ -21,7 +21,7 @@ test("paper-forward public raw compatibility entrypoint is guarded and DB-free",
   assert.equal(scripts.some((command) => command.includes("report-paper-forward-candidates-raw.ts")), false);
 
   const preflight = raw.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const internalRun = raw.indexOf('run("scripts/report-paper-forward-candidates-internal.ts")');
+  const internalRun = raw.indexOf('run("scripts/report-paper-forward-candidates-internal.ts"');
   assert.ok(preflight >= 0, "raw compatibility entrypoint must invoke settlement preflight");
   assert.ok(internalRun > preflight, "raw compatibility entrypoint must not aggregate before preflight");
   assert.doesNotMatch(raw, /new DatabaseSync/u);

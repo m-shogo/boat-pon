@@ -7,7 +7,7 @@ const internal = readFileSync("scripts/report-paper-forward-candidates-internal.
 
 test("paper-forward raw entrypoint runs settlement completeness before internal aggregation", () => {
   const preflight = guarded.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const aggregation = guarded.indexOf('run("scripts/report-paper-forward-candidates-internal.ts")');
+  const aggregation = guarded.indexOf('run("scripts/report-paper-forward-candidates-internal.ts"');
 
   assert.ok(preflight >= 0, "canonical settlement completeness preflight must be invoked");
   assert.ok(aggregation > preflight, "internal aggregation must only run after the preflight");
