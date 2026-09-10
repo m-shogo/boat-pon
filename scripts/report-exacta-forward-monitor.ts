@@ -7,11 +7,15 @@
  * settlement return states. No production behavior is changed.
  */
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-function run(script: string): number {
+const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+
+function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
-    env: process.env,
+    env,
   });
   if (result.error) {
     console.error(`[exacta-forward-monitor] failed to start guarded research step: ${result.error.message}`);
@@ -26,5 +30,13 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const monitor = run("scripts/report-exacta-forward-monitor-internal.ts");
+if (!existsSync(DB_PATH)) throw new Error("EXACTA_FORWARD_MONITOR_DB_MISSING");
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "EXACTA_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID",
+);
+const monitor = run("scripts/report-exacta-forward-monitor-internal.ts", {
+  ...process.env,
+  BOAT_PON_DB_PATH: handoffDbPath,
+});
 if (monitor !== 0) process.exit(monitor);
