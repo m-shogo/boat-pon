@@ -8,7 +8,7 @@ const coreSource = readFileSync("scripts/analyze-ticket-selector-strategies-core
 
 test("direct ticket-selector analysis cannot bypass compared-market payout completeness", () => {
   const preflight = entrySource.indexOf('run("scripts/audit-ticket-selector-payout-completeness.ts")');
-  const identity = entrySource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const identity = entrySource.indexOf('"TICKET_SELECTOR_PRIMARY_DB_IDENTITY_INVALID"');
   const analysis = entrySource.indexOf('run("scripts/analyze-ticket-selector-strategies-core.ts"');
   assert.ok(preflight >= 0);
   assert.ok(identity > preflight);
