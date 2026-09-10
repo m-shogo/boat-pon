@@ -24,7 +24,7 @@ test("paper-forward monitor entrypoint fails closed before verified internal rep
 
 test("paper-forward monitor raw compatibility entrypoint is independently guarded and redacts DB provenance", () => {
   const preflight = raw.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
-  const verify = raw.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const verify = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID");
   const report = raw.indexOf('run("scripts/report-paper-forward-monitor-internal.ts"');
   const handoff = raw.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
   const sanitize = raw.indexOf("sanitizeDbProvenance(handoffDbPath)");
@@ -40,6 +40,17 @@ test("paper-forward monitor raw compatibility entrypoint is independently guarde
   assert.match(raw, /\.split\(handoffDbPath\)\.join\(OPAQUE_DB_SOURCE\)/);
   assert.match(raw, /replace\(\/\^DB:\.\*\$\/gm, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
   assert.doesNotMatch(raw, /new DatabaseSync/);
+});
+
+test("paper-forward monitor raw verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORT_IDENTITY_INVALID"');
+  const read = raw.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const handoffIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = raw.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
 });
 
 test("paper-forward monitor payout preflight covers only settled historical trifecta 1-2-3 BUY rows and stays read-only", () => {
