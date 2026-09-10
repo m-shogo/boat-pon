@@ -21,6 +21,17 @@ test("ROI mechanism skip-filter normal entrypoint checks payout completeness bef
   assert.doesNotMatch(entrypointSource, /run\("scripts\/analyze-roi-mechanism-skip-filters-raw\.ts"\)/);
 });
 
+test("ROI mechanism skip-filter redacts configured DB provenance only after guarded analysis completes", () => {
+  assert.match(entrypointSource, /OPAQUE_DB_SOURCE = "primary research database"/);
+  assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_REPORT_MISSING_AFTER_ANALYSIS/);
+  assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_DB_PROVENANCE_NOT_FOUND/);
+  assert.match(entrypointSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-raw")');
+  const redact = entrypointSource.lastIndexOf("redactDbProvenance(handoffDbPath)");
+  const pass = entrypointSource.lastIndexOf("[roi-mechanism-skip-filter] PASS");
+  assert.ok(analysis >= 0 && redact > analysis && pass > redact);
+});
+
 test("ROI mechanism skip-filter normal entrypoint fails closed before exclusion verdicts", () => {
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
