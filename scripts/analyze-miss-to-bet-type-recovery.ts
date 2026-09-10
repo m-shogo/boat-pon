@@ -1,8 +1,10 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_MD = "reports/miss-to-bet-type-recovery.md";
+const OPAQUE_DB_SOURCE = "primary research database";
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
 
 if (!existsSync(DB_PATH)) {
@@ -85,6 +87,24 @@ function assertPayoutCompleteness(): void {
   }
 }
 
+function redactDbProvenance(dbPath: string): void {
+  if (!existsSync(OUT_MD)) {
+    throw new Error("MISS_RECOVERY_REPORT_MISSING_AFTER_ANALYSIS");
+  }
+
+  const report = readFileSync(OUT_MD, "utf8");
+  const privateMarker = `DB: ${dbPath}`;
+  if (!report.includes(privateMarker)) {
+    throw new Error("MISS_RECOVERY_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
+  }
+
+  writeFileSync(
+    OUT_MD,
+    report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
+    "utf8",
+  );
+}
+
 const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   dbPath,
   "MISS_RECOVERY_DB_HANDOFF_IDENTITY_INVALID",
@@ -92,3 +112,4 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
 await import("./analyze-miss-to-bet-type-recovery-raw");
+redactDbProvenance(handoffDbPath);

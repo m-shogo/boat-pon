@@ -14,3 +14,16 @@ test("miss recovery wrapper preserves canonical read-only database boundary", ()
   assert.match(source, /new DatabaseSync\(dbPath, \{ readOnly: true \}\)/u);
   assert.match(source, /PRAGMA query_only=ON/u);
 });
+
+test("miss recovery wrapper redacts private database provenance after guarded analysis", () => {
+  const analysis = source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")');
+  const redact = source.lastIndexOf("redactDbProvenance(handoffDbPath)");
+
+  assert.ok(analysis >= 0);
+  assert.ok(redact > analysis, "private DB provenance must be sanitized only after guarded analysis completes");
+  assert.match(source, /const OPAQUE_DB_SOURCE = "primary research database"/u);
+  assert.match(source, /const privateMarker = `DB: \$\{dbPath\}`/u);
+  assert.match(source, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
+  assert.match(source, /MISS_RECOVERY_REPORT_MISSING_AFTER_ANALYSIS/u);
+  assert.match(source, /MISS_RECOVERY_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
+});
