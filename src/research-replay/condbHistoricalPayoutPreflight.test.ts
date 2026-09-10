@@ -21,6 +21,17 @@ test("condB historical payout preflight uses verified read-only positive officia
   assert.match(preflight, /dh\.date >= \?/);
 });
 
+test("condB historical payout preflight pins all checks to one read snapshot", () => {
+  const queryOnly = preflight.indexOf("PRAGMA query_only = ON");
+  const begin = preflight.indexOf('db.exec("BEGIN;")');
+  const firstCohortRead = preflight.indexOf("const contamination = db.prepare");
+  const coverageRead = preflight.indexOf("const row = db.prepare");
+  assert.ok(queryOnly >= 0);
+  assert.ok(begin > queryOnly);
+  assert.ok(firstCohortRead > begin);
+  assert.ok(coverageRead > firstCohortRead);
+});
+
 test("condB historical payout preflight rejects unknown or returned official payout rows before coverage", () => {
   assert.match(preflight, /rp\.returned IS NULL OR rp\.returned != 0/);
   assert.match(preflight, /CONDB_SWITCH_HISTORICAL_PAYOUT_RETURN_STATE_INVALID/);
