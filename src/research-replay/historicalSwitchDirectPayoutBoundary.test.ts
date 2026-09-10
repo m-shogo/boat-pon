@@ -10,6 +10,8 @@ const CASES = [
     auditPath: "scripts/audit-condb-switch-historical-payout-completeness.ts",
     audit: "audit-condb-switch-historical-payout-completeness.ts",
     raw: "analyze-condb-switch-historical-closing-odds-raw.ts",
+    primaryIdentityError: "CONDB_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID",
+    handoffIdentityError: "CONDB_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID",
   },
   {
     alias: "analyze:skip6r-switch-historical",
@@ -18,6 +20,8 @@ const CASES = [
     auditPath: "scripts/audit-skip6r-historical-payout-completeness.ts",
     audit: "audit-skip6r-historical-payout-completeness.ts",
     raw: "analyze-skip6r-switch-historical-closing-odds-raw.ts",
+    primaryIdentityError: "SKIP6R_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID",
+    handoffIdentityError: "SKIP6R_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID",
   },
   {
     alias: "analyze:skipvenue-switch-historical",
@@ -26,6 +30,8 @@ const CASES = [
     auditPath: "scripts/audit-skipvenue-historical-payout-completeness.ts",
     audit: "audit-skipvenue-historical-payout-completeness.ts",
     raw: "analyze-skipvenue-switch-historical-closing-odds-raw.ts",
+    primaryIdentityError: "SKIPVENUE_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID",
+    handoffIdentityError: "SKIPVENUE_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID",
   },
 ] as const;
 
@@ -34,17 +40,20 @@ const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Reco
 for (const c of CASES) {
   test(`${c.alias} direct entrypoint verifies DB identity and fails closed before raw analysis`, () => {
     const source = readFileSync(c.entry, "utf8");
-    const identityIndex = source.indexOf("assertCanonicalSingleLinkRegularFile");
+    const primaryIdentityIndex = source.indexOf(c.primaryIdentityError);
     const auditIndex = source.indexOf(c.audit);
     const gateIndex = source.indexOf("audit !== 0");
+    const handoffIdentityIndex = source.indexOf(c.handoffIdentityError);
     const rawModule = c.raw.replace(/\.ts$/u, "");
     const rawIndex = Math.max(source.indexOf(c.raw), source.indexOf(rawModule));
 
-    assert.ok(identityIndex >= 0, "canonical entrypoint must verify primary DB identity");
-    assert.ok(auditIndex > identityIndex, "payout audit must receive only the verified DB path");
+    assert.ok(primaryIdentityIndex >= 0, "canonical entrypoint must verify primary DB identity");
+    assert.ok(auditIndex > primaryIdentityIndex, "payout audit must receive only the verified DB path");
     assert.ok(gateIndex > auditIndex);
-    assert.ok(rawIndex > gateIndex);
+    assert.ok(handoffIdentityIndex > gateIndex, "DB identity must be reverified after payout preflight");
+    assert.ok(rawIndex > handoffIdentityIndex, "raw analysis must start only after handoff identity revalidation");
     assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
+    assert.match(source, /BOAT_PON_DB_PATH = handoffDbPath/);
     assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
     assert.doesNotMatch(source, /DatabaseSync/);
     assert.equal(pkg.scripts?.[c.alias], `tsx ${c.entry}`);

@@ -29,5 +29,9 @@ if (audit !== 0) {
   process.exit(audit);
 }
 
-process.env.BOAT_PON_DB_PATH = verifiedDbPath;
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  verifiedDbPath,
+  "SKIP6R_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
 await import("./analyze-skip6r-switch-historical-closing-odds-raw");
