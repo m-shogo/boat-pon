@@ -49,13 +49,16 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
   );
 });
 
-test("promising bet raw compatibility module blocks direct CLI bypass", () => {
+test("promising bet raw compatibility module blocks direct CLI bypass and revalidates DB identity", () => {
   const raw = readFileSync("scripts/analyze-promising-bet-type-strategies-raw.ts", "utf8");
   assert.match(raw, /PROMISING_BET_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(raw, /process\.argv\[1\]/);
+  assert.match(raw, /PROMISING_BET_RAW_DB_MISSING/);
+  assert.match(raw, /PROMISING_BET_RAW_DB_IDENTITY_INVALID/);
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH/);
   assert.match(raw, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
   assert.doesNotMatch(raw, /DatabaseSync/);
-  assert.doesNotMatch(raw, /DB_PATH/);
   assert.doesNotMatch(raw, /const STRATEGIES: StrategyDef\[\] =/);
 });
 
