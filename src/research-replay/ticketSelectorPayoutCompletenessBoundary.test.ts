@@ -8,7 +8,7 @@ const coreSource = readFileSync("scripts/analyze-ticket-selector-strategies-core
 
 test("direct ticket-selector analysis cannot bypass compared-market payout completeness", () => {
   const preflight = entrySource.indexOf('run("scripts/audit-ticket-selector-payout-completeness.ts")');
-  const identity = entrySource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const identity = entrySource.indexOf('"TICKET_SELECTOR_PRIMARY_DB_IDENTITY_INVALID"');
   const analysis = entrySource.indexOf('run("scripts/analyze-ticket-selector-strategies-core.ts"');
   assert.ok(preflight >= 0);
   assert.ok(identity > preflight);
@@ -29,6 +29,17 @@ test("ticket-selector redacts configured DB provenance only after successful gua
   const redact = entrySource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
   const pass = entrySource.lastIndexOf("[ticket-selector] PASS");
   assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
+});
+
+test("ticket-selector verifies generated report identity before redaction read and again before write", () => {
+  const firstIdentity = entrySource.indexOf('"TICKET_SELECTOR_REPORT_IDENTITY_INVALID"');
+  const read = entrySource.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const handoffIdentity = entrySource.indexOf('"TICKET_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = entrySource.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
+  assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
 });
 
 test("ticket-selector preflight covers the exact base population and every compared market", () => {
