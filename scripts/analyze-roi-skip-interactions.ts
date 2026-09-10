@@ -58,7 +58,7 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID",
 );
 
-const analysis = run("scripts/analyze-roi-skip-interactions-core.ts", {
+const analysis = run("scripts/analyze-roi-skip-interactions-raw.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: verifiedDbPath,
 });
