@@ -31,6 +31,24 @@ test("direct wind24 entrypoint cannot bypass payout completeness", () => {
   assert.match(directSource, /process\.exit\(preflight\)/);
   assert.match(directSource, /WIND24_SWITCH_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(directSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(directSource, /BOAT_PON_WIND24_CORE_GUARD: "1"/);
+});
+
+test("wind24 core is guarded and re-verifies the DB identity before legacy aggregation", () => {
+  const guard = coreSource.indexOf('process.env.BOAT_PON_WIND24_CORE_GUARD !== "1"');
+  const dbMissing = coreSource.indexOf("WIND24_SWITCH_CORE_DB_MISSING");
+  const verify = coreSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const internal = coreSource.indexOf("analyze-wind24-exh1-switch-deep-dive-internal.ts");
+  assert.ok(guard >= 0, "core must reject direct execution");
+  assert.ok(dbMissing > guard, "opaque DB existence handling must occur after the caller guard");
+  assert.ok(verify > dbMissing, "core must re-verify canonical DB identity");
+  assert.ok(internal > verify, "legacy aggregation must not start before DB identity verification");
+  assert.match(coreSource, /WIND24_SWITCH_CORE_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(coreSource, /WIND24_SWITCH_CORE_DB_IDENTITY_INVALID/);
+  assert.doesNotMatch(coreSource, /DB not found: \\?\$\{[^}]+\}/u);
+  assert.doesNotMatch(coreSource, /new DatabaseSync/u);
+  assert.match(coreSource, /格上げ条件/);
+  assert.match(coreSource, /降格条件/);
 });
 
 test("direct wind24 entrypoint redacts private DB provenance after successful analysis", () => {
@@ -62,8 +80,6 @@ test("wind24 payout preflight matches the deep-dive population and is read-only"
   assert.match(auditSource, /PRAGMA query_only = ON/);
   assert.match(auditSource, /assertCanonicalSingleLinkRegularFile/);
   assert.match(auditSource, /total > 0 && covered === total/);
-  assert.match(coreSource, /格上げ条件/);
-  assert.match(coreSource, /降格条件/);
 });
 
 test("wind24 payout preflight rejects decision cohort drift before deep-dive", () => {
