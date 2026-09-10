@@ -85,4 +85,10 @@ function assertPayoutCompleteness(): void {
   }
 }
 
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  dbPath,
+  "BET_TYPE_COURSE_DB_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
+
 await import("./analyze-bet-type-course-edge-raw");
