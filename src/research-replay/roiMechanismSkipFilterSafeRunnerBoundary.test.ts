@@ -32,6 +32,17 @@ test("ROI mechanism skip-filter redacts configured DB provenance only after guar
   assert.ok(analysis >= 0 && redact > analysis && pass > redact);
 });
 
+test("ROI mechanism skip-filter verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = entrypointSource.indexOf('"ROI_MECHANISM_SKIP_FILTER_REPORT_IDENTITY_INVALID"');
+  const read = entrypointSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const handoffIdentity = entrypointSource.indexOf('"ROI_MECHANISM_SKIP_FILTER_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = entrypointSource.indexOf("writeFileSync(\n    handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+});
+
 test("ROI mechanism skip-filter normal entrypoint fails closed before exclusion verdicts", () => {
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
