@@ -7,11 +7,15 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-function run(script: string): number {
+const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+
+function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
-    env: process.env,
+    env,
   });
   if (result.error) {
     console.error(`[alternative-odds-health] failed to start ${script}: ${result.error.message}`);
@@ -26,7 +30,16 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const health = run("scripts/check-alternative-odds-timeseries-health-internal.ts");
+if (!existsSync(DB_PATH)) throw new Error("ALTERNATIVE_ODDS_HEALTH_DB_MISSING");
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ALTERNATIVE_ODDS_HEALTH_DB_HANDOFF_IDENTITY_INVALID",
+);
+
+const health = run("scripts/check-alternative-odds-timeseries-health-internal.ts", {
+  ...process.env,
+  BOAT_PON_DB_PATH: handoffDbPath,
+});
 if (health !== 0) {
   console.error("[alternative-odds-health] internal read-only health report failed after a successful cohort preflight");
   process.exit(health);
