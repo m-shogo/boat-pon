@@ -12,8 +12,18 @@ test("skip6R historical switch uses the shared canonical trifecta market authori
   assert.doesNotMatch(internal, /WHERE source_quality = 'historical_closing_odds'/);
 });
 
-test("skip6R historical switch raw path cannot bypass canonical settlement preflight", () => {
+test("skip6R historical switch raw path revalidates the DB after canonical settlement preflight", () => {
   assert.match(raw, /SKIP6R_SWITCH_HISTORICAL_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(raw, /invokedPath === rawEntrypointPath/);
+  assert.match(raw, /SKIP6R_SWITCH_HISTORICAL_RAW_DB_MISSING/);
+  assert.match(raw, /SKIP6R_SWITCH_HISTORICAL_RAW_DB_IDENTITY_INVALID/);
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
   assert.match(raw, /await import\("\.\/analyze-skip6r-switch-historical-closing-odds-internal"\)/);
+  assert.doesNotMatch(raw, /DB not found: \$\{/);
+
+  const guard = raw.indexOf("SKIP6R_SWITCH_HISTORICAL_RAW_DIRECT_EXECUTION_FORBIDDEN");
+  const identity = raw.indexOf("SKIP6R_SWITCH_HISTORICAL_RAW_DB_IDENTITY_INVALID");
+  const internalImport = raw.indexOf('await import("./analyze-skip6r-switch-historical-closing-odds-internal")');
+  assert.ok(guard >= 0 && identity > guard && internalImport > identity);
 });
