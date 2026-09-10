@@ -8,11 +8,12 @@ const LOCK_PATH = "data/exacta-forward-candidates.json";
 if (!existsSync(DB_PATH)) throw new Error("EXACTA_FORWARD_MONITOR_DB_UNAVAILABLE");
 if (!existsSync(LOCK_PATH)) throw new Error("EXACTA_FORWARD_MONITOR_LOCK_UNAVAILABLE");
 
-const lock = JSON.parse(readFileSync(LOCK_PATH, "utf8")) as {
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "EXACTA_FORWARD_MONITOR_DB_IDENTITY_INVALID");
+const verifiedLockPath = assertCanonicalSingleLinkRegularFile(LOCK_PATH, "EXACTA_FORWARD_MONITOR_LOCK_IDENTITY_INVALID");
+const lock = JSON.parse(readFileSync(verifiedLockPath, "utf8")) as {
   lockedAt: string;
   basePopulation: { runKind: string; decision: string; selection: string; excludedVenues: string[]; excludedRaceNos: number[] };
 };
-const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "EXACTA_FORWARD_MONITOR_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
