@@ -6,6 +6,7 @@ const runnerSource = readFileSync("scripts/run-wind24-exh1-switch-deep-dive-safe
 const auditSource = readFileSync("scripts/audit-wind24-exh1-switch-payout-completeness.ts", "utf-8");
 const directSource = readFileSync("scripts/analyze-wind24-exh1-switch-deep-dive.ts", "utf-8");
 const coreSource = readFileSync("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts", "utf-8");
+const internalSource = readFileSync("scripts/analyze-wind24-exh1-switch-deep-dive-internal.ts", "utf-8");
 
 test("wind24 switch safe runner checks payout completeness before deep-dive", () => {
   const preflight = runnerSource.indexOf('run("scripts/audit-wind24-exh1-switch-payout-completeness.ts")');
@@ -45,10 +46,28 @@ test("wind24 core is guarded and re-verifies the DB identity before legacy aggre
   assert.ok(internal > verify, "legacy aggregation must not start before DB identity verification");
   assert.match(coreSource, /WIND24_SWITCH_CORE_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(coreSource, /WIND24_SWITCH_CORE_DB_IDENTITY_INVALID/);
+  assert.match(coreSource, /BOAT_PON_WIND24_INTERNAL_GUARD: "1"/);
   assert.doesNotMatch(coreSource, /DB not found: \\?\$\{[^}]+\}/u);
   assert.doesNotMatch(coreSource, /new DatabaseSync/u);
   assert.match(coreSource, /格上げ条件/);
   assert.match(coreSource, /降格条件/);
+});
+
+test("wind24 legacy internal fails closed and re-verifies the actual SQLite connection", () => {
+  const guard = internalSource.indexOf('process.env.BOAT_PON_WIND24_INTERNAL_GUARD !== "1"');
+  const dbMissing = internalSource.indexOf("WIND24_SWITCH_INTERNAL_DB_MISSING");
+  const verify = internalSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const open = internalSource.indexOf("new DatabaseSync(verifiedDbPath");
+  const queryOnly = internalSource.indexOf("PRAGMA query_only = ON");
+  assert.ok(guard >= 0, "legacy internal must reject direct execution");
+  assert.ok(dbMissing > guard, "opaque DB missing guard must run after caller guard");
+  assert.ok(verify > dbMissing, "legacy internal must re-verify canonical DB identity");
+  assert.ok(open > verify, "SQLite must open only the re-verified path");
+  assert.ok(queryOnly > open, "query-only mode must be enabled on the actual connection");
+  assert.match(internalSource, /WIND24_SWITCH_INTERNAL_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(internalSource, /WIND24_SWITCH_INTERNAL_DB_IDENTITY_INVALID/);
+  assert.match(internalSource, /readOnly: true/);
+  assert.doesNotMatch(internalSource, /DB not found: \\?\$\{[^}]+\}/u);
 });
 
 test("direct wind24 entrypoint redacts private DB provenance after successful analysis", () => {
