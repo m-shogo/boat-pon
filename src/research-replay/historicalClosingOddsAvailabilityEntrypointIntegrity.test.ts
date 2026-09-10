@@ -26,6 +26,20 @@ test("historical closing-odds audit fails closed on bet-type or return-state dri
   assert.ok(implementationImport > guardFailure, "archive/cache implementation must load only after the cohort guard");
 });
 
+test("historical closing-odds audit re-verifies DB identity after cohort preflight before internal handoff", () => {
+  const guardQuery = entrypoint.indexOf("const invalidCohort = db.prepare");
+  const dbClose = entrypoint.lastIndexOf("db.close();");
+  const handoffIdentity = entrypoint.indexOf("const handoffDbPath = assertCanonicalSingleLinkRegularFile(");
+  const implementationImport = entrypoint.indexOf("audit-historical-closing-odds-availability-internal");
+
+  assert.ok(guardQuery >= 0, "cohort preflight must exist");
+  assert.ok(dbClose > guardQuery, "preflight DB must close after cohort validation");
+  assert.ok(handoffIdentity > dbClose, "DB identity must be re-verified after preflight closes");
+  assert.ok(implementationImport > handoffIdentity, "internal implementation must load only after handoff re-verification");
+  assert.match(entrypoint, /HISTORICAL_CLOSING_ODDS_AUDIT_DB_HANDOFF_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH = handoffDbPath/u);
+});
+
 test("historical closing-odds implementation remains read-only and scoped to historical-backfill BUY", () => {
   assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/u);
   assert.match(internal, /dh\.decision='BUY' AND dh\.run_kind='historical-backfill'/u);
