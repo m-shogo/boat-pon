@@ -33,10 +33,16 @@ test("legacy skip-filter robustness safe runner delegates to canonical fail-clos
   assert.doesNotMatch(legacyRunnerSource, /analyze-roi-skip-filter-robustness-raw/);
 });
 
-test("legacy raw module rejects direct CLI execution and only imports the internal analyzer", () => {
+test("legacy raw module rejects direct CLI execution, revalidates DB identity, and only imports the internal analyzer", () => {
   assert.match(rawSource, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(rawSource, /ROI_SKIP_FILTER_ROBUSTNESS_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(rawSource, /await import\("\.\/analyze-roi-skip-filter-robustness-internal"\)/);
+  assert.match(rawSource, /ROI_SKIP_FILTER_ROBUSTNESS_RAW_DB_MISSING/);
+  assert.match(rawSource, /ROI_SKIP_FILTER_ROBUSTNESS_RAW_DB_IDENTITY_INVALID/);
+  const identity = rawSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const internal = rawSource.indexOf('await import("./analyze-roi-skip-filter-robustness-internal")');
+  assert.ok(identity >= 0 && internal > identity);
+  assert.match(rawSource, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(rawSource, /DatabaseSync/);
 });
 
 test("payout preflight matches the robustness population and validates cohort and settlement integrity", () => {
