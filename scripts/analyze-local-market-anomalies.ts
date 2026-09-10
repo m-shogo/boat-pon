@@ -88,4 +88,10 @@ try {
   db.close();
 }
 
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  verifiedDbPath,
+  "LOCAL_MARKET_DB_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
+
 await import("./analyze-local-market-anomalies-raw");
