@@ -78,4 +78,10 @@ SELECT COUNT(*) AS n FROM invalid
   db.close();
 }
 
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  verifiedDbPath,
+  "ROI_PATTERN_DB_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
+
 await import("./search-roi-patterns-raw");
