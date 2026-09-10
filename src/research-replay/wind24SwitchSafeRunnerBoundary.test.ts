@@ -33,6 +33,21 @@ test("direct wind24 entrypoint cannot bypass payout completeness", () => {
   assert.match(directSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
+test("direct wind24 entrypoint redacts private DB provenance after successful analysis", () => {
+  const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts"');
+  const successGuard = directSource.indexOf("if (analysis !== 0)");
+  const redact = directSource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+
+  assert.ok(analysis >= 0);
+  assert.ok(successGuard > analysis);
+  assert.ok(redact > successGuard, "private DB provenance must be sanitized only after successful analysis");
+  assert.match(directSource, /const OPAQUE_DB_SOURCE = "primary research database"/);
+  assert.match(directSource, /const privateMarker = `DB: \$\{dbPath\}`/);
+  assert.match(directSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(directSource, /WIND24_SWITCH_REPORT_MISSING_AFTER_ANALYSIS/);
+  assert.match(directSource, /WIND24_SWITCH_PRIVATE_DB_PROVENANCE_MARKER_MISSING/);
+});
+
 test("wind24 payout preflight matches the deep-dive population and is read-only", () => {
   assert.match(auditSource, /WITH target_rows AS \(/);
   assert.match(auditSource, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
