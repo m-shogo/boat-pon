@@ -10,7 +10,7 @@ const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Rec
 test("skip-interactions command cannot bypass settlement completeness", () => {
   assert.equal(pkg.scripts?.["analyze:roi-skip-interactions"], "tsx scripts/analyze-roi-skip-interactions.ts");
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
-  const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const verify = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID"');
   const guarded = entrypoint.indexOf('await import("./analyze-roi-skip-interactions-raw")');
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight);
@@ -28,7 +28,7 @@ test("skip-interactions canonical entrypoint re-verifies DB identity before guar
   assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = verifiedDbPath/);
 
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
-  const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const verify = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID"');
   const envHandoff = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = verifiedDbPath");
   const analysis = entrypoint.indexOf('await import("./analyze-roi-skip-interactions-raw")');
   assert.ok(preflight >= 0 && verify > preflight && envHandoff > verify && analysis > envHandoff);
@@ -57,6 +57,17 @@ test("skip-interactions canonical entrypoint redacts private DB provenance only 
   assert.match(entrypoint, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_REPORT_MISSING_AFTER_ANALYSIS/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
+});
+
+test("skip-interactions verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_REPORT_IDENTITY_INVALID"');
+  const read = entrypoint.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const handoffIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = entrypoint.indexOf("writeFileSync(\n    handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
 });
 
 test("skip-interactions preflight matches the exact forward population and validates settlement line integrity", () => {
