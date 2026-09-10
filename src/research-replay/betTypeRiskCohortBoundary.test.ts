@@ -8,7 +8,7 @@ const internal = readFileSync("scripts/analyze-bet-type-risk-factors-internal.ts
 
 test("bet type risk analysis runs canonical cohort preflight before internal analysis", () => {
   const guard = entrypoint.indexOf('run("scripts/audit-bet-type-risk-factors-cohort.ts")');
-  const identity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const identity = entrypoint.indexOf('"BET_TYPE_RISK_PRIMARY_DB_IDENTITY_INVALID"');
   const analysis = entrypoint.indexOf('run("scripts/analyze-bet-type-risk-factors-internal.ts"');
   assert.ok(guard >= 0, "entrypoint must invoke cohort preflight");
   assert.ok(identity > guard, "primary DB identity must be reverified after preflight");
@@ -29,6 +29,17 @@ test("bet type risk analysis redacts configured DB provenance only after success
   const redact = entrypoint.lastIndexOf("redactDbProvenance(verifiedDbPath)");
   const pass = entrypoint.lastIndexOf("[bet-type-risk] PASS");
   assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
+});
+
+test("bet type risk verifies generated report identity before redaction read and again before write", () => {
+  const firstIdentity = entrypoint.indexOf('"BET_TYPE_RISK_REPORT_IDENTITY_INVALID"');
+  const read = entrypoint.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const handoffIdentity = entrypoint.indexOf('"BET_TYPE_RISK_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = entrypoint.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
 });
 
 test("bet type risk cohort is fixed to unique settled trifecta historical BUY rows", () => {
