@@ -6,7 +6,7 @@ test("paper-forward raw entrypoint reverifies DB identity after settlement prefl
   const source = readFileSync("scripts/report-paper-forward-candidates-raw.ts", "utf8");
 
   const preflight = source.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const verify = source.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const verify = source.indexOf('"PAPER_FORWARD_RAW_DB_HANDOFF_IDENTITY_INVALID"');
   const internal = source.indexOf('run("scripts/report-paper-forward-candidates-internal.ts"');
   const handoff = source.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
 

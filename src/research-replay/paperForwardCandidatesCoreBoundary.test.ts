@@ -38,6 +38,17 @@ test("paper-forward public raw compatibility entrypoint is guarded, DB-free, and
   assert.doesNotMatch(raw, /new DatabaseSync/u);
 });
 
+test("paper-forward raw verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = raw.indexOf('"PAPER_FORWARD_RAW_REPORT_IDENTITY_INVALID"');
+  const read = raw.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const handoffIdentity = raw.indexOf('"PAPER_FORWARD_RAW_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = raw.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+});
+
 test("paper-forward aggregation implementation fails closed and hardens the actual SQLite boundary", () => {
   const guard = internal.indexOf('process.env.BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD !== "1"');
   const missing = internal.indexOf("PAPER_FORWARD_INTERNAL_DB_MISSING");
