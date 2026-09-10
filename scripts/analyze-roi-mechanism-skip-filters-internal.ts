@@ -11,7 +11,10 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/roi-mechanism-skip-filters.md";
@@ -23,8 +26,20 @@ const EXCL_RACES  = [10, 11, 12];
 const MIN_EXCL_N  = 5;   // 除外対象 n < MIN_EXCL_N → data-insufficient
 const MIN_REMAIN_N = 30; // 残存 n < MIN_REMAIN_N → data-insufficient
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const internalEntrypointPath = resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
+if (invokedPath === internalEntrypointPath) {
+  throw new Error("ROI_MECHANISM_SKIP_FILTER_INTERNAL_DIRECT_EXECUTION_FORBIDDEN");
+}
+if (!existsSync(DB_PATH)) {
+  throw new Error("ROI_MECHANISM_SKIP_FILTER_INTERNAL_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ROI_MECHANISM_SKIP_FILTER_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 function r2(v: number) { return Math.round(v * 100) / 100; }

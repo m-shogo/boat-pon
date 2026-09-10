@@ -69,6 +69,24 @@ test("legacy raw module rejects direct CLI execution, revalidates DB identity, a
   assert.doesNotMatch(rawSource, /DatabaseSync/);
 });
 
+test("ROI mechanism internal analyzer independently fails closed before SQLite reads", () => {
+  const directGuard = analysisSource.indexOf("ROI_MECHANISM_SKIP_FILTER_INTERNAL_DIRECT_EXECUTION_FORBIDDEN");
+  const missing = analysisSource.indexOf("ROI_MECHANISM_SKIP_FILTER_INTERNAL_DB_MISSING");
+  const identity = analysisSource.indexOf("ROI_MECHANISM_SKIP_FILTER_INTERNAL_DB_IDENTITY_INVALID");
+  const open = analysisSource.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = analysisSource.indexOf("PRAGMA query_only = ON");
+
+  assert.ok(directGuard >= 0, "internal analyzer must reject direct CLI execution");
+  assert.ok(missing > directGuard, "DB existence check must follow the direct-execution guard");
+  assert.ok(identity > missing, "DB identity must be revalidated before SQLite open");
+  assert.ok(open > identity, "SQLite must open only the revalidated DB path");
+  assert.ok(queryOnly > open, "SQLite connection must be forced query-only after read-only open");
+  assert.match(analysisSource, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(analysisSource, /DB not found: \$\{DB_PATH\}/);
+  assert.doesNotMatch(analysisSource, /new DatabaseSync\(DB_PATH/);
+  assert.doesNotMatch(analysisSource, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
+});
+
 test("ROI mechanism payout preflight matches internal analyzer population and validates settlement line integrity", () => {
   assert.match(auditSource, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
   assert.match(auditSource, /dh\.decision = 'BUY'/);
