@@ -33,7 +33,10 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import {
   historicalTrifectaCanonicalSourcePredicate,
   historicalTrifectaCompleteMarketPredicate,
@@ -43,8 +46,20 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/skipvenue-switch-historical-closing-odds.md";
 const OUT_JSON = "reports/skipvenue-switch-historical-closing-odds.json";
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const internalEntrypointPath = resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
+if (invokedPath === internalEntrypointPath) {
+  throw new Error("SKIPVENUE_SWITCH_HISTORICAL_INTERNAL_DIRECT_EXECUTION_FORBIDDEN");
+}
+if (!existsSync(DB_PATH)) {
+  throw new Error("SKIPVENUE_SWITCH_HISTORICAL_INTERNAL_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "SKIPVENUE_SWITCH_HISTORICAL_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 const FORWARD_START = "2025-01-01";
