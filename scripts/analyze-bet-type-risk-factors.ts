@@ -7,7 +7,11 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+const OUT_MD = "reports/bet-type-risk-factors.md";
+const OPAQUE_DB_SOURCE = "primary research database";
 
 function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -19,6 +23,18 @@ function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
     return 1;
   }
   return result.status ?? 1;
+}
+
+function redactDbProvenance(dbPath: string): void {
+  if (!existsSync(OUT_MD)) {
+    throw new Error("BET_TYPE_RISK_REPORT_MISSING_AFTER_ANALYSIS");
+  }
+  const report = readFileSync(OUT_MD, "utf8");
+  const provenance = `DB: ${dbPath}`;
+  if (!report.includes(provenance)) {
+    throw new Error("BET_TYPE_RISK_DB_PROVENANCE_NOT_FOUND");
+  }
+  writeFileSync(OUT_MD, report.replaceAll(provenance, `DB: ${OPAQUE_DB_SOURCE}`));
 }
 
 const preflight = run("scripts/audit-bet-type-risk-factors-cohort.ts");
@@ -42,4 +58,5 @@ if (analysis !== 0) {
   process.exit(analysis);
 }
 
+redactDbProvenance(verifiedDbPath);
 console.log("[bet-type-risk] PASS: cohort preflight passed before risk-factor analysis");
