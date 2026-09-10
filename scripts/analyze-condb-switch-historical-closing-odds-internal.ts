@@ -32,13 +32,19 @@ import {
   historicalTrifectaCanonicalSourcePredicate,
   historicalTrifectaCompleteMarketPredicate,
 } from "../src/research-replay/historicalTrifectaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/condb-switch-historical-closing-odds.md";
 const OUT_JSON = "reports/condb-switch-historical-closing-odds.json";
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) throw new Error("CONDB_SWITCH_HISTORICAL_INTERNAL_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "CONDB_SWITCH_HISTORICAL_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 const FORWARD_START = "2025-01-01";
