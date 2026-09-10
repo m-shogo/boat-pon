@@ -11,6 +11,7 @@ import { existsSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const CANDIDATES_PATH = "data/exacta-forward-candidates.json";
 
 function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -34,6 +35,11 @@ if (!existsSync(DB_PATH)) throw new Error("EXACTA_FORWARD_MONITOR_DB_MISSING");
 const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   DB_PATH,
   "EXACTA_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID",
+);
+if (!existsSync(CANDIDATES_PATH)) throw new Error("EXACTA_FORWARD_MONITOR_CANDIDATES_MISSING");
+assertCanonicalSingleLinkRegularFile(
+  CANDIDATES_PATH,
+  "EXACTA_FORWARD_MONITOR_CANDIDATE_IDENTITY_INVALID",
 );
 const monitor = run("scripts/report-exacta-forward-monitor-internal.ts", {
   ...process.env,
