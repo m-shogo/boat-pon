@@ -10,7 +10,7 @@ test("research governor cannot publish readiness before its integrity preflight"
   const audit = entrypoint.indexOf('run("scripts/audit-research-governor-readiness.ts")');
   const guard = entrypoint.indexOf("if (preflight !== 0)");
   const handoffIdentity = entrypoint.indexOf("RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID");
-  const report = entrypoint.indexOf('run("scripts/report-research-governor-internal.ts"');
+  const report = entrypoint.indexOf('run("scripts/report-research-governor-raw.ts"');
   assert.ok(audit >= 0 && guard > audit && handoffIdentity > guard && report > handoffIdentity);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /RESEARCH_GOVERNOR_DB_MISSING/);
