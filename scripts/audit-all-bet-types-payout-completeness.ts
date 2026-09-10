@@ -18,6 +18,9 @@ const betTypes = REQUIRED_BET_TYPES.map(q).join(",");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
+// Keep BUY-cohort validation and multi-bet settlement coverage on one
+// append-only research snapshot so coverage cannot be accepted against a later cohort.
+db.exec("BEGIN;");
 
 try {
   const invalidBuyCohort = db.prepare(`
