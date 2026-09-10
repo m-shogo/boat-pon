@@ -8,13 +8,18 @@ const internal = readFileSync("scripts/report-paper-forward-monitor-internal.ts"
 const audit = readFileSync("scripts/audit-paper-forward-monitor-payout-completeness.ts", "utf-8");
 const pkg = readFileSync("package.json", "utf-8");
 
-test("paper-forward monitor entrypoint fails closed before internal report generation", () => {
+test("paper-forward monitor entrypoint fails closed before verified internal report generation", () => {
   const preflight = entrypoint.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
-  const report = entrypoint.indexOf('run("scripts/report-paper-forward-monitor-internal.ts")');
+  const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const report = entrypoint.indexOf('run("scripts/report-paper-forward-monitor-internal.ts"');
+  const handoff = entrypoint.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
   assert.ok(preflight >= 0);
-  assert.ok(report > preflight);
+  assert.ok(verify > preflight, "DB identity must be reverified after settlement preflight");
+  assert.ok(report > verify, "internal report must start only after DB identity revalidation");
+  assert.ok(handoff > report, "internal report must receive only the verified DB path");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
+  assert.match(entrypoint, /PAPER_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID/);
 });
 
 test("paper-forward monitor raw compatibility entrypoint is independently guarded and DB-free", () => {
