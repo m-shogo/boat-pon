@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REQUIRED_REPORTS = [
   "reports/paper-forward-monitor.json",
@@ -91,9 +92,13 @@ function validateDecisionCriticalShape(reportPath: string, parsed: unknown): voi
 
 for (const path of REQUIRED_REPORTS) {
   if (!existsSync(path)) fail(path, "missing");
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(
+    path,
+    "ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID",
+  );
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(path, "utf8"));
+    parsed = JSON.parse(readFileSync(verifiedPath, "utf8"));
   } catch {
     fail(path, "invalid_json");
   }
