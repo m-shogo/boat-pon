@@ -10,11 +10,20 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   const audit = entrypoint.indexOf('run("scripts/audit-exacta-forward-monitor-settlements.ts")');
   const guard = entrypoint.indexOf("if (preflight !== 0)");
   const handoffIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID");
+  const candidateIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_CANDIDATE_IDENTITY_INVALID");
   const monitor = entrypoint.indexOf('run("scripts/report-exacta-forward-monitor-internal.ts"');
-  assert.ok(audit >= 0 && guard > audit && handoffIdentity > guard && monitor > handoffIdentity);
+  assert.ok(
+    audit >= 0 &&
+      guard > audit &&
+      handoffIdentity > guard &&
+      candidateIdentity > handoffIdentity &&
+      monitor > candidateIdentity,
+  );
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_MISSING/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/u);
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_CANDIDATES_MISSING/u);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*CANDIDATES_PATH,/u);
   assert.match(entrypoint, /BOAT_PON_DB_PATH: handoffDbPath/u);
 });
 
