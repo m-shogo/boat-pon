@@ -7,11 +7,12 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-function run(script: string): number {
+function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
-    env: process.env,
+    env,
   });
 
   if (result.error) {
@@ -27,7 +28,16 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-ticket-selector-strategies-core.ts");
+const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  configuredDbPath,
+  "TICKET_SELECTOR_PRIMARY_DB_IDENTITY_INVALID",
+);
+
+const analysis = run("scripts/analyze-ticket-selector-strategies-core.ts", {
+  ...process.env,
+  BOAT_PON_DB_PATH: verifiedDbPath,
+});
 if (analysis !== 0) {
   console.error("[ticket-selector] analysis failed after successful payout completeness preflight");
   process.exit(analysis);
