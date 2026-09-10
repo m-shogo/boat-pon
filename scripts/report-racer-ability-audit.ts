@@ -6,11 +6,11 @@
  * and removes filesystem provenance before publishing reports.
  */
 
+import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -18,6 +18,7 @@ const configuredCandidatesPath = "data/exacta-forward-candidates.json";
 const outMd = "reports/racer-ability-data-audit.md";
 const outJson = "reports/racer-ability-data-audit.json";
 const internalPath = fileURLToPath(new URL("./report-racer-ability-audit-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 if (!existsSync(configuredDbPath)) throw new Error("RACER_ABILITY_AUDIT_DB_MISSING");
 if (!existsSync(configuredCandidatesPath)) throw new Error("RACER_ABILITY_AUDIT_CANDIDATES_MISSING");
@@ -38,7 +39,7 @@ try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
   copyFileSync(verifiedCandidatesPath, workspaceCandidates);
 
-  const child = spawnSync(process.execPath, ["--import", "tsx", internalPath], {
+  const child = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     cwd: workspace,
     env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
     encoding: "utf8",
