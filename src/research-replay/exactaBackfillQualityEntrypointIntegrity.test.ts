@@ -22,10 +22,15 @@ test("exacta backfill quality rejects decision cohort drift before implementatio
 
   const guard = entrypoint.indexOf("const invalidTargetCohort = db.prepare");
   const failure = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DECISION_COHORT_INVALID");
+  const close = entrypoint.lastIndexOf("db.close()");
+  const handoffIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DB_HANDOFF_IDENTITY_INVALID");
   const implementationImport = entrypoint.indexOf("check-exacta-backfill-quality-internal");
   assert.ok(guard >= 0, "target cohort guard must exist");
   assert.ok(failure > guard, "failure contract must follow cohort query");
-  assert.ok(implementationImport > failure, "quality audit must load only after cohort validation");
+  assert.ok(close > failure, "preflight DB must close after cohort validation");
+  assert.ok(handoffIdentity > close, "DB identity must be reverified after preflight closes");
+  assert.ok(implementationImport > handoffIdentity, "quality audit must load only after handoff identity revalidation");
+  assert.match(entrypoint, /BOAT_PON_DB_PATH = handoffDbPath/u);
 });
 
 test("exacta backfill quality implementation remains read-only historical research", () => {
