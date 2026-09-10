@@ -11,11 +11,15 @@ const packageSource = readFileSync("package.json", "utf-8");
 
 test("ROI skip-policy normal entrypoint checks payout completeness before guarded raw import", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
+  const identity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(");
   const analysis = entrypointSource.indexOf('await import("./analyze-roi-skip-policy-simulation-raw")');
   assert.ok(preflight >= 0);
-  assert.ok(analysis > preflight);
+  assert.ok(identity > preflight);
+  assert.ok(analysis > identity);
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
+  assert.match(entrypointSource, /ROI_SKIP_POLICY_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
   assert.doesNotMatch(entrypointSource, /run\("scripts\/analyze-roi-skip-policy-simulation-raw\.ts"\)/);
 });
 
