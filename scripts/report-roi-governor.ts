@@ -7,6 +7,10 @@ const REQUIRED_REPORTS = [
   "reports/roi-skip-policy-simulation.json",
 ] as const;
 
+const OPTIONAL_DECISION_REPORTS = [
+  "reports/wind24-exh1-switch-deep-dive.json",
+] as const;
+
 type JsonObject = Record<string, unknown>;
 
 function fail(path: string, reason: string): never {
@@ -40,6 +44,12 @@ function requireNonNegativeInteger(reportPath: string, root: unknown, path: read
   if (!Number.isSafeInteger(value) || value < 0) {
     fail(reportPath, `invalid_required_count:${path.join(".")}`);
   }
+  return value;
+}
+
+function requireBoolean(reportPath: string, root: unknown, path: readonly string[]): boolean {
+  const value = readPath(root, path);
+  if (typeof value !== "boolean") fail(reportPath, `invalid_required_boolean:${path.join(".")}`);
   return value;
 }
 
@@ -83,14 +93,32 @@ function validateSkipPolicy(reportPath: string, parsed: unknown): void {
   requireArray(reportPath, parsed, ["greedy"]);
 }
 
+function validateWind24DeepDive(reportPath: string, parsed: unknown): void {
+  requireNonNegativeInteger(reportPath, parsed, ["periods", "fwdAll", "n"]);
+  requireFiniteNumber(reportPath, parsed, ["periods", "train", "roi132"]);
+  requireFiniteNumber(reportPath, parsed, ["periods", "fwdAll", "roi132"]);
+  requireFiniteNumber(reportPath, parsed, ["periods", "fwdH2", "roi132"]);
+  requireFiniteNumber(reportPath, parsed, ["excludeMax", "forward", "top1Roi"]);
+  requireFiniteNumber(reportPath, parsed, ["excludeMax", "forward", "top2Roi"]);
+  requireFiniteNumber(reportPath, parsed, ["excludeMax", "forward", "top3Roi"]);
+  requireNonNegativeInteger(reportPath, parsed, ["upgradeStatus", "nForUpgrade"]);
+  requireBoolean(reportPath, parsed, ["upgradeStatus", "nReached200"]);
+  requireBoolean(reportPath, parsed, ["upgradeStatus", "top2RoiOk"]);
+  requireNonNegativeInteger(reportPath, parsed, ["upgradeStatus", "recentZeroCount"]);
+}
+
 function validateDecisionCriticalShape(reportPath: string, parsed: unknown): void {
   if (reportPath === "reports/paper-forward-monitor.json") return validatePaperForwardMonitor(reportPath, parsed);
   if (reportPath === "reports/ticket-selector-strategies.json") return validateTicketSelector(reportPath, parsed);
   if (reportPath === "reports/roi-skip-policy-simulation.json") return validateSkipPolicy(reportPath, parsed);
+  if (reportPath === "reports/wind24-exh1-switch-deep-dive.json") return validateWind24DeepDive(reportPath, parsed);
 }
 
-function validateRequiredReport(path: string, identityError: string): void {
-  if (!existsSync(path)) fail(path, "missing");
+function validateReport(path: string, identityError: string, required: boolean): void {
+  if (!existsSync(path)) {
+    if (required) fail(path, "missing");
+    return;
+  }
   const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityError);
   let parsed: unknown;
   try {
@@ -103,14 +131,20 @@ function validateRequiredReport(path: string, identityError: string): void {
 }
 
 for (const path of REQUIRED_REPORTS) {
-  validateRequiredReport(path, "ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID");
+  validateReport(path, "ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID", true);
+}
+for (const path of OPTIONAL_DECISION_REPORTS) {
+  validateReport(path, "ROI_GOVERNOR_OPTIONAL_DECISION_REPORT_IDENTITY_INVALID", false);
 }
 
-// Re-read and revalidate the decision-critical artifacts immediately before the
-// raw phase consumes them. This narrows the validation/use window and keeps the
-// canonical command fail-closed if a report is replaced after the first pass.
+// Re-read and revalidate every decision-affecting artifact immediately before
+// the raw phase consumes it. This keeps both required inputs and any present
+// higher-precedence optional evidence fail-closed across the validation/use window.
 for (const path of REQUIRED_REPORTS) {
-  validateRequiredReport(path, "ROI_GOVERNOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID");
+  validateReport(path, "ROI_GOVERNOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID", true);
+}
+for (const path of OPTIONAL_DECISION_REPORTS) {
+  validateReport(path, "ROI_GOVERNOR_OPTIONAL_DECISION_REPORT_HANDOFF_IDENTITY_INVALID", false);
 }
 
 await import("./report-roi-governor-raw");
