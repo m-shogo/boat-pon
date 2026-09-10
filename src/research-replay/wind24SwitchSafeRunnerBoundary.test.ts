@@ -22,11 +22,15 @@ test("wind24 switch safe runner fails closed before promotion/demotion analysis"
 
 test("direct wind24 entrypoint cannot bypass payout completeness", () => {
   const preflight = directSource.indexOf('run("scripts/audit-wind24-exh1-switch-payout-completeness.ts")');
-  const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts")');
+  const verify = directSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts"');
   assert.ok(preflight >= 0);
-  assert.ok(analysis > preflight);
+  assert.ok(verify > preflight);
+  assert.ok(analysis > verify);
   assert.match(directSource, /if \(preflight !== 0\)/);
   assert.match(directSource, /process\.exit\(preflight\)/);
+  assert.match(directSource, /WIND24_SWITCH_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.match(directSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
 test("wind24 payout preflight matches the deep-dive population and is read-only", () => {
