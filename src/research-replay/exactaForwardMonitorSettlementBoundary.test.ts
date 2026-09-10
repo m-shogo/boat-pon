@@ -4,6 +4,7 @@ import test from "node:test";
 
 const entrypoint = readFileSync("scripts/report-exacta-forward-monitor.ts", "utf8");
 const preflight = readFileSync("scripts/audit-exacta-forward-monitor-settlements.ts", "utf8");
+const raw = readFileSync("scripts/report-exacta-forward-monitor-raw.ts", "utf8");
 const internal = readFileSync("scripts/report-exacta-forward-monitor-internal.ts", "utf8");
 
 test("exacta forward monitor cannot bypass cohort and settlement preflight", () => {
@@ -11,7 +12,7 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   const guard = entrypoint.indexOf("if (preflight !== 0)");
   const handoffIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID");
   const candidateIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_CANDIDATE_IDENTITY_INVALID");
-  const monitor = entrypoint.indexOf('run("scripts/report-exacta-forward-monitor-internal.ts"');
+  const monitor = entrypoint.indexOf('run("scripts/report-exacta-forward-monitor-raw.ts"');
   assert.ok(
     audit >= 0 &&
       guard > audit &&
@@ -25,6 +26,17 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_CANDIDATES_MISSING/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*CANDIDATES_PATH,/u);
   assert.match(entrypoint, /BOAT_PON_DB_PATH: handoffDbPath/u);
+});
+
+test("exacta forward raw compatibility module revalidates identities immediately before internal import", () => {
+  const directGuard = raw.indexOf("EXACTA_FORWARD_MONITOR_RAW_DIRECT_EXECUTION_FORBIDDEN");
+  const dbIdentity = raw.indexOf("EXACTA_FORWARD_MONITOR_RAW_DB_IDENTITY_INVALID");
+  const candidateIdentity = raw.indexOf("EXACTA_FORWARD_MONITOR_RAW_CANDIDATE_IDENTITY_INVALID");
+  const internalImport = raw.indexOf('await import("./report-exacta-forward-monitor-internal")');
+  assert.ok(directGuard >= 0 && dbIdentity > directGuard && candidateIdentity > dbIdentity && internalImport > candidateIdentity);
+  assert.match(raw, /EXACTA_FORWARD_MONITOR_RAW_DB_MISSING/u);
+  assert.match(raw, /EXACTA_FORWARD_MONITOR_RAW_CANDIDATES_MISSING/u);
+  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/u);
 });
 
 test("exacta forward preflight fails closed on decision cohort drift and invalid settlement lines", () => {
