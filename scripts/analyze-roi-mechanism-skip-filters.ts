@@ -4,7 +4,11 @@
  * the internal exclusion-effect analyzer can emit payout-ROI-based verdicts.
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+const OUT_MD = "reports/roi-mechanism-skip-filters.md";
+const OPAQUE_DB_SOURCE = "primary research database";
 
 function run(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -16,6 +20,24 @@ function run(script: string): number {
     return 1;
   }
   return result.status ?? 1;
+}
+
+function redactDbProvenance(dbPath: string): void {
+  if (!existsSync(OUT_MD)) {
+    throw new Error("ROI_MECHANISM_SKIP_FILTER_REPORT_MISSING_AFTER_ANALYSIS");
+  }
+
+  const report = readFileSync(OUT_MD, "utf-8");
+  const privateMarker = `DB: ${dbPath}`;
+  if (!report.includes(privateMarker)) {
+    throw new Error("ROI_MECHANISM_SKIP_FILTER_DB_PROVENANCE_NOT_FOUND");
+  }
+
+  writeFileSync(
+    OUT_MD,
+    report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
+    "utf-8",
+  );
 }
 
 const preflight = run("scripts/audit-roi-mechanism-skip-filter-payout-completeness.ts");
@@ -32,4 +54,5 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
 await import("./analyze-roi-mechanism-skip-filters-raw");
+redactDbProvenance(handoffDbPath);
 console.log("[roi-mechanism-skip-filter] PASS: payout completeness preflight passed before internal analysis");
