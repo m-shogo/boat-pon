@@ -27,3 +27,14 @@ test("miss recovery wrapper redacts private database provenance after guarded an
   assert.match(source, /MISS_RECOVERY_REPORT_MISSING_AFTER_ANALYSIS/u);
   assert.match(source, /MISS_RECOVERY_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
 });
+
+test("miss recovery wrapper verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = source.indexOf('"MISS_RECOVERY_REPORT_IDENTITY_INVALID"');
+  const read = source.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const handoffIdentity = source.indexOf('"MISS_RECOVERY_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = source.indexOf("writeFileSync(\n    handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+});
