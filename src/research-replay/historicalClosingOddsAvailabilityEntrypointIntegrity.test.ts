@@ -40,8 +40,16 @@ test("historical closing-odds audit re-verifies DB identity after cohort preflig
   assert.match(entrypoint, /BOAT_PON_DB_PATH = handoffDbPath/u);
 });
 
-test("historical closing-odds implementation remains read-only and scoped to historical-backfill BUY", () => {
-  assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/u);
+test("historical closing-odds implementation preserves a canonical read-only DB boundary and historical-backfill BUY scope", () => {
+  const identity = internal.indexOf("const verifiedDbPath = assertCanonicalSingleLinkRegularFile(");
+  const open = internal.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+
+  assert.ok(identity >= 0, "internal implementation must verify canonical DB identity");
+  assert.ok(open > identity, "internal implementation must open only the verified DB path");
+  assert.match(internal, /HISTORICAL_CLOSING_ODDS_AUDIT_INTERNAL_DB_IDENTITY_INVALID/u);
+  assert.match(internal, /PRAGMA query_only\s*=\s*ON/u);
+  assert.match(internal, /research database unavailable/u);
+  assert.doesNotMatch(internal, /DB not found: \$\{DB_PATH\}/u);
   assert.match(internal, /dh\.decision='BUY' AND dh\.run_kind='historical-backfill'/u);
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\([^)]*(?:INSERT|UPDATE|DELETE|DROP)/iu);
 });

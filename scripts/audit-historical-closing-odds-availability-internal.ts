@@ -30,6 +30,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { parseAllTrifectaOdds } from "../src/domain/oddsParser";
 import { parseHistoricalClosingOddsAuditOptions } from "../src/research-replay/historicalClosingOddsAuditOptions";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/historical-closing-odds-availability.md";
@@ -75,9 +76,16 @@ const VENUE_FILTER = parsedOptions.venueFilter;
 const RACENO_FILTER = parsedOptions.raceNoFilter;
 const CAT_FILTER = parsedOptions.categoryFilter;
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+if (!existsSync(DB_PATH)) {
+  console.error("[historical-closing-odds] research database unavailable");
+  process.exit(1);
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "HISTORICAL_CLOSING_ODDS_AUDIT_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 const excl_v = EXCL_VENUES.map(v => `'${v}'`).join(",");
 const excl_r = EXCL_RACES.join(",");
