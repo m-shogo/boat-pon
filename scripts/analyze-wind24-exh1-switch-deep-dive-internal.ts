@@ -17,6 +17,11 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+if (process.env.BOAT_PON_WIND24_INTERNAL_GUARD !== "1") {
+  throw new Error("WIND24_SWITCH_INTERNAL_DIRECT_EXECUTION_FORBIDDEN");
+}
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/wind24-exh1-switch-deep-dive.md";
@@ -28,8 +33,15 @@ const FWD_H1_END    = "2025-09-01";
 const EXCLUDED_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCLUDED_RACE_NOS = [10, 11, 12];
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) {
+  throw new Error("WIND24_SWITCH_INTERNAL_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "WIND24_SWITCH_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 const EXCL_V = EXCLUDED_VENUES.map(v => `'${v}'`).join(",");
