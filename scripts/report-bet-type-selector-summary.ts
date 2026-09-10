@@ -12,6 +12,7 @@ const REQUIRED_REPORTS = [
 ] as const;
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/bet-type-selector-summary.md";
+const OUT_JSON = "reports/bet-type-selector-summary.json";
 const OPAQUE_DB_SOURCE = "primary research database";
 
 type ReportEnvelope = {
@@ -84,7 +85,29 @@ function redactDbProvenance(dbPath: string): void {
   writeFileSync(handoffReportPath, report.replaceAll(provenance, `DB: ${OPAQUE_DB_SOURCE}`));
 }
 
+function verifyJsonOutput(): void {
+  if (!existsSync(OUT_JSON)) {
+    throw new Error("BET_TYPE_SELECTOR_JSON_REPORT_MISSING_AFTER_ANALYSIS");
+  }
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    OUT_JSON,
+    "BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID",
+  );
+  try {
+    JSON.parse(readFileSync(verifiedJsonPath, "utf8"));
+  } catch {
+    throw new Error("BET_TYPE_SELECTOR_JSON_REPORT_INVALID");
+  }
+  assertCanonicalSingleLinkRegularFile(
+    verifiedJsonPath,
+    "BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID",
+  );
+}
+
 const verifiedDbPath = verifyDbHandoff();
 const status = run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath);
-if (status === 0) redactDbProvenance(verifiedDbPath);
+if (status === 0) {
+  redactDbProvenance(verifiedDbPath);
+  verifyJsonOutput();
+}
 process.exit(status);
