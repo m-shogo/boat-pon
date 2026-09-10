@@ -12,15 +12,19 @@ const requiredReports = [
   "reports/roi-skip-policy-simulation.json",
 ];
 
-test("ROI governor fails closed on missing or invalid decision-critical reports before raw phase generation", () => {
+test("ROI governor fails closed on missing, non-canonical, or invalid decision-critical reports before raw phase generation", () => {
   for (const path of requiredReports) assert.match(entry, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(entry, /ROI_GOVERNOR_INPUT_REPORT_INVALID/);
-  assert.match(entry, /JSON\.parse\(readFileSync\(path, "utf8"\)\)/);
+  assert.match(entry, /ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID/);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*path,/u);
+  assert.match(entry, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/);
   assert.match(entry, /!isObject\(parsed\)/);
   assert.match(entry, /validateDecisionCriticalShape\(path, parsed\)/);
   const validation = entry.indexOf("for (const path of REQUIRED_REPORTS)");
+  const identity = entry.indexOf("ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID");
+  const shape = entry.indexOf("validateDecisionCriticalShape(path, parsed)");
   const rawRun = entry.indexOf("report-roi-governor-raw.ts");
-  assert.ok(validation >= 0 && rawRun > validation);
+  assert.ok(validation >= 0 && identity > validation && shape > identity && rawRun > shape);
   assert.equal(pkg.scripts?.["report:roi-governor"], "tsx scripts/report-roi-governor.ts");
 });
 
