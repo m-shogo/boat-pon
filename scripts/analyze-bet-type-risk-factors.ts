@@ -7,11 +7,12 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-function run(script: string): number {
+function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
-    env: process.env,
+    env,
   });
   if (result.error) {
     console.error(`[bet-type-risk] failed to start ${script}: ${result.error.message}`);
@@ -26,7 +27,16 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const analysis = run("scripts/analyze-bet-type-risk-factors-internal.ts");
+const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  configuredDbPath,
+  "BET_TYPE_RISK_PRIMARY_DB_IDENTITY_INVALID",
+);
+
+const analysis = run("scripts/analyze-bet-type-risk-factors-internal.ts", {
+  ...process.env,
+  BOAT_PON_DB_PATH: verifiedDbPath,
+});
 if (analysis !== 0) {
   console.error("[bet-type-risk] internal read-only analysis failed after a successful cohort preflight");
   process.exit(analysis);
