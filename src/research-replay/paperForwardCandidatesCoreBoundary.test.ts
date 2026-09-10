@@ -20,15 +20,21 @@ test("paper-forward core cannot bypass official settlement completeness when inv
   assert.match(core, /BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1"/);
 });
 
-test("paper-forward public raw compatibility entrypoint is guarded and DB-free", () => {
+test("paper-forward public raw compatibility entrypoint is guarded, DB-free, and redacts DB provenance", () => {
   const scripts = Object.values(pkg.scripts ?? {});
   assert.equal(scripts.some((command) => command.includes("report-paper-forward-candidates-raw.ts")), false);
 
   const preflight = raw.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
   const internalRun = raw.indexOf('run("scripts/report-paper-forward-candidates-internal.ts"');
+  const redact = raw.indexOf("redactDbProvenance(handoffDbPath)");
   assert.ok(preflight >= 0, "raw compatibility entrypoint must invoke settlement preflight");
   assert.ok(internalRun > preflight, "raw compatibility entrypoint must not aggregate before preflight");
+  assert.ok(redact > internalRun, "raw compatibility output must redact DB provenance only after successful aggregation");
   assert.match(raw, /BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1"/);
+  assert.match(raw, /PAPER_FORWARD_RAW_PRIVATE_DB_PATH_REMAINS/);
+  assert.match(raw, /PAPER_FORWARD_RAW_DB_PROVENANCE_UNEXPECTED/);
+  assert.match(raw, /\.split\(handoffDbPath\)\.join\(OPAQUE_DB_SOURCE\)/);
+  assert.match(raw, /replace\(\/\^DB:\.\*\$\/gm, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
   assert.doesNotMatch(raw, /new DatabaseSync/u);
 });
 
