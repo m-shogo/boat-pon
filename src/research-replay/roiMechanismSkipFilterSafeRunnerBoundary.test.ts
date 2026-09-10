@@ -12,9 +12,12 @@ const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Rec
 test("ROI mechanism skip-filter normal entrypoint checks payout completeness before guarded analysis", () => {
   assert.equal(pkg.scripts?.["analyze:roi-skip-filters"], "tsx scripts/analyze-roi-mechanism-skip-filters.ts");
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-mechanism-skip-filter-payout-completeness.ts")');
+  const handoffIdentity = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_DB_HANDOFF_IDENTITY_INVALID");
   const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-raw")');
   assert.ok(preflight >= 0);
-  assert.ok(analysis > preflight);
+  assert.ok(handoffIdentity > preflight, "DB identity must be reverified after the settlement preflight");
+  assert.ok(analysis > handoffIdentity, "guarded analysis must start only after DB handoff identity verification");
+  assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
   assert.doesNotMatch(entrypointSource, /run\("scripts\/analyze-roi-mechanism-skip-filters-raw\.ts"\)/);
 });
 
