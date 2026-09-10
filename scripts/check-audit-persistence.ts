@@ -13,6 +13,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const SERVER_DB = "server/db.ts";
@@ -55,11 +56,16 @@ function checkServerSource() {
 
 function checkDbColumns() {
   if (!existsSync(DB_PATH)) {
-    add(false, "DB exists", `${DB_PATH} missing`, "run with the local DB or set BOAT_PON_DB_PATH");
+    add(false, "DB exists", "primary research database missing", "run with the local DB or set BOAT_PON_DB_PATH");
     return;
   }
 
-  const db = new DatabaseSync(DB_PATH, { readOnly: true });
+  const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+    DB_PATH,
+    "AUDIT_PERSISTENCE_DB_IDENTITY_INVALID",
+  );
+  const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+  db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
   try {
     const columns = db.prepare("PRAGMA table_info(decision_history)").all() as Array<{ name: string }>;
     const names = new Set(columns.map((column) => column.name));
