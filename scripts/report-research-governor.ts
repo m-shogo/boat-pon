@@ -34,7 +34,7 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   DB_PATH,
   "RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID",
 );
-const report = run("scripts/report-research-governor-internal.ts", {
+const report = run("scripts/report-research-governor-raw.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: handoffDbPath,
 });
