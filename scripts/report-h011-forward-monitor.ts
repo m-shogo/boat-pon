@@ -94,7 +94,7 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   "H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID",
 );
 
-const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/report-h011-forward-monitor-internal.ts"], {
+const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/report-h011-forward-monitor-raw.ts"], {
   stdio: "inherit",
   env: { ...process.env, BOAT_PON_DB_PATH: handoffDbPath },
 });
