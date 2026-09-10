@@ -8,11 +8,12 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-function run(script: string): number {
+function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
-    env: process.env,
+    env,
   });
 
   if (result.error) {
@@ -29,7 +30,16 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const internal = run("scripts/report-paper-forward-candidates-internal.ts");
+const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  configuredDbPath,
+  "PAPER_FORWARD_CORE_DB_HANDOFF_IDENTITY_INVALID",
+);
+
+const internal = run("scripts/report-paper-forward-candidates-internal.ts", {
+  ...process.env,
+  BOAT_PON_DB_PATH: handoffDbPath,
+});
 if (internal !== 0) {
   console.error("[paper-forward-core] internal candidate aggregation failed after a successful settlement completeness preflight");
   process.exit(internal);
