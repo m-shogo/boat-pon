@@ -13,7 +13,10 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/roi-skip-interactions.md";
@@ -26,8 +29,20 @@ const EXCL_RACES   = [10, 11, 12];
 const BAD_VENUES   = ["浜名湖", "住之江"];
 const WEAK_RACENOS = [2, 5, 6];
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const coreEntrypointPath = resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
+if (invokedPath === coreEntrypointPath) {
+  throw new Error("ROI_SKIP_INTERACTIONS_CORE_DIRECT_EXECUTION_FORBIDDEN");
+}
+if (!existsSync(DB_PATH)) {
+  throw new Error("ROI_SKIP_INTERACTIONS_CORE_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ROI_SKIP_INTERACTIONS_CORE_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 function r2(v: number) { return Math.round(v * 100) / 100; }

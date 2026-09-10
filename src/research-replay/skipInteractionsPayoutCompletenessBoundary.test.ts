@@ -4,6 +4,7 @@ import test from "node:test";
 
 const entrypoint = readFileSync("scripts/analyze-roi-skip-interactions.ts", "utf-8");
 const raw = readFileSync("scripts/analyze-roi-skip-interactions-raw.ts", "utf-8");
+const core = readFileSync("scripts/analyze-roi-skip-interactions-core.ts", "utf-8");
 const audit = readFileSync("scripts/audit-roi-skip-interactions-payout-completeness.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
@@ -44,6 +45,24 @@ test("skip-interactions guarded raw compatibility module revalidates DB identity
   assert.match(raw, /ROI_SKIP_INTERACTIONS_RAW_DB_MISSING/);
   assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
   assert.doesNotMatch(raw, /DB not found: \$\{/);
+});
+
+test("skip-interactions core independently fails closed before SQLite reads", () => {
+  const directGuard = core.indexOf("ROI_SKIP_INTERACTIONS_CORE_DIRECT_EXECUTION_FORBIDDEN");
+  const missing = core.indexOf("ROI_SKIP_INTERACTIONS_CORE_DB_MISSING");
+  const identity = core.indexOf("ROI_SKIP_INTERACTIONS_CORE_DB_IDENTITY_INVALID");
+  const open = core.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = core.indexOf("PRAGMA query_only = ON");
+
+  assert.ok(directGuard >= 0, "core must reject direct CLI execution");
+  assert.ok(missing > directGuard, "core DB existence check must follow direct-execution guard");
+  assert.ok(identity > missing, "core DB identity must be revalidated before SQLite open");
+  assert.ok(open > identity, "core SQLite open must use only the revalidated DB path");
+  assert.ok(queryOnly > open, "core connection must be forced query-only after read-only open");
+  assert.match(core, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(core, /DB not found: \$\{DB_PATH\}/);
+  assert.doesNotMatch(core, /new DatabaseSync\(DB_PATH/);
+  assert.doesNotMatch(core, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
 });
 
 test("skip-interactions canonical entrypoint redacts private DB provenance only after guarded analysis returns", () => {
