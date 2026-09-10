@@ -35,3 +35,20 @@ test("calibration stability payout audit uses the same official settlement autho
   assert.match(source, /CALIBRATION_STABILITY_OFFICIAL_SETTLEMENT_INVALID/);
   assert.match(source, /payoutBasis: "official-race_payouts"/);
 });
+
+test("calibration stability payout audit pins integrity and coverage checks to one read snapshot", () => {
+  const source = readFileSync("scripts/audit-calibration-stability-payout-completeness.ts", "utf8");
+  const queryOnly = source.indexOf("PRAGMA query_only = ON");
+  const begin = source.indexOf('db.exec("BEGIN;")');
+  const blankResult = source.indexOf("const blankResult = db.prepare");
+  const invalidReturn = source.indexOf("const invalidReturn = db.prepare");
+  const settlementIntegrity = source.indexOf("const duplicateOrInvalid = db.prepare");
+  const coverage = source.indexOf("const rows = db.prepare");
+
+  assert.ok(queryOnly >= 0);
+  assert.ok(begin > queryOnly);
+  assert.ok(blankResult > begin);
+  assert.ok(invalidReturn > blankResult);
+  assert.ok(settlementIntegrity > invalidReturn);
+  assert.ok(coverage > settlementIntegrity);
+});

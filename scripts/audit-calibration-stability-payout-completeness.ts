@@ -8,6 +8,9 @@ const BOUNDARY = "2025-01-01";
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
+// Keep cohort, return-state, settlement-integrity, and coverage checks on one
+// append-only research snapshot so a concurrent ingest cannot split the audit.
+db.exec("BEGIN;");
 
 try {
   const blankResult = db.prepare(`
