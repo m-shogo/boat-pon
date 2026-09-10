@@ -37,19 +37,23 @@ test("condB historical payout preflight fails closed on empty or incomplete cove
   assert.match(preflight, /process\.exit\(2\)/);
 });
 
-test("canonical entrypoint verifies the primary DB before payout preflight and guarded analyzer import", () => {
+test("canonical entrypoint verifies the primary DB before payout preflight, then reverifies the analyzer handoff", () => {
   assert.match(entrypoint, /CONDB_SWITCH_HISTORICAL_PRIMARY_DB_MISSING/);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH/);
   assert.match(entrypoint, /CONDB_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(entrypoint, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(entrypoint, /CONDB_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH = handoffDbPath/);
   assert.doesNotMatch(entrypoint, /DB not found: \$\{DB_PATH\}/);
 
-  const identity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile");
+  const primaryIdentity = entrypoint.indexOf("CONDB_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID");
   const audit = entrypoint.indexOf("audit-condb-switch-historical-payout-completeness.ts");
+  const handoffIdentity = entrypoint.indexOf("CONDB_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID");
   const analyzer = entrypoint.indexOf("await import(\"./analyze-condb-switch-historical-closing-odds-raw\")");
-  assert.ok(identity >= 0);
-  assert.ok(audit > identity);
-  assert.ok(analyzer > audit);
+  assert.ok(primaryIdentity >= 0);
+  assert.ok(audit > primaryIdentity);
+  assert.ok(handoffIdentity > audit);
+  assert.ok(analyzer > handoffIdentity);
 });
 
 test("compatibility safe runner delegates to the canonical fail-closed entrypoint", () => {
