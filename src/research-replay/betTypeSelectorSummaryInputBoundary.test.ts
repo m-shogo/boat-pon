@@ -46,7 +46,7 @@ test("bet-type selector summary reverifies DB identity at handoff and redacts co
   assert.match(entry, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
   const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
   const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
-  const redact = entry.lastIndexOf("if (status === 0) redactDbProvenance(verifiedDbPath)");
+  const redact = entry.lastIndexOf("redactDbProvenance(verifiedDbPath)");
   assert.ok(handoff >= 0 && internalRun > handoff && redact > internalRun);
 });
 
@@ -59,6 +59,20 @@ test("bet-type selector summary verifies generated report identity before redact
   assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
+});
+
+test("bet-type selector summary validates generated JSON identity and parseability before successful exit", () => {
+  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_MISSING_AFTER_ANALYSIS/);
+  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID/);
+  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_INVALID/);
+  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID/);
+  const firstIdentity = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID"');
+  const read = entry.indexOf('readFileSync(verifiedJsonPath, "utf8")');
+  const handoffIdentity = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const invoke = entry.lastIndexOf("verifyJsonOutput()");
+  const exit = entry.lastIndexOf("process.exit(status)");
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read);
+  assert.ok(invoke > handoffIdentity && exit > invoke);
 });
 
 test("legacy raw selector summary path cannot bypass prerequisite report validation", () => {
