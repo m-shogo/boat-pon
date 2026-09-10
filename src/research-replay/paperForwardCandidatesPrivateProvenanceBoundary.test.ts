@@ -17,8 +17,18 @@ test("paper-forward core sanitizes all configured DB provenance after internal a
   assert.match(coreSource, /const OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(coreSource, /\.split\(handoffDbPath\)\.join\(OPAQUE_DB_SOURCE\)/);
   assert.match(coreSource, /\.replace\(\/\^DB:\.\*\$\/gm, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
-  assert.match(coreSource, /writeFileSync\(OUT_MD, redacted, "utf-8"\)/);
   assert.match(coreSource, /dbLines\.length !== 1/);
   assert.match(coreSource, /PAPER_FORWARD_CORE_DB_PROVENANCE_UNEXPECTED/);
   assert.match(coreSource, /PAPER_FORWARD_CORE_PRIVATE_DB_PATH_REMAINS/);
+});
+
+test("paper-forward core verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = coreSource.indexOf('"PAPER_FORWARD_CORE_REPORT_IDENTITY_INVALID"');
+  const read = coreSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const handoffIdentity = coreSource.indexOf('"PAPER_FORWARD_CORE_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = coreSource.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(coreSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(coreSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
 });
