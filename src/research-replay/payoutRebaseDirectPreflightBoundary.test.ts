@@ -25,6 +25,21 @@ test("canonical payout-rebase entrypoint passes only a verified opaque DB identi
   assert.match(entrypointSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
+test("canonical payout-rebase entrypoint redacts private DB provenance after successful analysis", () => {
+  const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
+  const successGuard = entrypointSource.indexOf("if (analysis !== 0)");
+  const redact = entrypointSource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+
+  assert.ok(analysis >= 0);
+  assert.ok(successGuard > analysis);
+  assert.ok(redact > successGuard, "private DB provenance must be sanitized only after successful analysis");
+  assert.match(entrypointSource, /const OPAQUE_DB_SOURCE = "primary research database"/u);
+  assert.match(entrypointSource, /const privateMarker = `DB: \$\{dbPath\}`/u);
+  assert.match(entrypointSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
+  assert.match(entrypointSource, /PAYOUT_REBASE_REPORT_MISSING_AFTER_ANALYSIS/u);
+  assert.match(entrypointSource, /PAYOUT_REBASE_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
+});
+
 test("internal payout-rebase analysis keeps canonical read-only database boundaries", () => {
   const verify = internalSource.indexOf("assertCanonicalSingleLinkRegularFile(DB_PATH");
   const open = internalSource.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
