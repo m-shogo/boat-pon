@@ -10,7 +10,7 @@ const pkg = readFileSync("package.json", "utf-8");
 
 test("paper-forward monitor entrypoint fails closed before verified internal report generation", () => {
   const preflight = entrypoint.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
-  const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const verify = entrypoint.indexOf("PAPER_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID");
   const report = entrypoint.indexOf('run("scripts/report-paper-forward-monitor-internal.ts"');
   const handoff = entrypoint.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
   assert.ok(preflight >= 0);

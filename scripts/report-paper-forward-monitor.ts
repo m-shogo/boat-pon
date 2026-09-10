@@ -29,7 +29,11 @@ function sanitizeDbProvenance(handoffDbPath: string): void {
     throw new Error("PAPER_FORWARD_MONITOR_REPORT_MISSING_AFTER_INTERNAL_SUCCESS");
   }
 
-  const report = readFileSync(OUT_MD, "utf-8");
+  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "PAPER_FORWARD_MONITOR_REPORT_IDENTITY_INVALID",
+  );
+  const report = readFileSync(verifiedReportPath, "utf-8");
   const sanitized = report
     .split(handoffDbPath).join(OPAQUE_DB_SOURCE)
     .replace(/^DB:.*$/gm, `DB: ${OPAQUE_DB_SOURCE}`);
@@ -38,7 +42,11 @@ function sanitizeDbProvenance(handoffDbPath: string): void {
     throw new Error("PAPER_FORWARD_MONITOR_PRIVATE_DB_PATH_REMAINS");
   }
 
-  writeFileSync(OUT_MD, sanitized, "utf-8");
+  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
+    verifiedReportPath,
+    "PAPER_FORWARD_MONITOR_REPORT_HANDOFF_IDENTITY_INVALID",
+  );
+  writeFileSync(handoffReportPath, sanitized, "utf-8");
 
   const dbLines = sanitized.match(/^DB:.*$/gm) ?? [];
   if (dbLines.length !== 1 || dbLines[0] !== `DB: ${OPAQUE_DB_SOURCE}`) {

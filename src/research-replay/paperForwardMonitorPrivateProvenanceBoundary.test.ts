@@ -17,7 +17,17 @@ test("paper-forward monitor sanitizes private DB provenance after internal repor
   assert.match(entrypointSource, /const OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entrypointSource, /\.split\(handoffDbPath\)\.join\(OPAQUE_DB_SOURCE\)/);
   assert.match(entrypointSource, /\.replace\(\/\^DB:\.\*\$\/gm, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
-  assert.match(entrypointSource, /writeFileSync\(OUT_MD, sanitized, "utf-8"\)/);
   assert.match(entrypointSource, /PAPER_FORWARD_MONITOR_PRIVATE_DB_PATH_REMAINS/);
   assert.match(entrypointSource, /PAPER_FORWARD_MONITOR_DB_PROVENANCE_UNEXPECTED/);
+});
+
+test("paper-forward monitor verifies generated report identity before provenance read and again before write", () => {
+  const firstIdentity = entrypointSource.indexOf('"PAPER_FORWARD_MONITOR_REPORT_IDENTITY_INVALID"');
+  const read = entrypointSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const handoffIdentity = entrypointSource.indexOf('"PAPER_FORWARD_MONITOR_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const write = entrypointSource.indexOf("writeFileSync(handoffReportPath");
+
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
 });
