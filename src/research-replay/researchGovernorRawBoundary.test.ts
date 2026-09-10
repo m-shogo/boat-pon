@@ -5,12 +5,14 @@ import test from "node:test";
 const entry = readFileSync("scripts/report-research-governor.ts", "utf8");
 const raw = readFileSync("scripts/report-research-governor-raw.ts", "utf8");
 
-test("research governor routes the verified DB through a guarded raw handoff", () => {
+test("research governor routes the verified DB through an in-process guarded raw handoff", () => {
   const preflight = entry.indexOf('run("scripts/audit-research-governor-readiness.ts")');
   const handoff = entry.indexOf("RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID");
-  const rawRun = entry.indexOf('run("scripts/report-research-governor-raw.ts"');
+  const envHandoff = entry.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
+  const rawImport = entry.indexOf('await import("./report-research-governor-raw")');
 
-  assert.ok(preflight >= 0 && handoff > preflight && rawRun > handoff);
+  assert.ok(preflight >= 0 && handoff > preflight && envHandoff > handoff && rawImport > envHandoff);
+  assert.equal(entry.includes('run("scripts/report-research-governor-raw.ts"'), false);
   assert.equal(entry.includes('run("scripts/report-research-governor-internal.ts"'), false);
 });
 

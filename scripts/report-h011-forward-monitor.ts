@@ -6,7 +6,6 @@
  * aggregation is allowed to run.
  */
 
-import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -94,10 +93,5 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   "H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID",
 );
 
-const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/report-h011-forward-monitor-raw.ts"], {
-  stdio: "inherit",
-  env: { ...process.env, BOAT_PON_DB_PATH: handoffDbPath },
-});
-
-if (result.error) throw result.error;
-if (result.status !== 0) process.exit(result.status ?? 1);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
+await import("./report-h011-forward-monitor-raw");

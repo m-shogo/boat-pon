@@ -41,8 +41,5 @@ assertCanonicalSingleLinkRegularFile(
   CANDIDATES_PATH,
   "EXACTA_FORWARD_MONITOR_CANDIDATE_IDENTITY_INVALID",
 );
-const monitor = run("scripts/report-exacta-forward-monitor-raw.ts", {
-  ...process.env,
-  BOAT_PON_DB_PATH: handoffDbPath,
-});
-if (monitor !== 0) process.exit(monitor);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
+await import("./report-exacta-forward-monitor-raw");
