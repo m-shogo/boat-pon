@@ -55,6 +55,7 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 const analysis = run("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: verifiedDbPath,
+  BOAT_PON_WIND24_CORE_GUARD: "1",
 });
 if (analysis !== 0) {
   console.error("[wind24-switch] deep-dive failed after a successful settlement completeness preflight");
