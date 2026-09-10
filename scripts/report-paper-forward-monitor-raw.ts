@@ -7,11 +7,12 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
-function run(script: string): number {
+function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
-    env: process.env,
+    env,
   });
   if (result.error) {
     console.error(`[paper-forward-monitor-raw] failed to start ${script}: ${result.error.message}`);
@@ -26,7 +27,16 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-const report = run("scripts/report-paper-forward-monitor-internal.ts");
+const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  configuredDbPath,
+  "PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID",
+);
+
+const report = run("scripts/report-paper-forward-monitor-internal.ts", {
+  ...process.env,
+  BOAT_PON_DB_PATH: handoffDbPath,
+});
 if (report !== 0) {
   console.error("[paper-forward-monitor-raw] internal monitor aggregation failed after a successful settlement preflight");
   process.exit(report);
