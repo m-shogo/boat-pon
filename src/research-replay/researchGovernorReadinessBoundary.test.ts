@@ -32,8 +32,18 @@ test("research governor readiness rejects decision cohort drift and misleading n
   assert.match(preflight, /RESEARCH_GOVERNOR_TRIFECTA_COVERAGE_INVALID/);
 });
 
-test("legacy governor remains report-only behind the guard", () => {
-  assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
+test("legacy governor revalidates the DB and remains report-only behind the guard", () => {
+  assert.match(internal, /RESEARCH_GOVERNOR_INTERNAL_DB_MISSING/);
+  assert.match(internal, /RESEARCH_GOVERNOR_INTERNAL_DB_IDENTITY_INVALID/);
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(internal, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
+  assert.match(internal, /PRAGMA query_only = ON/);
+  assert.doesNotMatch(internal, /DB not found: \$\{/);
   assert.match(internal, /app_settings \/ 本番 decision \/ 自動投票 は絶対に変更しない/);
   assert.match(internal, /futureOnlySwitchReady/);
+
+  const identity = internal.indexOf("RESEARCH_GOVERNOR_INTERNAL_DB_IDENTITY_INVALID");
+  const dbOpen = internal.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = internal.indexOf('db.exec("PRAGMA query_only = ON;")');
+  assert.ok(identity >= 0 && dbOpen > identity && queryOnly > dbOpen);
 });
