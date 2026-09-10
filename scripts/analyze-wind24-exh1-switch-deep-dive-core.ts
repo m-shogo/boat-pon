@@ -32,6 +32,7 @@ const result = spawnSync(process.execPath, ["--import", tsxLoader, internalPath]
     ...process.env,
     BOAT_PON_DB_PATH: verifiedDbPath,
     BOAT_PON_WIND24_CORE_GUARD: "0",
+    BOAT_PON_WIND24_INTERNAL_GUARD: "1",
   },
 });
 if (result.error || result.status !== 0) {
