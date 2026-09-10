@@ -32,11 +32,15 @@ test("ROI skip-policy raw compatibility module rejects direct CLI execution", ()
   assert.ok(internal > failure);
 });
 
-test("ROI skip-policy legacy safe runner checks payout completeness before internal simulation", () => {
+test("ROI skip-policy legacy safe runner checks payout completeness and DB identity before internal simulation", () => {
   const preflight = runnerSource.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
-  const analysis = runnerSource.indexOf('run("scripts/analyze-roi-skip-policy-simulation-internal.ts")');
+  const identity = runnerSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const analysis = runnerSource.indexOf('run("scripts/analyze-roi-skip-policy-simulation-internal.ts"');
   assert.ok(preflight >= 0);
-  assert.ok(analysis > preflight);
+  assert.ok(identity > preflight);
+  assert.ok(analysis > identity);
+  assert.match(runnerSource, /ROI_SKIP_POLICY_LEGACY_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.match(runnerSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
   assert.doesNotMatch(runnerSource, /run\("scripts\/analyze-roi-skip-policy-simulation-raw\.ts"\)/);
   assert.doesNotMatch(runnerSource, /run\("scripts\/analyze-roi-skip-policy-simulation\.ts"\)/);
 });
