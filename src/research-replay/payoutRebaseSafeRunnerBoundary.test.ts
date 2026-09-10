@@ -23,10 +23,12 @@ test("payout rebase safe runner fails closed before classifications when preflig
   assert.ok(guard >= 0 && guard < analysis, "preflight failure guard must precede guarded payout rebase entrypoint");
 });
 
-test("direct payout rebase entrypoint independently retains the same preflight boundary", () => {
+test("direct payout rebase entrypoint independently retains preflight and verified DB handoff boundaries", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
-  const internal = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts")');
-  assert.ok(preflight >= 0 && internal > preflight, "direct invocation must not bypass settlement integrity preflight");
+  const verify = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const internal = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
+  assert.ok(preflight >= 0 && verify > preflight, "direct invocation must verify DB identity only after settlement preflight");
+  assert.ok(internal > verify, "internal analysis must run only after the verified DB handoff");
 });
 
 test("legacy payout rebase implementation still depends on official payout values and remains research-only", () => {
