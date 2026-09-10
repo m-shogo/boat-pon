@@ -31,6 +31,19 @@ test("event-context screen fails closed on database identity and settlement comp
   assert.doesNotMatch(source, /row\.payout_yen \?\? 0/);
 });
 
+test("event-context screen pins settlement validation and analyzed population to one read snapshot", () => {
+  const source = readFileSync("scripts/analyze-event-market-context.ts", "utf8");
+  const queryOnly = source.indexOf("PRAGMA query_only=ON");
+  const begin = source.indexOf('db.exec("BEGIN;")');
+  const settlement = source.indexOf("assertSettlementCompleteness();");
+  const population = source.indexOf("const rows = db.prepare");
+
+  assert.ok(queryOnly >= 0);
+  assert.ok(begin > queryOnly);
+  assert.ok(settlement > begin);
+  assert.ok(population > settlement);
+});
+
 test("event-context payout audit enforces the same exact settlement authority", () => {
   const source = readFileSync("scripts/audit-event-market-context-payout-completeness.ts", "utf8");
 

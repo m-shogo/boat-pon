@@ -35,6 +35,9 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+// Pin settlement validation and the analyzed exacta population to one
+// append-only research snapshot so the report cannot outgrow its preflight.
+db.exec("BEGIN;");
 try {
   assertSettlementCompleteness();
 
