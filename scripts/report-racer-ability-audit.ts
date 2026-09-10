@@ -37,7 +37,12 @@ try {
   const workspaceCandidates = join(workspace, configuredCandidatesPath);
   mkdirSync(dirname(workspaceCandidates), { recursive: true });
   mkdirSync(join(workspace, "reports"), { recursive: true });
-  copyFileSync(verifiedCandidatesPath, workspaceCandidates);
+
+  const handoffCandidatesSourcePath = assertCanonicalSingleLinkRegularFile(
+    verifiedCandidatesPath,
+    "RACER_ABILITY_AUDIT_CANDIDATES_SOURCE_HANDOFF_IDENTITY_INVALID",
+  );
+  copyFileSync(handoffCandidatesSourcePath, workspaceCandidates);
 
   const handoffDbPath = assertCanonicalSingleLinkRegularFile(
     verifiedDbPath,
