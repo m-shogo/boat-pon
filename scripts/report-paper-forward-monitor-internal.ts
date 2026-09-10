@@ -15,18 +15,31 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+if (process.env.BOAT_PON_PAPER_FORWARD_MONITOR_INTERNAL_GUARD !== "1") {
+  throw new Error("PAPER_FORWARD_MONITOR_INTERNAL_DIRECT_EXECUTION_FORBIDDEN");
+}
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD  = "reports/paper-forward-monitor.md";
 const OUT_JSON = "reports/paper-forward-monitor.json";
+const OPAQUE_DB_SOURCE = "primary research database";
 const FORWARD_START = process.env.FORWARD_START_DATE ?? "2025-01-01";
 const STAKE = 100;
 
 const EXCLUDED_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCLUDED_RACE_NOS = [10, 11, 12];
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) {
+  throw new Error("PAPER_FORWARD_MONITOR_INTERNAL_DB_MISSING");
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "PAPER_FORWARD_MONITOR_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 const BASE_WHERE_ALL = `
@@ -362,7 +375,7 @@ const trendIcon   = (t: string): string => ({ "再現": "✅", "forward急伸": 
 let md = `# paper-forward モニターレポート
 
 生成日時: ${now}
-DB: ${DB_PATH}
+DB: ${OPAQUE_DB_SOURCE}
 forward 開始日: **${FORWARD_START}**（それ以前を訓練期、以降を forward 期とする）
 
 > **ROI基準**: race_payouts.payout_yen 実払戻（current_odds は参考値のみ）
