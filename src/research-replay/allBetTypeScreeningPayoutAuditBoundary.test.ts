@@ -30,6 +30,19 @@ test("all-bet-type screening fails closed on unknown return state before settlem
   assert.ok(coverage > guard, "unknown/returned BUY rows must be rejected before payout coverage can be accepted");
 });
 
+test("all-bet-type screening payout audit pins return-state validation and coverage to one read snapshot", () => {
+  const source = readFileSync("scripts/audit-all-bet-type-screening-payout-completeness.ts", "utf8");
+  const queryOnly = source.indexOf("PRAGMA query_only = ON");
+  const begin = source.indexOf('db.exec("BEGIN;")');
+  const returnState = source.indexOf("const invalidReturnedBuy = db.prepare");
+  const coverage = source.indexOf("const rows = db.prepare");
+
+  assert.ok(queryOnly >= 0);
+  assert.ok(begin > queryOnly);
+  assert.ok(returnState > begin);
+  assert.ok(coverage > returnState);
+});
+
 test("normal all-bet-type screening entrypoint cannot bypass payout audit", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
   const runner = readFileSync("scripts/run-all-bet-type-screening-safe.ts", "utf8");
