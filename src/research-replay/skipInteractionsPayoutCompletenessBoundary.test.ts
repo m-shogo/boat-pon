@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const entrypoint = readFileSync("scripts/analyze-roi-skip-interactions.ts", "utf-8");
+const raw = readFileSync("scripts/analyze-roi-skip-interactions-raw.ts", "utf-8");
 const audit = readFileSync("scripts/audit-roi-skip-interactions-payout-completeness.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
@@ -10,15 +11,16 @@ test("skip-interactions command cannot bypass settlement completeness", () => {
   assert.equal(pkg.scripts?.["analyze:roi-skip-interactions"], "tsx scripts/analyze-roi-skip-interactions.ts");
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
   const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
-  const core = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-core.ts"');
+  const guarded = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-raw.ts"');
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight);
-  assert.ok(core > verify);
+  assert.ok(guarded > verify);
   assert.match(entrypoint, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-roi-skip-interactions-core.ts")), false);
+  assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-roi-skip-interactions-raw.ts")), false);
 });
 
-test("skip-interactions canonical entrypoint re-verifies DB identity before the core reopens SQLite", () => {
+test("skip-interactions canonical entrypoint re-verifies DB identity before guarded raw handoff", () => {
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIMARY_DB_MISSING/);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID/);
   assert.doesNotMatch(entrypoint, /DB not found:/);
@@ -26,12 +28,24 @@ test("skip-interactions canonical entrypoint re-verifies DB identity before the 
 
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
   const verify = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(");
-  const analysis = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-core.ts"');
+  const analysis = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-raw.ts"');
   assert.ok(preflight >= 0 && verify > preflight && analysis > verify);
+  assert.equal(entrypoint.includes("analyze-roi-skip-interactions-core.ts"), false);
+});
+
+test("skip-interactions guarded raw compatibility module revalidates DB identity immediately before core import", () => {
+  const directGuard = raw.indexOf("ROI_SKIP_INTERACTIONS_RAW_DIRECT_EXECUTION_FORBIDDEN");
+  const identity = raw.indexOf("ROI_SKIP_INTERACTIONS_RAW_DB_IDENTITY_INVALID");
+  const coreImport = raw.indexOf('await import("./analyze-roi-skip-interactions-core")');
+
+  assert.ok(directGuard >= 0 && identity > directGuard && coreImport > identity);
+  assert.match(raw, /ROI_SKIP_INTERACTIONS_RAW_DB_MISSING/);
+  assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(raw, /DB not found: \$\{/);
 });
 
 test("skip-interactions canonical entrypoint redacts private DB provenance after successful analysis", () => {
-  const analysis = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-core.ts"');
+  const analysis = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-raw.ts"');
   const successGuard = entrypoint.indexOf("if (analysis !== 0)");
   const redact = entrypoint.lastIndexOf("redactDbProvenance(verifiedDbPath)");
 
