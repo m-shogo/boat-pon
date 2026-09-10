@@ -7,7 +7,11 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+const OUT_MD = "reports/wind24-exh1-switch-deep-dive.md";
+const OPAQUE_DB_SOURCE = "primary research database";
 
 function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -20,6 +24,20 @@ function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
     return 1;
   }
   return result.status ?? 1;
+}
+
+function redactDbProvenance(dbPath: string): void {
+  if (!existsSync(OUT_MD)) {
+    throw new Error("WIND24_SWITCH_REPORT_MISSING_AFTER_ANALYSIS");
+  }
+
+  const report = readFileSync(OUT_MD, "utf-8");
+  const privateMarker = `DB: ${dbPath}`;
+  if (!report.includes(privateMarker)) {
+    throw new Error("WIND24_SWITCH_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
+  }
+
+  writeFileSync(OUT_MD, report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`), "utf-8");
 }
 
 const preflight = run("scripts/audit-wind24-exh1-switch-payout-completeness.ts");
@@ -43,4 +61,5 @@ if (analysis !== 0) {
   process.exit(analysis);
 }
 
+redactDbProvenance(verifiedDbPath);
 console.log("[wind24-switch] PASS: settlement completeness preflight passed before deep-dive analysis");
