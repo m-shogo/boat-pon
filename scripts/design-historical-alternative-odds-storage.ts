@@ -10,6 +10,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/historical-alternative-odds-storage-design.md";
@@ -29,9 +30,13 @@ const EXH1   = `EXISTS (SELECT 1 FROM race_entries re
     AND ed.exhibition_time = (SELECT MIN(ed2.exhibition_time) FROM exhibition_data ed2
       WHERE ed2.race_id=dh.race_id))`;
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+if (!existsSync(DB_PATH)) throw new Error("HISTORICAL_ALT_ODDS_DESIGN_PRIMARY_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "HISTORICAL_ALT_ODDS_DESIGN_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 const excl_v = EXCL_VENUES.map(v => `'${v}'`).join(",");
 const excl_r = EXCL_RACES.join(",");
