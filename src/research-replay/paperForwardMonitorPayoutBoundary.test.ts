@@ -24,10 +24,15 @@ test("paper-forward monitor entrypoint fails closed before verified internal rep
 
 test("paper-forward monitor raw compatibility entrypoint is independently guarded and DB-free", () => {
   const preflight = raw.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
-  const report = raw.indexOf('run("scripts/report-paper-forward-monitor-internal.ts")');
+  const verify = raw.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const report = raw.indexOf('run("scripts/report-paper-forward-monitor-internal.ts"');
+  const handoff = raw.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
   assert.ok(preflight >= 0);
-  assert.ok(report > preflight);
+  assert.ok(verify > preflight, "raw DB identity must be reverified after settlement preflight");
+  assert.ok(report > verify, "raw internal aggregation must start only after DB identity revalidation");
+  assert.ok(handoff > report, "raw internal aggregation must receive only the verified DB path");
   assert.match(raw, /FAIL CLOSED: official trifecta settlement coverage\/integrity did not pass/);
+  assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID/);
   assert.doesNotMatch(raw, /new DatabaseSync/);
 });
 
