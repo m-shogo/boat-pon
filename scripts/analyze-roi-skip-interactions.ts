@@ -5,11 +5,13 @@
  * zero-return observation in skip/intersection residual analysis.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_MD = "reports/roi-skip-interactions.md";
+const OPAQUE_DB_SOURCE = "primary research database";
 
 function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -22,6 +24,24 @@ function run(script: string, env = process.env): number {
     return 1;
   }
   return result.status ?? 1;
+}
+
+function redactDbProvenance(dbPath: string): void {
+  if (!existsSync(OUT_MD)) {
+    throw new Error("ROI_SKIP_INTERACTIONS_REPORT_MISSING_AFTER_ANALYSIS");
+  }
+
+  const report = readFileSync(OUT_MD, "utf-8");
+  const privateMarker = `DB: ${dbPath}`;
+  if (!report.includes(privateMarker)) {
+    throw new Error("ROI_SKIP_INTERACTIONS_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
+  }
+
+  writeFileSync(
+    OUT_MD,
+    report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
+    "utf-8",
+  );
 }
 
 const preflight = run("scripts/audit-roi-skip-interactions-payout-completeness.ts");
@@ -47,4 +67,5 @@ if (analysis !== 0) {
   process.exit(analysis);
 }
 
+redactDbProvenance(verifiedDbPath);
 console.log("[skip-interactions] PASS: settlement completeness preflight and DB identity verification passed before interaction analysis");
