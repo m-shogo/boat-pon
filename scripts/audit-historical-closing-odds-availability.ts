@@ -47,6 +47,11 @@ if (Number(invalidCohort.invalid ?? 0) > 0) {
 
 db.close();
 
-// Keep the implementation read-only and force it to use the verified canonical path.
-process.env.BOAT_PON_DB_PATH = verifiedDbPath;
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  verifiedDbPath,
+  "HISTORICAL_CLOSING_ODDS_AUDIT_DB_HANDOFF_IDENTITY_INVALID",
+);
+
+// Keep the implementation read-only and force it to use the re-verified canonical path.
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
 await import("./audit-historical-closing-odds-availability-internal");
