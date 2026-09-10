@@ -35,15 +35,23 @@ test("exacta residual payout audit requires one scalar winning settlement per ra
   assert.doesNotMatch(source, /WHEN COUNT\(\*\) >= 1/);
 });
 
-test("direct exacta residual entrypoint cannot bypass payout audit", () => {
+test("direct exacta residual entrypoint cannot bypass payout audit or DB handoff verification", () => {
   const source = readFileSync("scripts/analyze-exacta-market-residual-sweep.ts", "utf8");
+  const primaryIdentityIndex = source.indexOf("EXACTA_MARKET_RESIDUAL_PRIMARY_DB_IDENTITY_INVALID");
   const auditIndex = source.indexOf("audit-exacta-market-residual-payout-completeness.ts");
-  const rawIndex = source.indexOf("analyze-exacta-market-residual-sweep-raw.ts");
   const statusGateIndex = source.indexOf("audit.status !== 0");
+  const handoffIdentityIndex = source.indexOf("EXACTA_MARKET_RESIDUAL_DB_HANDOFF_IDENTITY_INVALID");
+  const rawIndex = source.indexOf("analyze-exacta-market-residual-sweep-raw.ts");
 
-  assert.ok(auditIndex >= 0);
+  assert.match(source, /EXACTA_MARKET_RESIDUAL_DB_MISSING/);
+  assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
+  assert.ok(primaryIdentityIndex >= 0);
+  assert.ok(auditIndex > primaryIdentityIndex);
   assert.ok(statusGateIndex > auditIndex);
-  assert.ok(rawIndex > statusGateIndex);
+  assert.ok(handoffIdentityIndex > statusGateIndex);
+  assert.ok(rawIndex > handoffIdentityIndex);
+  assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(source, /BOAT_PON_DB_PATH: handoffDbPath/);
   assert.doesNotMatch(source, /DatabaseSync/);
 });
 
