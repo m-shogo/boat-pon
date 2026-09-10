@@ -31,13 +31,21 @@ function redactDbProvenance(dbPath: string): void {
     throw new Error("WIND24_SWITCH_REPORT_MISSING_AFTER_ANALYSIS");
   }
 
-  const report = readFileSync(OUT_MD, "utf-8");
+  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "WIND24_SWITCH_REPORT_IDENTITY_INVALID",
+  );
+  const report = readFileSync(verifiedReportPath, "utf-8");
   const privateMarker = `DB: ${dbPath}`;
   if (!report.includes(privateMarker)) {
     throw new Error("WIND24_SWITCH_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
   }
 
-  writeFileSync(OUT_MD, report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`), "utf-8");
+  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
+    verifiedReportPath,
+    "WIND24_SWITCH_REPORT_HANDOFF_IDENTITY_INVALID",
+  );
+  writeFileSync(handoffReportPath, report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`), "utf-8");
 }
 
 const preflight = run("scripts/audit-wind24-exh1-switch-payout-completeness.ts");
