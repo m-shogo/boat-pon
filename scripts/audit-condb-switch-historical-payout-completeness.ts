@@ -25,6 +25,10 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 );
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
+// Keep every cohort/settlement check on the same SQLite snapshot. The research DB
+// is append-only, so separate autocommit SELECTs could otherwise observe different
+// ingestion states within one preflight run.
+db.exec("BEGIN;");
 
 try {
   const venuePlaceholders = EXCL_VENUES.map(() => "?").join(",");
