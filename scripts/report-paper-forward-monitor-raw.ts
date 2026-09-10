@@ -70,6 +70,7 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 const report = run("scripts/report-paper-forward-monitor-internal.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: handoffDbPath,
+  BOAT_PON_PAPER_FORWARD_MONITOR_INTERNAL_GUARD: "1",
 });
 if (report !== 0) {
   console.error("[paper-forward-monitor-raw] internal monitor aggregation failed after a successful settlement preflight");
