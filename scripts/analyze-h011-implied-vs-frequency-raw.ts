@@ -32,6 +32,7 @@ import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { historicalExactaCanonicalSourcePredicate } from "../src/research-replay/historicalExactaMarketAuthority";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const rawEntrypointPath = resolve(fileURLToPath(import.meta.url));
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
@@ -44,7 +45,11 @@ const OUT_MD   = "reports/h011-implied-vs-frequency.md";
 const OUT_JSON = "reports/h011-implied-vs-frequency.json";
 
 if (!existsSync(DB_PATH)) throw new Error("H011_PRIMARY_DB_MISSING");
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "H011_RAW_PRIMARY_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout = 5000;");
 
 const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
