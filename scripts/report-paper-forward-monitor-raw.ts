@@ -7,7 +7,11 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+const OUT_MD = "reports/paper-forward-monitor.md";
+const OPAQUE_DB_SOURCE = "primary research database";
 
 function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -19,6 +23,28 @@ function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
     return 1;
   }
   return result.status ?? 1;
+}
+
+function sanitizeDbProvenance(handoffDbPath: string): void {
+  if (!existsSync(OUT_MD)) {
+    throw new Error("PAPER_FORWARD_MONITOR_RAW_REPORT_MISSING_AFTER_INTERNAL_SUCCESS");
+  }
+
+  const report = readFileSync(OUT_MD, "utf-8");
+  const sanitized = report
+    .split(handoffDbPath).join(OPAQUE_DB_SOURCE)
+    .replace(/^DB:.*$/gm, `DB: ${OPAQUE_DB_SOURCE}`);
+
+  if (sanitized.includes(handoffDbPath)) {
+    throw new Error("PAPER_FORWARD_MONITOR_RAW_PRIVATE_DB_PATH_REMAINS");
+  }
+
+  writeFileSync(OUT_MD, sanitized, "utf-8");
+
+  const dbLines = sanitized.match(/^DB:.*$/gm) ?? [];
+  if (dbLines.length !== 1 || dbLines[0] !== `DB: ${OPAQUE_DB_SOURCE}`) {
+    throw new Error("PAPER_FORWARD_MONITOR_RAW_DB_PROVENANCE_UNEXPECTED");
+  }
 }
 
 const preflight = run("scripts/audit-paper-forward-monitor-payout-completeness.ts");
@@ -42,4 +68,5 @@ if (report !== 0) {
   process.exit(report);
 }
 
+sanitizeDbProvenance(handoffDbPath);
 console.log("[paper-forward-monitor-raw] PASS: settlement preflight passed before internal monitor aggregation");
