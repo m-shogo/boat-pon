@@ -17,6 +17,7 @@ test("paper-forward core cannot bypass official settlement completeness when inv
   assert.ok(internalRun > handoffIdentity, "internal aggregation must run only after DB handoff identity verification");
   assert.match(core, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
   assert.match(core, /BOAT_PON_DB_PATH: handoffDbPath/);
+  assert.match(core, /BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1"/);
 });
 
 test("paper-forward public raw compatibility entrypoint is guarded and DB-free", () => {
@@ -27,10 +28,25 @@ test("paper-forward public raw compatibility entrypoint is guarded and DB-free",
   const internalRun = raw.indexOf('run("scripts/report-paper-forward-candidates-internal.ts"');
   assert.ok(preflight >= 0, "raw compatibility entrypoint must invoke settlement preflight");
   assert.ok(internalRun > preflight, "raw compatibility entrypoint must not aggregate before preflight");
+  assert.match(raw, /BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1"/);
   assert.doesNotMatch(raw, /new DatabaseSync/u);
 });
 
-test("paper-forward aggregation implementation remains read-only behind guarded entrypoints", () => {
-  assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
+test("paper-forward aggregation implementation fails closed and hardens the actual SQLite boundary", () => {
+  const guard = internal.indexOf('process.env.BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD !== "1"');
+  const missing = internal.indexOf("PAPER_FORWARD_INTERNAL_DB_MISSING");
+  const identity = internal.indexOf("assertCanonicalSingleLinkRegularFile(");
+  const open = internal.indexOf("new DatabaseSync(verifiedDbPath");
+  const queryOnly = internal.indexOf("PRAGMA query_only = ON");
+
+  assert.ok(guard >= 0, "internal aggregation must reject direct execution");
+  assert.ok(missing > guard, "opaque missing guard must run after caller guard");
+  assert.ok(identity > missing, "DB identity must be reverified inside the internal aggregation boundary");
+  assert.ok(open > identity, "SQLite must open only the reverified DB path");
+  assert.ok(queryOnly > open, "the actual SQLite connection must be forced into query-only mode");
+  assert.match(internal, /PAPER_FORWARD_INTERNAL_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(internal, /PAPER_FORWARD_INTERNAL_DB_IDENTITY_INVALID/);
+  assert.match(internal, /readOnly: true/);
+  assert.doesNotMatch(internal, /DB not found: \\?\$\{[^}]+\}/u);
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
 });

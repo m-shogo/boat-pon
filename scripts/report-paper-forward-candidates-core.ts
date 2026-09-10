@@ -65,6 +65,7 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 const internal = run("scripts/report-paper-forward-candidates-internal.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: handoffDbPath,
+  BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1",
 });
 if (internal !== 0) {
   console.error("[paper-forward-core] internal candidate aggregation failed after a successful settlement completeness preflight");
