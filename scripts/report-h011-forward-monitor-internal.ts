@@ -27,13 +27,19 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/h011-forward-monitor.md";
 const OUT_JSON = "reports/h011-forward-monitor.json";
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
+if (!existsSync(DB_PATH)) throw new Error("H011_FORWARD_INTERNAL_DB_MISSING");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "H011_FORWARD_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON;");
 db.exec("PRAGMA busy_timeout = 5000;");
 
 // forward monitor 開始日。H011 を未来で検証するための境界。
@@ -503,7 +509,7 @@ const jsonOutput = {
 };
 writeFileSync(OUT_JSON, JSON.stringify(jsonOutput, null, 2), "utf-8");
 
-// ─── コンソール ───────────────────────────────────────────────────────────────
+// ─── コンソール ────────────────────────────────────────────────────────────────
 
 console.log(`\n=== run_kind 診断 ===`);
 console.log(`  最新BUY date: ${latestDate} / monitor対象: ${RUN_KIND}`);
