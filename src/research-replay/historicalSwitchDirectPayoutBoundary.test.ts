@@ -85,6 +85,18 @@ for (const c of CASES) {
     assert.ok(coverage > returnStateGate);
   });
 
+  test(`${c.alias} payout audit pins cohort and settlement checks to one read snapshot`, () => {
+    const source = readFileSync(c.auditPath, "utf8");
+    const queryOnly = source.indexOf("PRAGMA query_only = ON");
+    const begin = source.indexOf('db.exec("BEGIN;")');
+    const contamination = source.indexOf("const contamination = db.prepare");
+    const coverage = source.indexOf("const row = db.prepare");
+    assert.ok(queryOnly >= 0);
+    assert.ok(begin > queryOnly);
+    assert.ok(contamination > begin);
+    assert.ok(coverage > contamination);
+  });
+
   test(`${c.alias} payout audit rejects decision cohort drift before settlement coverage`, () => {
     const source = readFileSync(c.auditPath, "utf8");
     const contamination = source.indexOf("const contamination = db.prepare");

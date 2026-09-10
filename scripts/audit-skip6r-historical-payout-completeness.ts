@@ -13,6 +13,8 @@ const exclRaces = EXCL_RACES.join(",");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
+// Keep cohort and settlement integrity checks on one append-only research snapshot.
+db.exec("BEGIN;");
 
 try {
   const contamination = db.prepare(`
