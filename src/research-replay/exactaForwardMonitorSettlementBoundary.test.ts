@@ -42,6 +42,17 @@ test("exacta forward raw compatibility module revalidates identities immediately
   assert.match(raw, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/u);
 });
 
+test("exacta forward preflight verifies frozen candidate lock identity before reading it", () => {
+  const dbIdentity = preflight.indexOf("EXACTA_FORWARD_MONITOR_DB_IDENTITY_INVALID");
+  const lockIdentity = preflight.indexOf("EXACTA_FORWARD_MONITOR_LOCK_IDENTITY_INVALID");
+  const lockRead = preflight.indexOf('readFileSync(verifiedLockPath, "utf8")');
+  const open = preflight.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+
+  assert.ok(dbIdentity >= 0 && lockIdentity > dbIdentity && lockRead > lockIdentity && open > lockRead);
+  assert.match(preflight, /assertCanonicalSingleLinkRegularFile\(LOCK_PATH/);
+  assert.doesNotMatch(preflight, /readFileSync\(LOCK_PATH/);
+});
+
 test("exacta forward preflight fails closed on decision cohort drift and invalid settlement lines", () => {
   assert.match(preflight, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(preflight, /readOnly: true/);
