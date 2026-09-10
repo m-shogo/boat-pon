@@ -23,13 +23,15 @@ test("H011 forward monitor validates exacta settlement integrity and DB handoff 
   assert.match(entry, /integrity\.ambiguous !== 0/);
   assert.match(entry, /H011_FORWARD_EXACTA_SETTLEMENT_INTEGRITY_FAILED/);
   assert.match(entry, /H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID/);
-  assert.match(entry, /BOAT_PON_DB_PATH: handoffDbPath/);
+  assert.match(entry, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
 
   const gate = entry.indexOf("H011_FORWARD_EXACTA_SETTLEMENT_INTEGRITY_FAILED");
   const handoff = entry.indexOf("H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID");
-  const run = entry.indexOf("report-h011-forward-monitor-raw.ts");
+  const envHandoff = entry.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
+  const run = entry.indexOf('await import("./report-h011-forward-monitor-raw")');
   assert.ok(gate >= 0 && handoff > gate, "database identity must be reverified after settlement integrity passes");
-  assert.ok(run > handoff, "guarded raw handoff must start only after DB handoff revalidation");
+  assert.ok(envHandoff > handoff && run > envHandoff, "guarded raw handoff must import in-process only after DB revalidation");
+  assert.equal(entry.includes('spawnSync(process.execPath, ["--import", "tsx", "scripts/report-h011-forward-monitor-raw.ts"]'), false);
   assert.equal(entry.includes("report-h011-forward-monitor-internal.ts"), false);
 });
 
