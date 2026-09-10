@@ -39,9 +39,18 @@ try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
   copyFileSync(verifiedCandidatesPath, workspaceCandidates);
 
+  const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+    verifiedDbPath,
+    "RACER_ABILITY_AUDIT_DB_HANDOFF_IDENTITY_INVALID",
+  );
+  assertCanonicalSingleLinkRegularFile(
+    workspaceCandidates,
+    "RACER_ABILITY_AUDIT_CANDIDATES_HANDOFF_IDENTITY_INVALID",
+  );
+
   const child = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: handoffDbPath },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
