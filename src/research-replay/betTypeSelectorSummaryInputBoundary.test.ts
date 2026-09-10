@@ -35,6 +35,21 @@ test("bet-type selector summary fails closed on missing, non-canonical, invalid,
   assert.equal(pkg.scripts?.["report:bet-type-selector"], "tsx scripts/report-bet-type-selector-summary.ts");
 });
 
+test("bet-type selector summary reverifies DB identity at handoff and redacts configured DB provenance after successful analysis", () => {
+  assert.match(entry, /BET_TYPE_SELECTOR_DB_MISSING/);
+  assert.match(entry, /BET_TYPE_SELECTOR_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "BET_TYPE_SELECTOR_DB_HANDOFF_IDENTITY_INVALID"\)/);
+  assert.match(entry, /env: \{ \.\.\.process\.env, BOAT_PON_DB_PATH: verifiedDbPath \}/);
+  assert.match(entry, /BET_TYPE_SELECTOR_REPORT_MISSING_AFTER_ANALYSIS/);
+  assert.match(entry, /BET_TYPE_SELECTOR_DB_PROVENANCE_NOT_FOUND/);
+  assert.match(entry, /OPAQUE_DB_SOURCE = "primary research database"/);
+  assert.match(entry, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
+  const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
+  const redact = entry.lastIndexOf("if (status === 0) redactDbProvenance(verifiedDbPath)");
+  assert.ok(handoff >= 0 && internalRun > handoff && redact > internalRun);
+});
+
 test("legacy raw selector summary path cannot bypass prerequisite report validation", () => {
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
