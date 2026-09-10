@@ -34,19 +34,20 @@ function redactDbProvenance(handoffDbPath: string): void {
   }
 
   const report = readFileSync(OUT_MD, "utf-8");
-  const configuredProvenance = `DB: ${handoffDbPath}`;
-  if (!report.includes(configuredProvenance)) {
-    if (/^DB:/m.test(report)) {
-      throw new Error("PAPER_FORWARD_CORE_DB_PROVENANCE_UNEXPECTED");
-    }
-    return;
-  }
+  const redacted = report
+    .split(handoffDbPath).join(OPAQUE_DB_SOURCE)
+    .replace(/^DB:.*$/gm, `DB: ${OPAQUE_DB_SOURCE}`);
 
-  const redacted = report.replace(configuredProvenance, `DB: ${OPAQUE_DB_SOURCE}`);
   if (redacted.includes(handoffDbPath)) {
     throw new Error("PAPER_FORWARD_CORE_PRIVATE_DB_PATH_REMAINS");
   }
+
   writeFileSync(OUT_MD, redacted, "utf-8");
+
+  const dbLines = redacted.match(/^DB:.*$/gm) ?? [];
+  if (dbLines.length !== 1 || dbLines[0] !== `DB: ${OPAQUE_DB_SOURCE}`) {
+    throw new Error("PAPER_FORWARD_CORE_DB_PROVENANCE_UNEXPECTED");
+  }
 }
 
 const preflight = run("scripts/audit-odds-payout-gap-completeness.ts");
