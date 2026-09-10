@@ -45,3 +45,14 @@ test("bet type risk cohort preflight verifies canonical read-only DB identity wi
   assert.match(preflight, /PRAGMA query_only = ON/);
   assert.doesNotMatch(preflight, /DB not found: \$\{DB_PATH\}/);
 });
+
+test("bet type risk cohort shape and uniqueness checks share one read snapshot", () => {
+  const queryOnly = preflight.indexOf("PRAGMA query_only = ON");
+  const begin = preflight.indexOf('db.exec("BEGIN;")');
+  const shapeCheck = preflight.indexOf("const invalid = db.prepare");
+  const uniquenessCheck = preflight.indexOf("const duplicateRace = db.prepare");
+  assert.ok(queryOnly >= 0);
+  assert.ok(begin > queryOnly);
+  assert.ok(shapeCheck > begin);
+  assert.ok(uniquenessCheck > shapeCheck);
+});
