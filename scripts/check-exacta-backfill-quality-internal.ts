@@ -13,13 +13,20 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/exacta-backfill-quality.md";
 const OUT_JSON = "reports/exacta-backfill-quality.json";
 
+const internalEntrypointPath = resolve(fileURLToPath(import.meta.url));
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
+if (invokedPath === internalEntrypointPath) {
+  throw new Error("EXACTA_BACKFILL_QUALITY_INTERNAL_DIRECT_EXECUTION_FORBIDDEN");
+}
 if (!existsSync(DB_PATH)) { console.error("EXACTA_BACKFILL_QUALITY_DB_MISSING"); process.exit(1); }
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "EXACTA_BACKFILL_QUALITY_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
@@ -111,15 +118,13 @@ const comboDist = db.prepare(`
   WHERE bet_type='exacta' GROUP BY combination ORDER BY combination
 `).all() as ComboDist[];
 
-// 期待: 全組番 (1-2 〜 6-5) の件数がほぼ均等
 const comboMin = Math.min(...comboDist.map(c => c.n));
 const comboMax = Math.max(...comboDist.map(c => c.n));
-const expectedCombos = 30; // 全2連単組番数
+const expectedCombos = 30;
 
 console.log(`[3] combination 別件数`);
 console.log(`  検出組番数: ${comboDist.length} / 期待: ${expectedCombos}`);
 console.log(`  件数range: min=${comboMin} 〜 max=${comboMax} (欠場レースがある組番は少ない)`);
-// H011 対象の3組番を表示
 for (const c of comboDist.filter(d => ["1-2", "1-3", "1-4"].includes(d.combination))) {
   console.log(`  ${c.combination}: ${c.n}件`);
 }
@@ -181,9 +186,6 @@ console.log();
 
 // ─── 6. 欠場あり / F返還ありレース ──────────────────────────────────────────
 
-// 欠場あり (race_entries に L/欠場等の情報があるか)
-// boatraceでは absent は entry が存在しない場合がある
-// H011 対象の BUY レース内での欠場数を確認
 const absentRaces = (db.prepare(`
   SELECT COUNT(DISTINCT hao.race_id) n
   FROM historical_alternative_odds hao
@@ -225,8 +227,6 @@ console.log();
 
 // ─── 8. overround 分布 (分析の入力品質) ─────────────────────────────────────
 
-// 各レースの全30通りのodds → overround = sum(1/odds)
-// 正常範囲: 通常 1.2〜1.4 程度 (ボートレースの控除率は約25%)
 type OverroundRow = { race_id: string; overround: number; combo_count: number };
 const overroundSample = db.prepare(`
   SELECT race_id, SUM(1.0/odds) overround, COUNT(*) combo_count
