@@ -19,6 +19,18 @@ test("bet type risk analysis runs canonical cohort preflight before internal ana
   assert.match(entrypoint, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
+test("bet type risk analysis redacts configured DB provenance only after successful guarded analysis", () => {
+  assert.match(entrypoint, /OPAQUE_DB_SOURCE = "primary research database"/);
+  assert.match(entrypoint, /BET_TYPE_RISK_REPORT_MISSING_AFTER_ANALYSIS/);
+  assert.match(entrypoint, /BET_TYPE_RISK_DB_PROVENANCE_NOT_FOUND/);
+  assert.match(entrypoint, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  const analysis = entrypoint.indexOf('run("scripts/analyze-bet-type-risk-factors-internal.ts"');
+  const successGate = entrypoint.indexOf("if (analysis !== 0)");
+  const redact = entrypoint.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+  const pass = entrypoint.lastIndexOf("[bet-type-risk] PASS");
+  assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
+});
+
 test("bet type risk cohort is fixed to unique settled trifecta historical BUY rows", () => {
   assert.match(preflight, /dh\.bet_type IS NULL/);
   assert.match(preflight, /dh\.bet_type != '3連単'/);
