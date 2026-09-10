@@ -58,14 +58,8 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID",
 );
 
-const analysis = run("scripts/analyze-roi-skip-interactions-raw.ts", {
-  ...process.env,
-  BOAT_PON_DB_PATH: verifiedDbPath,
-});
-if (analysis !== 0) {
-  console.error("[skip-interactions] analysis failed after a successful settlement completeness preflight");
-  process.exit(analysis);
-}
+process.env.BOAT_PON_DB_PATH = verifiedDbPath;
+await import("./analyze-roi-skip-interactions-raw");
 
 redactDbProvenance(verifiedDbPath);
 console.log("[skip-interactions] PASS: settlement completeness preflight and DB identity verification passed before interaction analysis");
