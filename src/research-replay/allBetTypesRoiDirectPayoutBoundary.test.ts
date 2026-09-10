@@ -34,6 +34,19 @@ test("all-bet-types payout audit fails closed on bet-type or return-state drift 
   assert.ok(coverage > guard, "unsupported BUY cohort rows must be rejected before payout coverage can be accepted");
 });
 
+test("all-bet-types payout audit pins cohort validation and coverage to one read snapshot", () => {
+  const source = readFileSync("scripts/audit-all-bet-types-payout-completeness.ts", "utf8");
+  const queryOnly = source.indexOf("PRAGMA query_only = ON");
+  const begin = source.indexOf('db.exec("BEGIN;")');
+  const cohort = source.indexOf("const invalidBuyCohort = db.prepare");
+  const coverage = source.indexOf("const rows = db.prepare");
+
+  assert.ok(queryOnly >= 0);
+  assert.ok(begin > queryOnly);
+  assert.ok(cohort > begin);
+  assert.ok(coverage > cohort);
+});
+
 test("direct all-bet-types ROI entrypoint cannot bypass payout completeness audit", () => {
   const source = readFileSync("scripts/analyze-all-bet-types-roi.ts", "utf8");
   const auditIndex = source.indexOf("audit-all-bet-types-payout-completeness.ts");
