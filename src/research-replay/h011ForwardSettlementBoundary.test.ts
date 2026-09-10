@@ -46,7 +46,17 @@ test("H011 forward raw compatibility module revalidates DB identity and forbids 
   assert.doesNotMatch(raw, /DB not found: \$\{/);
 });
 
-test("H011 forward implementation remains read-only behind the guarded command", () => {
-  assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/);
+test("H011 forward implementation revalidates the DB and remains query-only behind the guarded command", () => {
+  assert.match(internal, /H011_FORWARD_INTERNAL_DB_MISSING/);
+  assert.match(internal, /H011_FORWARD_INTERNAL_DB_IDENTITY_INVALID/);
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(internal, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
+  assert.match(internal, /PRAGMA query_only = ON/);
+  assert.doesNotMatch(internal, /DB not found: \$\{/);
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
+
+  const identity = internal.indexOf("H011_FORWARD_INTERNAL_DB_IDENTITY_INVALID");
+  const dbOpen = internal.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = internal.indexOf('db.exec("PRAGMA query_only = ON;")');
+  assert.ok(identity >= 0 && dbOpen > identity && queryOnly > dbOpen);
 });
