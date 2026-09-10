@@ -28,22 +28,19 @@ test("H011 forward monitor validates exacta settlement integrity and DB handoff 
   const gate = entry.indexOf("H011_FORWARD_EXACTA_SETTLEMENT_INTEGRITY_FAILED");
   const handoff = entry.indexOf("H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID");
   const envHandoff = entry.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
-  const run = entry.indexOf('await import("./report-h011-forward-monitor-raw")');
+  const run = entry.indexOf('await import("./report-h011-forward-monitor-internal")');
   assert.ok(gate >= 0 && handoff > gate, "database identity must be reverified after settlement integrity passes");
-  assert.ok(envHandoff > handoff && run > envHandoff, "guarded raw handoff must import in-process only after DB revalidation");
-  assert.equal(entry.includes('spawnSync(process.execPath, ["--import", "tsx", "scripts/report-h011-forward-monitor-raw.ts"]'), false);
-  assert.equal(entry.includes("report-h011-forward-monitor-internal.ts"), false);
+  assert.ok(envHandoff > handoff && run > envHandoff, "internal aggregation must import in-process only after DB revalidation");
+  assert.equal(entry.includes("report-h011-forward-monitor-raw"), false);
 });
 
-test("H011 forward raw compatibility module revalidates DB identity and forbids direct CLI execution", () => {
+test("H011 forward raw compatibility module forbids direct CLI execution and cannot bypass canonical preflight", () => {
   const directGuard = raw.indexOf("H011_FORWARD_RAW_DIRECT_EXECUTION_FORBIDDEN");
-  const identity = raw.indexOf("H011_FORWARD_RAW_DB_IDENTITY_INVALID");
-  const internalImport = raw.indexOf('await import("./report-h011-forward-monitor-internal")');
+  const canonicalImport = raw.indexOf('await import("./report-h011-forward-monitor")');
 
-  assert.ok(directGuard >= 0 && identity > directGuard && internalImport > identity);
-  assert.match(raw, /H011_FORWARD_RAW_DB_MISSING/);
-  assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
-  assert.doesNotMatch(raw, /DB not found: \$\{/);
+  assert.ok(directGuard >= 0 && canonicalImport > directGuard);
+  assert.doesNotMatch(raw, /report-h011-forward-monitor-internal/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
 });
 
 test("H011 forward implementation revalidates the DB and remains query-only behind the guarded command", () => {
