@@ -19,6 +19,18 @@ test("direct ticket-selector analysis cannot bypass compared-market payout compl
   assert.match(entrySource, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
+test("ticket-selector redacts configured DB provenance only after successful guarded analysis", () => {
+  assert.match(entrySource, /OPAQUE_DB_SOURCE = "primary research database"/);
+  assert.match(entrySource, /TICKET_SELECTOR_REPORT_MISSING_AFTER_ANALYSIS/);
+  assert.match(entrySource, /TICKET_SELECTOR_DB_PROVENANCE_NOT_FOUND/);
+  assert.match(entrySource, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  const analysis = entrySource.indexOf('run("scripts/analyze-ticket-selector-strategies-core.ts"');
+  const successGate = entrySource.indexOf("if (analysis !== 0)");
+  const redact = entrySource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+  const pass = entrySource.lastIndexOf("[ticket-selector] PASS");
+  assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
+});
+
 test("ticket-selector preflight covers the exact base population and every compared market", () => {
   assert.match(auditSource, /SELECT DISTINCT dh\.race_id/);
   assert.match(auditSource, /dh\.decision='BUY'/);
