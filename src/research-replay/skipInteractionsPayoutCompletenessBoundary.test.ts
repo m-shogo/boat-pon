@@ -30,6 +30,21 @@ test("skip-interactions canonical entrypoint re-verifies DB identity before the 
   assert.ok(preflight >= 0 && verify > preflight && analysis > verify);
 });
 
+test("skip-interactions canonical entrypoint redacts private DB provenance after successful analysis", () => {
+  const analysis = entrypoint.indexOf('run("scripts/analyze-roi-skip-interactions-core.ts"');
+  const successGuard = entrypoint.indexOf("if (analysis !== 0)");
+  const redact = entrypoint.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+
+  assert.ok(analysis >= 0);
+  assert.ok(successGuard > analysis);
+  assert.ok(redact > successGuard, "private DB provenance must be sanitized only after successful analysis");
+  assert.match(entrypoint, /const OPAQUE_DB_SOURCE = "primary research database"/u);
+  assert.match(entrypoint, /const privateMarker = `DB: \$\{dbPath\}`/u);
+  assert.match(entrypoint, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_REPORT_MISSING_AFTER_ANALYSIS/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
+});
+
 test("skip-interactions preflight matches the exact forward population and validates settlement line integrity", () => {
   assert.match(audit, /WITH target_rows AS \(/);
   assert.match(audit, /SELECT dh\.race_id, dh\.bet_type, dh\.returned/);
