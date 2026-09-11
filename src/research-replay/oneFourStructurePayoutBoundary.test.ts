@@ -2,17 +2,26 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("one-four structure direct entrypoint cannot bypass official payout audit", () => {
+test("one-four structure direct entrypoint cannot bypass official payout audit before isolated internal analysis", () => {
   const source = readFileSync("scripts/analyze-one-four-structure.ts", "utf8");
   const auditIndex = source.indexOf("audit-all-bet-types-payout-completeness.ts");
   const gateIndex = source.indexOf("audit !== 0");
   const handoffIndex = source.indexOf("ONE_FOUR_STRUCTURE_DB_HANDOFF_IDENTITY_INVALID");
-  const internalIndex = source.indexOf('await import("./analyze-one-four-structure-internal")');
+  const childHandoffIndex = source.indexOf("ONE_FOUR_STRUCTURE_DB_CHILD_HANDOFF_IDENTITY_INVALID");
+  const workspaceIndex = source.indexOf("mkdtempSync(", childHandoffIndex);
+  const launchIdentityIndex = source.indexOf("ONE_FOUR_STRUCTURE_DB_CHILD_LAUNCH_IDENTITY_INVALID", workspaceIndex);
+  const internalIndex = source.indexOf("const analysis = spawnSync", launchIdentityIndex);
 
   assert.ok(auditIndex >= 0);
   assert.ok(gateIndex > auditIndex);
   assert.ok(handoffIndex > gateIndex);
-  assert.ok(internalIndex > handoffIndex);
+  assert.ok(childHandoffIndex > handoffIndex);
+  assert.ok(workspaceIndex > childHandoffIndex);
+  assert.ok(launchIdentityIndex > workspaceIndex);
+  assert.ok(internalIndex > launchIdentityIndex);
+  assert.match(source, /cwd: workspace/);
+  assert.match(source, /BOAT_PON_DB_PATH: launchDbPath/);
+  assert.doesNotMatch(source, /await import\("\.\/analyze-one-four-structure-internal"\)/);
   assert.doesNotMatch(source, /analyze-one-four-structure-raw/);
   assert.doesNotMatch(source, /DatabaseSync/);
 });
