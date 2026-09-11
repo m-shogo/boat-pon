@@ -2,12 +2,19 @@
  * report-roi-all-data-sweep.ts — 既存の読み取り専用探索結果を1枚に集約する。
  * DB・app_settings・本番判定は変更しない。
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REPORT_DIR = "reports";
 const OUT_MD = `${REPORT_DIR}/roi-all-data-sweep.md`;
 const OUT_JSON = `${REPORT_DIR}/roi-all-data-sweep.json`;
-const read = (name: string): any => existsSync(`${REPORT_DIR}/${name}`) ? JSON.parse(readFileSync(`${REPORT_DIR}/${name}`, "utf8")) : null;
+const read = (name: string): any => {
+  const path = `${REPORT_DIR}/${name}`;
+  if (!existsSync(path)) return null;
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_ALL_DATA_SWEEP_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readFileSync(verifiedPath, "utf8"));
+};
 const docs = [
   ["選手能力/モーターのpoint-in-time screen", "unconventional-feature-screen.json"],
   ["局所市場異常（会場・風・選手構成）", "local-market-anomaly-deep-dive.json"],
@@ -65,7 +72,24 @@ const lines = [
   "現時点で、選手などのデータを追加しても本番BUYを黒字化できると検証済みの条件はない。最有力の次段階は、風向を会場ごとの向かい風/追い風へ正規化し、4号艇相対能力との組合せを事前固定してT-5 paper-forwardで検証すること。ただし本番判定・自動購入へは接続しない。",
 ];
 
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 mkdirSync(REPORT_DIR, { recursive: true });
-writeFileSync(OUT_MD, `${lines.join("\n")}\n`, "utf8");
-writeFileSync(OUT_JSON, JSON.stringify({ generatedAt: now, sources: sourceMeta, verdict: "no_production_candidate", next: "wind-direction-normalization-and-T5-paper-forward" }, null, 2) + "\n", "utf8");
+atomicPublish(OUT_MD, `${lines.join("\n")}\n`, "ROI_ALL_DATA_SWEEP_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_JSON, JSON.stringify({ generatedAt: now, sources: sourceMeta, verdict: "no_production_candidate", next: "wind-direction-normalization-and-T5-paper-forward" }, null, 2) + "\n", "ROI_ALL_DATA_SWEEP_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log(`[all-data-sweep] 完了 → ${OUT_MD}`);
