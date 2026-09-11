@@ -2,7 +2,8 @@
  * 保存済みレース前オッズHTMLの開催タイトルと暦を使い、注目イベントとexacta 1-4市場残差を調べる。
  * DB・ネットワークは読み取り専用。タイトル個別ランキングは作らず、事前定義カテゴリだけを集計する。
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
@@ -31,6 +32,8 @@ type Metric = { n: number; hits: number; edgePp: number; roi: number; max2HitExc
 
 const categories = EVENT_CONTEXT_CATEGORIES;
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_JSON = "reports/event-market-context-screen.json";
+const OUT_MD = "reports/event-market-context-screen.md";
 
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
@@ -94,7 +97,11 @@ try {
     ],
   };
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/event-market-context-screen.json", `${JSON.stringify(report, null, 2)}\n`);
+  atomicPublish(
+    OUT_JSON,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "EVENT_MARKET_CONTEXT_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
   const lines = [
     "# イベント・開催文脈と市場残差screen", "",
     "> 保存済みレース前オッズHTMLの開催タイトルを事前定義カテゴリへ集約。個別開催や個人の疑惑ランキングは作らない。", "",
@@ -109,7 +116,11 @@ try {
     "- 2024と2025で符号が揃い、十分なnがあり、条件外差と最大配当除外も残るものだけを次の仮説候補にする。",
     "- 最有力条件内は元々nが小さいため、イベント細分化は説明探索であり採用判断に使わない。",
   ];
-  writeFileSync("reports/event-market-context-screen.md", `${lines.join("\n")}\n`);
+  atomicPublish(
+    OUT_MD,
+    `${lines.join("\n")}\n`,
+    "EVENT_MARKET_CONTEXT_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
   console.log(`event market context: exacta=${evaluations.length} titles=${titleAvailable}`);
 } finally {
   db.close();
@@ -184,6 +195,22 @@ function readEventTitle(raceId: string, date: string) {
   );
   const $ = load(readFileSync(verifiedPath, "utf8"));
   return $(".rname a").first().text().replace(/\s+/g, " ").trim();
+}
+function atomicPublish(path: string, contents: string, errorCode: string) {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 function isTopRival(program: UnconventionalProgram, course: number) {
   const own = program.boats.find(boat => boat.course === course)?.nationalWinRate;
