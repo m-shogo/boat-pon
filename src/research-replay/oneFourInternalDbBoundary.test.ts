@@ -6,16 +6,24 @@ const entrypoint = readFileSync("scripts/analyze-one-four-structure.ts", "utf8")
 const raw = readFileSync("scripts/analyze-one-four-structure-raw.ts", "utf8");
 const internal = readFileSync("scripts/analyze-one-four-structure-internal.ts", "utf8");
 
-test("one-four canonical entrypoint revalidates DB after payout audit before internal analysis", () => {
+test("one-four canonical entrypoint revalidates DB after payout audit and immediately before internal analysis", () => {
   const audit = entrypoint.indexOf("audit !== 0");
-  const identityRecheck = entrypoint.indexOf("ONE_FOUR_STRUCTURE_DB_HANDOFF_IDENTITY_INVALID");
+  const handoffIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_DB_HANDOFF_IDENTITY_INVALID");
+  const mdPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_PREEXISTING_IDENTITY_INVALID", handoffIdentity);
+  const jsonPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_PREEXISTING_IDENTITY_INVALID", handoffIdentity);
+  const childIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_DB_CHILD_HANDOFF_IDENTITY_INVALID", jsonPreflight);
+  const childEnv = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = childDbPath", childIdentity);
   const internalImport = entrypoint.indexOf('await import("./analyze-one-four-structure-internal")');
 
   assert.ok(audit >= 0);
-  assert.ok(identityRecheck > audit, "DB identity must be revalidated only after payout audit passes");
-  assert.ok(internalImport > identityRecheck, "internal analyzer must load only after verified DB handoff");
+  assert.ok(handoffIdentity > audit, "DB identity must be revalidated only after payout audit passes");
+  assert.ok(mdPreflight > handoffIdentity && jsonPreflight > handoffIdentity, "report paths must be checked after initial DB handoff");
+  assert.ok(childIdentity > mdPreflight && childIdentity > jsonPreflight, "DB identity must be revalidated after report-path checks");
+  assert.ok(childEnv > childIdentity, "only the final reverified DB path may be exported to the internal analyzer");
+  assert.ok(internalImport > childEnv, "internal analyzer must load only after the final verified DB handoff");
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_DB_MISSING/);
-  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
+  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = childDbPath/);
   assert.doesNotMatch(entrypoint, /analyze-one-four-structure-raw/);
 });
 
