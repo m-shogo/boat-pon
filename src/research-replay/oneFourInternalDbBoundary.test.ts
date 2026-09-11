@@ -4,6 +4,7 @@ import test from "node:test";
 
 const entrypoint = readFileSync("scripts/analyze-one-four-structure.ts", "utf8");
 const raw = readFileSync("scripts/analyze-one-four-structure-raw.ts", "utf8");
+const internal = readFileSync("scripts/analyze-one-four-structure-internal.ts", "utf8");
 
 test("one-four canonical entrypoint revalidates DB after payout audit before internal analysis", () => {
   const audit = entrypoint.indexOf("audit !== 0");
@@ -38,4 +39,19 @@ test("one-four guarded raw compatibility module cannot bypass canonical payout a
   assert.doesNotMatch(raw, /analyze-one-four-structure-internal/);
   assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
   assert.doesNotMatch(raw, /DatabaseSync/);
+});
+
+test("one-four internal verifies canonical DB identity and enables query_only before analysis", () => {
+  const identity = internal.indexOf("ONE_FOUR_STRUCTURE_DB_IDENTITY_INVALID");
+  const open = internal.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = internal.indexOf("PRAGMA query_only = ON");
+  const firstQuery = internal.indexOf("db.prepare(");
+
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile/u);
+  assert.ok(identity >= 0, "internal DB identity error code must exist");
+  assert.ok(open > identity, "internal must verify DB identity before SQLite open");
+  assert.ok(queryOnly > open, "internal must enable query_only after read-only open");
+  assert.ok(firstQuery > queryOnly, "internal must enable query_only before analysis queries");
+  assert.doesNotMatch(internal, /DB not found: \$\{DB_PATH\}/u);
+  assert.doesNotMatch(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/u);
 });
