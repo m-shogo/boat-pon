@@ -4,8 +4,20 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_MD = "reports/roi-pattern-search.md";
+const OUT_JSON = "reports/roi-pattern-search.json";
 const DECISION_BET_TYPE = "3連単";
 const PAYOUT_BET_TYPE = "trifecta";
+
+function assertExistingOutputIdentity(path: string, code: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function assertGeneratedOutputIdentity(path: string, missingCode: string, invalidCode: string): void {
+  if (!existsSync(path)) throw new Error(missingCode);
+  assertCanonicalSingleLinkRegularFile(path, invalidCode);
+}
 
 if (!existsSync(DB_PATH)) {
   console.error("[search-roi-patterns] database not found");
@@ -84,4 +96,23 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
+assertExistingOutputIdentity(OUT_MD, "ROI_PATTERN_MD_PREEXISTING_IDENTITY_INVALID");
+assertExistingOutputIdentity(OUT_JSON, "ROI_PATTERN_JSON_PREEXISTING_IDENTITY_INVALID");
+
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "ROI_PATTERN_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = childDbPath;
 await import("./search-roi-patterns-internal");
+
+assertGeneratedOutputIdentity(
+  OUT_MD,
+  "ROI_PATTERN_MD_OUTPUT_MISSING",
+  "ROI_PATTERN_MD_OUTPUT_IDENTITY_INVALID",
+);
+assertGeneratedOutputIdentity(
+  OUT_JSON,
+  "ROI_PATTERN_JSON_OUTPUT_MISSING",
+  "ROI_PATTERN_JSON_OUTPUT_IDENTITY_INVALID",
+);
