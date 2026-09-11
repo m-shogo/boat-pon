@@ -6,6 +6,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 function run(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -27,6 +28,11 @@ if (preflight !== 0) {
 }
 
 await import("./assert-roi-edge-market-gap-db-boundary");
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite",
+  "ROI_EDGE_MARKET_GAP_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = childDbPath;
 await import("./analyze-roi-edge-market-gap-internal");
 
 console.log("[roi-edge-market-gap-entrypoint] PASS: payout completeness preflight passed before market-gap analysis");
