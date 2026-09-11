@@ -47,8 +47,17 @@ test("historical alternative-odds quality rejects forward cohort drift and rever
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_JSON_OUTPUT_MISSING/u);
 });
 
-test("historical alternative-odds quality implementation remains read-only research", () => {
-  assert.match(internal, /new DatabaseSync\(DB_PATH, \{ readOnly: true \}\)/u);
+test("historical alternative-odds quality implementation revalidates its DB and remains read-only research", () => {
+  const identity = internal.indexOf("HISTORICAL_ALT_ODDS_QUALITY_INTERNAL_DB_IDENTITY_INVALID");
+  const open = internal.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = internal.indexOf("PRAGMA query_only = ON");
+  assert.ok(identity >= 0, "internal DB identity guard must exist");
+  assert.ok(open > identity, "internal DB must open only after identity verification");
+  assert.ok(queryOnly > open, "query_only must be enabled after read-only open");
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile/u);
+  assert.match(internal, /research database unavailable/u);
+  assert.doesNotMatch(internal, /new DatabaseSync\(DB_PATH/u);
+  assert.doesNotMatch(internal, /DB not found: \$\{DB_PATH\}/u);
   assert.match(internal, /historical_alternative_odds/u);
   assert.match(internal, /run_kind='historical-backfill'/u);
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\([^)]*(?:INSERT|UPDATE|DELETE|DROP|ALTER)/iu);
