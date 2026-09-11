@@ -13,7 +13,7 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   const handoffIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID");
   const candidateIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_CANDIDATE_IDENTITY_INVALID");
   const envHandoff = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
-  const monitor = entrypoint.indexOf('await import("./report-exacta-forward-monitor-raw")');
+  const monitor = entrypoint.indexOf('await import("./report-exacta-forward-monitor-internal")');
   assert.ok(
     audit >= 0 &&
       guard > audit &&
@@ -28,18 +28,17 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_CANDIDATES_MISSING/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*CANDIDATES_PATH,/u);
   assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/u);
-  assert.doesNotMatch(entrypoint, /run\("scripts\/report-exacta-forward-monitor-raw\.ts"/u);
+  assert.doesNotMatch(entrypoint, /report-exacta-forward-monitor-raw/u);
+  assert.doesNotMatch(entrypoint, /run\("scripts\/report-exacta-forward-monitor-internal\.ts"/u);
 });
 
-test("exacta forward raw compatibility module revalidates identities immediately before internal import", () => {
-  const directGuard = raw.indexOf("EXACTA_FORWARD_MONITOR_RAW_DIRECT_EXECUTION_FORBIDDEN");
-  const dbIdentity = raw.indexOf("EXACTA_FORWARD_MONITOR_RAW_DB_IDENTITY_INVALID");
-  const candidateIdentity = raw.indexOf("EXACTA_FORWARD_MONITOR_RAW_CANDIDATE_IDENTITY_INVALID");
-  const internalImport = raw.indexOf('await import("./report-exacta-forward-monitor-internal")');
-  assert.ok(directGuard >= 0 && dbIdentity > directGuard && candidateIdentity > dbIdentity && internalImport > candidateIdentity);
-  assert.match(raw, /EXACTA_FORWARD_MONITOR_RAW_DB_MISSING/u);
-  assert.match(raw, /EXACTA_FORWARD_MONITOR_RAW_CANDIDATES_MISSING/u);
-  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/u);
+test("exacta forward raw compatibility module forbids direct CLI execution and cannot bypass canonical preflight", () => {
+  assert.match(raw, /EXACTA_FORWARD_MONITOR_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(raw, /await import\("\.\/report-exacta-forward-monitor"\)/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
+  assert.doesNotMatch(raw, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(raw, /report-exacta-forward-monitor-internal/);
+  assert.doesNotMatch(raw, /DatabaseSync/);
 });
 
 test("exacta forward preflight verifies frozen candidate lock identity before reading it", () => {
