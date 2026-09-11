@@ -8,15 +8,23 @@ const preflight = readFileSync("scripts/audit-alternative-odds-timeseries-health
 test("alternative odds health runs canonical cohort preflight and DB handoff revalidation before private coverage/readiness aggregation", () => {
   const guard = entrypoint.indexOf('run("scripts/audit-alternative-odds-timeseries-health-cohort.ts")');
   const handoffIdentity = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_DB_HANDOFF_IDENTITY_INVALID");
+  const mdPreexisting = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_MD_PREEXISTING_IDENTITY_INVALID");
+  const jsonPreexisting = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_JSON_PREEXISTING_IDENTITY_INVALID");
   const internal = entrypoint.indexOf('run("scripts/check-alternative-odds-timeseries-health-internal.ts"');
+  const mdPostflight = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_MD_OUTPUT_IDENTITY_INVALID");
+  const jsonPostflight = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_JSON_OUTPUT_IDENTITY_INVALID");
   assert.ok(guard >= 0, "entrypoint must invoke cohort preflight");
   assert.ok(handoffIdentity > guard, "database identity must be reverified after preflight");
-  assert.ok(internal > handoffIdentity, "internal health aggregation must run only after DB handoff revalidation");
+  assert.ok(mdPreexisting > handoffIdentity && jsonPreexisting > handoffIdentity, "existing report paths must be verified before the internal writer runs");
+  assert.ok(internal > mdPreexisting && internal > jsonPreexisting, "internal health aggregation must run only after report-path preflight");
+  assert.ok(mdPostflight > internal && jsonPostflight > internal, "generated report identities must be verified before success");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_DB_MISSING/);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/u);
   assert.match(entrypoint, /BOAT_PON_DB_PATH: handoffDbPath/);
+  assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_MD_OUTPUT_MISSING/);
+  assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_JSON_OUTPUT_MISSING/);
   assert.doesNotMatch(entrypoint, /DB not found: \$\{DB_PATH\}/);
 });
 
