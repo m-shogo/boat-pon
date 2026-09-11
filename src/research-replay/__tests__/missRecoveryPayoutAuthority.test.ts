@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("miss recovery normal entrypoint validates official settlement integrity before guarded analysis", () => {
+test("miss recovery normal entrypoint validates official settlement integrity before internal analysis", () => {
   const source = readFileSync("scripts/analyze-miss-to-bet-type-recovery.ts", "utf8");
   const raw = readFileSync("scripts/analyze-miss-to-bet-type-recovery-raw.ts", "utf8");
   const internal = readFileSync("scripts/analyze-miss-to-bet-type-recovery-internal.ts", "utf8");
@@ -26,24 +26,27 @@ test("miss recovery normal entrypoint validates official settlement integrity be
   assert.match(source, /MISS_RECOVERY_PAYOUT_INVALID_LINE/);
   assert.match(source, /MISS_RECOVERY_BUY_POPULATION_EMPTY/);
   assert.match(source, /MISS_RECOVERY_PAYOUT_COVERAGE_INCOMPLETE/);
-  assert.match(source, /await import\("\.\/analyze-miss-to-bet-type-recovery-raw"\)/);
+  assert.match(source, /await import\("\.\/analyze-miss-to-bet-type-recovery-internal"\)/);
+  assert.doesNotMatch(source, /analyze-miss-to-bet-type-recovery-raw/);
   assert.ok(
     source.indexOf("MISS_RECOVERY_RETURNED_BUY_UNSUPPORTED")
-      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
+      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-internal")'),
   );
   assert.ok(
     source.indexOf("MISS_RECOVERY_PAYOUT_RETURN_STATE_INVALID")
-      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
+      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-internal")'),
   );
   assert.ok(
     source.indexOf("assertPayoutCompleteness();")
-      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-raw")'),
+      < source.indexOf('await import("./analyze-miss-to-bet-type-recovery-internal")'),
   );
 
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
   assert.match(raw, /MISS_RECOVERY_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(raw, /await import\("\.\/analyze-miss-to-bet-type-recovery-internal"\)/);
+  assert.match(raw, /await import\("\.\/analyze-miss-to-bet-type-recovery"\)/);
+  assert.doesNotMatch(raw, /analyze-miss-to-bet-type-recovery-internal/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
   assert.match(internal, /const payoutIndex = new Map<string, number>\(\)/);
   assert.match(internal, /const analyzed: RecoveryRow\[\] = \[\]/);
   assert.match(internal, /writeFileSync\(OUT_JSON/);
