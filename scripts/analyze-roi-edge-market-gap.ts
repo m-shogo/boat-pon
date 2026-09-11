@@ -26,6 +26,7 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-await import("./analyze-roi-edge-market-gap-raw");
+await import("./assert-roi-edge-market-gap-db-boundary");
+await import("./analyze-roi-edge-market-gap-internal");
 
 console.log("[roi-edge-market-gap-entrypoint] PASS: payout completeness preflight passed before market-gap analysis");
