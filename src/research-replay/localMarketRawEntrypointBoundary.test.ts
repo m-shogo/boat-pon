@@ -5,11 +5,13 @@ import test from "node:test";
 const raw = readFileSync("scripts/analyze-local-market-anomalies-raw.ts", "utf8");
 const internal = readFileSync("scripts/analyze-local-market-anomalies-internal.ts", "utf8");
 
-test("local market raw compatibility module cannot be invoked directly", () => {
+test("local market raw compatibility module cannot be invoked directly or bypass canonical preflight", () => {
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
   assert.match(raw, /LOCAL_MARKET_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(raw, /await import\("\.\/analyze-local-market-anomalies-internal"\)/);
+  assert.match(raw, /await import\("\.\/analyze-local-market-anomalies"\)/);
+  assert.doesNotMatch(raw, /analyze-local-market-anomalies-internal/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
 });
 
 test("isolated local market implementation remains research-only and read-only", () => {

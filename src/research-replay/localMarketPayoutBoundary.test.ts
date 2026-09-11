@@ -5,7 +5,7 @@ import test from "node:test";
 const source = readFileSync("scripts/analyze-local-market-anomalies.ts", "utf8");
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Record<string, string> };
 
-test("local market anomaly entrypoint fails closed before raw analysis", () => {
+test("local market anomaly entrypoint fails closed before internal analysis", () => {
   assert.equal(pkg.scripts?.["analyze:local-market-anomalies"], "tsx scripts/analyze-local-market-anomalies.ts");
   assert.match(source, /LOCAL_MARKET_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
@@ -16,9 +16,11 @@ test("local market anomaly entrypoint fails closed before raw analysis", () => {
   assert.match(source, /winner_h\.combination=rp\.combination/);
 
   const coverageIndex = source.indexOf("LOCAL_MARKET_EXACTA_PAYOUT_COVERAGE_INCOMPLETE");
-  const analysisIndex = source.indexOf('await import("./analyze-local-market-anomalies-raw")');
+  const handoffIndex = source.indexOf("LOCAL_MARKET_DB_HANDOFF_IDENTITY_INVALID");
+  const analysisIndex = source.indexOf('await import("./analyze-local-market-anomalies-internal")');
   assert.ok(coverageIndex >= 0, "settlement coverage gate must exist");
-  assert.ok(analysisIndex > coverageIndex, "raw analysis must not run before settlement coverage passes");
+  assert.ok(handoffIndex > coverageIndex, "DB handoff must be revalidated after settlement coverage passes");
+  assert.ok(analysisIndex > handoffIndex, "internal analysis must not run before settlement coverage and DB handoff pass");
 });
 
 test("local market settlement gate rejects ambiguous multi-line exacta winners", () => {
