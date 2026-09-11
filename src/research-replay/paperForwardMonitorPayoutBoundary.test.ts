@@ -49,15 +49,19 @@ test("paper-forward monitor raw compatibility entrypoint is independently guarde
   assert.doesNotMatch(raw, /new DatabaseSync/);
 });
 
-test("paper-forward monitor raw verifies generated report identity before provenance read and again before write", () => {
+test("paper-forward monitor raw verifies generated report identity before provenance read and publishes sanitized output atomically", () => {
   const firstIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORT_IDENTITY_INVALID"');
   const read = raw.indexOf('readFileSync(verifiedReportPath, "utf-8")');
   const handoffIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = raw.indexOf("writeFileSync(handoffReportPath");
+  const atomicPublish = raw.indexOf("atomicPublishSanitizedReport(handoffReportPath, sanitized)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && atomicPublish > handoffIdentity);
   assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
-  assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.match(raw, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(raw, /fsyncSync\(fd\)/u);
+  assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_SANITIZED_TEMP_IDENTITY_INVALID/u);
+  assert.match(raw, /renameSync\(verifiedTempPath, path\)/u);
+  assert.doesNotMatch(raw, /writeFileSync\(handoffReportPath/u);
 });
 
 test("paper-forward monitor payout preflight covers only settled historical trifecta 1-2-3 BUY rows and stays read-only", () => {

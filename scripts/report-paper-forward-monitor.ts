@@ -6,7 +6,17 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/paper-forward-monitor.md";
@@ -22,6 +32,27 @@ function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
     return 1;
   }
   return result.status ?? 1;
+}
+
+function atomicPublishSanitizedReport(path: string, content: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "PAPER_FORWARD_MONITOR_SANITIZED_TEMP_IDENTITY_INVALID",
+    );
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function sanitizeDbProvenance(handoffDbPath: string): void {
@@ -46,7 +77,7 @@ function sanitizeDbProvenance(handoffDbPath: string): void {
     verifiedReportPath,
     "PAPER_FORWARD_MONITOR_REPORT_HANDOFF_IDENTITY_INVALID",
   );
-  writeFileSync(handoffReportPath, sanitized, "utf-8");
+  atomicPublishSanitizedReport(handoffReportPath, sanitized);
 
   const dbLines = sanitized.match(/^DB:.*$/gm) ?? [];
   if (dbLines.length !== 1 || dbLines[0] !== `DB: ${OPAQUE_DB_SOURCE}`) {
