@@ -12,12 +12,16 @@ const packageSource = readFileSync("package.json", "utf-8");
 test("ROI edge market-gap normal entrypoint fails closed before internal analysis", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-edge-market-gap-payout-completeness.ts")');
   const dbBoundary = entrypointSource.indexOf('await import("./assert-roi-edge-market-gap-db-boundary")');
+  const childDbIdentity = entrypointSource.indexOf("ROI_EDGE_MARKET_GAP_DB_CHILD_HANDOFF_IDENTITY_INVALID");
   const analysis = entrypointSource.indexOf('await import("./analyze-roi-edge-market-gap-internal")');
   assert.ok(preflight >= 0);
   assert.ok(dbBoundary > preflight);
-  assert.ok(analysis > dbBoundary);
+  assert.ok(childDbIdentity > dbBoundary);
+  assert.ok(analysis > childDbIdentity);
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
+  assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile/);
+  assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = childDbPath/);
   assert.doesNotMatch(entrypointSource, /analyze-roi-edge-market-gap-raw/);
 });
 
