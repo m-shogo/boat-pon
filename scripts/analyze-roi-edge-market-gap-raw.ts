@@ -1,7 +1,7 @@
 /**
  * Guarded compatibility module for ROI edge market-gap research.
- * The canonical entrypoint validates official trifecta settlement coverage before
- * the internal analyzer may run. Direct CLI execution is forbidden.
+ * Imported compatibility callers are routed back through the canonical trifecta
+ * settlement preflight. Direct CLI execution is forbidden.
  */
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,5 +12,4 @@ if (invokedPath === rawEntrypointPath) {
   throw new Error("ROI_EDGE_MARKET_GAP_RAW_DIRECT_EXECUTION_FORBIDDEN");
 }
 
-await import("./assert-roi-edge-market-gap-db-boundary");
-await import("./analyze-roi-edge-market-gap-internal");
+await import("./analyze-roi-edge-market-gap");

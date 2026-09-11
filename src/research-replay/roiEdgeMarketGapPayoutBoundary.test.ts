@@ -9,23 +9,26 @@ const internalSource = readFileSync("scripts/analyze-roi-edge-market-gap-interna
 const auditSource = readFileSync("scripts/audit-roi-edge-market-gap-payout-completeness.ts", "utf-8");
 const packageSource = readFileSync("package.json", "utf-8");
 
-test("ROI edge market-gap normal entrypoint fails closed before guarded analysis", () => {
+test("ROI edge market-gap normal entrypoint fails closed before internal analysis", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-edge-market-gap-payout-completeness.ts")');
-  const analysis = entrypointSource.indexOf('await import("./analyze-roi-edge-market-gap-raw")');
+  const dbBoundary = entrypointSource.indexOf('await import("./assert-roi-edge-market-gap-db-boundary")');
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-edge-market-gap-internal")');
   assert.ok(preflight >= 0);
-  assert.ok(analysis > preflight);
+  assert.ok(dbBoundary > preflight);
+  assert.ok(analysis > dbBoundary);
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
+  assert.doesNotMatch(entrypointSource, /analyze-roi-edge-market-gap-raw/);
 });
 
-test("ROI edge market-gap raw compatibility module cannot be executed directly", () => {
+test("ROI edge market-gap raw compatibility module cannot bypass canonical preflight", () => {
   assert.match(rawSource, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(rawSource, /process\.argv\[1\]/);
   assert.match(rawSource, /ROI_EDGE_MARKET_GAP_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  const dbBoundary = rawSource.indexOf('await import("./assert-roi-edge-market-gap-db-boundary")');
-  const analysis = rawSource.indexOf('await import("./analyze-roi-edge-market-gap-internal")');
-  assert.ok(dbBoundary >= 0);
-  assert.ok(analysis > dbBoundary);
+  assert.match(rawSource, /await import\("\.\/analyze-roi-edge-market-gap"\)/);
+  assert.doesNotMatch(rawSource, /assert-roi-edge-market-gap-db-boundary/);
+  assert.doesNotMatch(rawSource, /analyze-roi-edge-market-gap-internal/);
+  assert.doesNotMatch(rawSource, /BOAT_PON_DB_PATH/);
   assert.doesNotMatch(rawSource, /new DatabaseSync/);
 });
 
