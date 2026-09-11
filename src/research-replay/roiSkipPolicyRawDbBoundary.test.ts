@@ -9,13 +9,16 @@ test("ROI skip-policy canonical entrypoint verifies DB identity before isolated 
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
   const identity = entrypoint.indexOf("ROI_SKIP_POLICY_PRIMARY_DB_IDENTITY_INVALID");
   const childIdentity = entrypoint.indexOf("ROI_SKIP_POLICY_DB_CHILD_HANDOFF_IDENTITY_INVALID");
-  const internalSpawn = entrypoint.indexOf("const analysis = spawnSync");
+  const isolatedIdentity = entrypoint.indexOf("ROI_SKIP_POLICY_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID");
+  const internalSpawn = entrypoint.indexOf("const analysis = spawnSync", isolatedIdentity);
 
   assert.ok(preflight >= 0);
   assert.ok(identity > preflight, "DB identity must be verified after payout-completeness preflight");
   assert.ok(childIdentity > identity, "DB identity must be reverified at the child handoff");
-  assert.ok(internalSpawn > childIdentity, "internal analyzer must start only after child DB identity verification");
-  assert.match(entrypoint, /BOAT_PON_DB_PATH: childDbPath/);
+  assert.ok(isolatedIdentity > childIdentity, "DB identity must be reverified immediately before isolated child launch");
+  assert.ok(internalSpawn > isolatedIdentity, "internal analyzer must start only after isolated child DB identity verification");
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: isolatedDbPath/);
+  assert.doesNotMatch(entrypoint, /BOAT_PON_DB_PATH: childDbPath/);
   assert.doesNotMatch(entrypoint, /analyze-roi-skip-policy-simulation-raw/);
 });
 
