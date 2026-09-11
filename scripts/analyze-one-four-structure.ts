@@ -29,14 +29,20 @@ const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 if (!existsSync(configuredDbPath)) {
   throw new Error("ONE_FOUR_STRUCTURE_DB_MISSING");
 }
-process.env.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile(
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   configuredDbPath,
   "ONE_FOUR_STRUCTURE_DB_HANDOFF_IDENTITY_INVALID",
 );
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
 assertExistingOutputIdentity(OUT_MD, "ONE_FOUR_STRUCTURE_MD_PREEXISTING_IDENTITY_INVALID");
 assertExistingOutputIdentity(OUT_JSON, "ONE_FOUR_STRUCTURE_JSON_PREEXISTING_IDENTITY_INVALID");
 
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "ONE_FOUR_STRUCTURE_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = childDbPath;
 await import("./analyze-one-four-structure-internal");
 
 if (!existsSync(OUT_MD) || !existsSync(OUT_JSON)) {
