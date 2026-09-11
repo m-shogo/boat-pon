@@ -62,3 +62,17 @@ test("historical alternative-odds quality implementation revalidates its DB and 
   assert.match(internal, /run_kind='historical-backfill'/u);
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\([^)]*(?:INSERT|UPDATE|DELETE|DROP|ALTER)/iu);
 });
+
+test("historical alternative-odds quality publishes reports through verified atomic temp files", () => {
+  assert.match(internal, /randomUUID/u);
+  assert.match(internal, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(internal, /fsyncSync\(fd\)/u);
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile\(\s*tempPath,/u);
+  assert.match(internal, /renameSync\(verifiedTempPath, path\)/u);
+  assert.match(internal, /HISTORICAL_ALT_ODDS_QUALITY_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(internal, /HISTORICAL_ALT_ODDS_QUALITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(internal, /atomicPublish\(OUT_MD, md,/u);
+  assert.match(internal, /atomicPublish\(OUT_JSON, JSON\.stringify\(jsonOutput, null, 2\),/u);
+  assert.doesNotMatch(internal, /writeFileSync\(OUT_MD/u);
+  assert.doesNotMatch(internal, /writeFileSync\(OUT_JSON/u);
+});
