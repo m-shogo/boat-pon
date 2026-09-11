@@ -61,6 +61,13 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "ROI_MECHANISM_SKIP_FILTER_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
+
 await import("./analyze-roi-mechanism-skip-filters-internal");
 redactDbProvenance(handoffDbPath);
 console.log("[roi-mechanism-skip-filter] PASS: payout completeness preflight passed before internal analysis");
