@@ -55,7 +55,11 @@ const jsonHandoffPath = assertCanonicalSingleLinkRegularFile(
 );
 writeFileSync(jsonHandoffPath, sanitizedJson);
 
-const markdown = readFileSync(verifiedMarkdownPath, "utf8");
+const markdownReadPath = assertCanonicalSingleLinkRegularFile(
+  verifiedMarkdownPath,
+  "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_READ_IDENTITY_INVALID",
+);
+const markdown = readFileSync(markdownReadPath, "utf8");
 if (!markdown.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_DB_PROVENANCE_NOT_FOUND");
 }
@@ -64,7 +68,7 @@ if (sanitizedMarkdown.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_PRIVATE_DB_PROVENANCE_REMAINED");
 }
 const markdownHandoffPath = assertCanonicalSingleLinkRegularFile(
-  verifiedMarkdownPath,
+  markdownReadPath,
   "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_HANDOFF_IDENTITY_INVALID",
 );
 writeFileSync(markdownHandoffPath, sanitizedMarkdown);

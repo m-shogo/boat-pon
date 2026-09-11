@@ -33,7 +33,8 @@ test("all-bet-type feasibility verifies generated report identity before read an
   const jsonRead = entry.indexOf('readFileSync(verifiedJsonPath, "utf8")');
   const jsonHandoffIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_HANDOFF_IDENTITY_INVALID");
   const jsonWrite = entry.indexOf("writeFileSync(jsonHandoffPath, sanitizedJson)");
-  const markdownRead = entry.indexOf('readFileSync(verifiedMarkdownPath, "utf8")');
+  const markdownReadIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_READ_IDENTITY_INVALID");
+  const markdownRead = entry.indexOf('readFileSync(markdownReadPath, "utf8")');
   const markdownHandoffIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_HANDOFF_IDENTITY_INVALID");
   const markdownWrite = entry.indexOf("writeFileSync(markdownHandoffPath, sanitizedMarkdown)");
 
@@ -42,9 +43,11 @@ test("all-bet-type feasibility verifies generated report identity before read an
   assert.ok(jsonRead > jsonIdentity);
   assert.ok(jsonHandoffIdentity > jsonRead);
   assert.ok(jsonWrite > jsonHandoffIdentity);
-  assert.ok(markdownRead > markdownIdentity);
+  assert.ok(markdownReadIdentity > jsonWrite, "markdown identity must be reverified after JSON sanitization before markdown read");
+  assert.ok(markdownRead > markdownReadIdentity);
   assert.ok(markdownHandoffIdentity > markdownRead);
   assert.ok(markdownWrite > markdownHandoffIdentity);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedMarkdownPath,\s*"ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_READ_IDENTITY_INVALID"/u);
   assert.doesNotMatch(entry, /readFileSync\(REPORT_(?:JSON|MD)/);
   assert.doesNotMatch(entry, /writeFileSync\(REPORT_(?:JSON|MD)/);
 });
