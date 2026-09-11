@@ -119,5 +119,5 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
-await import("./analyze-miss-to-bet-type-recovery-raw");
+await import("./analyze-miss-to-bet-type-recovery-internal");
 redactDbProvenance(handoffDbPath);
