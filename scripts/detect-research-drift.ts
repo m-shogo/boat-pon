@@ -52,13 +52,17 @@ if (args.presentationJson) {
 
 /**
  * data/research-rules.json（read-only）から ruleId 一致のルールを探すだけの関数。
- * ファイルが無い/パースできない/一致しない場合は undefined を返し、呼び出し側は
+ * ファイルが無い/identity不正/パースできない/一致しない場合は undefined を返し、呼び出し側は
  * adhoc rule（title/statusなし）として扱う。書き込みは一切行わない。
  */
 function loadRuleMeta(ruleId: string): Pick<ResearchRule, "title" | "status"> | undefined {
   if (!existsSync(RULE_STORE_PATH)) return undefined;
   try {
-    const store = JSON.parse(readFileSync(RULE_STORE_PATH, "utf8")) as { rules?: ResearchRule[] };
+    const verifiedRuleStorePath = assertCanonicalSingleLinkRegularFile(
+      RULE_STORE_PATH,
+      "RESEARCH_DRIFT_RULE_STORE_IDENTITY_INVALID",
+    );
+    const store = JSON.parse(readFileSync(verifiedRuleStorePath, "utf8")) as { rules?: ResearchRule[] };
     const rule = store.rules?.find((r) => r.ruleId === ruleId);
     if (!rule) return undefined;
     return { title: rule.title, status: rule.status };
