@@ -1,6 +1,8 @@
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_DIR = "reports/roi-relentless";
 const OUT_JSON = "reports/roi-relentless.json";
@@ -60,8 +62,8 @@ for (const [index, pass] of passes.entries()) {
   const allFeature = readOptional<AllFeatureReport>(ALL_FEATURE_JSON);
   const archivedPro = join(OUT_DIR, `${index + 1}-${pass.name}-pro-loop.json`);
   const archivedAll = join(OUT_DIR, `${index + 1}-${pass.name}-all-feature.json`);
-  if (existsSync(PRO_LOOP_JSON)) copyFileSync(PRO_LOOP_JSON, archivedPro);
-  if (existsSync(ALL_FEATURE_JSON)) copyFileSync(ALL_FEATURE_JSON, archivedAll);
+  if (existsSync(PRO_LOOP_JSON)) archiveVerifiedSource(PRO_LOOP_JSON, archivedPro, "ROI_RELENTLESS_PRO_LOOP_ARCHIVE_SOURCE_IDENTITY_INVALID", "ROI_RELENTLESS_PRO_LOOP_ARCHIVE_TEMP_IDENTITY_INVALID");
+  if (existsSync(ALL_FEATURE_JSON)) archiveVerifiedSource(ALL_FEATURE_JSON, archivedAll, "ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_SOURCE_IDENTITY_INVALID", "ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_TEMP_IDENTITY_INVALID");
 
   const strong = isStrong(proLoop);
   const paper = isPaper(proLoop, allFeature);
@@ -96,8 +98,8 @@ const report = {
   nextActions: nextActions(finalDecision),
 };
 
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, renderMd(report));
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ROI_RELENTLESS_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD, renderMd(report), "ROI_RELENTLESS_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log(`[roi-relentless] finalDecision=${finalDecision}`);
 console.log(`[roi-relentless] wrote ${OUT_MD}`);
 console.log(`[roi-relentless] wrote ${OUT_JSON}`);
@@ -167,7 +169,30 @@ function consensusTable(items: ReturnType<typeof mergeConsensus>) {
 
 function readOptional<T>(path: string): T | null {
   if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_RELENTLESS_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+}
+
+function archiveVerifiedSource(sourcePath: string, destinationPath: string, sourceErrorCode: string, tempErrorCode: string): void {
+  const verifiedSourcePath = assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
+  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode);
+}
+
+function atomicPublish(path: string, contents: string | Buffer, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents);
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function pct(value: number) { return `${(value * 100).toFixed(2)}%`; }
