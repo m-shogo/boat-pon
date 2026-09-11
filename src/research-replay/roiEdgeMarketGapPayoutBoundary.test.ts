@@ -91,6 +91,18 @@ test("ROI edge market-gap settlement gate permits legitimate multi-line races bu
   assert.doesNotMatch(auditSource, /HAVING COUNT\(\*\) = 1/);
 });
 
+test("ROI edge market-gap internal analyzer revalidates its DB before read-only query-only analysis", () => {
+  const identity = internalSource.indexOf("ROI_EDGE_MARKET_GAP_INTERNAL_DB_IDENTITY_INVALID");
+  const open = internalSource.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = internalSource.indexOf("PRAGMA query_only = ON");
+  assert.ok(identity >= 0);
+  assert.ok(open > identity);
+  assert.ok(queryOnly > open);
+  assert.match(internalSource, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(internalSource, /new DatabaseSync\(DB_PATH/);
+  assert.doesNotMatch(internalSource, /DB not found:/);
+});
+
 test("ROI edge market-gap internal analyzer retains both payout-dependent combinations", () => {
   assert.match(internalSource, /combination='1-2-3'/);
   assert.match(internalSource, /combination='1-3-2'/);
