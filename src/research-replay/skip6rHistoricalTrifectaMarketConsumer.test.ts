@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+const entry = readFileSync("scripts/analyze-skip6r-switch-historical-closing-odds.ts", "utf8");
 const internal = readFileSync("scripts/analyze-skip6r-switch-historical-closing-odds-internal.ts", "utf8");
 const raw = readFileSync("scripts/analyze-skip6r-switch-historical-closing-odds-raw.ts", "utf8");
 
@@ -12,18 +13,23 @@ test("skip6R historical switch uses the shared canonical trifecta market authori
   assert.doesNotMatch(internal, /WHERE source_quality = 'historical_closing_odds'/);
 });
 
-test("skip6R historical switch raw path revalidates the DB after canonical settlement preflight", () => {
+test("skip6R canonical entrypoint owns settlement preflight and the internal handoff", () => {
+  const audit = entry.indexOf('run("scripts/audit-skip6r-historical-payout-completeness.ts")');
+  const gate = entry.indexOf("audit !== 0");
+  const identity = entry.indexOf("SKIP6R_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID");
+  const internalImport = entry.indexOf('await import("./analyze-skip6r-switch-historical-closing-odds-internal")');
+
+  assert.ok(audit >= 0);
+  assert.ok(gate > audit, "settlement audit must fail closed before analysis");
+  assert.ok(identity > gate, "DB identity must be revalidated after settlement preflight");
+  assert.ok(internalImport > identity, "internal analyzer must run only after the canonical handoff identity check");
+  assert.doesNotMatch(entry, /analyze-skip6r-switch-historical-closing-odds-raw/);
+});
+
+test("skip6R raw compatibility path cannot bypass canonical settlement preflight", () => {
   assert.match(raw, /SKIP6R_SWITCH_HISTORICAL_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(raw, /invokedPath === rawEntrypointPath/);
-  assert.match(raw, /SKIP6R_SWITCH_HISTORICAL_RAW_DB_MISSING/);
-  assert.match(raw, /SKIP6R_SWITCH_HISTORICAL_RAW_DB_IDENTITY_INVALID/);
-  assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
-  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
-  assert.match(raw, /await import\("\.\/analyze-skip6r-switch-historical-closing-odds-internal"\)/);
-  assert.doesNotMatch(raw, /DB not found: \$\{/);
-
-  const guard = raw.indexOf("SKIP6R_SWITCH_HISTORICAL_RAW_DIRECT_EXECUTION_FORBIDDEN");
-  const identity = raw.indexOf("SKIP6R_SWITCH_HISTORICAL_RAW_DB_IDENTITY_INVALID");
-  const internalImport = raw.indexOf('await import("./analyze-skip6r-switch-historical-closing-odds-internal")');
-  assert.ok(guard >= 0 && identity > guard && internalImport > identity);
+  assert.match(raw, /await import\("\.\/analyze-skip6r-switch-historical-closing-odds"\)/);
+  assert.doesNotMatch(raw, /analyze-skip6r-switch-historical-closing-odds-internal/);
+  assert.doesNotMatch(raw, /assertCanonicalSingleLinkRegularFile/);
 });
