@@ -67,11 +67,19 @@ try {
     throw new Error("RACER_ABILITY_AUDIT_OUTPUT_MISSING");
   }
 
-  const report = JSON.parse(readFileSync(generatedJsonPath, "utf8")) as Record<string, unknown>;
+  const generatedJsonReadPath = assertCanonicalSingleLinkRegularFile(
+    generatedJsonPath,
+    "RACER_ABILITY_AUDIT_JSON_OUTPUT_IDENTITY_INVALID",
+  );
+  const report = JSON.parse(readFileSync(generatedJsonReadPath, "utf8")) as Record<string, unknown>;
   delete report.dbPath;
   report.dbProvenance = "verified-read-only-research-db";
 
-  const markdown = readFileSync(generatedMdPath, "utf8").replace(
+  const generatedMdReadPath = assertCanonicalSingleLinkRegularFile(
+    generatedMdPath,
+    "RACER_ABILITY_AUDIT_MARKDOWN_OUTPUT_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(generatedMdReadPath, "utf8").replace(
     /^DB: .*$/mu,
     "DB: verified read-only research DB",
   );
