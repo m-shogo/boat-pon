@@ -57,6 +57,13 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "BET_TYPE_RISK_PRIMARY_DB_IDENTITY_INVALID",
 );
 
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "BET_TYPE_RISK_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
+
 const analysis = run("scripts/analyze-bet-type-risk-factors-internal.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: verifiedDbPath,
