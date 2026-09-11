@@ -9,19 +9,25 @@ const internalSource = readFileSync("scripts/analyze-roi-edge-market-gap-interna
 const auditSource = readFileSync("scripts/audit-roi-edge-market-gap-payout-completeness.ts", "utf-8");
 const packageSource = readFileSync("package.json", "utf-8");
 
-test("ROI edge market-gap normal entrypoint fails closed before internal analysis", () => {
+test("ROI edge market-gap normal entrypoint fails closed before isolated internal analysis", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-edge-market-gap-payout-completeness.ts")');
   const dbBoundary = entrypointSource.indexOf('await import("./assert-roi-edge-market-gap-db-boundary")');
   const childDbIdentity = entrypointSource.indexOf("ROI_EDGE_MARKET_GAP_DB_CHILD_HANDOFF_IDENTITY_INVALID");
-  const analysis = entrypointSource.indexOf('await import("./analyze-roi-edge-market-gap-internal")');
+  const workspace = entrypointSource.indexOf("mkdtempSync(", childDbIdentity);
+  const launchIdentity = entrypointSource.indexOf("ROI_EDGE_MARKET_GAP_DB_CHILD_LAUNCH_IDENTITY_INVALID", workspace);
+  const analysis = entrypointSource.indexOf("const analysis = spawnSync", launchIdentity);
   assert.ok(preflight >= 0);
   assert.ok(dbBoundary > preflight);
   assert.ok(childDbIdentity > dbBoundary);
-  assert.ok(analysis > childDbIdentity);
+  assert.ok(workspace > childDbIdentity);
+  assert.ok(launchIdentity > workspace);
+  assert.ok(analysis > launchIdentity);
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
   assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile/);
-  assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = childDbPath/);
+  assert.match(entrypointSource, /BOAT_PON_DB_PATH: launchDbPath/);
+  assert.doesNotMatch(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = childDbPath/);
+  assert.doesNotMatch(entrypointSource, /await import\("\.\/analyze-roi-edge-market-gap-internal"\)/);
   assert.doesNotMatch(entrypointSource, /analyze-roi-edge-market-gap-raw/);
 });
 
