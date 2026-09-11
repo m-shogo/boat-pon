@@ -58,7 +58,7 @@ test("skip-filter robustness verifies isolated outputs and publishes them atomic
 });
 
 test("skip-filter robustness internal revalidates DB identity and enforces query-only", () => {
-  const verify = analysisSource.indexOf("assertCanonicalSingleLinkRegularFile(DB_PATH");
+  const verify = analysisSource.search(/assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/);
   const open = analysisSource.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
   const queryOnly = analysisSource.indexOf("PRAGMA query_only = ON", open);
   assert.ok(verify >= 0, "internal DB identity validation must exist");
