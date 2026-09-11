@@ -10,7 +10,8 @@
  *       全7券種の coverage と分析可否を判定する。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -295,9 +296,26 @@ ${betTypeStats
 - BUY結合可能数はreturned=0のhistorical BUYと、positive/non-refundかつcombination確定済みのofficial payoutが存在するraceだけを数える。
 `;
 
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_MD, md, "utf-8");
-writeFileSync(OUT_JSON, JSON.stringify(report, null, 2), "utf-8");
+atomicPublish(OUT_MD, md, "BET_TYPE_COVERAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_JSON, JSON.stringify(report, null, 2), "BET_TYPE_COVERAGE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
 
 db.close();
 
