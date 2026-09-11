@@ -71,6 +71,11 @@ process.env.BOAT_PON_DB_PATH = handoffDbPath;
 assertExistingOutputIdentity(OUT_MD, "HISTORICAL_ALT_ODDS_QUALITY_MD_PREEXISTING_IDENTITY_INVALID");
 assertExistingOutputIdentity(OUT_JSON, "HISTORICAL_ALT_ODDS_QUALITY_JSON_PREEXISTING_IDENTITY_INVALID");
 
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "HISTORICAL_ALT_ODDS_QUALITY_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = childDbPath;
 await import("./check-historical-alternative-odds-quality-internal");
 
 assertGeneratedOutputIdentity(
