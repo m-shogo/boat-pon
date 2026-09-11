@@ -29,14 +29,18 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/all-bet-types-roi.md";
 const OUT_JSON = "reports/all-bet-types-roi.json";
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ALL_BET_TYPES_ROI_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 const FORWARD_START = "2025-01-01";
 const EXCL_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
