@@ -57,6 +57,17 @@ test("skip-filter robustness verifies isolated outputs and publishes them atomic
   assert.match(entrypointSource, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
 });
 
+test("skip-filter robustness internal revalidates DB identity and enforces query-only", () => {
+  const verify = analysisSource.indexOf("assertCanonicalSingleLinkRegularFile(DB_PATH");
+  const open = analysisSource.indexOf("new DatabaseSync(verifiedDbPath, { readOnly: true })");
+  const queryOnly = analysisSource.indexOf("PRAGMA query_only = ON", open);
+  assert.ok(verify >= 0, "internal DB identity validation must exist");
+  assert.ok(open > verify, "internal DB open must use the verified canonical path");
+  assert.ok(queryOnly > open, "query_only must be enabled immediately after opening the internal DB");
+  assert.doesNotMatch(analysisSource, /DB not found: \$\{DB_PATH\}/);
+  assert.doesNotMatch(analysisSource, /DB: \$\{DB_PATH\}/);
+});
+
 test("legacy skip-filter robustness safe runner delegates to canonical fail-closed entrypoint", () => {
   assert.match(legacyRunnerSource, /await import\("\.\/analyze-roi-skip-filter-robustness"\)/);
   assert.doesNotMatch(legacyRunnerSource, /audit-roi-skip-filter-robustness-payout-completeness/);
