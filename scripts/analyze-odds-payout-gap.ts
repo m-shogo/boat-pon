@@ -5,7 +5,9 @@
  * decisions, notifications, or betting.
  */
 
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 function run(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -27,6 +29,13 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-await import("./analyze-odds-payout-gap-raw");
+const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+if (!existsSync(configuredDbPath)) throw new Error("ODDS_PAYOUT_GAP_DB_MISSING");
+process.env.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile(
+  configuredDbPath,
+  "ODDS_PAYOUT_GAP_DB_IDENTITY_INVALID",
+);
+
+await import("./analyze-odds-payout-gap-internal");
 
 console.log("[odds-payout-gap-safe-runner] PASS: completeness preflight passed before odds-payout-gap analysis");
