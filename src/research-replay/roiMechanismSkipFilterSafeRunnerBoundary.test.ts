@@ -9,24 +9,24 @@ const rawSource = readFileSync("scripts/analyze-roi-mechanism-skip-filters-raw.t
 const analysisSource = readFileSync("scripts/analyze-roi-mechanism-skip-filters-internal.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
-test("ROI mechanism skip-filter normal entrypoint checks payout completeness before guarded analysis", () => {
+test("ROI mechanism skip-filter normal entrypoint checks payout completeness before internal analysis", () => {
   assert.equal(pkg.scripts?.["analyze:roi-skip-filters"], "tsx scripts/analyze-roi-mechanism-skip-filters.ts");
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-mechanism-skip-filter-payout-completeness.ts")');
   const handoffIdentity = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_DB_HANDOFF_IDENTITY_INVALID");
-  const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-raw")');
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-internal")');
   assert.ok(preflight >= 0);
   assert.ok(handoffIdentity > preflight, "DB identity must be reverified after the settlement preflight");
-  assert.ok(analysis > handoffIdentity, "guarded analysis must start only after DB handoff identity verification");
+  assert.ok(analysis > handoffIdentity, "internal analysis must start only after DB handoff identity verification");
   assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
-  assert.doesNotMatch(entrypointSource, /run\("scripts\/analyze-roi-mechanism-skip-filters-raw\.ts"\)/);
+  assert.doesNotMatch(entrypointSource, /analyze-roi-mechanism-skip-filters-raw/);
 });
 
-test("ROI mechanism skip-filter redacts configured DB provenance only after guarded analysis completes", () => {
+test("ROI mechanism skip-filter redacts configured DB provenance only after internal analysis completes", () => {
   assert.match(entrypointSource, /OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_DB_PROVENANCE_NOT_FOUND/);
   assert.match(entrypointSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
-  const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-raw")');
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-internal")');
   const redact = entrypointSource.lastIndexOf("redactDbProvenance(handoffDbPath)");
   const pass = entrypointSource.lastIndexOf("[roi-mechanism-skip-filter] PASS");
   assert.ok(analysis >= 0 && redact > analysis && pass > redact);
@@ -47,7 +47,7 @@ test("ROI mechanism skip-filter normal entrypoint fails closed before exclusion 
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
   assert.ok(
-    entrypointSource.indexOf("if (preflight !== 0)") < entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-raw")'),
+    entrypointSource.indexOf("if (preflight !== 0)") < entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-internal")'),
   );
 });
 
@@ -57,15 +57,13 @@ test("legacy ROI mechanism safe runner delegates to the canonical fail-closed en
   assert.doesNotMatch(legacyRunnerSource, /analyze-roi-mechanism-skip-filters-raw/);
 });
 
-test("legacy raw module rejects direct CLI execution, revalidates DB identity, and only imports the internal analyzer", () => {
+test("legacy raw module rejects direct CLI execution and routes imported callers through canonical preflight", () => {
   assert.match(rawSource, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(rawSource, /ROI_MECHANISM_SKIP_FILTER_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(rawSource, /ROI_MECHANISM_SKIP_FILTER_RAW_DB_MISSING/);
-  assert.match(rawSource, /ROI_MECHANISM_SKIP_FILTER_RAW_DB_IDENTITY_INVALID/);
-  const identity = rawSource.indexOf("assertCanonicalSingleLinkRegularFile(");
-  const internal = rawSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-internal")');
-  assert.ok(identity >= 0 && internal > identity);
-  assert.match(rawSource, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.match(rawSource, /await import\("\.\/analyze-roi-mechanism-skip-filters"\)/);
+  assert.doesNotMatch(rawSource, /BOAT_PON_DB_PATH/);
+  assert.doesNotMatch(rawSource, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(rawSource, /analyze-roi-mechanism-skip-filters-internal/);
   assert.doesNotMatch(rawSource, /DatabaseSync/);
 });
 
