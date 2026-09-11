@@ -13,7 +13,7 @@ test("exacta backfill quality entrypoint verifies canonical read-only DB without
   assert.doesNotMatch(entrypoint, /DB not found: \$\{DB_PATH\}/u);
 });
 
-test("exacta backfill quality rejects decision cohort drift and protects report identities around implementation load", () => {
+test("exacta backfill quality rejects decision cohort drift before isolated implementation handoff", () => {
   assert.match(entrypoint, /dh\.bet_type IS NULL OR dh\.bet_type != '3連単'/u);
   assert.match(entrypoint, /dh\.returned IS NULL OR dh\.returned != 0/u);
   assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_DECISION_COHORT_INVALID/u);
@@ -25,23 +25,43 @@ test("exacta backfill quality rejects decision cohort drift and protects report 
   const failure = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DECISION_COHORT_INVALID");
   const close = entrypoint.lastIndexOf("db.close()");
   const handoffIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DB_HANDOFF_IDENTITY_INVALID");
-  const mdPreexisting = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_MD_PREEXISTING_IDENTITY_INVALID", handoffIdentity);
-  const jsonPreexisting = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_JSON_PREEXISTING_IDENTITY_INVALID", handoffIdentity);
-  const childHandoffIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DB_CHILD_HANDOFF_IDENTITY_INVALID", jsonPreexisting);
-  const implementationImport = entrypoint.indexOf("check-exacta-backfill-quality-internal");
-  const mdPostflight = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_MD_OUTPUT_IDENTITY_INVALID", implementationImport);
-  const jsonPostflight = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_JSON_OUTPUT_IDENTITY_INVALID", implementationImport);
+  const childHandoffIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DB_CHILD_HANDOFF_IDENTITY_INVALID", handoffIdentity);
+  const workspace = entrypoint.indexOf("mkdtempSync(", childHandoffIdentity);
+  const implementationSpawn = entrypoint.indexOf("const analysis = spawnSync", workspace);
   assert.ok(guard >= 0, "target cohort guard must exist");
   assert.ok(failure > guard, "failure contract must follow cohort query");
   assert.ok(close > failure, "preflight DB must close after cohort validation");
   assert.ok(handoffIdentity > close, "DB identity must be reverified after preflight closes");
-  assert.ok(mdPreexisting > handoffIdentity && jsonPreexisting > handoffIdentity, "existing report identities must be checked after DB handoff");
-  assert.ok(childHandoffIdentity > mdPreexisting && childHandoffIdentity > jsonPreexisting, "DB identity must be reverified after output-path checks");
-  assert.ok(implementationImport > childHandoffIdentity, "quality audit must load only after final handoff identity revalidation");
-  assert.ok(mdPostflight > implementationImport && jsonPostflight > implementationImport, "generated report identities must be verified after implementation");
-  assert.match(entrypoint, /BOAT_PON_DB_PATH = childDbPath/u);
+  assert.ok(childHandoffIdentity > handoffIdentity, "DB identity must be reverified at isolated child handoff");
+  assert.ok(workspace > childHandoffIdentity, "workspace must be created only after child DB handoff verification");
+  assert.ok(implementationSpawn > workspace, "quality audit must run only inside the isolated workspace");
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: childDbPath/u);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/check-exacta-backfill-quality-internal"\)/u);
+});
+
+test("exacta backfill quality verifies isolated outputs, redacts DB provenance, and publishes atomically", () => {
+  const implementationSpawn = entrypoint.indexOf("const analysis = spawnSync");
+  const mdIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_MD_OUTPUT_IDENTITY_INVALID", implementationSpawn);
+  const jsonIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_JSON_OUTPUT_IDENTITY_INVALID", implementationSpawn);
+  const mdRead = entrypoint.indexOf('readFileSync(verifiedMdPath, "utf8")', mdIdentity);
+  const jsonRead = entrypoint.indexOf('readFileSync(verifiedJsonPath, "utf8")', jsonIdentity);
+  const redaction = entrypoint.indexOf('.split(childDbPath).join("verified read-only research DB")', mdRead);
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const mdPublish = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
+  const jsonPublish = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
+
+  assert.ok(mdIdentity > implementationSpawn && jsonIdentity > implementationSpawn, "isolated outputs must be identity-verified after the child exits");
+  assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity, "outputs must not be read before identity verification");
+  assert.ok(redaction > mdRead, "private DB provenance must be redacted before publication");
+  assert.ok(tempCreate >= 0 && fsync > tempCreate, "publication temp must be exclusively created and fsynced");
+  assert.ok(tempIdentity > fsync && rename > tempIdentity, "only verified single-link temps may replace final reports");
+  assert.ok(mdPublish > mdRead && jsonPublish > jsonRead, "both reports must publish through the atomic writer");
   assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_MD_OUTPUT_MISSING/u);
   assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_JSON_OUTPUT_MISSING/u);
+  assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
 });
 
 test("exacta backfill quality implementation remains read-only historical research", () => {
