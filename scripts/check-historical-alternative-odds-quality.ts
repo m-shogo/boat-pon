@@ -11,8 +11,20 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_MD = "reports/historical-alternative-odds-quality.md";
+const OUT_JSON = "reports/historical-alternative-odds-quality.json";
 const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCL_RACES = [10, 11, 12];
+
+function assertExistingOutputIdentity(path: string, code: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function assertGeneratedOutputIdentity(path: string, missingCode: string, invalidCode: string): void {
+  if (!existsSync(path)) throw new Error(missingCode);
+  assertCanonicalSingleLinkRegularFile(path, invalidCode);
+}
 
 if (!existsSync(DB_PATH)) {
   console.error("[historical-alt-odds-quality] research database unavailable");
@@ -55,4 +67,19 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   "HISTORICAL_ALT_ODDS_QUALITY_DB_HANDOFF_IDENTITY_INVALID",
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
+
+assertExistingOutputIdentity(OUT_MD, "HISTORICAL_ALT_ODDS_QUALITY_MD_PREEXISTING_IDENTITY_INVALID");
+assertExistingOutputIdentity(OUT_JSON, "HISTORICAL_ALT_ODDS_QUALITY_JSON_PREEXISTING_IDENTITY_INVALID");
+
 await import("./check-historical-alternative-odds-quality-internal");
+
+assertGeneratedOutputIdentity(
+  OUT_MD,
+  "HISTORICAL_ALT_ODDS_QUALITY_MD_OUTPUT_MISSING",
+  "HISTORICAL_ALT_ODDS_QUALITY_MD_OUTPUT_IDENTITY_INVALID",
+);
+assertGeneratedOutputIdentity(
+  OUT_JSON,
+  "HISTORICAL_ALT_ODDS_QUALITY_JSON_OUTPUT_MISSING",
+  "HISTORICAL_ALT_ODDS_QUALITY_JSON_OUTPUT_IDENTITY_INVALID",
+);
