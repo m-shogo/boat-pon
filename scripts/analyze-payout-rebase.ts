@@ -17,16 +17,23 @@ const OPAQUE_DB_SOURCE = "primary research database";
 
 function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
-    stdio: "inherit",
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
     env,
   });
 
   if (result.error) {
-    console.error(`[payout-rebase-entrypoint] failed to start guarded research step: ${result.error.message}`);
+    console.error("[payout-rebase-entrypoint] GUARDED_STEP_SPAWN_FAILED");
     return 1;
   }
 
-  return result.status ?? 1;
+  const status = result.status ?? 1;
+  if (status !== 0) {
+    console.error("[payout-rebase-entrypoint] GUARDED_STEP_FAILED");
+    return status;
+  }
+  if (result.stdout) process.stdout.write(result.stdout);
+  return status;
 }
 
 function redactDbProvenance(dbPath: string): void {
