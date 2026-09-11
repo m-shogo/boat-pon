@@ -19,7 +19,11 @@ type EvalRow = ExactaRow & { period: "discovery" | "forward"; hit: boolean; impl
 type Metric = { n: number; hits: number; edgePp: number; roi: number; max2HitExclRoi: number; zScore: number };
 type OfficialRelationshipRegistry = { relationships: Array<{ relationshipType: string; mentor: { registrationNo: string }; apprentice: { registrationNo: string }; sourcePublishedDate: string }> };
 
-const officialRegistry = JSON.parse(readFileSync("docs/official-racer-relationships.json", "utf8")) as OfficialRelationshipRegistry;
+const verifiedOfficialRegistryPath = assertCanonicalSingleLinkRegularFile(
+  "docs/official-racer-relationships.json",
+  "OFFICIAL_RACER_RELATIONSHIP_REGISTRY_IDENTITY_INVALID",
+);
+const officialRegistry = JSON.parse(readFileSync(verifiedOfficialRegistryPath, "utf8")) as OfficialRelationshipRegistry;
 const officialPairs = new Map(officialRegistry.relationships.map(row => [pairKey(row.mentor.registrationNo, row.apprentice.registrationNo), row]));
 
 const dbPath = assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite", "RESEARCH_DB_IDENTITY_INVALID");
