@@ -15,6 +15,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/roi-skip-filter-robustness.md";
@@ -26,9 +27,12 @@ const FWD_H2_START = "2025-09-01"; // forward後半開始
 const EXCL_VENUES  = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCL_RACES   = [10, 11, 12];
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ROI_SKIP_FILTER_ROBUSTNESS_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 function r2(v: number) { return Math.round(v * 100) / 100; }
 function calcRoi(payout: number, n: number) { return n > 0 ? r2(payout / (n * STAKE) * 100) : 0; }
@@ -428,7 +432,7 @@ ${r.verdicts.map(v => `- ${v}`).join("\n") || "- —"}
 let md = `# 見送り候補 頑健性検証 (skip-filter robustness)
 
 生成日時: ${now}
-DB: ${DB_PATH}
+DB: verified read-only research DB
 forward期間: ${FORWARD_START}〜${dbMaxDate}
 直近3M基準: ${recent3mCutoff}〜
 2025-07 除外ベース ROI: ${exJul25Base}%（全体 baseline: ${baselineRoi}%）
@@ -547,7 +551,7 @@ ${results.filter(r =>
 *生成: analyze-roi-skip-filter-robustness.ts*
 `;
 
-// ─── JSON 出力 ───────────────────────────────────────────────────────────────────
+// ─── JSON 出力 ────────────────────────────────────────────────────────────────────
 
 const jsonOut = {
   generatedAt: now,
