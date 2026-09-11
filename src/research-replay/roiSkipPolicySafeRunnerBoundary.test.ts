@@ -9,18 +9,41 @@ const internalSource = readFileSync("scripts/analyze-roi-skip-policy-simulation-
 const auditSource = readFileSync("scripts/audit-roi-skip-policy-payout-completeness.ts", "utf-8");
 const packageSource = readFileSync("package.json", "utf-8");
 
-test("ROI skip-policy normal entrypoint checks payout completeness before internal simulation", () => {
+test("ROI skip-policy normal entrypoint checks payout completeness before isolated internal simulation", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
-  const identity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(");
-  const analysis = entrypointSource.indexOf('await import("./analyze-roi-skip-policy-simulation-internal")');
+  const identity = entrypointSource.indexOf("ROI_SKIP_POLICY_PRIMARY_DB_IDENTITY_INVALID");
+  const childIdentity = entrypointSource.indexOf("ROI_SKIP_POLICY_DB_CHILD_HANDOFF_IDENTITY_INVALID");
+  const workspace = entrypointSource.indexOf("mkdtempSync(");
+  const analysis = entrypointSource.indexOf("const analysis = spawnSync");
   assert.ok(preflight >= 0);
   assert.ok(identity > preflight);
-  assert.ok(analysis > identity);
+  assert.ok(childIdentity > identity);
+  assert.ok(workspace > childIdentity);
+  assert.ok(analysis > workspace);
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
   assert.match(entrypointSource, /ROI_SKIP_POLICY_PRIMARY_DB_IDENTITY_INVALID/);
-  assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.match(entrypointSource, /ROI_SKIP_POLICY_DB_CHILD_HANDOFF_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /BOAT_PON_DB_PATH: childDbPath/);
+  assert.doesNotMatch(entrypointSource, /await import\("\.\/analyze-roi-skip-policy-simulation-internal"\)/);
   assert.doesNotMatch(entrypointSource, /analyze-roi-skip-policy-simulation-raw/);
+});
+
+test("ROI skip-policy normal entrypoint verifies isolated outputs and publishes them atomically", () => {
+  const spawn = entrypointSource.indexOf("const analysis = spawnSync");
+  const mdIdentity = entrypointSource.indexOf("ROI_SKIP_POLICY_MARKDOWN_OUTPUT_IDENTITY_INVALID");
+  const jsonIdentity = entrypointSource.indexOf("ROI_SKIP_POLICY_JSON_OUTPUT_IDENTITY_INVALID");
+  const mdPublish = entrypointSource.indexOf("ROI_SKIP_POLICY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");
+  const jsonPublish = entrypointSource.indexOf("ROI_SKIP_POLICY_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  assert.ok(spawn >= 0);
+  assert.ok(mdIdentity > spawn);
+  assert.ok(jsonIdentity > mdIdentity);
+  assert.ok(mdPublish > jsonIdentity);
+  assert.ok(jsonPublish > mdPublish);
+  assert.match(entrypointSource, /openSync\(tempPath, "wx", 0o600\)/);
+  assert.match(entrypointSource, /fsyncSync\(fd\)/);
+  assert.match(entrypointSource, /renameSync\(verifiedTempPath, path\)/);
+  assert.match(entrypointSource, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
 });
 
 test("ROI skip-policy raw compatibility module rejects direct CLI execution and routes through canonical preflight", () => {
