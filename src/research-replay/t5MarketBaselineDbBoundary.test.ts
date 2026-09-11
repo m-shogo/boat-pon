@@ -14,3 +14,14 @@ test("T-5 market baseline does not expose the configured database path on missin
   assert.match(source, /T5_MARKET_BASELINE_DB_MISSING/u);
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/u);
 });
+
+test("T-5 market baseline publishes Markdown and JSON through exclusive verified temp files", () => {
+  assert.match(source, /openSync\(tempPath,"wx",0o600\)/u);
+  assert.match(source, /fsyncSync\(fd\)/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,errorCode\)/u);
+  assert.match(source, /renameSync\(verifiedTempPath,path\)/u);
+  assert.match(source, /T5_MARKET_BASELINE_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /T5_MARKET_BASELINE_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.doesNotMatch(source, /writeFileSync\(OUT_JSON/u);
+  assert.doesNotMatch(source, /writeFileSync\(OUT_MD/u);
+});
