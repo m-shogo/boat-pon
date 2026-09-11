@@ -11,6 +11,17 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const HYPOTHESIS_PATH = "data/research-hypotheses.json";
+const REPORT_INPUT_PATHS = [
+  "reports/roi-governor.json",
+  "reports/historical-alternative-odds-quality.json",
+  "reports/condb-switch-historical-closing-odds.json",
+  "reports/skip6r-switch-historical-closing-odds.json",
+  "reports/skipvenue-switch-historical-closing-odds.json",
+  "reports/alternative-odds-timeseries-health.json",
+  "reports/roi-skip-policy-simulation.json",
+  "reports/paper-forward-monitor.json",
+  "reports/paper-forward-candidates.json",
+] as const;
 
 function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -42,5 +53,13 @@ assertCanonicalSingleLinkRegularFile(
   HYPOTHESIS_PATH,
   "RESEARCH_GOVERNOR_HYPOTHESIS_REGISTRY_IDENTITY_INVALID",
 );
+
+for (const reportPath of REPORT_INPUT_PATHS) {
+  if (!existsSync(reportPath)) continue;
+  assertCanonicalSingleLinkRegularFile(
+    reportPath,
+    "RESEARCH_GOVERNOR_REPORT_INPUT_IDENTITY_INVALID",
+  );
+}
 
 await import("./report-research-governor-internal");
