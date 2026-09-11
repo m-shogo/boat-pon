@@ -34,7 +34,11 @@ for (const file of files) {
     lines.push("");
     continue;
   }
-  const json = JSON.parse(readFileSync(file, "utf8")) as any;
+  const verifiedInputPath = assertCanonicalSingleLinkRegularFile(
+    file,
+    "ROI_SEARCH_SUITE_INPUT_IDENTITY_INVALID",
+  );
+  const json = JSON.parse(readFileSync(verifiedInputPath, "utf8")) as any;
   if (json.baseline) {
     lines.push(`- baseline n: ${json.baseline.n}`);
     lines.push(`- baseline ROI: ${pct(json.baseline.roi)}`);
