@@ -3,12 +3,14 @@
  * DB read-only。app_settings変更なし。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/motor-filter-consistency.md";
+const OUT_JSON = "reports/motor-filter-consistency.json";
 const DECISION_BET_TYPE = "3連単";
 const PAYOUT_BET_TYPE = "trifecta";
 
@@ -42,10 +44,10 @@ try {
   const summaries = conditions.map(([label, fn]) => ({ condition: label, ...metric(rows.filter(fn)), recommendation: recommendation(label, metric(rows.filter(fn))) }));
   const report = { generatedAt: new Date().toISOString(), roiBasis: "official-race-payouts", summaries };
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/motor-filter-consistency.json", `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, renderMarkdown(report));
+  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "MOTOR_FILTER_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(OUT_MD, renderMarkdown(report), "MOTOR_FILTER_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   console.log(`[analyze-motor-filter-consistency] wrote ${OUT_MD}`);
-  console.log("[analyze-motor-filter-consistency] wrote reports/motor-filter-consistency.json");
+  console.log(`[analyze-motor-filter-consistency] wrote ${OUT_JSON}`);
 } finally {
   db.close();
 }
@@ -217,6 +219,23 @@ function recommendation(label: string, m: ReturnType<typeof metric>) {
   if (label.includes("venue") && m.roi < 0.8) return "venue基準のNO BUY/減点候補";
   if (label.includes("national") && m.roi < 0.8) return "national基準も弱いが、venueとのズレ確認が必要";
   return "観察";
+}
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function renderMarkdown(report: { roiBasis: string; summaries: Array<{ condition: string; recommendation: string } & ReturnType<typeof metric>> }) {
