@@ -3,7 +3,8 @@
  * モデル候補を経由せず、odds_timeseries_snapshotsから直接評価する。
  * 読み取り専用。本番判定・DB・app_settingsは変更しない。
  */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
@@ -88,7 +89,27 @@ const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,dbWrite
 const p=(v:number|null)=>v==null?"-":`${(v*100).toFixed(2)}%`; const n=(v:number|null)=>v==null?"-":v.toFixed(4);
 const periodRows = [["全体",report.marketFavorite.all],["discovery",report.marketFavorite.discovery],["forward",report.marketFavorite.forward]] as const;
 const lines=["# T-5 純市場ベースライン", "", `生成日時: ${report.generatedAt}`, "", "> モデル候補を経由せず、単一captured_atで揃ったT-5全120通りから直接計算。読み取り専用。", "", "## Coverage", "", `- T-5あり: ${byRace.size}レース / 完全市場・結果確定: ${evaluated.length}レース`, `- 不完全: ${rejectedIncomplete} / 不正値: ${rejectedInvalid} / 未確定・返還: ${unsettled}`, `- research gate: **${report.gate.passed?"PASS":"BLOCKED"}**（${report.gate.reasons.join(" / ")||"条件達成"}）`, "", "## 市場1番人気を1点選ぶベースライン", "", "| 期間 | n | 的中 | 的中率 | 実払戻ROI | 最大2的中除外ROI | 平均市場確率 | log loss | Brier |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|", ...periodRows.map(([label,s])=>`| ${label} | ${s.n} | ${s.hits} | ${p(s.hitRate)} | ${p(s.payoutRoi)} | ${p(s.payoutRoiExTop2)} | ${p(s.avgFavoriteProbability)} | ${n(s.logLoss)} | ${n(s.brier)} |`), "", "## 月別", "", "| 月 | n | 的中率 | ROI | 最大2件除外ROI |", "|---|---:|---:|---:|---:|", ...monthly.map(m=>`| ${m.month} | ${m.n} | ${p(m.hitRate)} | ${p(m.payoutRoi)} | ${p(m.payoutRoiExTop2)} |`), "", "## 判定", "", "- これを今後の最低比較基準に固定する。モデル候補を経由した旧market-only集計は基準に使わない。", "- 残差モデルは同じ完全市場race_id集合でのみ比較する。", "- 1,000 settled到達までは予測改善を確定しない。"];
-mkdirSync("reports",{recursive:true});writeFileSync(OUT_JSON,`${JSON.stringify(report,null,2)}\n`);writeFileSync(OUT_MD,`${lines.join("\n")}\n`);db.close();console.log(`[t5-market-baseline] wrote ${OUT_MD} / ${OUT_JSON}`);
+
+function atomicPublish(path:string,contents:string,errorCode:string){
+  const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd:number|null=null;
+  try{
+    fd=openSync(tempPath,"wx",0o600);
+    writeFileSync(fd,contents,"utf8");
+    fsyncSync(fd);
+    closeSync(fd);fd=null;
+    const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,errorCode);
+    renameSync(verifiedTempPath,path);
+  }finally{
+    if(fd!==null)closeSync(fd);
+    rmSync(tempPath,{force:true});
+  }
+}
+
+mkdirSync("reports",{recursive:true});
+atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"T5_MARKET_BASELINE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD,`${lines.join("\n")}\n`,"T5_MARKET_BASELINE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+db.close();console.log(`[t5-market-baseline] wrote ${OUT_MD} / ${OUT_JSON}`);
 
 function avg(v:number[]){return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
 function validSelection(value:string){const p=value.split("-").map(Number);return p.length===3&&new Set(p).size===3&&p.every(x=>Number.isInteger(x)&&x>=1&&x<=6);}
