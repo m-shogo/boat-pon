@@ -1,5 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/roi-master-review.md";
 const OUT_JSON = "reports/roi-master-review.json";
@@ -66,8 +68,8 @@ const report = {
 };
 
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, renderMd(report));
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ROI_MASTER_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD, renderMd(report), "ROI_MASTER_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log(`[roi-master-review] finalDecision=${finalDecision}`);
 console.log(`[roi-master-review] wrote ${OUT_MD}`);
 console.log(`[roi-master-review] wrote ${OUT_JSON}`);
@@ -137,8 +139,27 @@ function table(items: Candidate[]) {
 
 function read(path: string): AnyObj | null {
   if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8")) as AnyObj;
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_MASTER_REVIEW_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as AnyObj;
 }
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 function getPath(obj: unknown, path: string[]): unknown {
   return path.reduce((cur, key) => cur && typeof cur === "object" ? (cur as AnyObj)[key] : undefined, obj);
 }
