@@ -4,7 +4,28 @@
  * the internal robustness analyzer can emit payout-ROI-based final verdicts.
  */
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+const OUT_MD = "reports/roi-skip-filter-robustness.md";
+const OUT_JSON = "reports/roi-skip-filter-robustness.json";
+const internalPath = fileURLToPath(new URL("./analyze-roi-skip-filter-robustness-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 function run(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -18,6 +39,23 @@ function run(script: string): number {
   return result.status ?? 1;
 }
 
+function atomicPublish(path: string, content: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 const preflight = run("scripts/audit-roi-skip-filter-robustness-payout-completeness.ts");
 if (preflight !== 0) {
   console.error("[skip-filter-robustness] FAIL CLOSED: settlement completeness preflight did not pass; robustness verdicts were not generated");
@@ -29,7 +67,65 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   configuredDbPath,
   "ROI_SKIP_FILTER_ROBUSTNESS_DB_HANDOFF_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "ROI_SKIP_FILTER_ROBUSTNESS_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
 
-await import("./analyze-roi-skip-filter-robustness-internal");
-console.log("[skip-filter-robustness] PASS: payout completeness preflight passed before internal analysis");
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-roi-skip-filter-robustness-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const isolatedDbPath = assertCanonicalSingleLinkRegularFile(
+    childDbPath,
+    "ROI_SKIP_FILTER_ROBUSTNESS_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID",
+  );
+  const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const analysis = spawnSync(
+    process.execPath,
+    ["--import", tsxLoader, "--input-type=module", "--eval", loader],
+    {
+      cwd: workspace,
+      env: { ...process.env, BOAT_PON_DB_PATH: isolatedDbPath },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  if (analysis.error || analysis.status !== 0) {
+    throw new Error("ROI_SKIP_FILTER_ROBUSTNESS_INTERNAL_FAILED");
+  }
+
+  const workspaceMd = join(workspace, OUT_MD);
+  const workspaceJson = join(workspace, OUT_JSON);
+  if (!existsSync(workspaceMd)) throw new Error("ROI_SKIP_FILTER_ROBUSTNESS_MD_OUTPUT_MISSING");
+  if (!existsSync(workspaceJson)) throw new Error("ROI_SKIP_FILTER_ROBUSTNESS_JSON_OUTPUT_MISSING");
+  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(
+    workspaceMd,
+    "ROI_SKIP_FILTER_ROBUSTNESS_MD_OUTPUT_IDENTITY_INVALID",
+  );
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    workspaceJson,
+    "ROI_SKIP_FILTER_ROBUSTNESS_JSON_OUTPUT_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(verifiedMdPath, "utf8")
+    .split(isolatedDbPath)
+    .join("verified read-only research DB");
+  const json = readFileSync(verifiedJsonPath, "utf8")
+    .split(isolatedDbPath)
+    .join("verified read-only research DB");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "ROI_SKIP_FILTER_ROBUSTNESS_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "ROI_SKIP_FILTER_ROBUSTNESS_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
+
+console.log("[skip-filter-robustness] PASS: payout completeness preflight passed before isolated internal analysis");
