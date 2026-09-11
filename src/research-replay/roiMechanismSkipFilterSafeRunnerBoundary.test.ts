@@ -21,6 +21,16 @@ test("ROI mechanism skip-filter normal entrypoint checks payout completeness bef
   assert.doesNotMatch(entrypointSource, /analyze-roi-mechanism-skip-filters-raw/);
 });
 
+test("ROI mechanism skip-filter rejects unsafe pre-existing report paths before legacy analysis writes", () => {
+  const dbHandoff = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_DB_HANDOFF_IDENTITY_INVALID");
+  const preexistingIdentity = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_PREEXISTING_REPORT_IDENTITY_INVALID");
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-internal")');
+
+  assert.ok(preexistingIdentity > dbHandoff, "report-path identity preflight must follow verified DB handoff");
+  assert.ok(analysis > preexistingIdentity, "legacy analyzer must not write before an existing report path is verified");
+  assert.match(entrypointSource, /if \(existsSync\(OUT_MD\)\)/);
+});
+
 test("ROI mechanism skip-filter redacts configured DB provenance only after internal analysis completes", () => {
   assert.match(entrypointSource, /OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_REPORT_MISSING_AFTER_ANALYSIS/);
