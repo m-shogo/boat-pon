@@ -1,7 +1,7 @@
 /**
  * Guarded compatibility module for 1-2-3 cross-bet conversion research.
- * The canonical entrypoint must complete official settlement completeness
- * preflight before the legacy analyzer may run. Direct CLI execution is forbidden.
+ * Imported compatibility callers are routed through the canonical official
+ * settlement-completeness preflight. Direct CLI execution is forbidden.
  */
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,4 +12,4 @@ if (invokedPath === coreEntrypointPath) {
   throw new Error("BET_TYPE_CONVERSION_CORE_DIRECT_EXECUTION_FORBIDDEN");
 }
 
-await import("./analyze-123-bet-type-conversion-internal");
+await import("./analyze-123-bet-type-conversion");

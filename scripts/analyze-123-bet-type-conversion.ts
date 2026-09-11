@@ -28,6 +28,6 @@ if (preflight !== 0) {
   process.exit(preflight);
 }
 
-await import("./analyze-123-bet-type-conversion-core");
+await import("./analyze-123-bet-type-conversion-internal");
 
 console.log("[123-bet-type-conversion] PASS: all required official settlement types were complete before analysis");
