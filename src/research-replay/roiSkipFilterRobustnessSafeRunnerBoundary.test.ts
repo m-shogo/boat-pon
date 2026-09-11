@@ -9,22 +9,22 @@ const rawSource = readFileSync("scripts/analyze-roi-skip-filter-robustness-raw.t
 const analysisSource = readFileSync("scripts/analyze-roi-skip-filter-robustness-internal.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
-test("skip-filter robustness normal entrypoint checks payout completeness before guarded analysis", () => {
+test("skip-filter robustness normal entrypoint checks payout completeness before internal analysis", () => {
   assert.equal(pkg.scripts?.["analyze:roi-skip-robustness"], "tsx scripts/analyze-roi-skip-filter-robustness.ts");
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-skip-filter-robustness-payout-completeness.ts")');
   const handoffIdentity = entrypointSource.indexOf("ROI_SKIP_FILTER_ROBUSTNESS_DB_HANDOFF_IDENTITY_INVALID");
-  const analysis = entrypointSource.indexOf('await import("./analyze-roi-skip-filter-robustness-raw")');
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-skip-filter-robustness-internal")');
   assert.ok(preflight >= 0);
   assert.ok(handoffIdentity > preflight, "DB identity must be reverified after the settlement preflight");
-  assert.ok(analysis > handoffIdentity, "guarded analysis must start only after DB handoff identity verification");
+  assert.ok(analysis > handoffIdentity, "internal analysis must start only after DB handoff identity verification");
   assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
-  assert.doesNotMatch(entrypointSource, /run\("scripts\/analyze-roi-skip-filter-robustness-raw\.ts"\)/);
+  assert.doesNotMatch(entrypointSource, /analyze-roi-skip-filter-robustness-raw/);
 });
 
 test("skip-filter robustness normal entrypoint fails closed before final verdicts", () => {
   assert.match(entrypointSource, /if \(preflight !== 0\)/);
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
-  assert.ok(entrypointSource.indexOf("if (preflight !== 0)") < entrypointSource.indexOf('await import("./analyze-roi-skip-filter-robustness-raw")'));
+  assert.ok(entrypointSource.indexOf("if (preflight !== 0)") < entrypointSource.indexOf('await import("./analyze-roi-skip-filter-robustness-internal")'));
 });
 
 test("legacy skip-filter robustness safe runner delegates to canonical fail-closed entrypoint", () => {
@@ -33,15 +33,13 @@ test("legacy skip-filter robustness safe runner delegates to canonical fail-clos
   assert.doesNotMatch(legacyRunnerSource, /analyze-roi-skip-filter-robustness-raw/);
 });
 
-test("legacy raw module rejects direct CLI execution, revalidates DB identity, and only imports the internal analyzer", () => {
+test("legacy raw module rejects direct CLI execution and routes imported callers through canonical preflight", () => {
   assert.match(rawSource, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(rawSource, /ROI_SKIP_FILTER_ROBUSTNESS_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(rawSource, /ROI_SKIP_FILTER_ROBUSTNESS_RAW_DB_MISSING/);
-  assert.match(rawSource, /ROI_SKIP_FILTER_ROBUSTNESS_RAW_DB_IDENTITY_INVALID/);
-  const identity = rawSource.indexOf("assertCanonicalSingleLinkRegularFile(");
-  const internal = rawSource.indexOf('await import("./analyze-roi-skip-filter-robustness-internal")');
-  assert.ok(identity >= 0 && internal > identity);
-  assert.match(rawSource, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.match(rawSource, /await import\("\.\/analyze-roi-skip-filter-robustness"\)/);
+  assert.doesNotMatch(rawSource, /BOAT_PON_DB_PATH/);
+  assert.doesNotMatch(rawSource, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(rawSource, /analyze-roi-skip-filter-robustness-internal/);
   assert.doesNotMatch(rawSource, /DatabaseSync/);
 });
 
