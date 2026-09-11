@@ -26,25 +26,27 @@ function fail(path: string, reason: string): never {
   process.exit(2);
 }
 
-for (const path of REQUIRED_REPORTS) {
-  if (!existsSync(path)) fail(path, "missing");
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(
-    path,
-    "BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID",
-  );
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(readFileSync(verifiedPath, "utf8"));
-  } catch {
-    fail(path, "invalid_json");
-  }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    fail(path, "invalid_shape");
-  }
+function verifyRequiredReports(): void {
+  for (const path of REQUIRED_REPORTS) {
+    if (!existsSync(path)) fail(path, "missing");
+    const verifiedPath = assertCanonicalSingleLinkRegularFile(
+      path,
+      "BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID",
+    );
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(readFileSync(verifiedPath, "utf8"));
+    } catch {
+      fail(path, "invalid_json");
+    }
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      fail(path, "invalid_shape");
+    }
 
-  const envelope = parsed as ReportEnvelope;
-  if (envelope.safety?.pointInTimeSafe === false) {
-    fail(path, "point_in_time_unsafe");
+    const envelope = parsed as ReportEnvelope;
+    if (envelope.safety?.pointInTimeSafe === false) {
+      fail(path, "point_in_time_unsafe");
+    }
   }
 }
 
@@ -119,8 +121,10 @@ function verifyJsonOutput(): void {
   );
 }
 
-const verifiedDbPath = verifyDbHandoff();
+verifyRequiredReports();
 verifyExistingOutputPaths();
+verifyRequiredReports();
+const verifiedDbPath = verifyDbHandoff();
 const status = run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath);
 if (status === 0) {
   redactDbProvenance(verifiedDbPath);
