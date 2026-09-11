@@ -21,7 +21,7 @@ const CASES = [
     auditPath: "scripts/audit-skip6r-historical-payout-completeness.ts",
     audit: "audit-skip6r-historical-payout-completeness.ts",
     raw: "analyze-skip6r-switch-historical-closing-odds-raw.ts",
-    analyzer: "analyze-skip6r-switch-historical-closing-odds-raw",
+    analyzer: "analyze-skip6r-switch-historical-closing-odds-internal",
     primaryIdentityError: "SKIP6R_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID",
     handoffIdentityError: "SKIP6R_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID",
   },
