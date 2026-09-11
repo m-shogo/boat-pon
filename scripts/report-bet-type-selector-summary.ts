@@ -135,12 +135,21 @@ function runIsolated(workspace: string, verifiedDbPath: string): number {
     ["--import", tsxLoader, "--input-type=module", "--eval", loader],
     {
       cwd: workspace,
-      stdio: "inherit",
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
     },
   );
-  if (result.error) throw result.error;
-  return result.status ?? 1;
+  if (result.error) {
+    throw new Error("BET_TYPE_SELECTOR_INTERNAL_SPAWN_FAILED");
+  }
+  const status = result.status ?? 1;
+  if (status !== 0) {
+    console.error("BET_TYPE_SELECTOR_INTERNAL_FAILED");
+    return status;
+  }
+  if (result.stdout) process.stdout.write(result.stdout);
+  return status;
 }
 
 function readIsolatedOutputs(workspace: string, dbPath: string): { markdown: string; json: string } {
