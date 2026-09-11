@@ -10,12 +10,15 @@ const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Rec
 test("paper-forward core cannot bypass official settlement completeness when invoked directly", () => {
   const preflight = core.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
   const handoffIdentity = core.indexOf("PAPER_FORWARD_CORE_DB_HANDOFF_IDENTITY_INVALID");
+  const reportIdentity = core.indexOf("PAPER_FORWARD_CORE_PREEXISTING_REPORT_IDENTITY_INVALID");
   const internalRun = core.indexOf('run("scripts/report-paper-forward-candidates-internal.ts", {');
 
   assert.ok(preflight >= 0, "core must invoke the canonical settlement-integrity preflight");
   assert.ok(handoffIdentity > preflight, "core must reverify DB identity after the settlement preflight");
-  assert.ok(internalRun > handoffIdentity, "internal aggregation must run only after DB handoff identity verification");
+  assert.ok(reportIdentity > handoffIdentity, "pre-existing report identity must be verified after DB handoff");
+  assert.ok(internalRun > reportIdentity, "internal aggregation must run only after report-path identity preflight");
   assert.match(core, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
+  assert.match(core, /if \(existsSync\(OUT_MD\)\)/u);
   assert.match(core, /BOAT_PON_DB_PATH: handoffDbPath/);
   assert.match(core, /BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1"/);
 });
@@ -25,11 +28,16 @@ test("paper-forward public raw compatibility entrypoint is guarded, DB-free, and
   assert.equal(scripts.some((command) => command.includes("report-paper-forward-candidates-raw.ts")), false);
 
   const preflight = raw.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
+  const handoffIdentity = raw.indexOf("PAPER_FORWARD_RAW_DB_HANDOFF_IDENTITY_INVALID");
+  const reportIdentity = raw.indexOf("PAPER_FORWARD_RAW_PREEXISTING_REPORT_IDENTITY_INVALID");
   const internalRun = raw.indexOf('run("scripts/report-paper-forward-candidates-internal.ts"');
   const redact = raw.indexOf("redactDbProvenance(handoffDbPath)");
   assert.ok(preflight >= 0, "raw compatibility entrypoint must invoke settlement preflight");
-  assert.ok(internalRun > preflight, "raw compatibility entrypoint must not aggregate before preflight");
+  assert.ok(handoffIdentity > preflight, "raw compatibility entrypoint must reverify DB identity after preflight");
+  assert.ok(reportIdentity > handoffIdentity, "raw compatibility entrypoint must verify a pre-existing report after DB handoff");
+  assert.ok(internalRun > reportIdentity, "raw compatibility entrypoint must not aggregate before report-path identity preflight");
   assert.ok(redact > internalRun, "raw compatibility output must redact DB provenance only after successful aggregation");
+  assert.match(raw, /if \(existsSync\(OUT_MD\)\)/u);
   assert.match(raw, /BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1"/);
   assert.match(raw, /PAPER_FORWARD_RAW_PRIVATE_DB_PATH_REMAINS/);
   assert.match(raw, /PAPER_FORWARD_RAW_DB_PROVENANCE_UNEXPECTED/);
