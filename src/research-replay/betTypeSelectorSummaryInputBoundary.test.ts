@@ -25,7 +25,7 @@ test("bet-type selector summary fails closed on missing, non-canonical, invalid,
   assert.match(entry, /parsed === null \|\| typeof parsed !== "object" \|\| Array\.isArray\(parsed\)/);
   assert.match(entry, /envelope\.safety\?\.pointInTimeSafe === false/);
   assert.match(entry, /point_in_time_unsafe/);
-  const validation = entry.indexOf("for (const path of REQUIRED_REPORTS)");
+  const validation = entry.indexOf("function verifyRequiredReports()");
   const identity = entry.indexOf("BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID");
   const safetyValidation = entry.indexOf("pointInTimeSafe === false");
   const internalRun = entry.indexOf("report-bet-type-selector-summary-internal.ts");
@@ -35,30 +35,42 @@ test("bet-type selector summary fails closed on missing, non-canonical, invalid,
   assert.equal(pkg.scripts?.["report:bet-type-selector"], "tsx scripts/report-bet-type-selector-summary.ts");
 });
 
-test("bet-type selector summary reverifies DB identity at handoff and redacts configured DB provenance after successful analysis", () => {
+test("bet-type selector summary reverifies prerequisite reports and DB identity immediately before child handoff", () => {
   assert.match(entry, /BET_TYPE_SELECTOR_DB_MISSING/);
   assert.match(entry, /BET_TYPE_SELECTOR_DB_HANDOFF_IDENTITY_INVALID/);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "BET_TYPE_SELECTOR_DB_HANDOFF_IDENTITY_INVALID"\)/);
   assert.match(entry, /env: \{ \.\.\.process\.env, BOAT_PON_DB_PATH: verifiedDbPath \}/);
+
+  const calls = [...entry.matchAll(/verifyRequiredReports\(\);/g)].map((match) => match.index ?? -1);
+  assert.equal(calls.length, 2, "prerequisite reports must be validated initially and again at child handoff");
+  const outputPreflight = entry.lastIndexOf("verifyExistingOutputPaths()");
+  const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
+  const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
+  assert.ok(calls[0] >= 0 && outputPreflight > calls[0]);
+  assert.ok(calls[1] > outputPreflight && handoff > calls[1] && internalRun > handoff);
+});
+
+test("bet-type selector summary redacts configured DB provenance after successful analysis", () => {
   assert.match(entry, /BET_TYPE_SELECTOR_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(entry, /BET_TYPE_SELECTOR_DB_PROVENANCE_NOT_FOUND/);
   assert.match(entry, /OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entry, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
-  const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
   const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
   const redact = entry.lastIndexOf("redactDbProvenance(verifiedDbPath)");
-  assert.ok(handoff >= 0 && internalRun > handoff && redact > internalRun);
+  assert.ok(internalRun >= 0 && redact > internalRun);
 });
 
 test("bet-type selector summary rejects unsafe pre-existing Markdown and JSON outputs before internal write", () => {
-  const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
+  const firstInputPreflight = entry.lastIndexOf("verifyRequiredReports();", entry.lastIndexOf("verifyExistingOutputPaths()"));
   const outputPreflight = entry.lastIndexOf("verifyExistingOutputPaths()");
+  const finalInputPreflight = entry.lastIndexOf("verifyRequiredReports();");
   const markdownIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_REPORT_IDENTITY_INVALID");
   const jsonIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_JSON_REPORT_IDENTITY_INVALID");
   const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
 
   assert.ok(markdownIdentity >= 0 && jsonIdentity > markdownIdentity);
-  assert.ok(outputPreflight > handoff && internalRun > outputPreflight);
+  assert.ok(firstInputPreflight >= 0 && outputPreflight > firstInputPreflight);
+  assert.ok(finalInputPreflight > outputPreflight && internalRun > finalInputPreflight);
   assert.match(entry, /if \(existsSync\(OUT_MD\)\)/u);
   assert.match(entry, /if \(existsSync\(OUT_JSON\)\)/u);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
