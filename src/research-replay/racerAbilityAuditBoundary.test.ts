@@ -19,6 +19,11 @@ test("racer ability canonical entrypoint verifies research inputs and redacts fi
   const markdownRead = source.indexOf('readFileSync(generatedMdReadPath, "utf8")');
   const redactJson = source.indexOf("delete report.dbPath");
   const redactMarkdown = source.indexOf('"DB: verified read-only research DB"');
+  const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const tempIdentity = source.indexOf("RACER_ABILITY_AUDIT_PUBLISH_TEMP_IDENTITY_INVALID");
+  const atomicRename = source.indexOf("renameSync(verifiedTempPath, path)");
+  const jsonPublish = source.indexOf('atomicPublish(outJson, `${JSON.stringify(report, null, 2)}\\n`)');
+  const markdownPublish = source.indexOf("atomicPublish(outMd, markdown)");
 
   assert.ok(dbMissing >= 0, "missing DB diagnostics must remain opaque");
   assert.ok(candidateMissing >= 0, "missing candidate diagnostics must remain opaque");
@@ -34,6 +39,12 @@ test("racer ability canonical entrypoint verifies research inputs and redacts fi
   assert.ok(markdownRead > markdownOutputIdentity, "generated Markdown must not be read before identity verification");
   assert.ok(redactJson > jsonRead, "JSON filesystem provenance must be removed before publishing");
   assert.ok(redactMarkdown > markdownRead, "Markdown filesystem provenance must be redacted before publishing");
+  assert.ok(tempCreate >= 0, "published reports must be staged with exclusive creation");
+  assert.ok(tempIdentity > tempCreate, "publish temp identity must be verified before replacement");
+  assert.ok(atomicRename > tempIdentity, "only a verified single-link temp may atomically replace a report path");
+  assert.ok(jsonPublish > redactJson, "sanitized JSON must publish through the atomic writer");
+  assert.ok(markdownPublish > redactMarkdown, "sanitized Markdown must publish through the atomic writer");
+  assert.doesNotMatch(source, /writeFileSync\(out(?:Json|Md)/u);
   assert.doesNotMatch(source, /DB not found: \\?\$\{[^}]+\}/u);
   assert.doesNotMatch(source, /new DatabaseSync/u);
 });
