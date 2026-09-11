@@ -119,5 +119,12 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "MISS_RECOVERY_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
+
 await import("./analyze-miss-to-bet-type-recovery-internal");
 redactDbProvenance(handoffDbPath);
