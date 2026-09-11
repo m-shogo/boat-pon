@@ -7,7 +7,20 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  copyFileSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +32,27 @@ const outMd = "reports/racer-ability-data-audit.md";
 const outJson = "reports/racer-ability-data-audit.json";
 const internalPath = fileURLToPath(new URL("./report-racer-ability-audit-internal.ts", import.meta.url));
 const tsxLoader = import.meta.resolve("tsx");
+
+function atomicPublish(path: string, content: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "RACER_ABILITY_AUDIT_PUBLISH_TEMP_IDENTITY_INVALID",
+    );
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 if (!existsSync(configuredDbPath)) throw new Error("RACER_ABILITY_AUDIT_DB_MISSING");
 if (!existsSync(configuredCandidatesPath)) throw new Error("RACER_ABILITY_AUDIT_CANDIDATES_MISSING");
@@ -85,8 +119,8 @@ try {
   );
 
   mkdirSync("reports", { recursive: true });
-  writeFileSync(outJson, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(outMd, markdown);
+  atomicPublish(outJson, `${JSON.stringify(report, null, 2)}\n`);
+  atomicPublish(outMd, markdown);
 
   console.log("[report-racer-ability-audit] completed with verified research inputs");
   console.log(`[report-racer-ability-audit] wrote ${outMd}`);
