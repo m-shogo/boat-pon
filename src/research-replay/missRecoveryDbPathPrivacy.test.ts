@@ -15,6 +15,16 @@ test("miss recovery wrapper preserves canonical read-only database boundary", ()
   assert.match(source, /PRAGMA query_only=ON/u);
 });
 
+test("miss recovery wrapper rejects unsafe pre-existing report paths before legacy analysis writes", () => {
+  const dbHandoff = source.indexOf("MISS_RECOVERY_DB_HANDOFF_IDENTITY_INVALID");
+  const reportPreflight = source.indexOf("MISS_RECOVERY_PREEXISTING_REPORT_IDENTITY_INVALID");
+  const analysis = source.indexOf('await import("./analyze-miss-to-bet-type-recovery-internal")');
+
+  assert.ok(reportPreflight > dbHandoff, "report identity must be checked after verified DB handoff");
+  assert.ok(analysis > reportPreflight, "legacy analyzer must not write before an existing report path is verified");
+  assert.match(source, /if \(existsSync\(OUT_MD\)\)/u);
+});
+
 test("miss recovery wrapper redacts private database provenance after canonical analysis", () => {
   const analysis = source.indexOf('await import("./analyze-miss-to-bet-type-recovery-internal")');
   const redact = source.lastIndexOf("redactDbProvenance(handoffDbPath)");
