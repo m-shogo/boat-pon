@@ -56,6 +56,21 @@ function verifyDbHandoff(): string {
   return assertCanonicalSingleLinkRegularFile(DB_PATH, "BET_TYPE_SELECTOR_DB_HANDOFF_IDENTITY_INVALID");
 }
 
+function verifyExistingOutputPaths(): void {
+  if (existsSync(OUT_MD)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_MD,
+      "BET_TYPE_SELECTOR_PREEXISTING_REPORT_IDENTITY_INVALID",
+    );
+  }
+  if (existsSync(OUT_JSON)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_JSON,
+      "BET_TYPE_SELECTOR_PREEXISTING_JSON_REPORT_IDENTITY_INVALID",
+    );
+  }
+}
+
 function run(script: string, verifiedDbPath: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     stdio: "inherit",
@@ -105,6 +120,7 @@ function verifyJsonOutput(): void {
 }
 
 const verifiedDbPath = verifyDbHandoff();
+verifyExistingOutputPaths();
 const status = run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath);
 if (status === 0) {
   redactDbProvenance(verifiedDbPath);
