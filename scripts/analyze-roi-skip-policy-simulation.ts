@@ -79,10 +79,14 @@ const childDbPath = assertCanonicalSingleLinkRegularFile(
 const workspace = mkdtempSync(join(tmpdir(), "boat-pon-roi-skip-policy-"));
 try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
+  const isolatedDbPath = assertCanonicalSingleLinkRegularFile(
+    childDbPath,
+    "ROI_SKIP_POLICY_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID",
+  );
 
   const analysis = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: childDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: isolatedDbPath },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
