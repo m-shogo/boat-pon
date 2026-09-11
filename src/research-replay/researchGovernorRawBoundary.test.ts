@@ -5,23 +5,22 @@ import test from "node:test";
 const entry = readFileSync("scripts/report-research-governor.ts", "utf8");
 const raw = readFileSync("scripts/report-research-governor-raw.ts", "utf8");
 
-test("research governor routes the verified DB through an in-process guarded raw handoff", () => {
+test("research governor enters the internal report only after canonical readiness and DB handoff checks", () => {
   const preflight = entry.indexOf('run("scripts/audit-research-governor-readiness.ts")');
   const handoff = entry.indexOf("RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID");
   const envHandoff = entry.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
-  const rawImport = entry.indexOf('await import("./report-research-governor-raw")');
+  const internalImport = entry.indexOf('await import("./report-research-governor-internal")');
 
-  assert.ok(preflight >= 0 && handoff > preflight && envHandoff > handoff && rawImport > envHandoff);
-  assert.equal(entry.includes('run("scripts/report-research-governor-raw.ts"'), false);
+  assert.ok(preflight >= 0 && handoff > preflight && envHandoff > handoff && internalImport > envHandoff);
+  assert.equal(entry.includes("report-research-governor-raw"), false);
   assert.equal(entry.includes('run("scripts/report-research-governor-internal.ts"'), false);
 });
 
-test("research governor raw compatibility module revalidates identity and forbids direct CLI execution", () => {
-  const directGuard = raw.indexOf("RESEARCH_GOVERNOR_RAW_DIRECT_EXECUTION_FORBIDDEN");
-  const identity = raw.indexOf("RESEARCH_GOVERNOR_RAW_DB_IDENTITY_INVALID");
-  const internalImport = raw.indexOf('await import("./report-research-governor-internal")');
-
-  assert.ok(directGuard >= 0 && identity > directGuard && internalImport > identity);
-  assert.ok(raw.includes("assertCanonicalSingleLinkRegularFile("));
-  assert.equal(raw.includes("DB not found: ${"), false);
+test("research governor raw compatibility module forbids direct CLI execution and cannot bypass canonical preflight", () => {
+  assert.match(raw, /RESEARCH_GOVERNOR_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(raw, /await import\("\.\/report-research-governor"\)/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
+  assert.doesNotMatch(raw, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(raw, /report-research-governor-internal/);
+  assert.doesNotMatch(raw, /DatabaseSync/);
 });
