@@ -30,7 +30,8 @@ test("all-bet-type feasibility verifies generated report identity before read an
   const internalImport = entry.indexOf('await import("./audit-all-bet-type-data-feasibility-internal")');
   const jsonIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_IDENTITY_INVALID");
   const markdownIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_IDENTITY_INVALID");
-  const jsonRead = entry.indexOf('readFileSync(verifiedJsonPath, "utf8")');
+  const jsonReadIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_READ_IDENTITY_INVALID");
+  const jsonRead = entry.indexOf('readFileSync(jsonReadPath, "utf8")');
   const jsonHandoffIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_HANDOFF_IDENTITY_INVALID");
   const jsonWrite = entry.indexOf("writeFileSync(jsonHandoffPath, sanitizedJson)");
   const markdownReadIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_READ_IDENTITY_INVALID");
@@ -40,13 +41,15 @@ test("all-bet-type feasibility verifies generated report identity before read an
 
   assert.ok(jsonIdentity > internalImport);
   assert.ok(markdownIdentity > internalImport);
-  assert.ok(jsonRead > jsonIdentity);
+  assert.ok(jsonReadIdentity > markdownIdentity, "JSON identity must be reverified immediately before JSON read");
+  assert.ok(jsonRead > jsonReadIdentity);
   assert.ok(jsonHandoffIdentity > jsonRead);
   assert.ok(jsonWrite > jsonHandoffIdentity);
   assert.ok(markdownReadIdentity > jsonWrite, "markdown identity must be reverified after JSON sanitization before markdown read");
   assert.ok(markdownRead > markdownReadIdentity);
   assert.ok(markdownHandoffIdentity > markdownRead);
   assert.ok(markdownWrite > markdownHandoffIdentity);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedJsonPath,\s*"ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_READ_IDENTITY_INVALID"/u);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedMarkdownPath,\s*"ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_READ_IDENTITY_INVALID"/u);
   assert.doesNotMatch(entry, /readFileSync\(REPORT_(?:JSON|MD)/);
   assert.doesNotMatch(entry, /writeFileSync\(REPORT_(?:JSON|MD)/);

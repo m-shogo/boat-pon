@@ -38,7 +38,11 @@ const verifiedMarkdownPath = assertCanonicalSingleLinkRegularFile(
   "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_IDENTITY_INVALID",
 );
 
-const parsed = JSON.parse(readFileSync(verifiedJsonPath, "utf8")) as {
+const jsonReadPath = assertCanonicalSingleLinkRegularFile(
+  verifiedJsonPath,
+  "ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_READ_IDENTITY_INVALID",
+);
+const parsed = JSON.parse(readFileSync(jsonReadPath, "utf8")) as {
   safety?: { dbPath?: unknown };
 };
 if (!parsed.safety || parsed.safety.dbPath !== verifiedDbPath) {
@@ -50,7 +54,7 @@ if (sanitizedJson.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_PRIVATE_DB_PROVENANCE_REMAINED");
 }
 const jsonHandoffPath = assertCanonicalSingleLinkRegularFile(
-  verifiedJsonPath,
+  jsonReadPath,
   "ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_HANDOFF_IDENTITY_INVALID",
 );
 writeFileSync(jsonHandoffPath, sanitizedJson);
