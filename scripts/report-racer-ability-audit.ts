@@ -86,10 +86,14 @@ try {
     workspaceCandidates,
     "RACER_ABILITY_AUDIT_CANDIDATES_HANDOFF_IDENTITY_INVALID",
   );
+  const childDbPath = assertCanonicalSingleLinkRegularFile(
+    handoffDbPath,
+    "RACER_ABILITY_AUDIT_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+  );
 
   const child = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: handoffDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: childDbPath },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
