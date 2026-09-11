@@ -1,5 +1,21 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  copyFileSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REQUIRED_REPORTS = [
@@ -14,6 +30,8 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/bet-type-selector-summary.md";
 const OUT_JSON = "reports/bet-type-selector-summary.json";
 const OPAQUE_DB_SOURCE = "primary research database";
+const internalPath = fileURLToPath(new URL("./report-bet-type-selector-summary-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 type ReportEnvelope = {
   safety?: {
@@ -73,61 +91,124 @@ function verifyExistingOutputPaths(): void {
   }
 }
 
-function run(script: string, verifiedDbPath: string): number {
-  const result = spawnSync(process.execPath, ["--import", "tsx", script], {
-    stdio: "inherit",
-    env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
-  });
+function atomicPublish(path: string, content: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
+function stageRequiredReports(workspace: string): void {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  for (const path of REQUIRED_REPORTS) {
+    const sourcePath = assertCanonicalSingleLinkRegularFile(
+      path,
+      "BET_TYPE_SELECTOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID",
+    );
+    const stagedPath = join(workspace, path);
+    copyFileSync(sourcePath, stagedPath);
+    assertCanonicalSingleLinkRegularFile(
+      stagedPath,
+      "BET_TYPE_SELECTOR_STAGED_INPUT_REPORT_IDENTITY_INVALID",
+    );
+  }
+}
+
+function runIsolated(workspace: string, verifiedDbPath: string): number {
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    verifiedDbPath,
+    "BET_TYPE_SELECTOR_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
+  const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const result = spawnSync(
+    process.execPath,
+    ["--import", tsxLoader, "--input-type=module", "--eval", loader],
+    {
+      cwd: workspace,
+      stdio: "inherit",
+      env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+    },
+  );
   if (result.error) throw result.error;
   return result.status ?? 1;
 }
 
-function redactDbProvenance(dbPath: string): void {
-  if (!existsSync(OUT_MD)) {
+function readIsolatedOutputs(workspace: string, dbPath: string): { markdown: string; json: string } {
+  const workspaceMd = join(workspace, OUT_MD);
+  const workspaceJson = join(workspace, OUT_JSON);
+  if (!existsSync(workspaceMd)) {
     throw new Error("BET_TYPE_SELECTOR_REPORT_MISSING_AFTER_ANALYSIS");
   }
+  if (!existsSync(workspaceJson)) {
+    throw new Error("BET_TYPE_SELECTOR_JSON_REPORT_MISSING_AFTER_ANALYSIS");
+  }
   const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
+    workspaceMd,
     "BET_TYPE_SELECTOR_REPORT_IDENTITY_INVALID",
   );
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    workspaceJson,
+    "BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID",
+  );
   const report = readFileSync(verifiedReportPath, "utf8");
+  const json = readFileSync(verifiedJsonPath, "utf8");
   const provenance = `DB: ${dbPath}`;
   if (!report.includes(provenance)) {
     throw new Error("BET_TYPE_SELECTOR_DB_PROVENANCE_NOT_FOUND");
   }
-  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
-    verifiedReportPath,
-    "BET_TYPE_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID",
-  );
-  writeFileSync(handoffReportPath, report.replaceAll(provenance, `DB: ${OPAQUE_DB_SOURCE}`));
-}
-
-function verifyJsonOutput(): void {
-  if (!existsSync(OUT_JSON)) {
-    throw new Error("BET_TYPE_SELECTOR_JSON_REPORT_MISSING_AFTER_ANALYSIS");
-  }
-  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
-    OUT_JSON,
-    "BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID",
-  );
   try {
-    JSON.parse(readFileSync(verifiedJsonPath, "utf8"));
+    JSON.parse(json);
   } catch {
     throw new Error("BET_TYPE_SELECTOR_JSON_REPORT_INVALID");
   }
   assertCanonicalSingleLinkRegularFile(
+    verifiedReportPath,
+    "BET_TYPE_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID",
+  );
+  assertCanonicalSingleLinkRegularFile(
     verifiedJsonPath,
     "BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID",
   );
+  return {
+    markdown: report.replaceAll(provenance, `DB: ${OPAQUE_DB_SOURCE}`),
+    json,
+  };
 }
 
 verifyRequiredReports();
 verifyExistingOutputPaths();
 verifyRequiredReports();
 const verifiedDbPath = verifyDbHandoff();
-const status = run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath);
-if (status === 0) {
-  redactDbProvenance(verifiedDbPath);
-  verifyJsonOutput();
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-bet-type-selector-"));
+let status = 1;
+try {
+  stageRequiredReports(workspace);
+  status = runIsolated(workspace, verifiedDbPath);
+  if (status === 0) {
+    const outputs = readIsolatedOutputs(workspace, verifiedDbPath);
+    mkdirSync("reports", { recursive: true });
+    atomicPublish(
+      OUT_MD,
+      outputs.markdown,
+      "BET_TYPE_SELECTOR_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    );
+    atomicPublish(
+      OUT_JSON,
+      outputs.json,
+      "BET_TYPE_SELECTOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    );
+  }
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
 }
 process.exit(status);
