@@ -9,10 +9,10 @@ const internalSource = readFileSync("scripts/analyze-roi-skip-policy-simulation-
 const auditSource = readFileSync("scripts/audit-roi-skip-policy-payout-completeness.ts", "utf-8");
 const packageSource = readFileSync("package.json", "utf-8");
 
-test("ROI skip-policy normal entrypoint checks payout completeness before guarded raw import", () => {
+test("ROI skip-policy normal entrypoint checks payout completeness before internal simulation", () => {
   const preflight = entrypointSource.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
   const identity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(");
-  const analysis = entrypointSource.indexOf('await import("./analyze-roi-skip-policy-simulation-raw")');
+  const analysis = entrypointSource.indexOf('await import("./analyze-roi-skip-policy-simulation-internal")');
   assert.ok(preflight >= 0);
   assert.ok(identity > preflight);
   assert.ok(analysis > identity);
@@ -20,16 +20,19 @@ test("ROI skip-policy normal entrypoint checks payout completeness before guarde
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
   assert.match(entrypointSource, /ROI_SKIP_POLICY_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(entrypointSource, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
-  assert.doesNotMatch(entrypointSource, /run\("scripts\/analyze-roi-skip-policy-simulation-raw\.ts"\)/);
+  assert.doesNotMatch(entrypointSource, /analyze-roi-skip-policy-simulation-raw/);
 });
 
-test("ROI skip-policy raw compatibility module rejects direct CLI execution", () => {
+test("ROI skip-policy raw compatibility module rejects direct CLI execution and routes through canonical preflight", () => {
   const guard = rawSource.indexOf("invokedPath === rawEntrypointPath");
   const failure = rawSource.indexOf("ROI_SKIP_POLICY_RAW_DIRECT_EXECUTION_FORBIDDEN");
-  const internal = rawSource.indexOf('await import("./analyze-roi-skip-policy-simulation-internal")');
+  const canonical = rawSource.indexOf('await import("./analyze-roi-skip-policy-simulation")');
   assert.ok(guard >= 0);
   assert.ok(failure > guard);
-  assert.ok(internal > failure);
+  assert.ok(canonical > failure);
+  assert.doesNotMatch(rawSource, /analyze-roi-skip-policy-simulation-internal/);
+  assert.doesNotMatch(rawSource, /BOAT_PON_DB_PATH/);
+  assert.doesNotMatch(rawSource, /assertCanonicalSingleLinkRegularFile/);
 });
 
 test("ROI skip-policy legacy safe runner checks payout completeness and DB identity before internal simulation", () => {
