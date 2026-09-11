@@ -178,7 +178,11 @@ function assertSettlementCompleteness(): void {
 function readEventTitle(raceId: string, date: string) {
   const path = `data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;
   if (!existsSync(path)) return "";
-  const $ = load(readFileSync(path, "utf8"));
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(
+    path,
+    "EVENT_MARKET_CONTEXT_ODDS_HTML_IDENTITY_INVALID",
+  );
+  const $ = load(readFileSync(verifiedPath, "utf8"));
   return $(".rname a").first().text().replace(/\s+/g, " ").trim();
 }
 function isTopRival(program: UnconventionalProgram, course: number) {
