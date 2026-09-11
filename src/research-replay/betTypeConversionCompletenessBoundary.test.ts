@@ -11,10 +11,14 @@ const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Rec
 test("123 bet-type conversion command fails closed before cross-bet analysis", () => {
   assert.equal(pkg.scripts?.["analyze:123-bet-type-conversion"], "tsx scripts/analyze-123-bet-type-conversion.ts");
   const preflight = entrypoint.indexOf('run("scripts/audit-123-bet-type-conversion-completeness.ts")');
+  const dbHandoff = entrypoint.indexOf('assertCanonicalSingleLinkRegularFile(');
   const analysis = entrypoint.indexOf('await import("./analyze-123-bet-type-conversion-internal")');
   assert.ok(preflight >= 0);
-  assert.ok(analysis > preflight, "cross-bet analysis must remain downstream of the completeness preflight");
+  assert.ok(dbHandoff > preflight, "DB identity handoff must remain downstream of the completeness preflight");
+  assert.ok(analysis > dbHandoff, "cross-bet analysis must remain downstream of the DB identity handoff");
   assert.match(entrypoint, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
+  assert.match(entrypoint, /BET_TYPE_CONVERSION_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
   assert.doesNotMatch(entrypoint, /analyze-123-bet-type-conversion-core/);
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-123-bet-type-conversion-core.ts")), false);
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-123-bet-type-conversion-internal.ts")), false);
