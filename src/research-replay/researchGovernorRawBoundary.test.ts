@@ -44,7 +44,7 @@ test("research governor enters the internal report only after canonical readines
 
 test("research governor identity gate mirrors every internal report-file input", () => {
   const guardedPaths = reportPathsFromBlock(entry, "const REPORT_INPUT_PATHS = [", "] as const;");
-  const internalPaths = reportPathsFromBlock(internal, "const REPORT_FILES = {", "} as const;");
+  const internalPaths = reportPathsFromBlock(internal, "const REPORT_FILES = {", "};");
   assert.deepEqual(guardedPaths, internalPaths);
 });
 
