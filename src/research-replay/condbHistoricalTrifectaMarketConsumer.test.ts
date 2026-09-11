@@ -15,5 +15,6 @@ test("condB historical switch uses the shared canonical trifecta market authorit
 test("condB historical switch raw path cannot bypass canonical settlement preflight", () => {
   assert.match(raw, /CONDB_SWITCH_HISTORICAL_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(raw, /invokedPath === rawEntrypointPath/);
-  assert.match(raw, /await import\("\.\/analyze-condb-switch-historical-closing-odds-internal"\)/);
+  assert.match(raw, /await import\("\.\/analyze-condb-switch-historical-closing-odds"\)/);
+  assert.doesNotMatch(raw, /analyze-condb-switch-historical-closing-odds-internal/);
 });
