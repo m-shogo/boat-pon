@@ -97,4 +97,12 @@ function assertPayoutCompleteness(): void {
   }
 }
 
-await import("./analyze-promising-bet-type-strategies-raw");
+if (!existsSync(DB_PATH)) {
+  throw new Error("PROMISING_BET_PRIMARY_DB_MISSING");
+}
+process.env.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID",
+);
+
+await import("./analyze-promising-bet-type-strategies-internal");
