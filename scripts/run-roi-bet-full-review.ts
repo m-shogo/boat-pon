@@ -1,5 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const BET_JSON = "reports/bet-strategy-simulation.json";
 const RELENTLESS_JSON = "reports/roi-relentless.json";
@@ -108,8 +110,8 @@ const report = {
 };
 
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, renderMd(report));
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ROI_BET_FULL_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD, renderMd(report), "ROI_BET_FULL_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log(`[roi-bet-full-review] finalDecision=${finalDecision}`);
 console.log(`[roi-bet-full-review] wrote ${OUT_MD}`);
 console.log(`[roi-bet-full-review] wrote ${OUT_JSON}`);
@@ -230,13 +232,32 @@ function consensusTable(items: NonNullable<RelentlessReport["globalConsensus"]>)
 }
 
 function readJson<T>(path: string): T {
-  if (!existsSync(path)) throw new Error(`${path} does not exist`);
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  if (!existsSync(path)) throw new Error("ROI_BET_FULL_REVIEW_REQUIRED_INPUT_MISSING");
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_BET_FULL_REVIEW_REQUIRED_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
 }
 
 function readOptional<T>(path: string): T | null {
   if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_BET_FULL_REVIEW_OPTIONAL_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+}
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function pct(value: number) { return `${(value * 100).toFixed(2)}%`; }
