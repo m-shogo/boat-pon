@@ -33,5 +33,5 @@ process.env.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile(
   "ROI_SKIP_POLICY_PRIMARY_DB_IDENTITY_INVALID",
 );
 
-await import("./analyze-roi-skip-policy-simulation-raw");
+await import("./analyze-roi-skip-policy-simulation-internal");
 console.log("[roi-skip-policy-entrypoint] PASS: payout completeness preflight passed before skip-policy simulation");
