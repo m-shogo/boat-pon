@@ -11,10 +11,12 @@ test("ROI pattern entrypoint rejects unknown or returned historical BUY rows bef
   assert.match(entrypoint, /unknown or returned settlement state/);
   const returnGate = entrypoint.indexOf("const invalidReturn = db.prepare");
   const integrity = entrypoint.indexOf("WITH relevant_settled AS");
-  const internalLaunch = entrypoint.indexOf('await import("./search-roi-patterns-internal")');
+  const isolatedHandoff = entrypoint.indexOf("ROI_PATTERN_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID");
+  const internalLaunch = entrypoint.indexOf("const analysis = spawnSync", isolatedHandoff);
   assert.ok(returnGate >= 0);
   assert.ok(integrity > returnGate);
-  assert.ok(internalLaunch > integrity);
+  assert.ok(isolatedHandoff > integrity);
+  assert.ok(internalLaunch > isolatedHandoff);
 });
 
 test("ROI pattern entrypoint validates every settled denominator against the canonical trifecta winning result", () => {
@@ -37,10 +39,12 @@ test("ROI pattern entrypoint validates every settled denominator against the can
   assert.match(entrypoint, /\) != 1/);
   const integrity = entrypoint.indexOf("WITH relevant_settled AS");
   const handoff = entrypoint.indexOf("ROI_PATTERN_DB_HANDOFF_IDENTITY_INVALID");
-  const internalLaunch = entrypoint.indexOf('await import("./search-roi-patterns-internal")');
+  const isolatedHandoff = entrypoint.indexOf("ROI_PATTERN_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID", handoff);
+  const internalLaunch = entrypoint.indexOf("const analysis = spawnSync", isolatedHandoff);
   assert.ok(integrity >= 0);
   assert.ok(handoff > integrity);
-  assert.ok(internalLaunch > handoff);
+  assert.ok(isolatedHandoff > handoff);
+  assert.ok(internalLaunch > isolatedHandoff);
 });
 
 test("ROI pattern raw compatibility module cannot bypass canonical settlement preflight", () => {
