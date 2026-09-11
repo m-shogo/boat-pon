@@ -45,7 +45,18 @@ function checkServerSource() {
     return;
   }
 
-  const source = readFileSync(SERVER_DB, "utf8");
+  let verifiedServerDbPath: string;
+  try {
+    verifiedServerDbPath = assertCanonicalSingleLinkRegularFile(
+      SERVER_DB,
+      "AUDIT_PERSISTENCE_SERVER_SOURCE_IDENTITY_INVALID",
+    );
+  } catch {
+    add(false, "server/db.ts identity", "server/db.ts identity invalid", "restore canonical single-link server/db.ts");
+    return;
+  }
+
+  const source = readFileSync(verifiedServerDbPath, "utf8");
   add(source.includes("decision_reasons"), "server mentions decision_reasons", "source should include decision_reasons", "wire decision_reasons into schema/select/insert/update");
   add(source.includes("feature_adjustment"), "server mentions feature_adjustment", "source should include feature_adjustment", "wire feature_adjustment into schema/select/insert/update");
   add(source.includes("feature_adjustment_breakdown"), "server mentions feature_adjustment_breakdown", "source should include feature_adjustment_breakdown", "wire feature_adjustment_breakdown into schema/select/insert/update");
