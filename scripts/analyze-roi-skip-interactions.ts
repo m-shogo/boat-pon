@@ -67,6 +67,12 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 );
 
 process.env.BOAT_PON_DB_PATH = verifiedDbPath;
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "ROI_SKIP_INTERACTIONS_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
 await import("./analyze-roi-skip-interactions-core");
 
 redactDbProvenance(verifiedDbPath);
