@@ -27,16 +27,19 @@ test("paper-forward monitor entrypoint fails closed before verified internal rep
 test("paper-forward monitor raw compatibility entrypoint is independently guarded and redacts DB provenance", () => {
   const preflight = raw.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
   const verify = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID");
+  const outputPreflight = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_PREEXISTING_REPORT_IDENTITY_INVALID");
   const report = raw.indexOf('run("scripts/report-paper-forward-monitor-internal.ts"');
   const handoff = raw.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
   const internalGuard = raw.indexOf('BOAT_PON_PAPER_FORWARD_MONITOR_INTERNAL_GUARD: "1"');
   const sanitize = raw.indexOf("sanitizeDbProvenance(handoffDbPath)");
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight, "raw DB identity must be reverified after settlement preflight");
-  assert.ok(report > verify, "raw internal aggregation must start only after DB identity revalidation");
+  assert.ok(outputPreflight > verify, "raw existing report identity must be verified after DB handoff");
+  assert.ok(report > outputPreflight, "raw internal aggregation must start only after report-path identity preflight");
   assert.ok(handoff > report, "raw internal aggregation must receive only the verified DB path");
   assert.ok(internalGuard > handoff, "raw internal execution guard must accompany the verified DB handoff");
   assert.ok(sanitize > internalGuard, "raw report must sanitize provenance after successful internal aggregation");
+  assert.match(raw, /if \(existsSync\(OUT_MD\)\)/u);
   assert.match(raw, /FAIL CLOSED: official trifecta settlement coverage\/integrity did not pass/);
   assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID/);
   assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_PRIVATE_DB_PATH_REMAINS/);
