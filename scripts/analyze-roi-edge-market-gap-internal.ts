@@ -16,8 +16,9 @@
  *   D. 1-3-2 missed opportunity: BUY1-2-3を買ったが1-3-2が来た際の機会損失
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/roi-edge-market-gap.md";
@@ -31,9 +32,12 @@ const N_MIN_MONITOR = 100;
 const N_MIN_CHECK   = 50;
 const N_MIN_VALID   = 30;
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ROI_EDGE_MARKET_GAP_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 const excl_v = EXCL_VENUES.map(v => `'${v}'`).join(",");
 const excl_r = EXCL_RACES.join(",");
@@ -477,7 +481,6 @@ function buildMarkdown(): string {
 
   // 主要洞察
   ls.push(`\n### 主要洞察`);
-
   // boat3 faster vs slower
   const b3f = segResults.find(x => x.seg.label.startsWith("3号艇exh < 2号艇exh"))?.stats;
   const b3s = segResults.find(x => x.seg.label.startsWith("3号艇exh > 2号艇exh"))?.stats;
