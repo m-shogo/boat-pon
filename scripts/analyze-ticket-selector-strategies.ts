@@ -58,6 +58,13 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "TICKET_SELECTOR_PRIMARY_DB_IDENTITY_INVALID",
 );
 
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "TICKET_SELECTOR_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
+
 const analysis = run("scripts/analyze-ticket-selector-strategies-core.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: verifiedDbPath,
