@@ -67,6 +67,13 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   "PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID",
 );
 
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "PAPER_FORWARD_MONITOR_RAW_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
+
 const report = run("scripts/report-paper-forward-monitor-internal.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: handoffDbPath,
