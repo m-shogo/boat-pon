@@ -24,11 +24,14 @@ test("payout rebase safe runner fails closed before classifications when preflig
 });
 
 test("direct payout rebase entrypoint independently retains preflight and verified DB handoff boundaries", () => {
-  const preflight = entrypointSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
+  const preflight = entrypointSource.indexOf('runGuarded("scripts/audit-odds-payout-gap-completeness.ts")');
   const verify = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
-  const internal = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
+  const internal = entrypointSource.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
+
   assert.ok(preflight >= 0 && verify > preflight, "direct invocation must verify DB identity only after settlement preflight");
-  assert.ok(internal > verify, "internal analysis must run only after the verified DB handoff");
+  assert.ok(internal > verify, "isolated internal analysis must run only after the verified DB handoff");
+  assert.match(entrypointSource, /PAYOUT_REBASE_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /BOAT_PON_DB_PATH: launchDbPath/);
 });
 
 test("legacy payout rebase implementation still depends on official payout values and remains research-only", () => {
