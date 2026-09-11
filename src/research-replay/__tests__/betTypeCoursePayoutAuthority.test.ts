@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("bet type course normal entrypoint validates settlement integrity before raw analysis", () => {
+test("bet type course normal entrypoint validates settlement integrity before internal analysis", () => {
   const source = readFileSync("scripts/analyze-bet-type-course-edge.ts", "utf8");
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
 
@@ -27,28 +27,30 @@ test("bet type course normal entrypoint validates settlement integrity before ra
   assert.match(source, /p\.returned === 0 && isPositivePayout/);
   assert.match(source, /BET_TYPE_COURSE_BUY_POPULATION_EMPTY/);
   assert.match(source, /BET_TYPE_COURSE_PAYOUT_COVERAGE_INCOMPLETE/);
-  assert.match(source, /await import\("\.\/analyze-bet-type-course-edge-raw"\)/);
+  assert.match(source, /await import\("\.\/analyze-bet-type-course-edge-internal"\)/);
+  assert.doesNotMatch(source, /analyze-bet-type-course-edge-raw/);
   assert.ok(
     source.indexOf("BET_TYPE_COURSE_RETURNED_BUY_UNSUPPORTED")
-      < source.indexOf('await import("./analyze-bet-type-course-edge-raw")'),
+      < source.indexOf('await import("./analyze-bet-type-course-edge-internal")'),
   );
   assert.ok(
     source.indexOf("BET_TYPE_COURSE_PAYOUT_RETURN_STATE_INVALID")
-      < source.indexOf('await import("./analyze-bet-type-course-edge-raw")'),
+      < source.indexOf('await import("./analyze-bet-type-course-edge-internal")'),
   );
   assert.ok(
     source.indexOf("assertPayoutCompleteness();")
-      < source.indexOf('await import("./analyze-bet-type-course-edge-raw")'),
+      < source.indexOf('await import("./analyze-bet-type-course-edge-internal")'),
   );
 });
 
-test("bet type course raw compatibility module blocks direct CLI bypass", () => {
+test("bet type course raw compatibility module blocks direct CLI and canonical-preflight bypass", () => {
   const raw = readFileSync("scripts/analyze-bet-type-course-edge-raw.ts", "utf8");
   assert.match(raw, /BET_TYPE_COURSE_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(raw, /process\.argv\[1\]/);
-  assert.match(raw, /await import\("\.\/analyze-bet-type-course-edge-internal"\)/);
+  assert.match(raw, /await import\("\.\/analyze-bet-type-course-edge"\)/);
+  assert.doesNotMatch(raw, /analyze-bet-type-course-edge-internal/);
   assert.doesNotMatch(raw, /DatabaseSync/);
-  assert.doesNotMatch(raw, /DB_PATH/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
   assert.doesNotMatch(raw, /const payoutIndex = new Map<string, number>\(\)/);
 });
 
