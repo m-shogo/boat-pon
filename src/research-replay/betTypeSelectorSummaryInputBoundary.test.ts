@@ -50,6 +50,21 @@ test("bet-type selector summary reverifies DB identity at handoff and redacts co
   assert.ok(handoff >= 0 && internalRun > handoff && redact > internalRun);
 });
 
+test("bet-type selector summary rejects unsafe pre-existing Markdown and JSON outputs before internal write", () => {
+  const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
+  const outputPreflight = entry.lastIndexOf("verifyExistingOutputPaths()");
+  const markdownIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_REPORT_IDENTITY_INVALID");
+  const jsonIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_JSON_REPORT_IDENTITY_INVALID");
+  const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
+
+  assert.ok(markdownIdentity >= 0 && jsonIdentity > markdownIdentity);
+  assert.ok(outputPreflight > handoff && internalRun > outputPreflight);
+  assert.match(entry, /if \(existsSync\(OUT_MD\)\)/u);
+  assert.match(entry, /if \(existsSync\(OUT_JSON\)\)/u);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_JSON,/u);
+});
+
 test("bet-type selector summary verifies generated report identity before redaction read and again before write", () => {
   const firstIdentity = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_IDENTITY_INVALID"');
   const read = entry.indexOf('readFileSync(verifiedReportPath, "utf8")');
