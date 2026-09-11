@@ -12,9 +12,11 @@ test("ROI search matrix accepts only realized-payout pattern search output", () 
   assert.match(searchInternal, /metricBasis: "official_payout_yen"/);
   assert.match(searchInternal, /FROM race_payouts rp/);
   assert.match(searchInternal, /rp\.payout_yen/);
-  assert.match(searchEntrypoint, /await import\("\.\/search-roi-patterns-raw"\)/);
+  assert.match(searchEntrypoint, /await import\("\.\/search-roi-patterns-internal"\)/);
+  assert.doesNotMatch(searchEntrypoint, /search-roi-patterns-raw/);
   assert.match(searchRaw, /ROI_PATTERN_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(searchRaw, /await import\("\.\/search-roi-patterns-internal"\)/);
+  assert.match(searchRaw, /await import\("\.\/search-roi-patterns"\)/);
+  assert.doesNotMatch(searchRaw, /search-roi-patterns-internal/);
   assert.match(searchEntrypoint, /FROM race_payouts rp/);
   assert.match(searchEntrypoint, /rp\.payout_yen > 0/);
   assert.match(matrixSource, /const SEARCH_METRIC_SOURCE = "scripts\/search-roi-patterns-internal\.ts"/);

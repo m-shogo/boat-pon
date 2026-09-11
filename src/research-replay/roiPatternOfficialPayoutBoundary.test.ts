@@ -6,15 +6,15 @@ const entrypoint = readFileSync("scripts/search-roi-patterns.ts", "utf8");
 const raw = readFileSync("scripts/search-roi-patterns-raw.ts", "utf8");
 const internal = readFileSync("scripts/search-roi-patterns-internal.ts", "utf8");
 
-test("ROI pattern entrypoint rejects unknown or returned historical BUY rows before settlement and guarded analysis", () => {
+test("ROI pattern entrypoint rejects unknown or returned historical BUY rows before settlement and internal analysis", () => {
   assert.match(entrypoint, /dh\.returned IS NULL OR dh\.returned != 0/);
   assert.match(entrypoint, /unknown or returned settlement state/);
   const returnGate = entrypoint.indexOf("const invalidReturn = db.prepare");
   const integrity = entrypoint.indexOf("WITH relevant_settled AS");
-  const rawLaunch = entrypoint.indexOf('await import("./search-roi-patterns-raw")');
+  const internalLaunch = entrypoint.indexOf('await import("./search-roi-patterns-internal")');
   assert.ok(returnGate >= 0);
   assert.ok(integrity > returnGate);
-  assert.ok(rawLaunch > integrity);
+  assert.ok(internalLaunch > integrity);
 });
 
 test("ROI pattern entrypoint validates every settled denominator against the canonical trifecta winning result", () => {
@@ -36,16 +36,20 @@ test("ROI pattern entrypoint validates every settled denominator against the can
   assert.doesNotMatch(entrypoint, /rp\.bet_type = h\.bet_type/);
   assert.match(entrypoint, /\) != 1/);
   const integrity = entrypoint.indexOf("WITH relevant_settled AS");
-  const rawLaunch = entrypoint.indexOf('await import("./search-roi-patterns-raw")');
+  const handoff = entrypoint.indexOf("ROI_PATTERN_DB_HANDOFF_IDENTITY_INVALID");
+  const internalLaunch = entrypoint.indexOf('await import("./search-roi-patterns-internal")');
   assert.ok(integrity >= 0);
-  assert.ok(rawLaunch > integrity);
+  assert.ok(handoff > integrity);
+  assert.ok(internalLaunch > handoff);
 });
 
-test("ROI pattern raw compatibility module cannot be executed directly", () => {
+test("ROI pattern raw compatibility module cannot bypass canonical settlement preflight", () => {
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
   assert.match(raw, /ROI_PATTERN_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(raw, /await import\("\.\/search-roi-patterns-internal"\)/);
+  assert.match(raw, /await import\("\.\/search-roi-patterns"\)/);
+  assert.doesNotMatch(raw, /search-roi-patterns-internal/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
   assert.doesNotMatch(raw, /FROM race_payouts rp/);
 });
 
