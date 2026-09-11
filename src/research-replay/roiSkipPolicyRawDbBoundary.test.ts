@@ -5,14 +5,17 @@ import test from "node:test";
 const entrypoint = readFileSync("scripts/analyze-roi-skip-policy-simulation.ts", "utf8");
 const raw = readFileSync("scripts/analyze-roi-skip-policy-simulation-raw.ts", "utf8");
 
-test("ROI skip-policy canonical entrypoint verifies DB identity before internal analysis", () => {
+test("ROI skip-policy canonical entrypoint verifies DB identity before isolated internal analysis", () => {
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-policy-payout-completeness.ts")');
   const identity = entrypoint.indexOf("ROI_SKIP_POLICY_PRIMARY_DB_IDENTITY_INVALID");
-  const internalImport = entrypoint.indexOf('await import("./analyze-roi-skip-policy-simulation-internal")');
+  const childIdentity = entrypoint.indexOf("ROI_SKIP_POLICY_DB_CHILD_HANDOFF_IDENTITY_INVALID");
+  const internalSpawn = entrypoint.indexOf("const analysis = spawnSync");
 
   assert.ok(preflight >= 0);
   assert.ok(identity > preflight, "DB identity must be verified after payout-completeness preflight");
-  assert.ok(internalImport > identity, "internal analyzer must load only after canonical DB identity verification");
+  assert.ok(childIdentity > identity, "DB identity must be reverified at the child handoff");
+  assert.ok(internalSpawn > childIdentity, "internal analyzer must start only after child DB identity verification");
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: childDbPath/);
   assert.doesNotMatch(entrypoint, /analyze-roi-skip-policy-simulation-raw/);
 });
 
