@@ -31,5 +31,5 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
-await import("./analyze-roi-skip-filter-robustness-raw");
+await import("./analyze-roi-skip-filter-robustness-internal");
 console.log("[skip-filter-robustness] PASS: payout completeness preflight passed before internal analysis");
