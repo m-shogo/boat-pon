@@ -1,5 +1,17 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 /**
  * End-to-end ROI review autopilot.
@@ -91,8 +103,11 @@ for (const [bin, args] of commands) {
   }
 }
 
-const matrix = readJson<MatrixReport>("reports/roi-search-matrix.json");
-const hypotheses = readOptionalJson<HypothesisReport>("reports/roi-hypothesis-sets.json");
+const matrix = readJson<MatrixReport>("reports/roi-search-matrix.json", "ROI_AUTOPILOT_MATRIX_IDENTITY_INVALID");
+const hypotheses = readOptionalJson<HypothesisReport>(
+  "reports/roi-hypothesis-sets.json",
+  "ROI_AUTOPILOT_HYPOTHESES_IDENTITY_INVALID",
+);
 assertOfficialPayoutHypotheses(hypotheses);
 
 const baseline = matrix.results[0]?.baseline ?? hypotheses?.baseline ?? {};
@@ -132,8 +147,18 @@ const report = {
 };
 
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, renderMarkdown(report));
+verifyExistingOutput(OUT_JSON, "ROI_AUTOPILOT_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "ROI_AUTOPILOT_PREEXISTING_MD_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "ROI_AUTOPILOT_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  renderMarkdown(report),
+  "ROI_AUTOPILOT_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 console.log(`[roi-autopilot] decision=${decision}`);
 console.log(`[roi-autopilot] wrote ${OUT_JSON}`);
 console.log(`[roi-autopilot] wrote ${OUT_MD}`);
@@ -313,14 +338,38 @@ function hypothesisTable(items: Array<{ name: string; intent?: string; removed?:
   return `| name | removed n | removed ROI | remaining n | remaining ROI | improvement | warnings |\n|---|---:|---:|---:|---:|---:|---|\n${items.map((x) => `| ${md(x.name)} | ${x.removed?.n ?? 0} | ${pct(Number(x.removed?.roi ?? 0))} | ${x.remaining?.n ?? 0} | ${pct(Number(x.remaining?.roi ?? 0))} | ${pct(Number(x.improvement ?? 0))} | ${md((x.warnings ?? []).join(", ") || "-")} |`).join("\n")}`;
 }
 
-function readJson<T>(path: string): T {
-  if (!existsSync(path)) throw new Error(`${path} does not exist`);
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+function readJson<T>(path: string, identityErrorCode: string): T {
+  if (!existsSync(path)) throw new Error("ROI_AUTOPILOT_REQUIRED_INPUT_MISSING");
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
 }
 
-function readOptionalJson<T>(path: string): T | null {
+function readOptionalJson<T>(path: string, identityErrorCode: string): T | null {
   if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+}
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function pct(value: number) {

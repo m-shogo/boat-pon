@@ -15,7 +15,7 @@ test("ROI autopilot fails closed if an optional hypothesis report is not officia
   assert.match(source, /assertOfficialPayoutHypotheses\(hypotheses\);/);
   assert.match(source, /report\.safety\?\.metricBasis !== "official_payout_yen"/);
   assert.match(source, /ROI_AUTOPILOT_HYPOTHESIS_METRIC_BASIS_UNSAFE/);
-  const reportRead = source.indexOf('readOptionalJson<HypothesisReport>("reports/roi-hypothesis-sets.json")');
+  const reportRead = source.indexOf('"reports/roi-hypothesis-sets.json"');
   const gate = source.indexOf("assertOfficialPayoutHypotheses(hypotheses);");
   const decision = source.indexOf("const decision = decide(");
   assert.ok(reportRead >= 0);
@@ -25,4 +25,29 @@ test("ROI autopilot fails closed if an optional hypothesis report is not officia
 
 test("ROI autopilot declares official payout metric basis", () => {
   assert.match(source, /metricBasis: "official_payout_yen"/);
+});
+
+test("ROI autopilot verifies upstream JSON identities before parsing", () => {
+  assert.match(source, /ROI_AUTOPILOT_MATRIX_IDENTITY_INVALID/);
+  assert.match(source, /ROI_AUTOPILOT_HYPOTHESES_IDENTITY_INVALID/);
+  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, identityErrorCode)");
+  const read = source.indexOf('readFileSync(verifiedPath, "utf8")', identity);
+  assert.ok(identity >= 0 && read > identity, "research JSON must only be parsed from a verified canonical file identity");
+  assert.doesNotMatch(source, /throw new Error\(`\$\{path\} does not exist`\)/);
+});
+
+test("ROI autopilot validates existing outputs and publishes through fsynced exclusive temp files", () => {
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
+  const jsonPublish = source.indexOf("atomicPublish(\n  OUT_JSON");
+  const mdPublish = source.indexOf("atomicPublish(\n  OUT_MD");
+  assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
+
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = source.indexOf("fsyncSync(fd)", create);
+  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
+  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+  assert.match(source, /ROI_AUTOPILOT_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /ROI_AUTOPILOT_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
 });
