@@ -41,5 +41,9 @@ assertCanonicalSingleLinkRegularFile(
   CANDIDATES_PATH,
   "EXACTA_FORWARD_MONITOR_CANDIDATE_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "EXACTA_FORWARD_MONITOR_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = childDbPath;
 await import("./report-exacta-forward-monitor-internal");
