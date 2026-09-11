@@ -11,13 +11,14 @@ test("research governor cannot publish readiness before its integrity preflight"
   const guard = entrypoint.indexOf("if (preflight !== 0)");
   const handoffIdentity = entrypoint.indexOf("RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID");
   const envHandoff = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
-  const report = entrypoint.indexOf('await import("./report-research-governor-raw")');
+  const report = entrypoint.indexOf('await import("./report-research-governor-internal")');
   assert.ok(audit >= 0 && guard > audit && handoffIdentity > guard && envHandoff > handoffIdentity && report > envHandoff);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /RESEARCH_GOVERNOR_DB_MISSING/);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/u);
   assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/u);
-  assert.doesNotMatch(entrypoint, /run\("scripts\/report-research-governor-raw\.ts"/u);
+  assert.doesNotMatch(entrypoint, /report-research-governor-raw/u);
+  assert.doesNotMatch(entrypoint, /run\("scripts\/report-research-governor-internal\.ts"/u);
 });
 
 test("research governor readiness rejects decision cohort drift and misleading non-canonical trifecta coverage", () => {

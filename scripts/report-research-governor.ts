@@ -35,4 +35,4 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   "RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID",
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
-await import("./report-research-governor-raw");
+await import("./report-research-governor-internal");
