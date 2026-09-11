@@ -20,6 +20,7 @@ test("historical alternative-odds quality rejects forward cohort drift and rever
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_DECISION_COHORT_INVALID/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_DB_HANDOFF_IDENTITY_INVALID/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_DB_CHILD_HANDOFF_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_DB_CHILD_LAUNCH_IDENTITY_INVALID/u);
 
   const guard = entrypoint.indexOf("const invalidForwardCohort = db.prepare");
   const failure = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_DECISION_COHORT_INVALID");
@@ -28,7 +29,9 @@ test("historical alternative-odds quality rejects forward cohort drift and rever
   const mdPreexisting = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_MD_PREEXISTING_IDENTITY_INVALID", handoff);
   const jsonPreexisting = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_JSON_PREEXISTING_IDENTITY_INVALID", handoff);
   const childHandoff = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_DB_CHILD_HANDOFF_IDENTITY_INVALID", jsonPreexisting);
-  const childSpawn = entrypoint.indexOf("spawnSync(process.execPath", childHandoff);
+  const workspace = entrypoint.indexOf("mkdtempSync(", childHandoff);
+  const launchIdentity = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_DB_CHILD_LAUNCH_IDENTITY_INVALID", workspace);
+  const childSpawn = entrypoint.indexOf("spawnSync(process.execPath", launchIdentity);
   const mdPostflight = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_MD_OUTPUT_IDENTITY_INVALID", childSpawn);
   const jsonPostflight = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_JSON_OUTPUT_IDENTITY_INVALID", childSpawn);
   assert.ok(guard >= 0, "forward cohort guard must exist");
@@ -37,8 +40,12 @@ test("historical alternative-odds quality rejects forward cohort drift and rever
   assert.ok(handoff > close, "DB identity must be revalidated after preflight closes");
   assert.ok(mdPreexisting > handoff && jsonPreexisting > handoff, "existing report paths must be verified after DB handoff");
   assert.ok(childHandoff > mdPreexisting && childHandoff > jsonPreexisting, "DB identity must be reverified after output-path checks");
-  assert.ok(childSpawn > childHandoff, "isolated implementation must run only after final DB identity verification");
+  assert.ok(workspace > childHandoff, "isolated workspace must be created only after child DB handoff verification");
+  assert.ok(launchIdentity > workspace, "DB identity must be reverified again immediately before child launch");
+  assert.ok(childSpawn > launchIdentity, "isolated implementation must run only after launch-time DB identity verification");
   assert.ok(mdPostflight > childSpawn && jsonPostflight > childSpawn, "generated report identities must be verified after implementation");
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: launchDbPath/u);
+  assert.doesNotMatch(entrypoint, /BOAT_PON_DB_PATH: childDbPath/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_MD_OUTPUT_MISSING/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_JSON_OUTPUT_MISSING/u);
 });

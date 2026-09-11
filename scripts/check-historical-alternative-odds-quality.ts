@@ -115,9 +115,13 @@ const childDbPath = assertCanonicalSingleLinkRegularFile(
 const workspace = mkdtempSync(join(tmpdir(), "boat-pon-historical-alt-quality-"));
 try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    childDbPath,
+    "HISTORICAL_ALT_ODDS_QUALITY_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
   const child = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: childDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
