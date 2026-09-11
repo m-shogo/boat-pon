@@ -83,10 +83,14 @@ try {
     childDbPath,
     "ROI_SKIP_POLICY_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID",
   );
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    isolatedDbPath,
+    "ROI_SKIP_POLICY_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
 
   const analysis = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: isolatedDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
