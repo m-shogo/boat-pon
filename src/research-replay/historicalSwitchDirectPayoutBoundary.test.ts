@@ -32,7 +32,7 @@ const CASES = [
     auditPath: "scripts/audit-skipvenue-historical-payout-completeness.ts",
     audit: "audit-skipvenue-historical-payout-completeness.ts",
     raw: "analyze-skipvenue-switch-historical-closing-odds-raw.ts",
-    analyzer: "analyze-skipvenue-switch-historical-closing-odds-raw",
+    analyzer: "analyze-skipvenue-switch-historical-closing-odds-internal",
     primaryIdentityError: "SKIPVENUE_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID",
     handoffIdentityError: "SKIPVENUE_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID",
   },
