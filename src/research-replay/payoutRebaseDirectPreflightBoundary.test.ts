@@ -33,15 +33,15 @@ test("canonical payout-rebase passes only a reverified DB identity to the isolat
 
 test("canonical payout-rebase rejects unsafe pre-existing Markdown and JSON paths before isolated analysis", () => {
   const dbVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
-  const mdVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID"');
-  const jsonVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID"');
+  const outputPreflight = entrypointSource.lastIndexOf("verifyExistingOutputs();");
   const workspace = entrypointSource.lastIndexOf("mkdtempSync(");
 
-  assert.ok(mdVerify > dbVerify, "Markdown path preflight must follow verified DB handoff");
-  assert.ok(jsonVerify > mdVerify, "JSON path preflight must cover the second canonical output");
-  assert.ok(workspace > jsonVerify, "legacy analysis must not start before output path preflight");
+  assert.ok(outputPreflight > dbVerify, "output path preflight must follow verified DB handoff");
+  assert.ok(workspace > outputPreflight, "legacy analysis must not start before output path preflight");
   assert.match(entrypointSource, /if \(existsSync\(OUT_MD\)\)/u);
+  assert.match(entrypointSource, /PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID/);
   assert.match(entrypointSource, /if \(existsSync\(OUT_JSON\)\)/u);
+  assert.match(entrypointSource, /PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID/);
 });
 
 test("canonical payout-rebase runs legacy analysis only inside an isolated workspace", () => {
