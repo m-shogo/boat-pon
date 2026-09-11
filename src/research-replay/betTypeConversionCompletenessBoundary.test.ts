@@ -8,13 +8,14 @@ const internal = readFileSync("scripts/analyze-123-bet-type-conversion-internal.
 const audit = readFileSync("scripts/audit-123-bet-type-conversion-completeness.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
-test("123 bet-type conversion command fails closed before guarded cross-bet analysis", () => {
+test("123 bet-type conversion command fails closed before cross-bet analysis", () => {
   assert.equal(pkg.scripts?.["analyze:123-bet-type-conversion"], "tsx scripts/analyze-123-bet-type-conversion.ts");
   const preflight = entrypoint.indexOf('run("scripts/audit-123-bet-type-conversion-completeness.ts")');
-  const analysis = entrypoint.indexOf('await import("./analyze-123-bet-type-conversion-core")');
+  const analysis = entrypoint.indexOf('await import("./analyze-123-bet-type-conversion-internal")');
   assert.ok(preflight >= 0);
   assert.ok(analysis > preflight, "cross-bet analysis must remain downstream of the completeness preflight");
   assert.match(entrypoint, /if \(preflight !== 0\)[\s\S]*process\.exit\(preflight\)/);
+  assert.doesNotMatch(entrypoint, /analyze-123-bet-type-conversion-core/);
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-123-bet-type-conversion-core.ts")), false);
   assert.equal(Object.values(pkg.scripts ?? {}).some((command) => command.includes("analyze-123-bet-type-conversion-internal.ts")), false);
 });
@@ -23,7 +24,8 @@ test("123 bet-type conversion core cannot bypass the canonical settlement prefli
   assert.match(core, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(core, /process\.argv\[1\]/);
   assert.match(core, /BET_TYPE_CONVERSION_CORE_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(core, /await import\("\.\/analyze-123-bet-type-conversion-internal"\)/);
+  assert.match(core, /await import\("\.\/analyze-123-bet-type-conversion"\)/);
+  assert.doesNotMatch(core, /analyze-123-bet-type-conversion-internal/);
   assert.doesNotMatch(core, /new DatabaseSync/);
   assert.match(internal, /race_payouts/);
   assert.match(internal, /switch候補/);
