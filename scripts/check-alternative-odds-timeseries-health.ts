@@ -51,9 +51,13 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 assertExistingOutputIdentity(OUT_MD, "ALTERNATIVE_ODDS_HEALTH_MD_PREEXISTING_IDENTITY_INVALID");
 assertExistingOutputIdentity(OUT_JSON, "ALTERNATIVE_ODDS_HEALTH_JSON_PREEXISTING_IDENTITY_INVALID");
 
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "ALTERNATIVE_ODDS_HEALTH_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
 const health = run("scripts/check-alternative-odds-timeseries-health-internal.ts", {
   ...process.env,
-  BOAT_PON_DB_PATH: handoffDbPath,
+  BOAT_PON_DB_PATH: childDbPath,
 });
 if (health !== 0) {
   console.error("[alternative-odds-health] internal read-only health report failed after a successful cohort preflight");
