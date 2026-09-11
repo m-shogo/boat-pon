@@ -35,6 +35,11 @@ process.env.BOAT_PON_DB_PATH = handoffDbPath;
 assertExistingOutputIdentity(OUT_MD, "ALL_BET_TYPES_ROI_MD_PREEXISTING_IDENTITY_INVALID");
 assertExistingOutputIdentity(OUT_JSON, "ALL_BET_TYPES_ROI_JSON_PREEXISTING_IDENTITY_INVALID");
 
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "ALL_BET_TYPES_ROI_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = childDbPath;
 const status = run("scripts/analyze-all-bet-types-roi-internal.ts");
 if (status !== 0) process.exit(status);
 

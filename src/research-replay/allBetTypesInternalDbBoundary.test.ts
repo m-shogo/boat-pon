@@ -7,16 +7,22 @@ const raw = readFileSync("scripts/analyze-all-bet-types-roi-raw.ts", "utf8");
 
 test("all-bet-types canonical analyzer revalidates the DB immediately before internal execution", () => {
   assert.match(wrapper, /ALL_BET_TYPES_ROI_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.match(wrapper, /ALL_BET_TYPES_ROI_DB_CHILD_HANDOFF_IDENTITY_INVALID/);
   assert.match(wrapper, /assertCanonicalSingleLinkRegularFile\(/);
-  assert.match(wrapper, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
+  assert.match(wrapper, /process\.env\.BOAT_PON_DB_PATH = childDbPath/);
 
   const gate = wrapper.indexOf("audit !== 0");
   const identityRecheck = wrapper.indexOf("ALL_BET_TYPES_ROI_DB_HANDOFF_IDENTITY_INVALID");
+  const mdPreflight = wrapper.indexOf("ALL_BET_TYPES_ROI_MD_PREEXISTING_IDENTITY_INVALID");
+  const jsonPreflight = wrapper.indexOf("ALL_BET_TYPES_ROI_JSON_PREEXISTING_IDENTITY_INVALID");
+  const childHandoffIdentity = wrapper.indexOf("ALL_BET_TYPES_ROI_DB_CHILD_HANDOFF_IDENTITY_INVALID");
   const internalRun = wrapper.indexOf('run("scripts/analyze-all-bet-types-roi-internal.ts")');
 
   assert.ok(gate >= 0);
   assert.ok(identityRecheck > gate, "DB handoff identity must be verified only after payout completeness passes");
-  assert.ok(internalRun > identityRecheck, "internal analyzer must run only after canonical DB identity verification");
+  assert.ok(mdPreflight > identityRecheck && jsonPreflight > identityRecheck, "existing output identities must be checked after the initial DB handoff");
+  assert.ok(childHandoffIdentity > mdPreflight && childHandoffIdentity > jsonPreflight, "DB identity must be reverified after output-path checks and immediately before child handoff");
+  assert.ok(internalRun > childHandoffIdentity, "internal analyzer must run only after the final canonical DB identity verification");
 });
 
 test("all-bet-types canonical analyzer protects generated report identities around internal execution", () => {
