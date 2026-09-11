@@ -60,6 +60,13 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "WIND24_SWITCH_PRIMARY_DB_IDENTITY_INVALID",
 );
 
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "WIND24_SWITCH_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
+
 const analysis = run("scripts/analyze-wind24-exh1-switch-deep-dive-internal.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: verifiedDbPath,
