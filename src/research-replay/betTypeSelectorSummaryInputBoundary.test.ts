@@ -28,78 +28,89 @@ test("bet-type selector summary fails closed on missing, non-canonical, invalid,
   const validation = entry.indexOf("function verifyRequiredReports()");
   const identity = entry.indexOf("BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID");
   const safetyValidation = entry.indexOf("pointInTimeSafe === false");
-  const internalRun = entry.indexOf("report-bet-type-selector-summary-internal.ts");
+  const internalRun = entry.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
   assert.ok(validation >= 0 && identity > validation && safetyValidation > identity && internalRun > safetyValidation);
   assert.doesNotMatch(entry, /report-bet-type-selector-summary-raw\.ts/);
   assert.doesNotMatch(entry, /DatabaseSync/);
   assert.equal(pkg.scripts?.["report:bet-type-selector"], "tsx scripts/report-bet-type-selector-summary.ts");
 });
 
-test("bet-type selector summary reverifies prerequisite reports and DB identity immediately before child handoff", () => {
+test("bet-type selector summary reverifies prerequisite reports and DB identity before isolated child handoff", () => {
   assert.match(entry, /BET_TYPE_SELECTOR_DB_MISSING/);
   assert.match(entry, /BET_TYPE_SELECTOR_DB_HANDOFF_IDENTITY_INVALID/);
-  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "BET_TYPE_SELECTOR_DB_HANDOFF_IDENTITY_INVALID"\)/);
-  assert.match(entry, /env: \{ \.\.\.process\.env, BOAT_PON_DB_PATH: verifiedDbPath \}/);
+  assert.match(entry, /BET_TYPE_SELECTOR_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
+  assert.match(entry, /env: \{ \.\.\.process\.env, BOAT_PON_DB_PATH: launchDbPath \}/);
 
   const calls = [...entry.matchAll(/verifyRequiredReports\(\);/g)].map((match) => match.index ?? -1);
-  assert.equal(calls.length, 2, "prerequisite reports must be validated initially and again at child handoff");
+  assert.equal(calls.length, 2, "prerequisite reports must be validated initially and again before staging");
   const outputPreflight = entry.lastIndexOf("verifyExistingOutputPaths()");
   const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
-  const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
+  const workspace = entry.lastIndexOf("mkdtempSync(");
+  const stage = entry.lastIndexOf("stageRequiredReports(workspace)");
+  const internalRun = entry.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
   assert.ok(calls[0] >= 0 && outputPreflight > calls[0]);
-  assert.ok(calls[1] > outputPreflight && handoff > calls[1] && internalRun > handoff);
+  assert.ok(calls[1] > outputPreflight && handoff > calls[1] && workspace > handoff && stage > workspace && internalRun > stage);
 });
 
-test("bet-type selector summary redacts configured DB provenance after successful analysis", () => {
+test("bet-type selector summary stages verified prerequisite reports into an isolated workspace", () => {
+  assert.match(entry, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-bet-type-selector-"\)\)/);
+  assert.match(entry, /BET_TYPE_SELECTOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID/);
+  assert.match(entry, /copyFileSync\(sourcePath, stagedPath\)/);
+  assert.match(entry, /BET_TYPE_SELECTOR_STAGED_INPUT_REPORT_IDENTITY_INVALID/);
+  assert.match(entry, /cwd: workspace/);
+  assert.match(entry, /pathToFileURL\(internalPath\)/);
+  assert.match(entry, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
+});
+
+test("bet-type selector summary redacts configured DB provenance before canonical publication", () => {
   assert.match(entry, /BET_TYPE_SELECTOR_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(entry, /BET_TYPE_SELECTOR_DB_PROVENANCE_NOT_FOUND/);
   assert.match(entry, /OPAQUE_DB_SOURCE = "primary research database"/);
-  assert.match(entry, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
-  const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
-  const redact = entry.lastIndexOf("redactDbProvenance(verifiedDbPath)");
-  assert.ok(internalRun >= 0 && redact > internalRun);
+  assert.match(entry, /markdown: report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  const isolatedRead = entry.lastIndexOf("readIsolatedOutputs(workspace, verifiedDbPath)");
+  const publish = entry.lastIndexOf("atomicPublish(");
+  assert.ok(isolatedRead >= 0 && publish > isolatedRead);
+  assert.doesNotMatch(entry, /writeFileSync\(handoffReportPath/);
 });
 
-test("bet-type selector summary rejects unsafe pre-existing Markdown and JSON outputs before internal write", () => {
+test("bet-type selector summary rejects unsafe pre-existing Markdown and JSON outputs before child write", () => {
   const firstInputPreflight = entry.lastIndexOf("verifyRequiredReports();", entry.lastIndexOf("verifyExistingOutputPaths()"));
   const outputPreflight = entry.lastIndexOf("verifyExistingOutputPaths()");
   const finalInputPreflight = entry.lastIndexOf("verifyRequiredReports();");
   const markdownIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_REPORT_IDENTITY_INVALID");
   const jsonIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_JSON_REPORT_IDENTITY_INVALID");
-  const internalRun = entry.lastIndexOf('run("scripts/report-bet-type-selector-summary-internal.ts", verifiedDbPath)');
+  const workspace = entry.lastIndexOf("mkdtempSync(");
 
   assert.ok(markdownIdentity >= 0 && jsonIdentity > markdownIdentity);
   assert.ok(firstInputPreflight >= 0 && outputPreflight > firstInputPreflight);
-  assert.ok(finalInputPreflight > outputPreflight && internalRun > finalInputPreflight);
+  assert.ok(finalInputPreflight > outputPreflight && workspace > finalInputPreflight);
   assert.match(entry, /if \(existsSync\(OUT_MD\)\)/u);
   assert.match(entry, /if \(existsSync\(OUT_JSON\)\)/u);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_JSON,/u);
 });
 
-test("bet-type selector summary verifies generated report identity before redaction read and again before write", () => {
-  const firstIdentity = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_IDENTITY_INVALID"');
-  const read = entry.indexOf('readFileSync(verifiedReportPath, "utf8")');
-  const handoffIdentity = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = entry.indexOf("writeFileSync(handoffReportPath");
-
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
-  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
-  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
+test("bet-type selector summary verifies isolated Markdown and JSON outputs before publication", () => {
+  const mdIdentity = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_IDENTITY_INVALID"');
+  const jsonIdentity = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID"');
+  const mdRead = entry.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const jsonRead = entry.indexOf('readFileSync(verifiedJsonPath, "utf8")');
+  const mdHandoff = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const jsonHandoff = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID"');
+  assert.ok(mdIdentity >= 0 && jsonIdentity > mdIdentity && mdRead > jsonIdentity && jsonRead > mdRead);
+  assert.ok(mdHandoff > jsonRead && jsonHandoff > mdHandoff);
+  assert.match(entry, /JSON\.parse\(json\)/);
 });
 
-test("bet-type selector summary validates generated JSON identity and parseability before successful exit", () => {
-  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_MISSING_AFTER_ANALYSIS/);
-  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID/);
-  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_INVALID/);
-  assert.match(entry, /BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID/);
-  const firstIdentity = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID"');
-  const read = entry.indexOf('readFileSync(verifiedJsonPath, "utf8")');
-  const handoffIdentity = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const invoke = entry.lastIndexOf("verifyJsonOutput()");
-  const exit = entry.lastIndexOf("process.exit(status)");
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read);
-  assert.ok(invoke > handoffIdentity && exit > invoke);
+test("bet-type selector summary publishes both outputs through exclusive fsynced temporary files and atomic rename", () => {
+  const tempCreate = entry.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = entry.indexOf("fsyncSync(fd)", tempCreate);
+  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
+  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const mdPublish = entry.lastIndexOf("BET_TYPE_SELECTOR_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  const jsonPublish = entry.lastIndexOf("BET_TYPE_SELECTOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  assert.ok(tempCreate >= 0 && fsync > tempCreate && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(mdPublish > rename && jsonPublish > mdPublish);
 });
 
 test("legacy raw selector summary path cannot bypass prerequisite report validation", () => {
