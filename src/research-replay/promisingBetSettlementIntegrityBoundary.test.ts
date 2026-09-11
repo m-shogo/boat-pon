@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("promising bet normal entrypoint validates settlement integrity before raw analyzer", () => {
+test("promising bet normal entrypoint validates settlement integrity before guarded internal analyzer", () => {
   const source = readFileSync("scripts/analyze-promising-bet-type-strategies.ts", "utf8");
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
 
@@ -30,34 +30,37 @@ test("promising bet normal entrypoint validates settlement integrity before raw 
       < source.indexOf("PROMISING_BET_PAYOUT_COVERAGE_INCOMPLETE"),
   );
   assert.match(source, /assertPayoutCompleteness\(\)/);
-  assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-raw"\)/);
+  assert.match(source, /PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
   assert.ok(
     source.indexOf("PROMISING_BET_RETURNED_BUY_UNSUPPORTED")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
+      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
   );
   assert.ok(
     source.indexOf("PROMISING_BET_PAYOUT_RETURN_STATE_INVALID")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
+      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
   );
   assert.ok(
     source.indexOf("PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
+      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
   );
   assert.ok(
     source.indexOf("assertPayoutCompleteness();")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-raw")'),
+      < source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID"),
+  );
+  assert.ok(
+    source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID")
+      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
   );
 });
 
-test("promising bet raw compatibility module blocks direct CLI bypass and revalidates DB identity", () => {
+test("promising bet raw compatibility module blocks direct CLI bypass and routes imports through canonical preflight", () => {
   const raw = readFileSync("scripts/analyze-promising-bet-type-strategies-raw.ts", "utf8");
   assert.match(raw, /PROMISING_BET_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(raw, /process\.argv\[1\]/);
-  assert.match(raw, /PROMISING_BET_RAW_DB_MISSING/);
-  assert.match(raw, /PROMISING_BET_RAW_DB_IDENTITY_INVALID/);
-  assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
-  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH/);
-  assert.match(raw, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
+  assert.match(raw, /await import\("\.\/analyze-promising-bet-type-strategies"\)/);
+  assert.doesNotMatch(raw, /analyze-promising-bet-type-strategies-internal/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
   assert.doesNotMatch(raw, /DatabaseSync/);
   assert.doesNotMatch(raw, /const STRATEGIES: StrategyDef\[\] =/);
 });
