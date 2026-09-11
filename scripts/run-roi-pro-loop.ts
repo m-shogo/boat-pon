@@ -1,6 +1,8 @@
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_DIR = "reports/roi-pro-loop";
 const OUT_JSON = "reports/roi-pro-loop.json";
@@ -79,11 +81,11 @@ for (const [index, c] of cases.entries()) {
 
   const allArchive = join(OUT_DIR, `${index + 1}-${c.name}-all.json`);
   const personaArchive = join(OUT_DIR, `${index + 1}-${c.name}-persona.json`);
-  copyFileSync(ALL_JSON, allArchive);
-  copyFileSync(PERSONA_JSON, personaArchive);
+  archiveVerifiedSource(ALL_JSON, allArchive, "ROI_PRO_LOOP_ALL_SOURCE_IDENTITY_INVALID", "ROI_PRO_LOOP_ALL_ARCHIVE_TEMP_IDENTITY_INVALID");
+  archiveVerifiedSource(PERSONA_JSON, personaArchive, "ROI_PRO_LOOP_PERSONA_SOURCE_IDENTITY_INVALID", "ROI_PRO_LOOP_PERSONA_ARCHIVE_TEMP_IDENTITY_INVALID");
 
-  const all = JSON.parse(readFileSync(ALL_JSON, "utf8")) as AllReport;
-  const persona = JSON.parse(readFileSync(PERSONA_JSON, "utf8")) as PersonaReport;
+  const all = readVerified<AllReport>(ALL_JSON, "ROI_PRO_LOOP_ALL_INPUT_IDENTITY_INVALID");
+  const persona = readVerified<PersonaReport>(PERSONA_JSON, "ROI_PRO_LOOP_PERSONA_INPUT_IDENTITY_INVALID");
   runs.push({
     case: c,
     baseline: all.baseline,
@@ -111,8 +113,8 @@ const report = {
   nextActions: nextActions(finalDecision),
 };
 
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, renderMd(report));
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ROI_PRO_LOOP_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD, renderMd(report), "ROI_PRO_LOOP_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log(`[roi-pro-loop] finalDecision=${finalDecision}`);
 console.log(`[roi-pro-loop] wrote ${OUT_MD}`);
 console.log(`[roi-pro-loop] wrote ${OUT_JSON}`);
@@ -197,6 +199,33 @@ function personaTable(items: ReturnType<typeof buildPersonaConsensus>) {
 function candidateTable(items: Candidate[]) {
   if (!items.length) return "None\n";
   return `| judgement | label | remainingN | remainingROI | improvement | test | warnings |\n|---|---|---:|---:|---:|---:|---|\n${items.map((x) => `| ${x.judgement ?? "-"} | ${md(x.label)} | ${x.remaining?.n ?? 0} | ${pct(Number(x.remaining?.roi ?? 0))} | ${pct(Number(x.improvement ?? 0))} | ${pct(Number(x.testRoi ?? 0))} | ${md((x.warnings ?? []).join(", ") || "-")} |`).join("\n")}`;
+}
+
+function readVerified<T>(path: string, errorCode: string): T {
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, errorCode);
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+}
+
+function archiveVerifiedSource(sourcePath: string, destinationPath: string, sourceErrorCode: string, tempErrorCode: string): void {
+  const verifiedSourcePath = assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
+  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode);
+}
+
+function atomicPublish(path: string, contents: string | Buffer, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents);
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function pct(value: number) { return `${(value * 100).toFixed(2)}%`; }
