@@ -1,5 +1,9 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
+
+const OUT_SUMMARY = "reports/roi-search-suite-summary.md";
 
 const commands = [
   ["tsx", "scripts/search-roi-patterns.ts"],
@@ -54,8 +58,28 @@ for (const file of files) {
   lines.push("");
 }
 
-writeFileSync("reports/roi-search-suite-summary.md", `${lines.join("\n")}\n`);
-console.log("[run-roi-search-suite] wrote reports/roi-search-suite-summary.md");
+atomicPublish(OUT_SUMMARY, `${lines.join("\n")}\n`);
+console.log(`[run-roi-search-suite] wrote ${OUT_SUMMARY}`);
+
+function atomicPublish(path: string, contents: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "ROI_SEARCH_SUITE_SUMMARY_PUBLISH_TEMP_IDENTITY_INVALID",
+    );
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 function pct(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "";
