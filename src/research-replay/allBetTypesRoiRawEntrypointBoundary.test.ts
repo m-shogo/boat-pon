@@ -6,15 +6,19 @@ const wrapper = readFileSync("scripts/analyze-all-bet-types-roi.ts", "utf8");
 const raw = readFileSync("scripts/analyze-all-bet-types-roi-raw.ts", "utf8");
 const internal = readFileSync("scripts/analyze-all-bet-types-roi-internal.ts", "utf8");
 
-test("all-bet-types ROI canonical entrypoint runs internal analysis only after payout audit and DB handoff", () => {
+test("all-bet-types ROI canonical entrypoint runs isolated internal analysis only after payout audit and launch-time DB handoff", () => {
   const audit = wrapper.indexOf("audit-all-bet-types-payout-completeness.ts");
   const gate = wrapper.indexOf("audit !== 0");
   const identity = wrapper.indexOf("ALL_BET_TYPES_ROI_DB_HANDOFF_IDENTITY_INVALID");
-  const internalRun = wrapper.indexOf('run("scripts/analyze-all-bet-types-roi-internal.ts")');
+  const launchIdentity = wrapper.indexOf("ALL_BET_TYPES_ROI_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const internalRun = wrapper.indexOf("const analysis = spawnSync", launchIdentity);
   assert.ok(audit >= 0);
   assert.ok(gate > audit);
   assert.ok(identity > gate, "DB handoff must remain downstream of the payout-completeness gate");
-  assert.ok(internalRun > identity, "internal analysis must run only after canonical DB handoff verification");
+  assert.ok(launchIdentity > identity, "DB identity must be revalidated again immediately before child launch");
+  assert.ok(internalRun > launchIdentity, "internal analysis must run only after launch-time canonical DB verification");
+  assert.match(wrapper, /cwd: workspace/);
+  assert.match(wrapper, /BOAT_PON_DB_PATH: launchDbPath/);
   assert.doesNotMatch(wrapper, /analyze-all-bet-types-roi-raw/);
 });
 
@@ -30,5 +34,6 @@ test("isolated all-bet-types ROI implementation remains research-only and read-o
   assert.match(internal, /race_payouts/);
   assert.match(internal, /new DatabaseSync/);
   assert.match(internal, /readOnly: true/);
+  assert.match(internal, /PRAGMA query_only = ON/);
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP|ALTER)\b/i);
 });
