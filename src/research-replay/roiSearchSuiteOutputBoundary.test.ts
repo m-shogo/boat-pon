@@ -4,6 +4,12 @@ import test from "node:test";
 
 const source = readFileSync("scripts/run-roi-search-suite.ts", "utf8");
 
+test("ROI search suite verifies generated JSON inputs immediately before read", () => {
+  assert.match(source, /ROI_SEARCH_SUITE_INPUT_IDENTITY_INVALID/u);
+  assert.match(source, /const verifiedInputPath = assertCanonicalSingleLinkRegularFile\(/u);
+  assert.match(source, /JSON\.parse\(readFileSync\(verifiedInputPath, "utf8"\)\)/u);
+});
+
 test("ROI search suite publishes summary through an exclusive verified temp file", () => {
   assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(source, /fsyncSync\(fd\)/u);
