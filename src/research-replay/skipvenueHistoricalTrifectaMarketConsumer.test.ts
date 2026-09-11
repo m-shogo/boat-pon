@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+const entry = readFileSync("scripts/analyze-skipvenue-switch-historical-closing-odds.ts", "utf8");
 const internal = readFileSync("scripts/analyze-skipvenue-switch-historical-closing-odds-internal.ts", "utf8");
 const raw = readFileSync("scripts/analyze-skipvenue-switch-historical-closing-odds-raw.ts", "utf8");
 
@@ -30,18 +31,23 @@ test("skipVenue historical switch internal independently fails closed before SQL
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\(\s*[`"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
 });
 
-test("skipVenue historical switch raw path revalidates the DB after canonical settlement preflight", () => {
+test("skipVenue canonical entrypoint owns settlement preflight and the internal handoff", () => {
+  const audit = entry.indexOf('run("scripts/audit-skipvenue-historical-payout-completeness.ts")');
+  const gate = entry.indexOf("audit !== 0");
+  const identity = entry.indexOf("SKIPVENUE_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID");
+  const internalImport = entry.indexOf('await import("./analyze-skipvenue-switch-historical-closing-odds-internal")');
+
+  assert.ok(audit >= 0);
+  assert.ok(gate > audit, "settlement audit must fail closed before analysis");
+  assert.ok(identity > gate, "DB identity must be revalidated after settlement preflight");
+  assert.ok(internalImport > identity, "internal analyzer must run only after the canonical handoff identity check");
+  assert.doesNotMatch(entry, /analyze-skipvenue-switch-historical-closing-odds-raw/);
+});
+
+test("skipVenue raw compatibility path cannot bypass canonical settlement preflight", () => {
   assert.match(raw, /SKIPVENUE_SWITCH_HISTORICAL_RAW_DIRECT_EXECUTION_FORBIDDEN/);
   assert.match(raw, /invokedPath === rawEntrypointPath/);
-  assert.match(raw, /SKIPVENUE_SWITCH_HISTORICAL_RAW_DB_MISSING/);
-  assert.match(raw, /SKIPVENUE_SWITCH_HISTORICAL_RAW_DB_IDENTITY_INVALID/);
-  assert.match(raw, /assertCanonicalSingleLinkRegularFile/);
-  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
-  assert.match(raw, /await import\("\.\/analyze-skipvenue-switch-historical-closing-odds-internal"\)/);
-  assert.doesNotMatch(raw, /DB not found: \$\{/);
-
-  const guard = raw.indexOf("SKIPVENUE_SWITCH_HISTORICAL_RAW_DIRECT_EXECUTION_FORBIDDEN");
-  const identity = raw.indexOf("SKIPVENUE_SWITCH_HISTORICAL_RAW_DB_IDENTITY_INVALID");
-  const internalImport = raw.indexOf('await import("./analyze-skipvenue-switch-historical-closing-odds-internal")');
-  assert.ok(guard >= 0 && identity > guard && internalImport > identity);
+  assert.match(raw, /await import\("\.\/analyze-skipvenue-switch-historical-closing-odds"\)/);
+  assert.doesNotMatch(raw, /analyze-skipvenue-switch-historical-closing-odds-internal/);
+  assert.doesNotMatch(raw, /assertCanonicalSingleLinkRegularFile/);
 });
