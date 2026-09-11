@@ -4,6 +4,17 @@ import test from "node:test";
 
 const entry = readFileSync("scripts/report-research-governor.ts", "utf8");
 const raw = readFileSync("scripts/report-research-governor-raw.ts", "utf8");
+const internal = readFileSync("scripts/report-research-governor-internal.ts", "utf8");
+
+function reportPathsFromBlock(source: string, startMarker: string, endMarker: string): string[] {
+  const start = source.indexOf(startMarker);
+  assert.ok(start >= 0, `missing block start: ${startMarker}`);
+  const end = source.indexOf(endMarker, start);
+  assert.ok(end > start, `missing block end: ${endMarker}`);
+  return [...source.slice(start, end).matchAll(/"(reports\/[^"\n]+\.json)"/g)]
+    .map((match) => match[1])
+    .sort();
+}
 
 test("research governor enters the internal report only after canonical readiness, DB handoff, registry, and report-input checks", () => {
   const preflight = entry.indexOf('run("scripts/audit-research-governor-readiness.ts")');
@@ -24,13 +35,17 @@ test("research governor enters the internal report only after canonical readines
   assert.ok(reportInputIdentity > hypothesisIdentity);
   assert.ok(internalImport > reportInputIdentity);
   assert.match(entry, /HYPOTHESIS_PATH = "data\/research-hypotheses\.json"/);
-  assert.match(entry, /"reports\/roi-governor\.json"/);
-  assert.match(entry, /"reports\/paper-forward-monitor\.json"/);
   assert.match(entry, /for \(const reportPath of REPORT_INPUT_PATHS\)/);
   assert.match(entry, /if \(!existsSync\(reportPath\)\) continue/);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile/);
   assert.equal(entry.includes("report-research-governor-raw"), false);
   assert.equal(entry.includes('run("scripts/report-research-governor-internal.ts"'), false);
+});
+
+test("research governor identity gate mirrors every internal report-file input", () => {
+  const guardedPaths = reportPathsFromBlock(entry, "const REPORT_INPUT_PATHS = [", "] as const;");
+  const internalPaths = reportPathsFromBlock(internal, "const REPORT_FILES = {", "} as const;");
+  assert.deepEqual(guardedPaths, internalPaths);
 });
 
 test("research governor raw compatibility module forbids direct CLI execution and cannot bypass canonical preflight", () => {
