@@ -6,23 +6,27 @@ test("one-four structure direct entrypoint cannot bypass official payout audit",
   const source = readFileSync("scripts/analyze-one-four-structure.ts", "utf8");
   const auditIndex = source.indexOf("audit-all-bet-types-payout-completeness.ts");
   const gateIndex = source.indexOf("audit !== 0");
-  const rawIndex = source.indexOf('await import("./analyze-one-four-structure-raw")');
+  const handoffIndex = source.indexOf("ONE_FOUR_STRUCTURE_DB_HANDOFF_IDENTITY_INVALID");
+  const internalIndex = source.indexOf('await import("./analyze-one-four-structure-internal")');
 
   assert.ok(auditIndex >= 0);
   assert.ok(gateIndex > auditIndex);
-  assert.ok(rawIndex > gateIndex);
+  assert.ok(handoffIndex > gateIndex);
+  assert.ok(internalIndex > handoffIndex);
+  assert.doesNotMatch(source, /analyze-one-four-structure-raw/);
   assert.doesNotMatch(source, /DatabaseSync/);
 });
 
-test("one-four structure raw compatibility module rejects direct CLI execution", () => {
+test("one-four structure raw compatibility module rejects direct CLI execution and routes imports through canonical audit", () => {
   const raw = readFileSync("scripts/analyze-one-four-structure-raw.ts", "utf8");
   const directGuard = raw.indexOf("invokedPath === rawEntrypointPath");
   const failure = raw.indexOf("ONE_FOUR_STRUCTURE_RAW_DIRECT_EXECUTION_FORBIDDEN");
-  const internal = raw.indexOf('await import("./analyze-one-four-structure-internal")');
+  const canonical = raw.indexOf('await import("./analyze-one-four-structure")');
 
   assert.ok(directGuard >= 0, "raw compatibility module must detect direct CLI execution");
   assert.ok(failure > directGuard, "direct execution must fail closed at the guard");
-  assert.ok(internal > failure, "internal analyzer may load only after the direct-execution guard");
+  assert.ok(canonical > failure, "canonical audit entrypoint may load only after the direct-execution guard");
+  assert.doesNotMatch(raw, /analyze-one-four-structure-internal/);
 });
 
 test("one-four structure uses the same forward BUY population covered by the shared payout audit", () => {
