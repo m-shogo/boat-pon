@@ -82,13 +82,17 @@ try {
     verifiedDbPath,
     "RACER_ABILITY_AUDIT_DB_HANDOFF_IDENTITY_INVALID",
   );
-  assertCanonicalSingleLinkRegularFile(
+  const stagedCandidatesPath = assertCanonicalSingleLinkRegularFile(
     workspaceCandidates,
     "RACER_ABILITY_AUDIT_CANDIDATES_HANDOFF_IDENTITY_INVALID",
   );
   const childDbPath = assertCanonicalSingleLinkRegularFile(
     handoffDbPath,
     "RACER_ABILITY_AUDIT_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+  );
+  assertCanonicalSingleLinkRegularFile(
+    stagedCandidatesPath,
+    "RACER_ABILITY_AUDIT_CANDIDATES_CHILD_HANDOFF_IDENTITY_INVALID",
   );
 
   const child = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
