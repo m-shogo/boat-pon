@@ -7,17 +7,25 @@ const rawSource = readFileSync("scripts/analyze-odds-payout-gap-raw.ts", "utf-8"
 const auditSource = readFileSync("scripts/audit-odds-payout-gap-completeness.ts", "utf-8");
 const pkg = JSON.parse(readFileSync("package.json", "utf-8")) as { scripts?: Record<string, string> };
 
-test("odds-payout-gap normal entrypoint executes settlement preflight and DB handoff before analysis", () => {
+test("odds-payout-gap normal entrypoint executes settlement preflight and launch-time DB handoff before isolated analysis", () => {
   assert.equal(pkg.scripts?.["analyze:odds-payout-gap"], "tsx scripts/analyze-odds-payout-gap.ts");
   const preflight = runnerSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
   const gate = runnerSource.indexOf("if (preflight !== 0)");
   const identity = runnerSource.indexOf("ODDS_PAYOUT_GAP_DB_IDENTITY_INVALID");
-  const analysis = runnerSource.indexOf('await import("./analyze-odds-payout-gap-internal")');
+  const workspace = runnerSource.indexOf("mkdtempSync(", identity);
+  const launchIdentity = runnerSource.indexOf("ODDS_PAYOUT_GAP_DB_CHILD_LAUNCH_IDENTITY_INVALID", workspace);
+  const analysis = runnerSource.indexOf("const analysis = spawnSync", launchIdentity);
 
   assert.ok(preflight >= 0, "normal entrypoint must invoke payout completeness preflight");
   assert.ok(gate > preflight);
   assert.ok(identity > gate, "DB identity must be revalidated only after payout completeness passes");
-  assert.ok(analysis > identity, "internal analysis must run only after the verified DB handoff");
+  assert.ok(workspace > identity, "isolated workspace must be created only after the initial DB handoff");
+  assert.ok(launchIdentity > workspace, "DB identity must be revalidated after workspace setup");
+  assert.ok(analysis > launchIdentity, "internal analysis must run only after the launch-time verified DB handoff");
+  assert.match(runnerSource, /cwd: workspace/);
+  assert.match(runnerSource, /BOAT_PON_DB_PATH: launchDbPath/);
+  assert.doesNotMatch(runnerSource, /process\.env\.BOAT_PON_DB_PATH =/);
+  assert.doesNotMatch(runnerSource, /await import\("\.\/analyze-odds-payout-gap-internal"\)/);
   assert.doesNotMatch(runnerSource, /analyze-odds-payout-gap-raw/);
 });
 
@@ -26,8 +34,25 @@ test("odds-payout-gap normal entrypoint fails closed before analysis when prefli
   assert.match(runnerSource, /process\.exit\(preflight\)/);
 
   const guard = runnerSource.indexOf("if (preflight !== 0)");
-  const analysis = runnerSource.indexOf('await import("./analyze-odds-payout-gap-internal")');
+  const analysis = runnerSource.indexOf("const analysis = spawnSync", guard);
   assert.ok(guard >= 0 && guard < analysis, "preflight failure guard must precede analysis execution");
+});
+
+test("odds-payout-gap isolated analysis verifies child outputs and publishes final reports atomically", () => {
+  const analysis = runnerSource.indexOf("const analysis = spawnSync");
+  const mdIdentity = runnerSource.indexOf("ODDS_PAYOUT_GAP_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
+  const jsonIdentity = runnerSource.indexOf("ODDS_PAYOUT_GAP_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
+  const tempCreate = runnerSource.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = runnerSource.indexOf("fsyncSync(fd)", tempCreate);
+  const tempIdentity = runnerSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
+  const rename = runnerSource.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+
+  assert.ok(mdIdentity > analysis && jsonIdentity > analysis);
+  assert.ok(tempCreate >= 0 && fsync > tempCreate);
+  assert.ok(tempIdentity > fsync && rename > tempIdentity);
+  assert.match(runnerSource, /ODDS_PAYOUT_GAP_INTERNAL_FAILED/);
+  assert.match(runnerSource, /ODDS_PAYOUT_GAP_MD_OUTPUT_IDENTITY_INVALID/);
+  assert.match(runnerSource, /ODDS_PAYOUT_GAP_JSON_OUTPUT_IDENTITY_INVALID/);
 });
 
 test("odds-payout-gap raw compatibility module forbids direct CLI execution and routes through canonical preflight", () => {
