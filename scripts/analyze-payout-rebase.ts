@@ -8,18 +8,36 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/payout-rebase.md";
+const OUT_JSON = "reports/payout-rebase.json";
 const OPAQUE_DB_SOURCE = "primary research database";
+const internalPath = fileURLToPath(new URL("./analyze-payout-rebase-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
-function run(script: string, env = process.env): number {
+function runGuarded(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    env,
+    env: process.env,
   });
 
   if (result.error) {
@@ -36,33 +54,109 @@ function run(script: string, env = process.env): number {
   return status;
 }
 
-function redactDbProvenance(dbPath: string): void {
-  if (!existsSync(OUT_MD)) {
-    throw new Error("PAYOUT_REBASE_REPORT_MISSING_AFTER_ANALYSIS");
+function verifyExistingOutputs(): void {
+  if (existsSync(OUT_MD)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_MD,
+      "PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID",
+    );
   }
+  if (existsSync(OUT_JSON)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_JSON,
+      "PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID",
+    );
+  }
+}
 
-  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
+function runIsolated(workspace: string, verifiedDbPath: string): number {
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    verifiedDbPath,
+    "PAYOUT_REBASE_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
+  const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const result = spawnSync(
+    process.execPath,
+    ["--import", tsxLoader, "--input-type=module", "--eval", loader],
+    {
+      cwd: workspace,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+    },
+  );
+
+  if (result.error) {
+    console.error("[payout-rebase-entrypoint] INTERNAL_SPAWN_FAILED");
+    return 1;
+  }
+  const status = result.status ?? 1;
+  if (status !== 0) {
+    console.error("[payout-rebase-entrypoint] INTERNAL_FAILED");
+    return status;
+  }
+  if (result.stdout) process.stdout.write(result.stdout);
+  return status;
+}
+
+function readIsolatedOutputs(workspace: string, dbPath: string): { markdown: string; json: string } {
+  const workspaceMd = join(workspace, OUT_MD);
+  const workspaceJson = join(workspace, OUT_JSON);
+  if (!existsSync(workspaceMd)) throw new Error("PAYOUT_REBASE_REPORT_MISSING_AFTER_ANALYSIS");
+  if (!existsSync(workspaceJson)) throw new Error("PAYOUT_REBASE_JSON_MISSING_AFTER_ANALYSIS");
+
+  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(
+    workspaceMd,
     "PAYOUT_REBASE_REPORT_IDENTITY_INVALID",
   );
-  const report = readFileSync(verifiedReportPath, "utf-8");
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    workspaceJson,
+    "PAYOUT_REBASE_JSON_IDENTITY_INVALID",
+  );
+  const report = readFileSync(verifiedMdPath, "utf8");
+  const json = readFileSync(verifiedJsonPath, "utf8");
   const privateMarker = `DB: ${dbPath}`;
   if (!report.includes(privateMarker)) {
     throw new Error("PAYOUT_REBASE_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
   }
+  try {
+    JSON.parse(json);
+  } catch {
+    throw new Error("PAYOUT_REBASE_JSON_INVALID");
+  }
 
-  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
-    verifiedReportPath,
+  assertCanonicalSingleLinkRegularFile(
+    verifiedMdPath,
     "PAYOUT_REBASE_REPORT_HANDOFF_IDENTITY_INVALID",
   );
-  writeFileSync(
-    handoffReportPath,
-    report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
-    "utf-8",
+  assertCanonicalSingleLinkRegularFile(
+    verifiedJsonPath,
+    "PAYOUT_REBASE_JSON_HANDOFF_IDENTITY_INVALID",
   );
+  return {
+    markdown: report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
+    json: json.split(dbPath).join(OPAQUE_DB_SOURCE),
+  };
 }
 
-const preflight = run("scripts/audit-odds-payout-gap-completeness.ts");
+function atomicPublish(path: string, content: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
+const preflight = runGuarded("scripts/audit-odds-payout-gap-completeness.ts");
 if (preflight !== 0) {
   console.error("[payout-rebase-entrypoint] FAIL CLOSED: settlement integrity preflight did not pass; payout-based classifications were not generated");
   process.exit(preflight);
@@ -75,22 +169,29 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   DB_PATH,
   "PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID",
 );
+verifyExistingOutputs();
 
-if (existsSync(OUT_MD)) {
-  assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
-    "PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID",
-  );
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-payout-rebase-"));
+let status = 1;
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  status = runIsolated(workspace, verifiedDbPath);
+  if (status === 0) {
+    const outputs = readIsolatedOutputs(workspace, verifiedDbPath);
+    mkdirSync("reports", { recursive: true });
+    atomicPublish(
+      OUT_JSON,
+      outputs.json,
+      "PAYOUT_REBASE_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    );
+    atomicPublish(
+      OUT_MD,
+      outputs.markdown,
+      "PAYOUT_REBASE_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    );
+  }
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
 }
-
-const analysis = run("scripts/analyze-payout-rebase-internal.ts", {
-  ...process.env,
-  BOAT_PON_DB_PATH: verifiedDbPath,
-});
-if (analysis !== 0) {
-  console.error("[payout-rebase-entrypoint] payout rebase analysis failed after a successful settlement integrity preflight");
-  process.exit(analysis);
-}
-
-redactDbProvenance(verifiedDbPath);
-console.log("[payout-rebase-entrypoint] PASS: settlement integrity preflight and DB identity verification passed before payout rebase analysis");
+if (status !== 0) process.exit(status);
+console.log("[payout-rebase-entrypoint] PASS: settlement integrity preflight and isolated verified publication passed before payout rebase outputs were exposed");
