@@ -1,12 +1,38 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 const root = process.cwd();
 const reportPath = join(root, "reports", "n1-all-bet-type-payout-readiness.json");
 const docPath = join(root, "docs", "n1-all-bet-type-payout-review.md");
-const report = JSON.parse(readFileSync(reportPath, "utf8"));
-const doc = readFileSync(docPath, "utf8");
+
+function assertCanonicalSingleLinkRegularFile(path, errorCode) {
+  const lexicalPath = resolve(path);
+  let leaf;
+  let realPath;
+  try {
+    leaf = lstatSync(lexicalPath);
+    realPath = realpathSync(lexicalPath);
+  } catch {
+    throw new Error(errorCode);
+  }
+  if (!leaf.isFile() || leaf.nlink !== 1 || realPath !== lexicalPath) {
+    throw new Error(errorCode);
+  }
+  return lexicalPath;
+}
+
+const reportReadPath = assertCanonicalSingleLinkRegularFile(
+  reportPath,
+  "N1_PAYOUT_REVIEW_REPORT_IDENTITY_INVALID",
+);
+const docReadPath = assertCanonicalSingleLinkRegularFile(
+  docPath,
+  "N1_PAYOUT_REVIEW_DOC_IDENTITY_INVALID",
+);
+const reportText = readFileSync(reportReadPath, "utf8");
+const report = JSON.parse(reportText);
+const doc = readFileSync(docReadPath, "utf8");
 
 assert.equal(report.verdict, "COMPLETE_OFFLINE_PERMANENT_NOT_APPLIED");
 assert.equal(report.implementationStatus, "N1_A_OFFLINE_COMPLETE");
@@ -41,7 +67,7 @@ for (const token of [
 
 const markdownLinks = [...doc.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1]);
 for (const target of markdownLinks.filter((value) => !value.includes("://") && !value.startsWith("#"))) {
-  assert.ok(existsSync(resolve(dirname(docPath), target)), `broken doc link: ${target}`);
+  assert.ok(existsSync(resolve(dirname(docReadPath), target)), `broken doc link: ${target}`);
 }
 
 for (const forbidden of [
@@ -49,7 +75,7 @@ for (const forbidden of [
   "collectorConnected\": true",
   "productionChanged\": true",
 ]) {
-  assert.ok(!readFileSync(reportPath, "utf8").includes(forbidden), `prohibited scope: ${forbidden}`);
+  assert.ok(!reportText.includes(forbidden), `prohibited scope: ${forbidden}`);
 }
 
 console.log(JSON.stringify({
