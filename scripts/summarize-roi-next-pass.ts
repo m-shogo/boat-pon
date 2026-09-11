@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT = "reports/roi-next-pass.md";
 const searchPath = "reports/roi-pattern-search.json";
@@ -51,12 +53,16 @@ lines.push("3. Re-test low boat, high motor trap, raceNo, venue, and odds intera
 lines.push("4. Do not use a condition if its ROI improvement disappears after warnings are considered.");
 lines.push("");
 
-writeFileSync(OUT, `${lines.join("\n")}\n`);
+atomicPublish(OUT, `${lines.join("\n")}\n`);
 console.log(`[summarize-roi-next-pass] wrote ${OUT}`);
 
 function readSearchReport() {
   if (!existsSync(searchPath)) return;
-  const json = JSON.parse(readFileSync(searchPath, "utf8")) as any;
+  const verifiedSearchPath = assertCanonicalSingleLinkRegularFile(
+    searchPath,
+    "ROI_NEXT_PASS_SEARCH_INPUT_IDENTITY_INVALID",
+  );
+  const json = JSON.parse(readFileSync(verifiedSearchPath, "utf8")) as any;
   for (const groupName of ["stability", "improvement", "noBuyEffect"]) {
     for (const item of json.rankings?.[groupName] ?? []) {
       candidates.push({
@@ -76,7 +82,11 @@ function readSearchReport() {
 
 function readHypothesisReport() {
   if (!existsSync(hypothesisPath)) return;
-  const json = JSON.parse(readFileSync(hypothesisPath, "utf8")) as any;
+  const verifiedHypothesisPath = assertCanonicalSingleLinkRegularFile(
+    hypothesisPath,
+    "ROI_NEXT_PASS_HYPOTHESIS_INPUT_IDENTITY_INVALID",
+  );
+  const json = JSON.parse(readFileSync(verifiedHypothesisPath, "utf8")) as any;
   for (const item of json.results ?? []) {
     candidates.push({
       source: "hypothesis",
@@ -89,6 +99,26 @@ function readHypothesisReport() {
       testRoi: item.split?.test?.roi ?? null,
       warnings: item.warnings ?? [],
     });
+  }
+}
+
+function atomicPublish(path: string, contents: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "ROI_NEXT_PASS_PUBLISH_TEMP_IDENTITY_INVALID",
+    );
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
   }
 }
 
