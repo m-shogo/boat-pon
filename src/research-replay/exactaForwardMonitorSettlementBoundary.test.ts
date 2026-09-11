@@ -13,26 +13,57 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   const handoffIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID");
   const candidateIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_CANDIDATE_IDENTITY_INVALID");
   const childHandoffIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_CHILD_HANDOFF_IDENTITY_INVALID");
-  const envHandoff = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = childDbPath");
-  const monitor = entrypoint.indexOf('await import("./report-exacta-forward-monitor-internal")');
+  const candidateSourceHandoff = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_CANDIDATE_SOURCE_HANDOFF_IDENTITY_INVALID");
+  const workspace = entrypoint.indexOf("mkdtempSync(", candidateSourceHandoff);
+  const candidateCopy = entrypoint.indexOf("copyFileSync(handoffCandidatesSourcePath, workspaceCandidates)", workspace);
+  const stagedIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_STAGED_CANDIDATE_IDENTITY_INVALID", candidateCopy);
+  const isolatedDbHandoff = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID", stagedIdentity);
+  const monitor = entrypoint.indexOf("const monitor = spawnSync", isolatedDbHandoff);
   assert.ok(
     audit >= 0 &&
       guard > audit &&
       handoffIdentity > guard &&
       candidateIdentity > handoffIdentity &&
       childHandoffIdentity > candidateIdentity &&
-      envHandoff > childHandoffIdentity &&
-      monitor > envHandoff,
+      candidateSourceHandoff > childHandoffIdentity &&
+      workspace > candidateSourceHandoff &&
+      candidateCopy > workspace &&
+      stagedIdentity > candidateCopy &&
+      isolatedDbHandoff > stagedIdentity &&
+      monitor > isolatedDbHandoff,
   );
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_MISSING/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/u);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_CANDIDATES_MISSING/u);
-  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*CANDIDATES_PATH,/u);
-  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_CHILD_HANDOFF_IDENTITY_INVALID/u);
-  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = childDbPath/u);
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: childDbHandoffPath/u);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/report-exacta-forward-monitor-internal"\)/u);
   assert.doesNotMatch(entrypoint, /report-exacta-forward-monitor-raw/u);
-  assert.doesNotMatch(entrypoint, /run\("scripts\/report-exacta-forward-monitor-internal\.ts"/u);
+});
+
+test("exacta forward monitor verifies isolated outputs and publishes them atomically", () => {
+  const monitor = entrypoint.indexOf("const monitor = spawnSync");
+  const mdIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_MD_OUTPUT_IDENTITY_INVALID", monitor);
+  const jsonIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_JSON_OUTPUT_IDENTITY_INVALID", monitor);
+  const mdRead = entrypoint.indexOf('readFileSync(verifiedMdPath, "utf8")', mdIdentity);
+  const jsonRead = entrypoint.indexOf('readFileSync(verifiedJsonPath, "utf8")', jsonIdentity);
+  const redaction = entrypoint.indexOf('.split(childDbHandoffPath)', mdRead);
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const mdPublish = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
+  const jsonPublish = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
+
+  assert.ok(mdIdentity > monitor && jsonIdentity > monitor, "generated report identities must be checked after isolated monitor completion");
+  assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity, "generated reports must not be read before identity checks");
+  assert.ok(redaction > mdRead, "DB provenance must be redacted before publication");
+  assert.ok(tempCreate >= 0 && fsync > tempCreate && tempIdentity > fsync && rename > tempIdentity, "publication must be exclusive, durable, identity-verified, and atomic");
+  assert.ok(mdPublish > mdRead && jsonPublish > jsonRead, "both reports must use atomic publication");
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_MD_OUTPUT_MISSING/u);
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_JSON_OUTPUT_MISSING/u);
+  assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
 });
 
 test("exacta forward raw compatibility module forbids direct CLI execution and cannot bypass canonical preflight", () => {
