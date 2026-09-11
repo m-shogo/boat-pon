@@ -80,12 +80,16 @@ try {
     "ROI_SKIP_FILTER_ROBUSTNESS_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID",
   );
   const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    isolatedDbPath,
+    "ROI_SKIP_FILTER_ROBUSTNESS_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
   const analysis = spawnSync(
     process.execPath,
     ["--import", tsxLoader, "--input-type=module", "--eval", loader],
     {
       cwd: workspace,
-      env: { ...process.env, BOAT_PON_DB_PATH: isolatedDbPath },
+      env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -107,10 +111,10 @@ try {
     "ROI_SKIP_FILTER_ROBUSTNESS_JSON_OUTPUT_IDENTITY_INVALID",
   );
   const markdown = readFileSync(verifiedMdPath, "utf8")
-    .split(isolatedDbPath)
+    .split(launchDbPath)
     .join("verified read-only research DB");
   const json = readFileSync(verifiedJsonPath, "utf8")
-    .split(isolatedDbPath)
+    .split(launchDbPath)
     .join("verified read-only research DB");
 
   mkdirSync("reports", { recursive: true });

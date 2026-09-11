@@ -15,14 +15,16 @@ test("skip-filter robustness normal entrypoint checks payout completeness before
   const handoffIdentity = entrypointSource.indexOf("ROI_SKIP_FILTER_ROBUSTNESS_DB_HANDOFF_IDENTITY_INVALID");
   const childIdentity = entrypointSource.indexOf("ROI_SKIP_FILTER_ROBUSTNESS_DB_CHILD_HANDOFF_IDENTITY_INVALID");
   const isolatedIdentity = entrypointSource.indexOf("ROI_SKIP_FILTER_ROBUSTNESS_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID");
-  const analysis = entrypointSource.indexOf("const analysis = spawnSync", isolatedIdentity);
+  const launchIdentity = entrypointSource.indexOf("ROI_SKIP_FILTER_ROBUSTNESS_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const analysis = entrypointSource.indexOf("const analysis = spawnSync", launchIdentity);
   assert.ok(preflight >= 0);
   assert.ok(handoffIdentity > preflight, "DB identity must be reverified after the settlement preflight");
   assert.ok(childIdentity > handoffIdentity, "child DB identity must follow canonical handoff validation");
-  assert.ok(isolatedIdentity > childIdentity, "isolated child DB identity must be reverified immediately before launch");
-  assert.ok(analysis > isolatedIdentity, "internal analysis must start only after isolated DB handoff identity verification");
+  assert.ok(isolatedIdentity > childIdentity, "isolated child DB identity must be reverified after workspace creation");
+  assert.ok(launchIdentity > isolatedIdentity, "DB identity must be reverified immediately before isolated child launch");
+  assert.ok(analysis > launchIdentity, "internal analysis must start only after launch-time DB identity verification");
   assert.match(entrypointSource, /cwd: workspace/);
-  assert.match(entrypointSource, /BOAT_PON_DB_PATH: isolatedDbPath/);
+  assert.match(entrypointSource, /BOAT_PON_DB_PATH: launchDbPath/);
   assert.doesNotMatch(entrypointSource, /await import\("\.\/analyze-roi-skip-filter-robustness-internal"\)/);
   assert.doesNotMatch(entrypointSource, /analyze-roi-skip-filter-robustness-raw/);
 });
@@ -51,7 +53,7 @@ test("skip-filter robustness verifies isolated outputs and publishes them atomic
   assert.match(entrypointSource, /openSync\(tempPath, "wx", 0o600\)/);
   assert.match(entrypointSource, /fsyncSync\(fd\)/);
   assert.match(entrypointSource, /renameSync\(verifiedTempPath, path\)/);
-  assert.match(entrypointSource, /\.split\(isolatedDbPath\)\s*\.join\("verified read-only research DB"\)/);
+  assert.match(entrypointSource, /\.split\(launchDbPath\)\s*\.join\("verified read-only research DB"\)/);
   assert.match(entrypointSource, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
 });
 
