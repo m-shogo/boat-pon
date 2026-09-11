@@ -25,6 +25,16 @@ test("canonical payout-rebase entrypoint passes only a verified opaque DB identi
   assert.match(entrypointSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
 });
 
+test("canonical payout-rebase rejects unsafe pre-existing report paths before legacy analysis writes", () => {
+  const dbVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
+  const reportVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID"');
+  const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
+
+  assert.ok(reportVerify > dbVerify, "report-path identity preflight must follow verified DB handoff");
+  assert.ok(analysis > reportVerify, "legacy analysis must not write before an existing report path is verified");
+  assert.match(entrypointSource, /if \(existsSync\(OUT_MD\)\)/u);
+});
+
 test("canonical payout-rebase entrypoint redacts private DB provenance after successful analysis", () => {
   const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
   const successGuard = entrypointSource.indexOf("if (analysis !== 0)");

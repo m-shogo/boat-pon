@@ -69,6 +69,13 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID",
 );
 
+if (existsSync(OUT_MD)) {
+  assertCanonicalSingleLinkRegularFile(
+    OUT_MD,
+    "PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID",
+  );
+}
+
 const analysis = run("scripts/analyze-payout-rebase-internal.ts", {
   ...process.env,
   BOAT_PON_DB_PATH: verifiedDbPath,
