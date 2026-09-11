@@ -12,6 +12,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/historical-alternative-odds-quality.md";
@@ -25,9 +26,16 @@ const TARGET_SELS   = ["1-2-3", "1-3-2", "1-2-4", "1-4-2", "1-3-4"] as const;
 const SOURCE_TYPE    = "official_archive";
 const SOURCE_QUALITY = "historical_closing_odds";
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+if (!existsSync(DB_PATH)) {
+  console.error("[historical-alt-odds-quality] research database unavailable");
+  process.exit(1);
+}
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "HISTORICAL_ALT_ODDS_QUALITY_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 const excl_v = EXCL_VENUES.map(v => `'${v}'`).join(",");
 const excl_r = EXCL_RACES.join(",");
