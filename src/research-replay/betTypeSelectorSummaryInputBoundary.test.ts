@@ -28,7 +28,7 @@ test("bet-type selector summary fails closed on missing, non-canonical, invalid,
   const validation = entry.indexOf("function verifyRequiredReports()");
   const identity = entry.indexOf("BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID");
   const safetyValidation = entry.indexOf("pointInTimeSafe === false");
-  const internalRun = entry.indexOf("report-bet-type-selector-summary-internal.ts");
+  const internalRun = entry.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
   assert.ok(validation >= 0 && identity > validation && safetyValidation > identity && internalRun > safetyValidation);
   assert.doesNotMatch(entry, /report-bet-type-selector-summary-raw\.ts/);
   assert.doesNotMatch(entry, /DatabaseSync/);
