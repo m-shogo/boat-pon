@@ -20,6 +20,7 @@ test("exacta backfill quality rejects decision cohort drift before isolated impl
   assert.match(entrypoint, /dh\.selection='1-2-3'/u);
   assert.match(entrypoint, /dh\.date >= '2024-01-01'/u);
   assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_DB_CHILD_HANDOFF_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_DB_CHILD_LAUNCH_IDENTITY_INVALID/u);
 
   const guard = entrypoint.indexOf("const invalidTargetCohort = db.prepare");
   const failure = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DECISION_COHORT_INVALID");
@@ -27,15 +28,18 @@ test("exacta backfill quality rejects decision cohort drift before isolated impl
   const handoffIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DB_HANDOFF_IDENTITY_INVALID");
   const childHandoffIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DB_CHILD_HANDOFF_IDENTITY_INVALID", handoffIdentity);
   const workspace = entrypoint.indexOf("mkdtempSync(", childHandoffIdentity);
-  const implementationSpawn = entrypoint.indexOf("const analysis = spawnSync", workspace);
+  const launchIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_DB_CHILD_LAUNCH_IDENTITY_INVALID", workspace);
+  const implementationSpawn = entrypoint.indexOf("const analysis = spawnSync", launchIdentity);
   assert.ok(guard >= 0, "target cohort guard must exist");
   assert.ok(failure > guard, "failure contract must follow cohort query");
   assert.ok(close > failure, "preflight DB must close after cohort validation");
   assert.ok(handoffIdentity > close, "DB identity must be reverified after preflight closes");
   assert.ok(childHandoffIdentity > handoffIdentity, "DB identity must be reverified at isolated child handoff");
   assert.ok(workspace > childHandoffIdentity, "workspace must be created only after child DB handoff verification");
-  assert.ok(implementationSpawn > workspace, "quality audit must run only inside the isolated workspace");
-  assert.match(entrypoint, /BOAT_PON_DB_PATH: childDbPath/u);
+  assert.ok(launchIdentity > workspace, "DB identity must be reverified again immediately before child launch");
+  assert.ok(implementationSpawn > launchIdentity, "quality audit must start only after launch-time DB verification");
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: launchDbPath/u);
+  assert.doesNotMatch(entrypoint, /BOAT_PON_DB_PATH: childDbPath/u);
   assert.doesNotMatch(entrypoint, /await import\("\.\/check-exacta-backfill-quality-internal"\)/u);
 });
 
@@ -45,7 +49,7 @@ test("exacta backfill quality verifies isolated outputs, redacts DB provenance, 
   const jsonIdentity = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_JSON_OUTPUT_IDENTITY_INVALID", implementationSpawn);
   const mdRead = entrypoint.indexOf('readFileSync(verifiedMdPath, "utf8")', mdIdentity);
   const jsonRead = entrypoint.indexOf('readFileSync(verifiedJsonPath, "utf8")', jsonIdentity);
-  const redaction = entrypoint.indexOf('.split(childDbPath).join("verified read-only research DB")', mdRead);
+  const redaction = entrypoint.indexOf('.split(launchDbPath).join("verified read-only research DB")', mdRead);
   const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
   const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
