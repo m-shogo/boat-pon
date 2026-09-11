@@ -69,7 +69,7 @@ test("historical alternative-odds quality isolates implementation writes and pub
   assert.match(entrypoint, /renameSync\(verifiedTempPath, path\)/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
-  assert.match(entrypoint, /atomicPublish\(OUT_MD, markdown,/u);
-  assert.match(entrypoint, /atomicPublish\(OUT_JSON, json,/u);
+  assert.match(entrypoint, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
+  assert.match(entrypoint, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
   assert.doesNotMatch(entrypoint, /await import\("\.\/check-historical-alternative-odds-quality-internal"\)/u);
 });
