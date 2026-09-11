@@ -24,7 +24,7 @@ test("wind24 switch safe runner fails closed before promotion/demotion analysis"
 test("direct wind24 entrypoint cannot bypass payout completeness", () => {
   const preflight = directSource.indexOf('run("scripts/audit-wind24-exh1-switch-payout-completeness.ts")');
   const verify = directSource.indexOf('"WIND24_SWITCH_PRIMARY_DB_IDENTITY_INVALID"');
-  const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts"');
+  const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-internal.ts"');
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight);
   assert.ok(analysis > verify);
@@ -32,25 +32,21 @@ test("direct wind24 entrypoint cannot bypass payout completeness", () => {
   assert.match(directSource, /process\.exit\(preflight\)/);
   assert.match(directSource, /WIND24_SWITCH_PRIMARY_DB_IDENTITY_INVALID/);
   assert.match(directSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
-  assert.match(directSource, /BOAT_PON_WIND24_CORE_GUARD: "1"/);
+  assert.match(directSource, /BOAT_PON_WIND24_INTERNAL_GUARD: "1"/);
+  assert.doesNotMatch(directSource, /BOAT_PON_WIND24_CORE_GUARD/);
 });
 
-test("wind24 core is guarded and re-verifies the DB identity before legacy aggregation", () => {
-  const guard = coreSource.indexOf('process.env.BOAT_PON_WIND24_CORE_GUARD !== "1"');
-  const dbMissing = coreSource.indexOf("WIND24_SWITCH_CORE_DB_MISSING");
-  const verify = coreSource.indexOf("assertCanonicalSingleLinkRegularFile(");
-  const internal = coreSource.indexOf("analyze-wind24-exh1-switch-deep-dive-internal.ts");
-  assert.ok(guard >= 0, "core must reject direct execution");
-  assert.ok(dbMissing > guard, "opaque DB existence handling must occur after the caller guard");
-  assert.ok(verify > dbMissing, "core must re-verify canonical DB identity");
-  assert.ok(internal > verify, "legacy aggregation must not start before DB identity verification");
-  assert.match(coreSource, /WIND24_SWITCH_CORE_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(coreSource, /WIND24_SWITCH_CORE_DB_IDENTITY_INVALID/);
-  assert.match(coreSource, /BOAT_PON_WIND24_INTERNAL_GUARD: "1"/);
-  assert.doesNotMatch(coreSource, /DB not found: \\?\$\{[^}]+\}/u);
+test("wind24 core compatibility path cannot bypass canonical settlement preflight", () => {
+  const guard = coreSource.indexOf("WIND24_SWITCH_CORE_DIRECT_EXECUTION_FORBIDDEN");
+  const canonical = coreSource.indexOf('await import("./analyze-wind24-exh1-switch-deep-dive")');
+  assert.ok(guard >= 0, "core must reject direct CLI execution");
+  assert.ok(canonical > guard, "imported compatibility callers must return to the canonical preflight");
+  assert.match(coreSource, /fileURLToPath\(import\.meta\.url\)/);
+  assert.match(coreSource, /process\.argv\[1\]/);
+  assert.doesNotMatch(coreSource, /BOAT_PON_WIND24_CORE_GUARD/);
+  assert.doesNotMatch(coreSource, /analyze-wind24-exh1-switch-deep-dive-internal/);
+  assert.doesNotMatch(coreSource, /assertCanonicalSingleLinkRegularFile/);
   assert.doesNotMatch(coreSource, /new DatabaseSync/u);
-  assert.match(coreSource, /格上げ条件/);
-  assert.match(coreSource, /降格条件/);
 });
 
 test("wind24 legacy internal fails closed and re-verifies the actual SQLite connection", () => {
@@ -71,7 +67,7 @@ test("wind24 legacy internal fails closed and re-verifies the actual SQLite conn
 });
 
 test("direct wind24 entrypoint redacts private DB provenance after successful analysis", () => {
-  const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-core.ts"');
+  const analysis = directSource.indexOf('run("scripts/analyze-wind24-exh1-switch-deep-dive-internal.ts"');
   const successGuard = directSource.indexOf("if (analysis !== 0)");
   const redact = directSource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
 
