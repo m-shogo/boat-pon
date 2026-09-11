@@ -48,7 +48,7 @@ test("exacta backfill quality verifies isolated outputs, redacts DB provenance, 
   const redaction = entrypoint.indexOf('.split(childDbPath).join("verified read-only research DB")', mdRead);
   const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("PUBLISH_TEMP_IDENTITY_INVALID", fsync);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
   const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
   const mdPublish = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
   const jsonPublish = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
