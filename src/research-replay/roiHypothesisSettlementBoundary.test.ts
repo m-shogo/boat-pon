@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8");
-const GUARDED_ANALYZER_IMPORT = 'await import("./analyze-roi-hypothesis-sets-raw")';
+const GUARDED_ANALYZER_IMPORT = 'await import("./analyze-roi-hypothesis-sets-internal")';
 
 test("ROI hypothesis analysis rejects unknown or returned historical BUY rows before settlement and guarded analysis", () => {
   assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);

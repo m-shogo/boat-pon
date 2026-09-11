@@ -84,4 +84,4 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
-await import("./analyze-roi-hypothesis-sets-raw");
+await import("./analyze-roi-hypothesis-sets-internal");

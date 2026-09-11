@@ -6,7 +6,7 @@ const entrypoint = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8"
 const raw = readFileSync("scripts/analyze-roi-hypothesis-sets-raw.ts", "utf8");
 const internal = readFileSync("scripts/analyze-roi-hypothesis-sets-internal.ts", "utf8");
 
-test("ROI hypothesis entrypoint verifies the database and every settled denominator before guarded analysis", () => {
+test("ROI hypothesis entrypoint verifies the database and every settled denominator before internal analysis", () => {
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(entrypoint, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(entrypoint, /PRAGMA query_only = ON/);
@@ -21,17 +21,22 @@ test("ROI hypothesis entrypoint verifies the database and every settled denomina
   assert.match(entrypoint, /rp\.returned = 0/);
   assert.doesNotMatch(entrypoint, /rp\.bet_type = s\.bet_type/);
   const integrity = entrypoint.indexOf("WITH relevant_settled AS");
-  const rawLaunch = entrypoint.indexOf('await import("./analyze-roi-hypothesis-sets-raw")');
+  const handoff = entrypoint.indexOf("ROI_HYPOTHESIS_DB_HANDOFF_IDENTITY_INVALID");
+  const internalLaunch = entrypoint.indexOf('await import("./analyze-roi-hypothesis-sets-internal")');
   assert.ok(integrity >= 0);
-  assert.ok(rawLaunch > integrity);
+  assert.ok(handoff > integrity);
+  assert.ok(internalLaunch > handoff);
+  assert.doesNotMatch(entrypoint, /analyze-roi-hypothesis-sets-raw/);
 });
 
-test("ROI hypothesis raw compatibility module cannot be executed directly", () => {
+test("ROI hypothesis raw compatibility module cannot bypass canonical settlement preflight", () => {
   assert.match(raw, /fileURLToPath\(import\.meta\.url\)/);
   assert.match(raw, /process\.argv\[1\]/);
   assert.match(raw, /ROI_HYPOTHESIS_RAW_DIRECT_EXECUTION_FORBIDDEN/);
-  assert.match(raw, /await import\("\.\/analyze-roi-hypothesis-sets-internal"\)/);
-  assert.doesNotMatch(raw, /assertOfficialSettlementIntegrity\(\)/);
+  assert.match(raw, /await import\("\.\/analyze-roi-hypothesis-sets"\)/);
+  assert.doesNotMatch(raw, /analyze-roi-hypothesis-sets-internal/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
+  assert.doesNotMatch(raw, /assertCanonicalSingleLinkRegularFile/);
 });
 
 test("ROI hypothesis internal core fails closed on return-state and exact winning-key settlement drift before scenario analysis", () => {
