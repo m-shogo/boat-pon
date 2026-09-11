@@ -9,8 +9,9 @@
  * app_settings 反映案ではない。あくまで読み取り専用の monitor policy 候補シミュレーション。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/roi-skip-policy-simulation.md";
@@ -22,9 +23,12 @@ const EXCL_VENUES   = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCL_RACES    = [10, 11, 12];
 const SKIP_RATE_WARN = 30; // 除外率30%超は注意
 
-if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: true });
-db.exec("PRAGMA busy_timeout = 5000;");
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "ROI_SKIP_POLICY_SIMULATION_INTERNAL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
 
 const excl_v = EXCL_VENUES.map(v => `'${v}'`).join(",");
 const excl_r = EXCL_RACES.join(",");
