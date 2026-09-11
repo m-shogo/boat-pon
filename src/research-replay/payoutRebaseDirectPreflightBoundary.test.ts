@@ -5,60 +5,79 @@ import test from "node:test";
 const entrypointSource = readFileSync("scripts/analyze-payout-rebase.ts", "utf-8");
 const internalSource = readFileSync("scripts/analyze-payout-rebase-internal.ts", "utf-8");
 
-test("direct payout-rebase invocation runs settlement integrity preflight before verified internal analysis", () => {
-  const preflight = entrypointSource.indexOf('run("scripts/audit-odds-payout-gap-completeness.ts")');
+test("direct payout-rebase invocation runs settlement integrity preflight before verified isolated internal analysis", () => {
+  const preflight = entrypointSource.indexOf('runGuarded("scripts/audit-odds-payout-gap-completeness.ts")');
   const guard = entrypointSource.indexOf("if (preflight !== 0)");
   const verify = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
-  const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
+  const analysis = entrypointSource.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
 
   assert.ok(preflight >= 0, "direct entrypoint must invoke settlement integrity preflight");
   assert.ok(guard > preflight, "preflight result must be checked before DB identity verification");
   assert.ok(verify > guard, "DB identity must be re-verified only after settlement integrity passes");
-  assert.ok(analysis > verify, "internal payout analysis must remain downstream of DB identity verification");
+  assert.ok(analysis > verify, "isolated payout analysis must remain downstream of DB identity verification");
   assert.match(entrypointSource, /process\.exit\(preflight\)/);
 });
 
-test("canonical payout-rebase entrypoint passes only a verified opaque DB identity to internal analysis", () => {
+test("canonical payout-rebase passes only a reverified DB identity to the isolated internal child", () => {
   assert.match(entrypointSource, /PAYOUT_REBASE_PRIMARY_DB_MISSING/);
   assert.match(entrypointSource, /PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /PAYOUT_REBASE_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
   assert.doesNotMatch(entrypointSource, /DB not found:/);
-  assert.match(entrypointSource, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(entrypointSource, /BOAT_PON_DB_PATH: launchDbPath/);
+
+  const primary = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
+  const launch = entrypointSource.indexOf('"PAYOUT_REBASE_DB_CHILD_LAUNCH_IDENTITY_INVALID"');
+  const spawn = entrypointSource.indexOf("const result = spawnSync(", launch);
+  assert.ok(primary >= 0 && launch > primary && spawn > launch);
 });
 
-test("canonical payout-rebase rejects unsafe pre-existing report paths before legacy analysis writes", () => {
+test("canonical payout-rebase rejects unsafe pre-existing Markdown and JSON paths before isolated analysis", () => {
   const dbVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
-  const reportVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID"');
-  const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
+  const mdVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID"');
+  const jsonVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID"');
+  const workspace = entrypointSource.lastIndexOf("mkdtempSync(");
 
-  assert.ok(reportVerify > dbVerify, "report-path identity preflight must follow verified DB handoff");
-  assert.ok(analysis > reportVerify, "legacy analysis must not write before an existing report path is verified");
+  assert.ok(mdVerify > dbVerify, "Markdown path preflight must follow verified DB handoff");
+  assert.ok(jsonVerify > mdVerify, "JSON path preflight must cover the second canonical output");
+  assert.ok(workspace > jsonVerify, "legacy analysis must not start before output path preflight");
   assert.match(entrypointSource, /if \(existsSync\(OUT_MD\)\)/u);
+  assert.match(entrypointSource, /if \(existsSync\(OUT_JSON\)\)/u);
 });
 
-test("canonical payout-rebase entrypoint redacts private DB provenance after successful analysis", () => {
-  const analysis = entrypointSource.indexOf('run("scripts/analyze-payout-rebase-internal.ts"');
-  const successGuard = entrypointSource.indexOf("if (analysis !== 0)");
-  const redact = entrypointSource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+test("canonical payout-rebase runs legacy analysis only inside an isolated workspace", () => {
+  assert.match(entrypointSource, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-payout-rebase-"\)\)/);
+  assert.match(entrypointSource, /cwd: workspace/);
+  assert.match(entrypointSource, /pathToFileURL\(internalPath\)/);
+  assert.match(entrypointSource, /mkdirSync\(join\(workspace, "reports"\), \{ recursive: true \}\)/);
+  assert.match(entrypointSource, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
+});
 
-  assert.ok(analysis >= 0);
-  assert.ok(successGuard > analysis);
-  assert.ok(redact > successGuard, "private DB provenance must be sanitized only after successful analysis");
-  assert.match(entrypointSource, /const OPAQUE_DB_SOURCE = "primary research database"/u);
+test("canonical payout-rebase verifies both isolated outputs before provenance sanitization and publication", () => {
+  const mdIdentity = entrypointSource.indexOf('"PAYOUT_REBASE_REPORT_IDENTITY_INVALID"');
+  const jsonIdentity = entrypointSource.indexOf('"PAYOUT_REBASE_JSON_IDENTITY_INVALID"');
+  const mdRead = entrypointSource.indexOf('readFileSync(verifiedMdPath, "utf8")');
+  const jsonRead = entrypointSource.indexOf('readFileSync(verifiedJsonPath, "utf8")');
+  const parse = entrypointSource.indexOf("JSON.parse(json)");
+  const mdHandoff = entrypointSource.indexOf('"PAYOUT_REBASE_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const jsonHandoff = entrypointSource.indexOf('"PAYOUT_REBASE_JSON_HANDOFF_IDENTITY_INVALID"');
+
+  assert.ok(mdIdentity >= 0 && jsonIdentity > mdIdentity && mdRead > jsonIdentity && jsonRead > mdRead);
+  assert.ok(parse > jsonRead && mdHandoff > parse && jsonHandoff > mdHandoff);
   assert.match(entrypointSource, /const privateMarker = `DB: \$\{dbPath\}`/u);
   assert.match(entrypointSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
-  assert.match(entrypointSource, /PAYOUT_REBASE_REPORT_MISSING_AFTER_ANALYSIS/u);
-  assert.match(entrypointSource, /PAYOUT_REBASE_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
+  assert.match(entrypointSource, /json: json\.split\(dbPath\)\.join\(OPAQUE_DB_SOURCE\)/u);
 });
 
-test("canonical payout-rebase entrypoint verifies generated report identity before provenance read and again before write", () => {
-  const firstIdentity = entrypointSource.indexOf('"PAYOUT_REBASE_REPORT_IDENTITY_INVALID"');
-  const read = entrypointSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
-  const handoffIdentity = entrypointSource.indexOf('"PAYOUT_REBASE_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = entrypointSource.indexOf("writeFileSync(\n    handoffReportPath");
+test("canonical payout-rebase publishes JSON and Markdown through exclusive fsynced temporary files", () => {
+  const create = entrypointSource.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = entrypointSource.indexOf("fsyncSync(fd)", create);
+  const tempIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
+  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const jsonPublish = entrypointSource.lastIndexOf("PAYOUT_REBASE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  const mdPublish = entrypointSource.lastIndexOf("PAYOUT_REBASE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
-  assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
-  assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(jsonPublish > rename && mdPublish > jsonPublish);
 });
 
 test("internal payout-rebase analysis keeps canonical read-only database boundaries", () => {
