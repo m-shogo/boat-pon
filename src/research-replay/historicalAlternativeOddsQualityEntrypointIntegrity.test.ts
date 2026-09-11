@@ -25,13 +25,21 @@ test("historical alternative-odds quality rejects forward cohort drift and rever
   const close = entrypoint.indexOf("db.close();", failure);
   const handoff = entrypoint.indexOf("const handoffDbPath = assertCanonicalSingleLinkRegularFile", close);
   const envHandoff = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath", handoff);
+  const mdPreexisting = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_MD_PREEXISTING_IDENTITY_INVALID", envHandoff);
+  const jsonPreexisting = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_JSON_PREEXISTING_IDENTITY_INVALID", envHandoff);
   const implementationImport = entrypoint.indexOf("check-historical-alternative-odds-quality-internal");
+  const mdPostflight = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_MD_OUTPUT_IDENTITY_INVALID", implementationImport);
+  const jsonPostflight = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_JSON_OUTPUT_IDENTITY_INVALID", implementationImport);
   assert.ok(guard >= 0, "forward cohort guard must exist");
   assert.ok(failure > guard, "cohort failure contract must follow the query");
   assert.ok(close > failure, "preflight DB must close before handoff identity revalidation");
   assert.ok(handoff > close, "DB identity must be revalidated after preflight closes");
   assert.ok(envHandoff > handoff, "only the reverified handoff path may be exported");
-  assert.ok(implementationImport > envHandoff, "quality implementation must load only after handoff revalidation");
+  assert.ok(mdPreexisting > envHandoff && jsonPreexisting > envHandoff, "existing report paths must be verified after DB handoff");
+  assert.ok(implementationImport > mdPreexisting && implementationImport > jsonPreexisting, "quality implementation must load only after output-path preflight");
+  assert.ok(mdPostflight > implementationImport && jsonPostflight > implementationImport, "generated report identities must be verified after implementation");
+  assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_MD_OUTPUT_MISSING/u);
+  assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_JSON_OUTPUT_MISSING/u);
 });
 
 test("historical alternative-odds quality implementation remains read-only research", () => {
