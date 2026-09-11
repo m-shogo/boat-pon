@@ -2,12 +2,14 @@
  * motor_boat_stats の全件ロードと対象race_idロードの読み取り専用性能確認。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/motor-boat-load-performance.md";
+const OUT_JSON = "reports/motor-boat-load-performance.json";
 
 if (!existsSync(DB_PATH)) throw new Error("MOTOR_BOAT_LOAD_PERFORMANCE_DB_UNAVAILABLE");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
@@ -33,12 +35,29 @@ WHERE run_kind='historical-backfill' AND decision='BUY' AND current_odds IS NOT 
   });
   const report = { generatedAt: new Date().toISOString(), indexes, total, scoped, targetRaceIds: targetRaceIds.length };
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/motor-boat-load-performance.json", `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, renderMarkdown(report));
+  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "MOTOR_BOAT_LOAD_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(OUT_MD, renderMarkdown(report), "MOTOR_BOAT_LOAD_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   console.log(`[analyze-motor-boat-load-performance] wrote ${OUT_MD}`);
-  console.log("[analyze-motor-boat-load-performance] wrote reports/motor-boat-load-performance.json");
+  console.log(`[analyze-motor-boat-load-performance] wrote ${OUT_JSON}`);
 } finally {
   db.close();
+}
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function time<T extends { length?: number }>(label: string, fn: () => T) {
