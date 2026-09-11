@@ -5,23 +5,23 @@ import test from "node:test";
 const entrypoint = readFileSync("scripts/analyze-promising-bet-type-strategies.ts", "utf8");
 const raw = readFileSync("scripts/analyze-promising-bet-type-strategies-raw.ts", "utf8");
 
-test("promising bet entrypoint completes settlement validation before guarded raw import", () => {
+test("promising bet entrypoint completes settlement validation and DB handoff before internal analysis", () => {
   const completeness = entrypoint.indexOf("assertPayoutCompleteness()");
   const close = entrypoint.indexOf("db.close()");
-  const rawImport = entrypoint.indexOf('await import("./analyze-promising-bet-type-strategies-raw")');
+  const handoff = entrypoint.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID");
+  const internal = entrypoint.indexOf('await import("./analyze-promising-bet-type-strategies-internal")');
 
   assert.ok(completeness >= 0);
   assert.ok(close > completeness, "canonical preflight DB must close after settlement validation");
-  assert.ok(rawImport > close, "guarded raw module must load only after settlement validation closes the DB");
+  assert.ok(handoff > close, "DB identity must be revalidated after settlement validation closes the preflight DB");
+  assert.ok(internal > handoff, "internal analyzer must load only after the verified DB handoff");
+  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(entrypoint, /analyze-promising-bet-type-strategies-raw/);
 });
 
-test("promising bet guarded raw module revalidates canonical DB identity before internal analysis", () => {
-  const identity = raw.indexOf("PROMISING_BET_RAW_DB_IDENTITY_INVALID");
-  const internal = raw.indexOf('await import("./analyze-promising-bet-type-strategies-internal")');
-
-  assert.ok(identity >= 0);
-  assert.ok(internal > identity, "internal analyzer must load only after raw DB identity revalidation");
-  assert.match(raw, /PROMISING_BET_RAW_DB_MISSING/);
-  assert.match(raw, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
-  assert.doesNotMatch(raw, /DB not found: \$\{configuredDbPath\}/);
+test("promising bet guarded raw module cannot bypass canonical preflight", () => {
+  assert.match(raw, /PROMISING_BET_RAW_DIRECT_EXECUTION_FORBIDDEN/);
+  assert.match(raw, /await import\("\.\/analyze-promising-bet-type-strategies"\)/);
+  assert.doesNotMatch(raw, /analyze-promising-bet-type-strategies-internal/);
+  assert.doesNotMatch(raw, /BOAT_PON_DB_PATH/);
 });
