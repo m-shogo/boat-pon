@@ -26,9 +26,11 @@ test("canonical payout-rebase passes only a reverified DB identity to the isolat
   assert.match(entrypointSource, /BOAT_PON_DB_PATH: launchDbPath/);
 
   const primary = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
+  const isolatedCall = entrypointSource.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
   const launch = entrypointSource.indexOf('"PAYOUT_REBASE_DB_CHILD_LAUNCH_IDENTITY_INVALID"');
   const spawn = entrypointSource.indexOf("const result = spawnSync(", launch);
-  assert.ok(primary >= 0 && launch > primary && spawn > launch);
+  assert.ok(primary >= 0 && isolatedCall > primary, "main flow must invoke isolated analysis only after primary DB verification");
+  assert.ok(launch >= 0 && spawn > launch, "isolated child must spawn only after launch-time DB identity verification");
 });
 
 test("canonical payout-rebase rejects unsafe pre-existing Markdown and JSON paths before isolated analysis", () => {
