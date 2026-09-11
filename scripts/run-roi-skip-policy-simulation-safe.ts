@@ -32,10 +32,14 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   configuredDbPath,
   "ROI_SKIP_POLICY_LEGACY_PRIMARY_DB_IDENTITY_INVALID",
 );
+const childDbPath = assertCanonicalSingleLinkRegularFile(
+  verifiedDbPath,
+  "ROI_SKIP_POLICY_LEGACY_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+);
 
 const analysis = run("scripts/analyze-roi-skip-policy-simulation-internal.ts", {
   ...process.env,
-  BOAT_PON_DB_PATH: verifiedDbPath,
+  BOAT_PON_DB_PATH: childDbPath,
 });
 if (analysis !== 0) {
   console.error("[roi-skip-policy-safe-runner] skip-policy simulation failed after a successful payout completeness preflight");
