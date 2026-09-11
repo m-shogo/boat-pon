@@ -67,7 +67,7 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 );
 
 process.env.BOAT_PON_DB_PATH = verifiedDbPath;
-await import("./analyze-roi-skip-interactions-raw");
+await import("./analyze-roi-skip-interactions-core");
 
 redactDbProvenance(verifiedDbPath);
 console.log("[skip-interactions] PASS: settlement completeness preflight and DB identity verification passed before interaction analysis");
