@@ -103,12 +103,16 @@ try {
     "EXACTA_FORWARD_MONITOR_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID",
   );
   const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    childDbHandoffPath,
+    "EXACTA_FORWARD_MONITOR_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
   const monitor = spawnSync(
     process.execPath,
     ["--import", tsxLoader, "--input-type=module", "--eval", loader],
     {
       cwd: workspace,
-      env: { ...process.env, BOAT_PON_DB_PATH: childDbHandoffPath },
+      env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -130,10 +134,10 @@ try {
     "EXACTA_FORWARD_MONITOR_JSON_OUTPUT_IDENTITY_INVALID",
   );
   const markdown = readFileSync(verifiedMdPath, "utf8")
-    .split(childDbHandoffPath)
+    .split(launchDbPath)
     .join("verified read-only research DB");
   const json = readFileSync(verifiedJsonPath, "utf8")
-    .split(childDbHandoffPath)
+    .split(launchDbPath)
     .join("verified read-only research DB");
 
   mkdirSync("reports", { recursive: true });

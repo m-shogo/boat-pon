@@ -18,7 +18,8 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   const candidateCopy = entrypoint.indexOf("copyFileSync(handoffCandidatesSourcePath, workspaceCandidates)", workspace);
   const stagedIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_STAGED_CANDIDATE_IDENTITY_INVALID", candidateCopy);
   const isolatedDbHandoff = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID", stagedIdentity);
-  const monitor = entrypoint.indexOf("const monitor = spawnSync", isolatedDbHandoff);
+  const launchDbHandoff = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_CHILD_LAUNCH_IDENTITY_INVALID", isolatedDbHandoff);
+  const monitor = entrypoint.indexOf("const monitor = spawnSync", launchDbHandoff);
   assert.ok(
     audit >= 0 &&
       guard > audit &&
@@ -30,14 +31,17 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
       candidateCopy > workspace &&
       stagedIdentity > candidateCopy &&
       isolatedDbHandoff > stagedIdentity &&
-      monitor > isolatedDbHandoff,
+      launchDbHandoff > isolatedDbHandoff &&
+      monitor > launchDbHandoff,
   );
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_MISSING/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/u);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_CANDIDATES_MISSING/u);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID/u);
-  assert.match(entrypoint, /BOAT_PON_DB_PATH: childDbHandoffPath/u);
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_CHILD_LAUNCH_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: launchDbPath/u);
+  assert.doesNotMatch(entrypoint, /BOAT_PON_DB_PATH: childDbHandoffPath/u);
   assert.doesNotMatch(entrypoint, /await import\("\.\/report-exacta-forward-monitor-internal"\)/u);
   assert.doesNotMatch(entrypoint, /report-exacta-forward-monitor-raw/u);
 });
@@ -48,7 +52,7 @@ test("exacta forward monitor verifies isolated outputs and publishes them atomic
   const jsonIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_JSON_OUTPUT_IDENTITY_INVALID", monitor);
   const mdRead = entrypoint.indexOf('readFileSync(verifiedMdPath, "utf8")', mdIdentity);
   const jsonRead = entrypoint.indexOf('readFileSync(verifiedJsonPath, "utf8")', jsonIdentity);
-  const redaction = entrypoint.indexOf('.split(childDbHandoffPath)', mdRead);
+  const redaction = entrypoint.indexOf('.split(launchDbPath)', mdRead);
   const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
   const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
