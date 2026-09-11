@@ -10,6 +10,7 @@ import { existsSync } from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const HYPOTHESIS_PATH = "data/research-hypotheses.json";
 
 function run(script: string, env = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -35,4 +36,11 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   "RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID",
 );
 process.env.BOAT_PON_DB_PATH = handoffDbPath;
+
+if (!existsSync(HYPOTHESIS_PATH)) throw new Error("RESEARCH_GOVERNOR_HYPOTHESIS_REGISTRY_MISSING");
+assertCanonicalSingleLinkRegularFile(
+  HYPOTHESIS_PATH,
+  "RESEARCH_GOVERNOR_HYPOTHESIS_REGISTRY_IDENTITY_INVALID",
+);
+
 await import("./report-research-governor-internal");
