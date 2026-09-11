@@ -1,9 +1,26 @@
-import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/one-four-structure.md";
 const OUT_JSON = "reports/one-four-structure.json";
+const internalPath = fileURLToPath(new URL("./analyze-one-four-structure-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 function run(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -17,6 +34,29 @@ function run(script: string): number {
 function assertExistingOutputIdentity(path: string, code: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function assertGeneratedOutputIdentity(path: string, missingCode: string, invalidCode: string): string {
+  if (!existsSync(path)) throw new Error(missingCode);
+  return assertCanonicalSingleLinkRegularFile(path, invalidCode);
+}
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 const audit = run("scripts/audit-all-bet-types-payout-completeness.ts");
@@ -33,7 +73,6 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   configuredDbPath,
   "ONE_FOUR_STRUCTURE_DB_HANDOFF_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
 assertExistingOutputIdentity(OUT_MD, "ONE_FOUR_STRUCTURE_MD_PREEXISTING_IDENTITY_INVALID");
 assertExistingOutputIdentity(OUT_JSON, "ONE_FOUR_STRUCTURE_JSON_PREEXISTING_IDENTITY_INVALID");
@@ -42,11 +81,54 @@ const childDbPath = assertCanonicalSingleLinkRegularFile(
   handoffDbPath,
   "ONE_FOUR_STRUCTURE_DB_CHILD_HANDOFF_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = childDbPath;
-await import("./analyze-one-four-structure-internal");
 
-if (!existsSync(OUT_MD) || !existsSync(OUT_JSON)) {
-  throw new Error("ONE_FOUR_STRUCTURE_OUTPUT_MISSING");
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-one-four-structure-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    childDbPath,
+    "ONE_FOUR_STRUCTURE_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
+  const analysis = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
+    cwd: workspace,
+    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (analysis.error || analysis.status !== 0) {
+    throw new Error("ONE_FOUR_STRUCTURE_INTERNAL_FAILED");
+  }
+
+  const workspaceMd = assertGeneratedOutputIdentity(
+    join(workspace, OUT_MD),
+    "ONE_FOUR_STRUCTURE_MD_WORKSPACE_OUTPUT_MISSING",
+    "ONE_FOUR_STRUCTURE_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID",
+  );
+  const workspaceJson = assertGeneratedOutputIdentity(
+    join(workspace, OUT_JSON),
+    "ONE_FOUR_STRUCTURE_JSON_WORKSPACE_OUTPUT_MISSING",
+    "ONE_FOUR_STRUCTURE_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(workspaceMd, "utf8");
+  const json = readFileSync(workspaceJson, "utf8");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "ONE_FOUR_STRUCTURE_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "ONE_FOUR_STRUCTURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+
+  if (!existsSync(OUT_MD) || !existsSync(OUT_JSON)) {
+    throw new Error("ONE_FOUR_STRUCTURE_OUTPUT_MISSING");
+  }
+  assertCanonicalSingleLinkRegularFile(OUT_MD, "ONE_FOUR_STRUCTURE_MD_OUTPUT_IDENTITY_INVALID");
+  assertCanonicalSingleLinkRegularFile(OUT_JSON, "ONE_FOUR_STRUCTURE_JSON_OUTPUT_IDENTITY_INVALID");
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
 }
-assertCanonicalSingleLinkRegularFile(OUT_MD, "ONE_FOUR_STRUCTURE_MD_OUTPUT_IDENTITY_INVALID");
-assertCanonicalSingleLinkRegularFile(OUT_JSON, "ONE_FOUR_STRUCTURE_JSON_OUTPUT_IDENTITY_INVALID");
