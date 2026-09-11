@@ -1,5 +1,6 @@
 /** 公式出典付き選手関係registryの構造と安全条件を検査する。ネットワーク・DBは変更しない。 */
 import { readFileSync } from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 type Person = { registrationNo: string; name: string };
 type Relationship = {
@@ -18,7 +19,11 @@ type Registry = {
 };
 
 const path = "docs/official-racer-relationships.json";
-const registry = JSON.parse(readFileSync(path, "utf8")) as Registry;
+const verifiedRegistryPath = assertCanonicalSingleLinkRegularFile(
+  path,
+  "OFFICIAL_RACER_RELATIONSHIP_REGISTRY_IDENTITY_INVALID",
+);
+const registry = JSON.parse(readFileSync(verifiedRegistryPath, "utf8")) as Registry;
 const errors: string[] = [];
 const seen = new Set<string>();
 
