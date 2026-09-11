@@ -7,6 +7,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 function run(script: string): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -27,6 +28,13 @@ if (preflight !== 0) {
   console.error("[123-bet-type-conversion] FAIL CLOSED: required official settlement coverage is incomplete; cross-bet ROI/verdict analysis was not generated");
   process.exit(preflight);
 }
+
+const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const handoffDbPath = assertCanonicalSingleLinkRegularFile(
+  configuredDbPath,
+  "BET_TYPE_CONVERSION_DB_HANDOFF_IDENTITY_INVALID",
+);
+process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
 await import("./analyze-123-bet-type-conversion-internal");
 
