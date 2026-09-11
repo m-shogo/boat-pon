@@ -14,7 +14,8 @@ test("ROI search matrix accepts only realized-payout pattern search output", () 
   assert.match(searchInternal, /rp\.payout_yen/);
   assert.match(searchEntrypoint, /const internalPath = fileURLToPath\(new URL\("\.\/search-roi-patterns-internal\.ts", import\.meta\.url\)\)/);
   assert.match(searchEntrypoint, /const analysis = spawnSync/);
-  assert.match(searchEntrypoint, /BOAT_PON_DB_PATH: isolatedDbPath/);
+  assert.match(searchEntrypoint, /BOAT_PON_DB_PATH: launchDbPath/);
+  assert.doesNotMatch(searchEntrypoint, /BOAT_PON_DB_PATH: isolatedDbPath/);
   assert.doesNotMatch(searchEntrypoint, /await import\("\.\/search-roi-patterns-internal"\)/);
   assert.doesNotMatch(searchEntrypoint, /search-roi-patterns-raw/);
   assert.match(searchRaw, /ROI_PATTERN_RAW_DIRECT_EXECUTION_FORBIDDEN/);
