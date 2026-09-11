@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 const entrypoint = readFileSync("scripts/check-alternative-odds-timeseries-health.ts", "utf8");
 const preflight = readFileSync("scripts/audit-alternative-odds-timeseries-health-cohort.ts", "utf8");
+const internal = readFileSync("scripts/check-alternative-odds-timeseries-health-internal.ts", "utf8");
 
 test("alternative odds health runs canonical cohort preflight and DB handoff revalidation before private coverage/readiness aggregation", () => {
   const guard = entrypoint.indexOf('run("scripts/audit-alternative-odds-timeseries-health-cohort.ts")');
@@ -11,15 +12,15 @@ test("alternative odds health runs canonical cohort preflight and DB handoff rev
   const mdPreexisting = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_MD_PREEXISTING_IDENTITY_INVALID");
   const jsonPreexisting = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_JSON_PREEXISTING_IDENTITY_INVALID");
   const childHandoffIdentity = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_DB_CHILD_HANDOFF_IDENTITY_INVALID");
-  const internal = entrypoint.indexOf('run("scripts/check-alternative-odds-timeseries-health-internal.ts"');
+  const internalRun = entrypoint.indexOf('run("scripts/check-alternative-odds-timeseries-health-internal.ts"');
   const mdPostflight = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_MD_OUTPUT_IDENTITY_INVALID");
   const jsonPostflight = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_JSON_OUTPUT_IDENTITY_INVALID");
   assert.ok(guard >= 0, "entrypoint must invoke cohort preflight");
   assert.ok(handoffIdentity > guard, "database identity must be reverified after preflight");
   assert.ok(mdPreexisting > handoffIdentity && jsonPreexisting > handoffIdentity, "existing report paths must be verified before the internal writer runs");
   assert.ok(childHandoffIdentity > mdPreexisting && childHandoffIdentity > jsonPreexisting, "database identity must be reverified after report-path checks and immediately before child handoff");
-  assert.ok(internal > childHandoffIdentity, "internal health aggregation must run only after child DB handoff revalidation");
-  assert.ok(mdPostflight > internal && jsonPostflight > internal, "generated report identities must be verified before success");
+  assert.ok(internalRun > childHandoffIdentity, "internal health aggregation must run only after child DB handoff revalidation");
+  assert.ok(mdPostflight > internalRun && jsonPostflight > internalRun, "generated report identities must be verified before success");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_DB_MISSING/);
@@ -29,6 +30,17 @@ test("alternative odds health runs canonical cohort preflight and DB handoff rev
   assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_MD_OUTPUT_MISSING/);
   assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_JSON_OUTPUT_MISSING/);
   assert.doesNotMatch(entrypoint, /DB not found: \$\{DB_PATH\}/);
+});
+
+test("alternative odds health internal revalidates the DB before read-only query-only analysis", () => {
+  const identity = internal.indexOf("ALTERNATIVE_ODDS_HEALTH_INTERNAL_DB_IDENTITY_INVALID");
+  const open = internal.indexOf("new DatabaseSync(dbPath, { readOnly: true })");
+  const queryOnly = internal.indexOf("PRAGMA query_only=ON");
+  assert.ok(identity >= 0 && open > identity, "internal SQLite open must follow canonical identity verification");
+  assert.ok(queryOnly > open, "internal SQLite connection must enter query-only mode before analysis queries");
+  assert.match(internal, /assertCanonicalSingleLinkRegularFile/);
+  assert.doesNotMatch(internal, /new DatabaseSync\(DB_PATH/);
+  assert.doesNotMatch(internal, /DB not found: \$\{DB_PATH\}/);
 });
 
 test("alternative odds health forward overlap population is fixed to unique settled trifecta BUY rows", () => {
