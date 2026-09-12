@@ -22,7 +22,17 @@ const REPORT_JSON = "reports/all-bet-type-data-feasibility.json";
 const REPORT_MD = "reports/all-bet-type-data-feasibility.md";
 const OPAQUE_DB_SOURCE = "canonical research database";
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function verifyExistingOutput(path: string, errorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, errorCode);
+}
+
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -31,7 +41,8 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    verifyExistingOutput(path, destinationErrorCode);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -88,6 +99,7 @@ atomicPublish(
   REPORT_JSON,
   sanitizedJson,
   "ALL_BET_TYPE_FEASIBILITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ALL_BET_TYPE_FEASIBILITY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 
 const markdownReadPath = assertCanonicalSingleLinkRegularFile(
@@ -110,6 +122,7 @@ atomicPublish(
   REPORT_MD,
   sanitizedMarkdown,
   "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 
 console.log("[all-bet-type-feasibility] PASS: canonical DB identity verified and persisted provenance redacted");
