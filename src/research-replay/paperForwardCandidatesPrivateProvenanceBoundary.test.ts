@@ -31,7 +31,8 @@ test("paper-forward core verifies generated report identity before atomic proven
   const exclusiveOpen = coreSource.indexOf('openSync(tempPath, "wx")');
   const fsync = coreSource.indexOf("fsyncSync(fd)");
   const tempIdentity = coreSource.indexOf('"PAPER_FORWARD_CORE_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = coreSource.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = coreSource.indexOf('"PAPER_FORWARD_CORE_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = coreSource.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -40,7 +41,13 @@ test("paper-forward core verifies generated report identity before atomic proven
       && handoffIdentity > provenanceCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(coreSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(coreSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
   assert.match(coreSource, /writeFileSync\(fd, content, "utf-8"\)/u);

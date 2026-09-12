@@ -31,10 +31,17 @@ test("paper-forward core validates provenance before atomic redaction publicatio
   const exclusiveOpen = core.indexOf('openSync(tempPath, "wx")');
   const fsync = core.indexOf("fsyncSync(fd)");
   const tempIdentity = core.indexOf('"PAPER_FORWARD_CORE_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = core.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = core.indexOf('"PAPER_FORWARD_CORE_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = core.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(read >= 0 && provenanceCheck > read && handoffIdentity > provenanceCheck && publishCall > handoffIdentity);
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(core, /writeFileSync\(fd, content, "utf-8"\)/u);
   assert.match(core, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
   assert.doesNotMatch(core, /writeFileSync\(handoffReportPath/u);
