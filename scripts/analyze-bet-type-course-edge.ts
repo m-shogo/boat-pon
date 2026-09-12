@@ -1,9 +1,47 @@
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella"] as const;
+const OUT_MD = "reports/bet-type-course-edge.md";
+const OUT_JSON = "reports/bet-type-course-edge.json";
+const internalPath = fileURLToPath(new URL("./analyze-bet-type-course-edge-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
+
+function atomicPublish(path: string, content: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 if (!existsSync(DB_PATH)) {
   throw new Error("BET_TYPE_COURSE_PRIMARY_DB_MISSING");
@@ -89,6 +127,54 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   dbPath,
   "BET_TYPE_COURSE_DB_HANDOFF_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
-await import("./analyze-bet-type-course-edge-internal");
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-bet-type-course-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    handoffDbPath,
+    "BET_TYPE_COURSE_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
+  const analysis = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
+    cwd: workspace,
+    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (analysis.error || analysis.status !== 0) throw new Error("BET_TYPE_COURSE_INTERNAL_FAILED");
+
+  const workspaceMd = join(workspace, OUT_MD);
+  const workspaceJson = join(workspace, OUT_JSON);
+  if (!existsSync(workspaceMd)) throw new Error("BET_TYPE_COURSE_MD_OUTPUT_MISSING");
+  if (!existsSync(workspaceJson)) throw new Error("BET_TYPE_COURSE_JSON_OUTPUT_MISSING");
+  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(
+    workspaceMd,
+    "BET_TYPE_COURSE_MD_OUTPUT_IDENTITY_INVALID",
+  );
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    workspaceJson,
+    "BET_TYPE_COURSE_JSON_OUTPUT_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(verifiedMdPath, "utf8")
+    .split(launchDbPath)
+    .join("verified read-only research DB");
+  const json = readFileSync(verifiedJsonPath, "utf8")
+    .split(launchDbPath)
+    .join("verified read-only research DB");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "BET_TYPE_COURSE_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "BET_TYPE_COURSE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "BET_TYPE_COURSE_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "BET_TYPE_COURSE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
