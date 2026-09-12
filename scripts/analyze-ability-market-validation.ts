@@ -2,7 +2,16 @@
  * 公開能力情報と市場順位のずれを、discovery -> validation -> untouched test の順で検証する。
  * DBは読み取り専用。historical closing oddsのため、通過しても本番採用しない。
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
   selectDynamicSecond,
@@ -59,12 +68,31 @@ const strategyDefs: Array<{ id: string; label: string; strategy?: RivalStrategy;
   { id: "national_worst_placebo", label: "全国勝率最低_placebo", strategy: "national_worst_placebo" },
 ];
 
+const JSON_REPORT_PATH = "reports/ability-market-validation.json";
+const MARKDOWN_REPORT_PATH = "reports/ability-market-validation.md";
 const dbPath = assertCanonicalSingleLinkRegularFile(
   process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite",
   "RESEARCH_DB_IDENTITY_INVALID",
 );
 const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 try {
   const races = db.prepare(`
@@ -241,7 +269,6 @@ WHERE exhibition_time IS NOT NULL
   };
 
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/ability-market-validation.json", `${JSON.stringify(report, null, 2)}\n`);
   const lines = [
     "# 能力情報×市場順位 三段階ROI検証",
     "",
@@ -284,7 +311,16 @@ WHERE exhibition_time IS NOT NULL
     "- 2025 testを見て条件や閾値を変更しない。",
     "- BUY・app_settings・本番decisionへ接続しない。",
   ];
-  writeFileSync("reports/ability-market-validation.md", `${lines.join("\n")}\n`);
+  atomicPublish(
+    JSON_REPORT_PATH,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "ABILITY_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    MARKDOWN_REPORT_PATH,
+    `${lines.join("\n")}\n`,
+    "ABILITY_MARKET_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
   console.log(`ability-market validation: races=${evaluatedRaces} candidates=${candidates.length} discovery=${discoveryPassed.length} validation=${validationPassed.length} robust=${robust.length}`);
 } finally {
   db.close();
