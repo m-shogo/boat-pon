@@ -7,7 +7,7 @@ const raw = readFileSync("scripts/report-h011-forward-monitor-raw.ts", "utf8");
 const internal = readFileSync("scripts/report-h011-forward-monitor-internal.ts", "utf8");
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts?: Record<string, string> };
 
-test("H011 forward monitor validates exacta settlement integrity and DB handoff before aggregation", () => {
+test("H011 forward monitor validates exacta settlement integrity and DB handoff before isolated aggregation", () => {
   assert.equal(pkg.scripts?.["report:h011-forward-monitor"], "tsx scripts/report-h011-forward-monitor.ts");
   assert.match(entry, /H011_FORWARD_PRIMARY_DB_MISSING/);
   assert.match(entry, /H011_FORWARD_HANDOFF_DB_MISSING/);
@@ -23,15 +23,30 @@ test("H011 forward monitor validates exacta settlement integrity and DB handoff 
   assert.match(entry, /integrity\.ambiguous !== 0/);
   assert.match(entry, /H011_FORWARD_EXACTA_SETTLEMENT_INTEGRITY_FAILED/);
   assert.match(entry, /H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID/);
-  assert.match(entry, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/);
+  assert.match(entry, /H011_FORWARD_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
 
   const gate = entry.indexOf("H011_FORWARD_EXACTA_SETTLEMENT_INTEGRITY_FAILED");
   const handoff = entry.indexOf("H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID");
-  const envHandoff = entry.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
-  const run = entry.indexOf('await import("./report-h011-forward-monitor-internal")');
+  const childIdentity = entry.indexOf("H011_FORWARD_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const run = entry.indexOf("const monitor = spawnSync");
   assert.ok(gate >= 0 && handoff > gate, "database identity must be reverified after settlement integrity passes");
-  assert.ok(envHandoff > handoff && run > envHandoff, "internal aggregation must import in-process only after DB revalidation");
+  assert.ok(childIdentity > handoff && run > childIdentity, "isolated aggregation must start only after launch identity revalidation");
+  assert.match(entry, /env: \{ \.\.\.process\.env, BOAT_PON_DB_PATH: launchDbPath \}/u);
+  assert.doesNotMatch(entry, /await import\("\.\/report-h011-forward-monitor-internal"\)/u);
   assert.equal(entry.includes("report-h011-forward-monitor-raw"), false);
+});
+
+test("H011 forward monitor verifies isolated outputs and publishes atomically", () => {
+  assert.match(entry, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-h011-forward-"\)\)/u);
+  assert.match(entry, /H011_FORWARD_MARKDOWN_OUTPUT_IDENTITY_INVALID/u);
+  assert.match(entry, /H011_FORWARD_JSON_OUTPUT_IDENTITY_INVALID/u);
+  assert.match(entry, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(entry, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(tempPath, errorCode\);\s*renameSync\(verifiedTempPath, path\);/u);
+  assert.match(entry, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
+  assert.match(entry, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
+  assert.match(entry, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
+  assert.doesNotMatch(entry, /writeFileSync\(OUT_(?:MD|JSON)/u);
 });
 
 test("H011 forward raw compatibility module forbids direct CLI execution and cannot bypass canonical preflight", () => {
