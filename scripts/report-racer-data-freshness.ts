@@ -11,8 +11,21 @@
  */
 
 import { execSync } from "node:child_process";
-import { existsSync, statSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = "data/boat.sqlite";
 const FORWARD_START = "2025-08-09";
@@ -242,35 +255,31 @@ function checkLaunchd(): LaunchdStatus {
   }
 }
 
+function readLogSnapshot(
+  path: string,
+  identityErrorCode: string,
+): { lastModified: string; lastLines: string[] } | null {
+  if (!existsSync(path)) return null;
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+  const stat = statSync(verifiedPath);
+  const content = readFileSync(verifiedPath, "utf8");
+  return {
+    lastModified: stat.mtime.toISOString(),
+    lastLines: content.trim().split("\n").slice(-5),
+  };
+}
+
 function checkLog(): LogStatus {
-  const logExists = existsSync(LOG_PATH);
-  const errExists = existsSync(ERR_LOG_PATH);
-
-  let lastModified: string | null = null;
-  let lastLines: string[] = [];
-  if (logExists) {
-    const stat = statSync(LOG_PATH);
-    lastModified = stat.mtime.toISOString();
-    const content = readFileSync(LOG_PATH, "utf8");
-    lastLines = content.trim().split("\n").slice(-5);
-  }
-
-  let errLastModified: string | null = null;
-  let errLastLines: string[] = [];
-  if (errExists) {
-    const stat = statSync(ERR_LOG_PATH);
-    errLastModified = stat.mtime.toISOString();
-    const content = readFileSync(ERR_LOG_PATH, "utf8");
-    errLastLines = content.trim().split("\n").slice(-5);
-  }
+  const log = readLogSnapshot(LOG_PATH, "RACER_FRESHNESS_LOG_IDENTITY_INVALID");
+  const errorLog = readLogSnapshot(ERR_LOG_PATH, "RACER_FRESHNESS_ERROR_LOG_IDENTITY_INVALID");
 
   return {
-    exists: logExists,
-    lastModified,
-    lastLines,
-    errExists,
-    errLastModified,
-    errLastLines,
+    exists: log !== null,
+    lastModified: log?.lastModified ?? null,
+    lastLines: log?.lastLines ?? [],
+    errExists: errorLog !== null,
+    errLastModified: errorLog?.lastModified ?? null,
+    errLastLines: errorLog?.lastLines ?? [],
   };
 }
 
@@ -338,8 +347,12 @@ function assessFetchNeeded(
 }
 
 function run(): FreshnessReport {
-  const db = new DatabaseSync(DB_PATH, { readOnly: true });
-  db.exec("PRAGMA busy_timeout = 5000");
+  const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+    DB_PATH,
+    "RACER_FRESHNESS_DB_IDENTITY_INVALID",
+  );
+  const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
+  db.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000");
 
   try {
     const profiles = queryFreshness(db, "racer_profiles");
@@ -544,11 +557,47 @@ function generateMarkdown(r: FreshnessReport): string {
   return lines.join("\n");
 }
 
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 const report = run();
 
 const md = generateMarkdown(report);
-writeFileSync(REPORT_MD, md, "utf8");
-writeFileSync(REPORT_JSON, JSON.stringify(report, null, 2), "utf8");
+mkdirSync("reports", { recursive: true });
+atomicPublish(
+  REPORT_MD,
+  md,
+  "RACER_FRESHNESS_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "RACER_FRESHNESS_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  REPORT_JSON,
+  JSON.stringify(report, null, 2),
+  "RACER_FRESHNESS_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "RACER_FRESHNESS_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 
 console.log(md);
 console.log(`\n→ ${REPORT_MD}`);
