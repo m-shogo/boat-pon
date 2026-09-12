@@ -10,17 +10,58 @@
  *   - 作成後に schema を確認してレポートを出力する
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD   = "reports/historical-alternative-odds-table-create.md";
 const OUT_JSON = "reports/historical-alternative-odds-table-create.json";
 const TARGET_TABLE = "historical_alternative_odds";
 
+function atomicPublishReport(
+  path: string,
+  content: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "HISTORICAL_ALT_ODDS_TABLE_CREATE_DB_IDENTITY_INVALID",
+);
 // 書き込みモード (readOnly: false)
-const db = new DatabaseSync(DB_PATH);
+const db = new DatabaseSync(verifiedDbPath);
 db.exec("PRAGMA busy_timeout = 5000;");
 db.exec("PRAGMA journal_mode = WAL;");
 
@@ -152,8 +193,6 @@ lines.push(`*生成: create-historical-alternative-odds-table.ts*`);
 
 const md = lines.join("\n");
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_MD, md, "utf-8");
-
 const jsonOutput = {
   generatedAt: now,
   targetTable: TARGET_TABLE,
@@ -164,7 +203,18 @@ const jsonOutput = {
   newTables,
   removedTables,
 };
-writeFileSync(OUT_JSON, JSON.stringify(jsonOutput, null, 2), "utf-8");
+atomicPublishReport(
+  OUT_MD,
+  md,
+  "HISTORICAL_ALT_ODDS_TABLE_CREATE_REPORT_MD_TEMP_IDENTITY_INVALID",
+  "HISTORICAL_ALT_ODDS_TABLE_CREATE_REPORT_MD_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublishReport(
+  OUT_JSON,
+  JSON.stringify(jsonOutput, null, 2),
+  "HISTORICAL_ALT_ODDS_TABLE_CREATE_REPORT_JSON_TEMP_IDENTITY_INVALID",
+  "HISTORICAL_ALT_ODDS_TABLE_CREATE_REPORT_JSON_DESTINATION_IDENTITY_INVALID",
+);
 
 console.log();
 console.log("=== schema 確認 ===");
