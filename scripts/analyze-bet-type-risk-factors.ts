@@ -43,8 +43,15 @@ function publishRedactedReportAtomically(targetPath: string, content: string): v
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    assertCanonicalSingleLinkRegularFile(tempPath, "BET_TYPE_RISK_TEMP_REPORT_IDENTITY_INVALID");
-    renameSync(tempPath, targetPath);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "BET_TYPE_RISK_TEMP_REPORT_IDENTITY_INVALID",
+    );
+    const verifiedTargetPath = assertCanonicalSingleLinkRegularFile(
+      targetPath,
+      "BET_TYPE_RISK_PUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+    renameSync(verifiedTempPath, verifiedTargetPath);
   } catch (error) {
     if (fd !== null) closeSync(fd);
     if (existsSync(tempPath)) unlinkSync(tempPath);
