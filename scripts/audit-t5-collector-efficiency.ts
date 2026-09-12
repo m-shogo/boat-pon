@@ -1,5 +1,15 @@
 /** T-5収集の欠測と重複保存を日別に監査する。読み取り専用。 */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
   type N2T5CollectorCaptureTimingRow,
@@ -14,6 +24,8 @@ import { validateT5MarketCoverageProgramRows } from "../src/research-replay/t5Ma
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_JSON = "reports/t5-collector-efficiency.json";
+const OUT_MD = "reports/t5-collector-efficiency.md";
 const inputs = resolveN2T5CollectorEfficiencyInputs({
   from: process.env.BOAT_PON_FROM ?? "2026-07-20",
   to: process.env.BOAT_PON_TO ?? todayJst(),
@@ -200,9 +212,44 @@ const lines = [
 ];
 
 mkdirSync("reports", { recursive: true });
-writeFileSync("reports/t5-collector-efficiency.json", `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync("reports/t5-collector-efficiency.md", `${lines.join("\n")}\n`);
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "T5_COLLECTOR_EFFICIENCY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "T5_COLLECTOR_EFFICIENCY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  `${lines.join("\n")}\n`,
+  "T5_COLLECTOR_EFFICIENCY_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "T5_COLLECTOR_EFFICIENCY_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log("[t5-collector-efficiency] wrote reports/t5-collector-efficiency.md / .json");
+
+function atomicPublish(
+  path: string,
+  content: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 function raceClose(date: string, closeAt: string) {
   return n2T5CollectorCloseTime(date, closeAt);
