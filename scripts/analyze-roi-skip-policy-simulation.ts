@@ -42,7 +42,12 @@ function run(script: string): number {
   return result.status ?? 1;
 }
 
-function atomicPublish(path: string, content: string, errorCode: string): void {
+function assertExistingOutputIdentity(path: string, code: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function atomicPublish(path: string, content: string, errorCode: string, destinationErrorCode: string): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -53,6 +58,7 @@ function atomicPublish(path: string, content: string, errorCode: string): void {
     fd = null;
 
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    assertExistingOutputIdentity(path, destinationErrorCode);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -120,11 +126,13 @@ try {
     OUT_MD,
     markdown,
     "ROI_SKIP_POLICY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_SKIP_POLICY_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_JSON,
     json,
     "ROI_SKIP_POLICY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_SKIP_POLICY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 } finally {
   rmSync(workspace, { recursive: true, force: true });
