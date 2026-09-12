@@ -64,8 +64,18 @@ try {
     "> この順位は仮説生成用。55セルを見た後の順位であり、future-only T-5へ事前固定するまではedge認定しない。"];
   verifyExistingOutput(OUT_JSON, "EVENT_SELECTION_MATRIX_PREEXISTING_JSON_IDENTITY_INVALID");
   verifyExistingOutput(OUT_MD, "EVENT_SELECTION_MATRIX_PREEXISTING_MD_IDENTITY_INVALID");
-  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "EVENT_SELECTION_MATRIX_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD, `${lines.join("\n")}\n`, "EVENT_SELECTION_MATRIX_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_JSON,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "EVENT_SELECTION_MATRIX_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "EVENT_SELECTION_MATRIX_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    `${lines.join("\n")}\n`,
+    "EVENT_SELECTION_MATRIX_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "EVENT_SELECTION_MATRIX_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
   console.log(`event selection matrix: races=${raceIds.length} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 } finally { db.close(); }
 
@@ -135,7 +145,12 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -144,7 +159,10 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
