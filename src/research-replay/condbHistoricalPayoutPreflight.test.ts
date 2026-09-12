@@ -48,24 +48,29 @@ test("condB historical payout preflight fails closed on empty or incomplete cove
   assert.match(preflight, /process\.exit\(2\)/);
 });
 
-test("canonical entrypoint verifies the primary DB before payout preflight, then reverifies the internal analyzer handoff", () => {
+test("canonical entrypoint verifies DB identity across preflight and isolated analysis launch", () => {
   assert.match(entrypoint, /CONDB_SWITCH_HISTORICAL_PRIMARY_DB_MISSING/);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH/);
   assert.match(entrypoint, /CONDB_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID/);
-  assert.match(entrypoint, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: auditDbPath/);
   assert.match(entrypoint, /CONDB_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID/);
-  assert.match(entrypoint, /BOAT_PON_DB_PATH = handoffDbPath/);
+  assert.match(entrypoint, /CONDB_SWITCH_HISTORICAL_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
+  assert.match(entrypoint, /cwd: workspace/);
+  assert.doesNotMatch(entrypoint, /BOAT_PON_DB_PATH = handoffDbPath/);
   assert.doesNotMatch(entrypoint, /DB not found: \$\{DB_PATH\}/);
 
   const primaryIdentity = entrypoint.indexOf("CONDB_SWITCH_HISTORICAL_PRIMARY_DB_IDENTITY_INVALID");
   const audit = entrypoint.indexOf("audit-condb-switch-historical-payout-completeness.ts");
   const handoffIdentity = entrypoint.indexOf("CONDB_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID");
-  const analyzer = entrypoint.indexOf("await import(\"./analyze-condb-switch-historical-closing-odds-internal\")");
+  const launchIdentity = entrypoint.indexOf("CONDB_SWITCH_HISTORICAL_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const analyzer = entrypoint.indexOf("const analysis = spawnSync");
   assert.ok(primaryIdentity >= 0);
   assert.ok(audit > primaryIdentity);
   assert.ok(handoffIdentity > audit);
-  assert.ok(analyzer > handoffIdentity);
+  assert.ok(launchIdentity > handoffIdentity);
+  assert.ok(analyzer > launchIdentity);
   assert.doesNotMatch(entrypoint, /analyze-condb-switch-historical-closing-odds-raw/);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/analyze-condb-switch-historical-closing-odds-internal"\)/);
 });
 
 test("compatibility safe runner delegates to the canonical fail-closed entrypoint", () => {
