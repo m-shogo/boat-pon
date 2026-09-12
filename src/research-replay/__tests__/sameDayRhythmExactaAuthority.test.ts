@@ -39,3 +39,25 @@ test("same-day rhythm exacta settlement is unambiguous before market aggregation
   assert.match(source, /winner_h\.combination=p\.combination/);
   assert.doesNotMatch(source, /LEFT JOIN race_payouts p/);
 });
+
+test("same-day rhythm title HTML is identity-verified before parsing", () => {
+  const source = readFileSync("scripts/analyze-same-day-rhythm-market.ts", "utf8");
+  const identity = source.indexOf('assertCanonicalSingleLinkRegularFile(path,"SAME_DAY_RHYTHM_TITLE_IDENTITY_INVALID")');
+  const read = source.indexOf('readFileSync(verifiedPath,"utf8")');
+
+  assert.ok(identity >= 0 && read > identity, "title HTML identity must be verified before read/parse");
+  assert.match(source, /if\(!existsSync\(path\)\)return""/);
+  assert.doesNotMatch(source, /load\(readFileSync\(path,/);
+});
+
+test("same-day rhythm reports publish through exclusive fsynced identity-verified temp files", () => {
+  const source = readFileSync("scripts/analyze-same-day-rhythm-market.ts", "utf8");
+
+  assert.match(source, /openSync\(tempPath,"wx",0o600\)/);
+  assert.match(source, /fsyncSync\(fd\)/);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,errorCode\)/);
+  assert.match(source, /renameSync\(verifiedTempPath,path\)/);
+  assert.match(source, /atomicPublish\(JSON_REPORT_PATH/);
+  assert.match(source, /atomicPublish\(MARKDOWN_REPORT_PATH/);
+  assert.doesNotMatch(source, /writeFileSync\("reports\/same-day-rhythm-market-screen\.(?:json|md)"/);
+});
