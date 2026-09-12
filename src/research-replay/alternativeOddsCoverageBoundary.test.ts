@@ -35,15 +35,27 @@ test("alternative odds coverage verifies isolated outputs and publishes them ato
   const jsonRead = entrypoint.indexOf('readFileSync(verifiedJsonPath, "utf8")', jsonIdentity);
   const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const mdPublish = entrypoint.indexOf("ALT_ODDS_COVERAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
+  const mdDestination = entrypoint.indexOf("ALT_ODDS_COVERAGE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID", mdPublish);
   const jsonPublish = entrypoint.indexOf("ALT_ODDS_COVERAGE_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
+  const jsonDestination = entrypoint.indexOf("ALT_ODDS_COVERAGE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID", jsonPublish);
 
   assert.ok(mdIdentity > internalRun && jsonIdentity > internalRun, "generated report identities must be checked after isolated aggregation");
   assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity, "generated reports must not be read before identity checks");
-  assert.ok(tempCreate >= 0 && fsync > tempCreate && tempIdentity > fsync && rename > tempIdentity, "publication must be exclusive, durable, identity-verified, and atomic");
-  assert.ok(mdPublish > mdRead && jsonPublish > jsonRead, "both reports must use atomic publication");
+  assert.ok(
+    tempCreate >= 0 &&
+      fsync > tempCreate &&
+      tempIdentity > fsync &&
+      destinationIdentity > tempIdentity &&
+      rename > destinationIdentity,
+    "publication must be exclusive, durable, temp-verified, destination-reverified, and atomic",
+  );
+  assert.ok(mdPublish > mdRead && mdDestination > mdPublish, "markdown publication must reverify its destination");
+  assert.ok(jsonPublish > jsonRead && jsonDestination > jsonPublish, "json publication must reverify its destination");
+  assert.match(entrypoint, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/s);
   assert.match(entrypoint, /ALT_ODDS_COVERAGE_MD_OUTPUT_MISSING/u);
   assert.match(entrypoint, /ALT_ODDS_COVERAGE_JSON_OUTPUT_MISSING/u);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
