@@ -35,22 +35,38 @@ test("ROI mechanism skip-filter redacts configured DB provenance only after inte
   assert.match(entrypointSource, /OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_DB_PROVENANCE_NOT_FOUND/);
-  assert.match(entrypointSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(entrypointSource, /const redacted = report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_PRIVATE_DB_PATH_REMAINS/);
   const analysis = entrypointSource.indexOf('await import("./analyze-roi-mechanism-skip-filters-internal")');
   const redact = entrypointSource.lastIndexOf("redactDbProvenance(handoffDbPath)");
   const pass = entrypointSource.lastIndexOf("[roi-mechanism-skip-filter] PASS");
   assert.ok(analysis >= 0 && redact > analysis && pass > redact);
 });
 
-test("ROI mechanism skip-filter verifies generated report identity before provenance read and again before write", () => {
+test("ROI mechanism skip-filter verifies report identity and publishes provenance atomically", () => {
   const firstIdentity = entrypointSource.indexOf('"ROI_MECHANISM_SKIP_FILTER_REPORT_IDENTITY_INVALID"');
   const read = entrypointSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const privatePathCheck = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_PRIVATE_DB_PATH_REMAINS");
   const handoffIdentity = entrypointSource.indexOf('"ROI_MECHANISM_SKIP_FILTER_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = entrypointSource.indexOf("writeFileSync(\n    handoffReportPath");
+  const publishCall = entrypointSource.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
+  const exclusiveOpen = entrypointSource.indexOf('openSync(tempPath, "wx")');
+  const fsync = entrypointSource.indexOf("fsyncSync(fd)");
+  const tempIdentity = entrypointSource.indexOf('"ROI_MECHANISM_SKIP_FILTER_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = entrypointSource.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && privatePathCheck > read
+      && handoffIdentity > privatePathCheck
+      && publishCall > handoffIdentity,
+  );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.match(entrypointSource, /writeFileSync\(fd, content, "utf-8"\)/u);
+  assert.match(entrypointSource, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
+  assert.doesNotMatch(entrypointSource, /writeFileSync\(\s*handoffReportPath/u);
 });
 
 test("ROI mechanism skip-filter normal entrypoint fails closed before exclusion verdicts", () => {
