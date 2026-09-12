@@ -9,16 +9,31 @@
  *   自動実行は一切しない。提案のみ。
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const GOV_JSON = "reports/research-governor.json";
 const OUT_MD   = "reports/next-research-action.md";
 const OUT_JSON = "reports/next-research-action.json";
 
 if (!existsSync(GOV_JSON)) {
-  console.error(`research-governor.json not found. 先に pnpm report:research-governor を実行してください。`);
-  process.exit(1);
+  throw new Error("NEXT_RESEARCH_ACTION_GOVERNOR_MISSING");
 }
+const verifiedGovernorPath = assertCanonicalSingleLinkRegularFile(
+  GOV_JSON,
+  "NEXT_RESEARCH_ACTION_GOVERNOR_IDENTITY_INVALID",
+);
 
 type GovData = {
   generatedAt: string;
@@ -37,7 +52,7 @@ type GovData = {
   oneLiner: string;
 };
 
-const gov = JSON.parse(readFileSync(GOV_JSON, "utf-8")) as GovData;
+const gov = JSON.parse(readFileSync(verifiedGovernorPath, "utf-8")) as GovData;
 
 // ─── 次アクションの詳細手順生成 ──────────────────────────────────────────────
 
@@ -229,7 +244,9 @@ lines.push(`*生成: plan-next-research-action.ts*`);
 
 const md = lines.join("\n");
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_MD, md, "utf-8");
+verifyExistingOutput(OUT_MD, "NEXT_RESEARCH_ACTION_PREEXISTING_MD_IDENTITY_INVALID");
+verifyExistingOutput(OUT_JSON, "NEXT_RESEARCH_ACTION_PREEXISTING_JSON_IDENTITY_INVALID");
+atomicPublish(OUT_MD, md, "NEXT_RESEARCH_ACTION_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 
 const jsonOut = {
   generatedAt: now,
@@ -249,7 +266,11 @@ const jsonOut = {
   forbidden: gov.forbidden,
   oneLiner: gov.oneLiner,
 };
-writeFileSync(OUT_JSON, JSON.stringify(jsonOut, null, 2), "utf-8");
+atomicPublish(
+  OUT_JSON,
+  JSON.stringify(jsonOut, null, 2),
+  "NEXT_RESEARCH_ACTION_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 
 console.log(`=== 次のリサーチアクション計画 ===`);
 console.log(`  タイトル: ${plan.title}`);
@@ -258,3 +279,25 @@ console.log(`  1行結論: ${gov.oneLiner}`);
 console.log();
 console.log(`出力: ${OUT_MD}`);
 console.log(`出力: ${OUT_JSON}`);
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
