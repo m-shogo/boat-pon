@@ -153,11 +153,13 @@ atomicPublish(
   OUT_JSON,
   `${JSON.stringify(report, null, 2)}\n`,
   "ROI_AUTOPILOT_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_AUTOPILOT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 atomicPublish(
   OUT_MD,
   renderMarkdown(report),
   "ROI_AUTOPILOT_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_AUTOPILOT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 console.log(`[roi-autopilot] decision=${decision}`);
 console.log(`[roi-autopilot] wrote ${OUT_JSON}`);
@@ -355,7 +357,12 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  identityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -365,6 +372,7 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    verifyExistingOutput(path, destinationIdentityErrorCode);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
