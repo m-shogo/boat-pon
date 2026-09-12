@@ -47,6 +47,12 @@ function atomicPublish(path: string, content: string): void {
       tempPath,
       "RACER_ABILITY_AUDIT_PUBLISH_TEMP_IDENTITY_INVALID",
     );
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        "RACER_ABILITY_AUDIT_PUBLISH_DESTINATION_IDENTITY_INVALID",
+      );
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
