@@ -37,16 +37,28 @@ test("ROI pattern entrypoint verifies isolated reports before atomic publication
   const redaction = entrypoint.indexOf('.split(launchDbPath)', mdRead);
   const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationCheck = entrypoint.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationCheck);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const mdPublish = entrypoint.indexOf("ROI_PATTERN_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
   const jsonPublish = entrypoint.indexOf("ROI_PATTERN_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
 
   assert.ok(mdIdentity > analysis && jsonIdentity > analysis, "isolated reports must be identity-verified after analysis");
   assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity, "reports must not be read before identity verification");
   assert.ok(redaction > mdRead, "DB filesystem provenance must be redacted before publication");
-  assert.ok(tempCreate >= 0 && fsync > tempCreate && tempIdentity > fsync && rename > tempIdentity, "publication must use exclusive, durable, verified atomic replacement");
+  assert.ok(
+    tempCreate >= 0
+      && fsync > tempCreate
+      && tempIdentity > fsync
+      && destinationCheck > tempIdentity
+      && destinationIdentity > destinationCheck
+      && rename > destinationIdentity,
+    "publication must use exclusive durable temp output and reverify any existing canonical destination before replacement",
+  );
   assert.ok(mdPublish > mdRead && jsonPublish > jsonRead, "both reports must publish through the atomic writer");
+  assert.match(entrypoint, /ROI_PATTERN_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entrypoint, /ROI_PATTERN_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /ROI_PATTERN_MD_OUTPUT_MISSING/);
   assert.match(entrypoint, /ROI_PATTERN_JSON_OUTPUT_MISSING/);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
