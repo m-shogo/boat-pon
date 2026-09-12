@@ -11,6 +11,7 @@ test("racer ability audit revalidates DB and candidates at the isolated handoff"
   assert.match(source, /RACER_ABILITY_AUDIT_DB_CHILD_HANDOFF_IDENTITY_INVALID/);
   assert.match(source, /RACER_ABILITY_AUDIT_CANDIDATES_CHILD_HANDOFF_IDENTITY_INVALID/);
   assert.match(source, /RACER_ABILITY_AUDIT_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
+  assert.match(source, /RACER_ABILITY_AUDIT_CANDIDATES_CHILD_LAUNCH_IDENTITY_INVALID/);
 
   const initialCandidateIdentity = source.indexOf("RACER_ABILITY_AUDIT_CANDIDATES_IDENTITY_INVALID");
   const candidateSourceHandoffIdentity = source.indexOf("RACER_ABILITY_AUDIT_CANDIDATES_SOURCE_HANDOFF_IDENTITY_INVALID");
@@ -20,6 +21,7 @@ test("racer ability audit revalidates DB and candidates at the isolated handoff"
   const dbChildHandoffIdentity = source.indexOf("RACER_ABILITY_AUDIT_DB_CHILD_HANDOFF_IDENTITY_INVALID");
   const candidateChildHandoffIdentity = source.indexOf("RACER_ABILITY_AUDIT_CANDIDATES_CHILD_HANDOFF_IDENTITY_INVALID");
   const dbLaunchIdentity = source.indexOf("RACER_ABILITY_AUDIT_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const candidateLaunchIdentity = source.indexOf("RACER_ABILITY_AUDIT_CANDIDATES_CHILD_LAUNCH_IDENTITY_INVALID");
   const spawn = source.indexOf("const child = spawnSync");
 
   assert.ok(initialCandidateIdentity >= 0);
@@ -30,7 +32,8 @@ test("racer ability audit revalidates DB and candidates at the isolated handoff"
   assert.ok(dbChildHandoffIdentity > candidateHandoffIdentity);
   assert.ok(candidateChildHandoffIdentity > dbChildHandoffIdentity);
   assert.ok(dbLaunchIdentity > candidateChildHandoffIdentity);
-  assert.ok(spawn > dbLaunchIdentity);
+  assert.ok(candidateLaunchIdentity > dbLaunchIdentity);
+  assert.ok(spawn > candidateLaunchIdentity);
   assert.match(source, /BOAT_PON_DB_PATH: launchDbPath/);
   assert.doesNotMatch(source, /BOAT_PON_DB_PATH: childDbPath/);
 });
