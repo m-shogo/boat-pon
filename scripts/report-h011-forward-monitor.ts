@@ -6,7 +6,23 @@
  * aggregation is allowed to run.
  */
 
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -15,6 +31,25 @@ const MONITOR_START = process.env.H011_MONITOR_START ?? "2026-06-01";
 const RUN_KIND = process.env.H011_RUN_KIND ?? "paper-live";
 const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const EXCL_RACES = [10, 11, 12];
+const OUT_MD = "reports/h011-forward-monitor.md";
+const OUT_JSON = "reports/h011-forward-monitor.json";
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 if (!existsSync(DB_PATH)) throw new Error("H011_FORWARD_PRIMARY_DB_MISSING");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "H011_FORWARD_PRIMARY_DB_IDENTITY_INVALID");
@@ -92,6 +127,52 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   DB_PATH,
   "H011_FORWARD_DB_HANDOFF_IDENTITY_INVALID",
 );
+const internalPath = fileURLToPath(new URL("./report-h011-forward-monitor-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-h011-forward-"));
 
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
-await import("./report-h011-forward-monitor-internal");
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    handoffDbPath,
+    "H011_FORWARD_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
+  const monitor = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
+    cwd: workspace,
+    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (monitor.error || monitor.status !== 0) throw new Error("H011_FORWARD_INTERNAL_FAILED");
+
+  const workspaceMarkdown = join(workspace, OUT_MD);
+  const workspaceJson = join(workspace, OUT_JSON);
+  if (!existsSync(workspaceMarkdown)) throw new Error("H011_FORWARD_MARKDOWN_OUTPUT_MISSING");
+  if (!existsSync(workspaceJson)) throw new Error("H011_FORWARD_JSON_OUTPUT_MISSING");
+  const verifiedMarkdownPath = assertCanonicalSingleLinkRegularFile(
+    workspaceMarkdown,
+    "H011_FORWARD_MARKDOWN_OUTPUT_IDENTITY_INVALID",
+  );
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    workspaceJson,
+    "H011_FORWARD_JSON_OUTPUT_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(verifiedMarkdownPath, "utf8");
+  const json = readFileSync(verifiedJsonPath, "utf8");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "H011_FORWARD_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "H011_FORWARD_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
+
+console.log("[h011-forward] PASS: settlement preflight and isolated report publication completed");
