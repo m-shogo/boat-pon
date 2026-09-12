@@ -39,6 +39,27 @@ test("root methodology guarded entrypoint preserves canonical read-only database
   assert.match(entrypoint, /PRAGMA query_only=ON/u);
 });
 
+test("root methodology publication permits first publish and revalidates existing destinations", () => {
+  assert.match(
+    entrypoint,
+    /const verifiedTempPath = assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\)/u,
+  );
+  assert.match(
+    entrypoint,
+    /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/u,
+  );
+  assert.match(entrypoint, /renameSync\(verifiedTempPath, path\)/u);
+
+  const tempVerification = entrypoint.indexOf(
+    "const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)",
+  );
+  const destinationCheck = entrypoint.indexOf("if (existsSync(path))");
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)");
+  assert.ok(tempVerification >= 0, "temp artifact identity verification must exist");
+  assert.ok(destinationCheck > tempVerification, "existing destination must be revalidated after temp verification");
+  assert.ok(rename > destinationCheck, "atomic rename must follow destination revalidation");
+});
+
 test("root methodology implementation remains read-only and does not alter paper-live criteria", () => {
   assert.match(internal, /run_kind='paper-live' AND model_version='boatpon-v3-alpha15'/u);
   assert.match(internal, /new DatabaseSync\(primaryDbPath, \{ readOnly: true \}\)/u);
