@@ -40,11 +40,15 @@ function publishRedactedReportAtomically(targetPath: string, content: string): v
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    assertCanonicalSingleLinkRegularFile(
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
       tempPath,
       "ROI_MECHANISM_SKIP_FILTER_TEMP_REPORT_IDENTITY_INVALID",
     );
-    renameSync(tempPath, targetPath);
+    const verifiedTargetPath = assertCanonicalSingleLinkRegularFile(
+      targetPath,
+      "ROI_MECHANISM_SKIP_FILTER_PUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+    renameSync(verifiedTempPath, verifiedTargetPath);
   } catch (error) {
     if (fd !== null) closeSync(fd);
     if (existsSync(tempPath)) unlinkSync(tempPath);
