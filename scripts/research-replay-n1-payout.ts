@@ -1,5 +1,6 @@
 import {
   closeSync,
+  existsSync,
   fsyncSync,
   mkdtempSync,
   openSync,
@@ -38,6 +39,12 @@ function atomicPublish(path: string, content: string): void {
       tempPath,
       "N1_PAYOUT_REPORT_TEMP_IDENTITY_INVALID",
     );
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        "N1_PAYOUT_REPORT_DESTINATION_IDENTITY_INVALID",
+      );
+    }
     renameSync(verifiedTempPath, path);
   } catch (error) {
     if (fd !== null) closeSync(fd);
