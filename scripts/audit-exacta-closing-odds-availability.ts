@@ -58,6 +58,35 @@ function atomicPublishReport(
   }
 }
 
+function publishOfficialCache(path: string, content: string): string {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "EXACTA_CLOSING_ODDS_AUDIT_CACHE_TEMP_IDENTITY_INVALID",
+    );
+    if (existsSync(path)) {
+      const verifiedExistingPath = assertCanonicalSingleLinkRegularFile(
+        path,
+        "EXACTA_CLOSING_ODDS_AUDIT_CACHE_DESTINATION_IDENTITY_INVALID",
+      );
+      return readFileSync(verifiedExistingPath, "utf-8");
+    }
+    renameSync(verifiedTempPath, path);
+    return content;
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 if (!existsSync(DB_PATH)) throw new Error("EXACTA_CLOSING_ODDS_AUDIT_DB_MISSING");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   DB_PATH,
@@ -212,14 +241,20 @@ async function fetchHtml(r: Race): Promise<{ html: string | null; cached: boolea
   const url = makeUrl(r.date, r.venue, r.race_no);
   if (!url) return { html: null, cached: false, url: null, error: `unknown venue: ${r.venue}` };
   const cp = cachePath(r.date, r.venue, r.race_no);
-  if (existsSync(cp)) return { html: readFileSync(cp, "utf-8"), cached: true, url };
+  if (existsSync(cp)) {
+    const verifiedCachePath = assertCanonicalSingleLinkRegularFile(
+      cp,
+      "EXACTA_CLOSING_ODDS_AUDIT_CACHE_READ_IDENTITY_INVALID",
+    );
+    return { html: readFileSync(verifiedCachePath, "utf-8"), cached: true, url };
+  }
   try {
     const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!response.ok) return { html: null, cached: false, url, error: `HTTP ${response.status}` };
     const html = await response.text();
     mkdirSync(dirname(cp), { recursive: true });
-    writeFileSync(cp, html, "utf-8");
-    return { html, cached: false, url };
+    const cachedHtml = publishOfficialCache(cp, html);
+    return { html: cachedHtml, cached: false, url };
   } catch (error) {
     return { html: null, cached: false, url, error: String(error) };
   }
