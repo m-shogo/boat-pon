@@ -74,20 +74,36 @@ test("skip-interactions canonical entrypoint redacts private DB provenance only 
   assert.ok(redact > analysis, "private DB provenance must be sanitized only after successful core analysis");
   assert.match(entrypoint, /const OPAQUE_DB_SOURCE = "primary research database"/u);
   assert.match(entrypoint, /const privateMarker = `DB: \$\{dbPath\}`/u);
-  assert.match(entrypoint, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
+  assert.match(entrypoint, /const redacted = report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_REPORT_MISSING_AFTER_ANALYSIS/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIVATE_DB_PATH_REMAINS/u);
 });
 
-test("skip-interactions verifies generated report identity before provenance read and again before write", () => {
+test("skip-interactions verifies report identity and publishes provenance atomically", () => {
   const firstIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_REPORT_IDENTITY_INVALID"');
   const read = entrypoint.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const privatePathCheck = entrypoint.indexOf("ROI_SKIP_INTERACTIONS_PRIVATE_DB_PATH_REMAINS");
   const handoffIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = entrypoint.indexOf("writeFileSync(\n    handoffReportPath");
+  const publishCall = entrypoint.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
+  const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx")');
+  const fsync = entrypoint.indexOf("fsyncSync(fd)");
+  const tempIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = entrypoint.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && privatePathCheck > read
+      && handoffIdentity > privatePathCheck
+      && publishCall > handoffIdentity,
+  );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.match(entrypoint, /writeFileSync\(fd, content, "utf-8"\)/u);
+  assert.match(entrypoint, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
+  assert.doesNotMatch(entrypoint, /writeFileSync\(\s*handoffReportPath/u);
 });
 
 test("skip-interactions preflight matches the exact forward population and validates settlement line integrity", () => {

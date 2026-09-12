@@ -5,7 +5,16 @@
  * zero-return observation in skip/intersection residual analysis.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { spawnSync } from "node:child_process";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -26,6 +35,27 @@ function run(script: string, env = process.env): number {
   return result.status ?? 1;
 }
 
+function publishRedactedReportAtomically(targetPath: string, content: string): void {
+  const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx");
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "ROI_SKIP_INTERACTIONS_TEMP_REPORT_IDENTITY_INVALID",
+    );
+    renameSync(tempPath, targetPath);
+  } catch (error) {
+    if (fd !== null) closeSync(fd);
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    throw error;
+  }
+}
+
 function redactDbProvenance(dbPath: string): void {
   if (!existsSync(OUT_MD)) {
     throw new Error("ROI_SKIP_INTERACTIONS_REPORT_MISSING_AFTER_ANALYSIS");
@@ -41,15 +71,16 @@ function redactDbProvenance(dbPath: string): void {
     throw new Error("ROI_SKIP_INTERACTIONS_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
   }
 
+  const redacted = report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`);
+  if (redacted.includes(dbPath)) {
+    throw new Error("ROI_SKIP_INTERACTIONS_PRIVATE_DB_PATH_REMAINS");
+  }
+
   const handoffReportPath = assertCanonicalSingleLinkRegularFile(
     verifiedReportPath,
     "ROI_SKIP_INTERACTIONS_REPORT_HANDOFF_IDENTITY_INVALID",
   );
-  writeFileSync(
-    handoffReportPath,
-    report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`),
-    "utf-8",
-  );
+  publishRedactedReportAtomically(handoffReportPath, redacted);
 }
 
 const preflight = run("scripts/audit-roi-skip-interactions-payout-completeness.ts");
