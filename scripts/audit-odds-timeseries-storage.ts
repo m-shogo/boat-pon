@@ -1,6 +1,6 @@
 /** odds時系列DBの肥大化を日別に監査する。読み取り専用。 */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { resolveN2OddsTimeseriesStorageWindow } from "../src/research-replay/n2OddsTimeseriesStorageWindow";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
