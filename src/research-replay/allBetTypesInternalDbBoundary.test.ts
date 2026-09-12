@@ -43,8 +43,9 @@ test("all-bet-types canonical analyzer isolates legacy writes and atomically pub
   const jsonRead = wrapper.indexOf('readFileSync(workspaceJson, "utf8")', jsonWorkspaceIdentity);
   const tempCreate = wrapper.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = wrapper.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = wrapper.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = wrapper.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = wrapper.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = wrapper.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
+  const rename = wrapper.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const outputMissing = wrapper.indexOf("ALL_BET_TYPES_ROI_OUTPUT_MISSING", internalRun);
   const mdPostflight = wrapper.indexOf("ALL_BET_TYPES_ROI_MD_OUTPUT_IDENTITY_INVALID", outputMissing);
   const jsonPostflight = wrapper.indexOf("ALL_BET_TYPES_ROI_JSON_OUTPUT_IDENTITY_INVALID", outputMissing);
@@ -55,14 +56,20 @@ test("all-bet-types canonical analyzer isolates legacy writes and atomically pub
   assert.ok(mdWorkspaceIdentity > internalRun && jsonWorkspaceIdentity > internalRun, "workspace outputs must be identity-verified before reads");
   assert.ok(mdRead > mdWorkspaceIdentity && jsonRead > jsonWorkspaceIdentity, "workspace outputs must be read only after identity verification");
   assert.ok(tempCreate >= 0 && fsync > tempCreate, "publication must use exclusive temp creation and fsync");
-  assert.ok(tempIdentity > fsync && rename > tempIdentity, "temp identity verification must precede atomic rename");
+  assert.ok(
+    tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity,
+    "temp identity and destination revalidation must precede atomic rename",
+  );
   assert.ok(outputMissing > internalRun, "successful internal execution must still prove both final outputs exist");
   assert.ok(mdPostflight > outputMissing && jsonPostflight > outputMissing, "published outputs must be canonical single-link files before success");
   assert.match(wrapper, /cwd: workspace/);
   assert.match(wrapper, /stdio: \["ignore", "pipe", "pipe"\]/u);
   assert.match(wrapper, /ALL_BET_TYPES_ROI_INTERNAL_FAILED/u);
   assert.match(wrapper, /ALL_BET_TYPES_ROI_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(wrapper, /ALL_BET_TYPES_ROI_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(wrapper, /ALL_BET_TYPES_ROI_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(wrapper, /ALL_BET_TYPES_ROI_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(wrapper, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/s);
   assert.match(wrapper, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(wrapper, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
 });
