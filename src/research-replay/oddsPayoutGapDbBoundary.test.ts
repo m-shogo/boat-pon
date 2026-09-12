@@ -25,7 +25,7 @@ test("odds-payout-gap canonical entrypoint verifies DB identity after preflight 
   assert.doesNotMatch(entry, /analyze-odds-payout-gap-raw/);
 });
 
-test("odds-payout-gap canonical entrypoint verifies generated artifacts before read and publishes atomically", () => {
+test("odds-payout-gap canonical entrypoint verifies generated artifacts before read and reverifies destinations before atomic publication", () => {
   const analysis = entry.indexOf("const analysis = spawnSync");
   const mdIdentity = entry.indexOf("ODDS_PAYOUT_GAP_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
   const jsonIdentity = entry.indexOf("ODDS_PAYOUT_GAP_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
@@ -33,19 +33,25 @@ test("odds-payout-gap canonical entrypoint verifies generated artifacts before r
   const jsonRead = entry.indexOf('readFileSync(workspaceJson, "utf8")', jsonIdentity);
   const tempCreate = entry.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entry.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationGuard = entry.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationGuard);
+  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const postflight = entry.indexOf("ODDS_PAYOUT_GAP_MD_OUTPUT_IDENTITY_INVALID", analysis);
 
   assert.ok(mdIdentity > analysis && jsonIdentity > analysis);
   assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity);
   assert.ok(tempCreate >= 0 && fsync > tempCreate);
-  assert.ok(tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(tempIdentity > fsync);
+  assert.ok(destinationGuard > tempIdentity && destinationIdentity > destinationGuard);
+  assert.ok(rename > destinationIdentity, "atomic rename must occur only after destination identity revalidation");
   assert.ok(postflight > rename);
   assert.match(entry, /ODDS_PAYOUT_GAP_MD_PREEXISTING_IDENTITY_INVALID/);
   assert.match(entry, /ODDS_PAYOUT_GAP_JSON_PREEXISTING_IDENTITY_INVALID/);
   assert.match(entry, /ODDS_PAYOUT_GAP_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(entry, /ODDS_PAYOUT_GAP_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(entry, /ODDS_PAYOUT_GAP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entry, /ODDS_PAYOUT_GAP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
 
 test("odds-payout-gap raw compatibility module cannot bypass canonical preflight", () => {
