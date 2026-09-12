@@ -40,3 +40,47 @@ test("exacta closing odds reports use exclusive fsynced verified temp files and 
   assert.match(source, /atomicPublishReport\(\s*OUT_JSON,/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_(?:MD|JSON),/u);
 });
+
+test("exacta closing odds official cache verifies reads and publishes fetched bytes atomically", () => {
+  const source = readFileSync("scripts/audit-exacta-closing-odds-availability.ts", "utf8");
+
+  const cacheReadGuard = source.indexOf("if (existsSync(cp))");
+  const cacheReadIdentity = source.indexOf(
+    '"EXACTA_CLOSING_ODDS_AUDIT_CACHE_READ_IDENTITY_INVALID"',
+    cacheReadGuard,
+  );
+  const cacheRead = source.indexOf('readFileSync(verifiedCachePath, "utf-8")', cacheReadIdentity);
+  assert.ok(
+    cacheReadGuard >= 0 && cacheReadIdentity > cacheReadGuard && cacheRead > cacheReadIdentity,
+    "pre-existing official cache must be identity-checked before read",
+  );
+
+  const cacheTempIdentity = source.indexOf(
+    '"EXACTA_CLOSING_ODDS_AUDIT_CACHE_TEMP_IDENTITY_INVALID"',
+  );
+  const cacheDestinationGuard = source.indexOf("if (existsSync(path))", cacheTempIdentity);
+  const cacheDestinationIdentity = source.indexOf(
+    '"EXACTA_CLOSING_ODDS_AUDIT_CACHE_DESTINATION_IDENTITY_INVALID"',
+    cacheDestinationGuard,
+  );
+  const cacheExistingRead = source.indexOf(
+    'readFileSync(verifiedExistingPath, "utf-8")',
+    cacheDestinationIdentity,
+  );
+  const cacheRename = source.indexOf(
+    "renameSync(verifiedTempPath, path)",
+    cacheDestinationIdentity,
+  );
+  assert.ok(
+    cacheTempIdentity >= 0 &&
+      cacheDestinationGuard > cacheTempIdentity &&
+      cacheDestinationIdentity > cacheDestinationGuard &&
+      cacheExistingRead > cacheDestinationIdentity &&
+      cacheRename > cacheExistingRead,
+    "fetched cache temp must be verified and any concurrently existing destination preserved before atomic install",
+  );
+
+  assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(source, /publishOfficialCache\(cp, html\)/u);
+  assert.doesNotMatch(source, /writeFileSync\(cp, html/u);
+});
