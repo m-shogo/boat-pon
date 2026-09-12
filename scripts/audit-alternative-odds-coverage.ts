@@ -44,7 +44,12 @@ function run(script: string, env = process.env): number {
   return result.status ?? 1;
 }
 
-function atomicPublish(path: string, content: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -53,7 +58,10 @@ function atomicPublish(path: string, content: string, errorCode: string): void {
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -114,11 +122,13 @@ try {
     OUT_MD,
     markdown,
     "ALT_ODDS_COVERAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ALT_ODDS_COVERAGE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_JSON,
     json,
     "ALT_ODDS_COVERAGE_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ALT_ODDS_COVERAGE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 } finally {
   rmSync(workspace, { recursive: true, force: true });
