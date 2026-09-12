@@ -18,14 +18,18 @@ test("condB raw compatibility path cannot bypass canonical payout preflight", ()
   assert.ok(guard >= 0 && canonicalImport > guard);
 });
 
-test("condB canonical entrypoint enters internal only after payout preflight and DB handoff revalidation", () => {
+test("condB canonical entrypoint enters isolated internal only after payout preflight and DB launch revalidation", () => {
   const audit = entrypoint.indexOf("audit-condb-switch-historical-payout-completeness.ts");
   const handoff = entrypoint.indexOf("CONDB_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID");
-  const internalImport = entrypoint.indexOf('await import("./analyze-condb-switch-historical-closing-odds-internal")');
+  const launchIdentity = entrypoint.indexOf("CONDB_SWITCH_HISTORICAL_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const internalLaunch = entrypoint.indexOf("const analysis = spawnSync");
   assert.ok(audit >= 0);
   assert.ok(handoff > audit);
-  assert.ok(internalImport > handoff);
+  assert.ok(launchIdentity > handoff);
+  assert.ok(internalLaunch > launchIdentity);
+  assert.match(entrypoint, /cwd: workspace/);
   assert.doesNotMatch(entrypoint, /analyze-condb-switch-historical-closing-odds-raw/);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/analyze-condb-switch-historical-closing-odds-internal"\)/);
 });
 
 test("condB internal analyzer revalidates the DB and remains query-only", () => {
