@@ -31,12 +31,15 @@ test("point-in-time leak impact validates existing reports and publishes atomica
 
   const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = source.indexOf("fsyncSync(fd)", create);
-  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
-  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+  const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode)", fsync);
+  const destinationIdentity = source.indexOf("verifyExistingOutput(path, destinationIdentityErrorCode)", tempIdentity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity);
 
   assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_PREEXISTING_JSON_IDENTITY_INVALID/);
   assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_PREEXISTING_MD_IDENTITY_INVALID/);
   assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });

@@ -202,6 +202,7 @@ atomicPublish(
   OUT_JSON,
   `${JSON.stringify(summary, null, 2)}\n`,
   "POINT_IN_TIME_LEAK_IMPACT_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "POINT_IN_TIME_LEAK_IMPACT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 
 const md = renderMarkdown(summary);
@@ -209,6 +210,7 @@ atomicPublish(
   OUT_MD,
   md,
   "POINT_IN_TIME_LEAK_IMPACT_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "POINT_IN_TIME_LEAK_IMPACT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 
 console.log(`[report-point-in-time-leak-impact] rows=${rows.length} buyChanged=${buySkipCount} skipToBuy=${skipBuyCount}`);
@@ -221,7 +223,12 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -230,7 +237,8 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    verifyExistingOutput(path, destinationIdentityErrorCode);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
