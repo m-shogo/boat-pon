@@ -26,3 +26,15 @@ test("track mood ROI fails closed on incomplete or ambiguous official payouts", 
   assert.match(source, /map\(requiredPayout\)/);
   assert.doesNotMatch(source, /payout_yen\?\?0/);
 });
+
+test("track mood reports publish through exclusive fsynced identity-verified temp files", () => {
+  const source = readFileSync("scripts/analyze-track-mood-market.ts", "utf8");
+
+  assert.match(source, /openSync\(tempPath,"wx",0o600\)/);
+  assert.match(source, /fsyncSync\(fd\)/);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,errorCode\)/);
+  assert.match(source, /renameSync\(verifiedTempPath,path\)/);
+  assert.match(source, /atomicPublish\(JSON_REPORT_PATH/);
+  assert.match(source, /atomicPublish\(MARKDOWN_REPORT_PATH/);
+  assert.doesNotMatch(source, /writeFileSync\("reports\/track-mood-market-screen\.(?:json|md)"/);
+});

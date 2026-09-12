@@ -1,5 +1,6 @@
 /** 同会場・同日の直前までの結果から「今日の水面傾向」を再構成し、exacta買い目残差を調べるread-only研究。 */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
@@ -23,6 +24,8 @@ const moods=[
   ["after_flying","当日すでにF発生レースあり"],
 ] as const;
 
+const JSON_REPORT_PATH="reports/track-mood-market-screen.json";
+const MARKDOWN_REPORT_PATH="reports/track-mood-market-screen.md";
 const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite","RESEARCH_DB_IDENTITY_INVALID");
 const db=new DatabaseSync(dbPath,{readOnly:true});db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 try{
@@ -55,11 +58,14 @@ try{
   const eligible=cells.filter(c=>c.inside.discovery.n>=30&&c.inside.forward.n>=30);const stable=eligible.filter(c=>c.inside.discovery.edgePp>0&&c.inside.forward.edgePp>0).sort((a,b)=>Math.min(b.inside.discovery.edgePp,b.inside.forward.edgePp)-Math.min(a.inside.discovery.edgePp,a.inside.forward.edgePp));const robust=stable.filter(c=>c.inside.discovery.max2HitExclRoi>=1&&c.inside.forward.max2HitExclRoi>=1);
   const negative=eligible.filter(c=>c.inside.discovery.edgePp<0&&c.inside.forward.edgePp<0).sort((a,b)=>Math.max(a.inside.discovery.edgePp,a.inside.forward.edgePp)-Math.max(b.inside.discovery.edgePp,b.inside.forward.edgePp));
   const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,priorVenueDayOnly:true,productionConnected:false},coverage:{races:new Set(evaluations.map(r=>r.race_id)).size},family:{moods:moods.length,selections:selections.length,cells:cells.length,eligible:eligible.length},stable,robust,negative,caveats:["現在レースより前の同会場当日結果だけを反映","水面傾向は選手構成・番組構成・天候変化も含むproxy","3連単5000円は荒れ度の便宜的閾値","55セル探索後の順位で独立検証ではない"]};
-  mkdirSync("reports",{recursive:true});writeFileSync("reports/track-mood-market-screen.json",`${JSON.stringify(report,null,2)}\n`);
+  mkdirSync("reports",{recursive:true});
   const lines=["# 当日の水面ムード×exacta市場残差","","> 直前までのコース成績・ST・荒配当・Fだけを使用。『今日は荒れる』を結果後に決めない。","",`探索族: ${moods.length}水面proxy×${selections.length}買い目=${cells.length}セル（両期n≥30: ${eligible.length}）`,"","## 両期で市場残差プラス","","| 順位 | 水面proxy | 買い目 | 2024 n / edge / ROI / max2 | 2025 n / edge / ROI / max2 |","|---:|---|---:|---:|---:|",...stable.map((c,i)=>`| ${i+1} | ${c.label} | ${c.selection} | ${cell(c.inside.discovery)} | ${cell(c.inside.forward)} |`),"","最大2的中除外まで両期100%以上:","",robust.length?robust.map(c=>`- ${c.label} × ${c.selection}`).join("\n"):"該当なし。","","## 両期で市場残差マイナス","","| 水面proxy | 買い目 | 2024 n / edge / ROI | 2025 n / edge / ROI |","|---|---:|---:|---:|",...negative.map(c=>`| ${c.label} | ${c.selection} | ${short(c.inside.discovery)} | ${short(c.inside.forward)} |`),"","## 判定規則","","- 直前の外枠勝ちを見て次も外枠と短絡しない。正規化市場確率が既に織り込んだ後の残差を見る。","- 頑健セルがあっても、天候・会場・レース番号を揃えたfuture-only T-5検証まで採用しない。"];
-  writeFileSync("reports/track-mood-market-screen.md",`${lines.join("\n")}\n`);console.log(`track mood market: races=${report.coverage.races} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
+  atomicPublish(JSON_REPORT_PATH,`${JSON.stringify(report,null,2)}\n`,"TRACK_MOOD_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(MARKDOWN_REPORT_PATH,`${lines.join("\n")}\n`,"TRACK_MOOD_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");
+  console.log(`track mood market: races=${report.coverage.races} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 }finally{db.close();}
 
+function atomicPublish(path:string,contents:string,errorCode:string):void{const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;let fd:number|null=null;try{fd=openSync(tempPath,"wx",0o600);writeFileSync(fd,contents,"utf8");fsyncSync(fd);closeSync(fd);fd=null;const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,errorCode);renameSync(verifiedTempPath,path);}finally{if(fd!==null)closeSync(fd);rmSync(tempPath,{force:true});}}
 function assertPayoutCompleteness(byRace:Map<string,OddsRow[]>):void{const counts={discovery:{total:0,settled:0,ambiguous:0},forward:{total:0,settled:0,ambiguous:0}};for(const race of byRace.values()){const row=race[0];if(!row)continue;const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.payout_rows===1&&row.valid_rows===1&&row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;if(row.payout_rows>1)counts[period].ambiguous+=1;}const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total||counts.discovery.ambiguous!==0||counts.forward.ambiguous!==0;if(invalid)throw new Error(`TRACK_MOOD_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`);}
 function requiredPayout(row:EvalRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`TRACK_MOOD_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function emptyState():TrackState{return{races:0,oneWins:0,outerWins:0,course4Top2:0,course4FinishSum:0,course4FinishN:0,course1StSum:0,course1StN:0,course4StSum:0,course4StN:0,lastWinners:[],highPayouts:0,flyingRaces:0};}
