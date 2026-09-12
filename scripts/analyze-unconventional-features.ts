@@ -2,12 +2,23 @@
  * 人・移動・F・イベントなどをpoint-in-time順でscreenするread-only分析。
  * 的中率の仮説生成専用。市場差・利益edge・BUY条件とは扱わない。
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { staticUnconventionalFlags, type UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
+const JSON_REPORT_PATH = "reports/unconventional-feature-screen.json";
+const MARKDOWN_REPORT_PATH = "reports/unconventional-feature-screen.md";
 const primaryDbPath = assertCanonicalSingleLinkRegularFile(
   resolve("data/boat.sqlite"),
   "UNCONVENTIONAL_FEATURE_PRIMARY_DB_IDENTITY_INVALID",
@@ -19,6 +30,23 @@ type RaceRow = { race_id: string; date: string; venue: string; race_no: number; 
 type Stat = { n: number; hits: number };
 type RacerState = { date: string; venue: string; won: boolean };
 type PairState = { meetings: number; lastWinner: string | null; wins: Map<string, number> };
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 try {
   const races = db.prepare(`
@@ -120,7 +148,6 @@ try {
     ],
   };
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/unconventional-feature-screen.json", `${JSON.stringify(report, null, 2)}\n`);
   const md = [
     "# 変わった角度のpoint-in-time feature screen", "",
     "> 1号艇1着率の仮説生成専用。利益edge・BUY条件ではない。2024→2025で同方向、両年n≥200、lift絶対値≥2ptだけを安定候補とする。", "",
@@ -133,7 +160,16 @@ try {
     ...conditionalHold.map(row => `| ${row.feature} | ${row.train.n} / ${pp(row.trainLift)} | ${row.forward.n} / ${pp(row.forwardLift)} | ${row.learning} | ${row.retryWhen} |`),
     "", "ここで否定したのは特徴単独の1号艇勝率上昇だけで、利益edgeではない。勝率低下も市場が過小評価していれば逆方向のedgeになり得る。仮説を削除せず、定義・期間・標本数・方向・保留理由を残し、T-5市場残差、買い目別相互作用、独立期間で検証する。", "",
   ].join("\n");
-  writeFileSync("reports/unconventional-feature-screen.md", md);
+  atomicPublish(
+    JSON_REPORT_PATH,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "UNCONVENTIONAL_FEATURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    MARKDOWN_REPORT_PATH,
+    md,
+    "UNCONVENTIONAL_FEATURE_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
   console.log(`races=${races.length} / stable=${stable.length}`);
   for (const row of stable) console.log(`${row.feature}: 2024 ${pp(row.trainLift)} n=${row.train.n} / 2025 ${pp(row.forwardLift)} n=${row.forward.n}`);
 } finally { db.close(); }
