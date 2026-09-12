@@ -42,8 +42,9 @@ test("one-four canonical entrypoint isolates legacy writes and atomically publis
   const jsonRead = entrypoint.indexOf('readFileSync(workspaceJson, "utf8")', jsonWorkspaceIdentity);
   const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const outputMissing = entrypoint.indexOf("ONE_FOUR_STRUCTURE_OUTPUT_MISSING", internalRun);
   const mdPostflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_OUTPUT_IDENTITY_INVALID", outputMissing);
   const jsonPostflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_OUTPUT_IDENTITY_INVALID", outputMissing);
@@ -54,13 +55,19 @@ test("one-four canonical entrypoint isolates legacy writes and atomically publis
   assert.ok(mdWorkspaceIdentity > internalRun && jsonWorkspaceIdentity > internalRun, "workspace outputs must be verified before reads");
   assert.ok(mdRead > mdWorkspaceIdentity && jsonRead > jsonWorkspaceIdentity, "workspace outputs must be read only after verification");
   assert.ok(tempCreate >= 0 && fsync > tempCreate, "publication must use exclusive temp creation and fsync");
-  assert.ok(tempIdentity > fsync && rename > tempIdentity, "temp identity verification must precede atomic rename");
+  assert.ok(
+    tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity,
+    "temp identity and destination revalidation must precede atomic rename",
+  );
   assert.ok(outputMissing > internalRun, "successful internal execution must still prove final outputs exist");
   assert.ok(mdPostflight > outputMissing && jsonPostflight > outputMissing, "published outputs must be canonical single-link files before success");
   assert.match(entrypoint, /cwd: workspace/);
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_INTERNAL_FAILED/);
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(entrypoint, /ONE_FOUR_STRUCTURE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(entrypoint, /ONE_FOUR_STRUCTURE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entrypoint, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/s);
 });
 
 test("one-four guarded raw compatibility module cannot bypass canonical payout audit", () => {
