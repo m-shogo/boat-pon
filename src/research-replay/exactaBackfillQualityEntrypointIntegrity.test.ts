@@ -52,8 +52,13 @@ test("exacta backfill quality verifies isolated outputs, redacts DB provenance, 
   const redaction = entrypoint.indexOf('.split(launchDbPath).join("verified read-only research DB")', mdRead);
   const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationGuard = entrypoint.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entrypoint.indexOf(
+    "assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)",
+    destinationGuard,
+  );
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const mdPublish = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
   const jsonPublish = entrypoint.indexOf("EXACTA_BACKFILL_QUALITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
 
@@ -61,8 +66,16 @@ test("exacta backfill quality verifies isolated outputs, redacts DB provenance, 
   assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity, "outputs must not be read before identity verification");
   assert.ok(redaction > mdRead, "private DB provenance must be redacted before publication");
   assert.ok(tempCreate >= 0 && fsync > tempCreate, "publication temp must be exclusively created and fsynced");
-  assert.ok(tempIdentity > fsync && rename > tempIdentity, "only verified single-link temps may replace final reports");
+  assert.ok(
+    tempIdentity > fsync &&
+      destinationGuard > tempIdentity &&
+      destinationIdentity > destinationGuard &&
+      rename > destinationIdentity,
+    "verified temp and any existing destination must be identity-checked before atomic replacement",
+  );
   assert.ok(mdPublish > mdRead && jsonPublish > jsonRead, "both reports must publish through the atomic writer");
+  assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_MD_OUTPUT_MISSING/u);
   assert.match(entrypoint, /EXACTA_BACKFILL_QUALITY_JSON_OUTPUT_MISSING/u);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
