@@ -21,17 +21,19 @@ test("paper-forward monitor sanitizes private DB provenance after internal repor
   assert.match(entrypointSource, /PAPER_FORWARD_MONITOR_DB_PROVENANCE_UNEXPECTED/);
 });
 
-test("paper-forward monitor verifies generated report identity before provenance read and publishes sanitized output atomically", () => {
+test("paper-forward monitor verifies generated report identity before provenance read and reverifies sanitized destination before atomic publication", () => {
   const firstIdentity = entrypointSource.indexOf('"PAPER_FORWARD_MONITOR_REPORT_IDENTITY_INVALID"');
   const read = entrypointSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
   const handoffIdentity = entrypointSource.indexOf('"PAPER_FORWARD_MONITOR_REPORT_HANDOFF_IDENTITY_INVALID"');
   const atomicPublish = entrypointSource.indexOf("atomicPublishSanitizedReport(handoffReportPath, sanitized)");
+  const tempIdentity = entrypointSource.indexOf('"PAPER_FORWARD_MONITOR_SANITIZED_TEMP_IDENTITY_INVALID"');
+  const destinationIdentity = entrypointSource.indexOf('"PAPER_FORWARD_MONITOR_SANITIZED_DESTINATION_IDENTITY_INVALID"', tempIdentity);
+  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
 
   assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && atomicPublish > handoffIdentity);
   assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(entrypointSource, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(entrypointSource, /fsyncSync\(fd\)/u);
-  assert.match(entrypointSource, /PAPER_FORWARD_MONITOR_SANITIZED_TEMP_IDENTITY_INVALID/u);
-  assert.match(entrypointSource, /renameSync\(verifiedTempPath, path\)/u);
+  assert.ok(tempIdentity >= 0 && destinationIdentity > tempIdentity && rename > destinationIdentity);
   assert.doesNotMatch(entrypointSource, /writeFileSync\(handoffReportPath/u);
 });
