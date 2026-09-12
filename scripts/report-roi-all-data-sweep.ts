@@ -72,7 +72,12 @@ const lines = [
   "現時点で、選手などのデータを追加しても本番BUYを黒字化できると検証済みの条件はない。最有力の次段階は、風向を会場ごとの向かい風/追い風へ正規化し、4号艇相対能力との組合せを事前固定してT-5 paper-forwardで検証すること。ただし本番判定・自動購入へは接続しない。",
 ];
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -81,7 +86,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -90,6 +98,16 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
 }
 
 mkdirSync(REPORT_DIR, { recursive: true });
-atomicPublish(OUT_MD, `${lines.join("\n")}\n`, "ROI_ALL_DATA_SWEEP_MD_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_JSON, JSON.stringify({ generatedAt: now, sources: sourceMeta, verdict: "no_production_candidate", next: "wind-direction-normalization-and-T5-paper-forward" }, null, 2) + "\n", "ROI_ALL_DATA_SWEEP_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(
+  OUT_MD,
+  `${lines.join("\n")}\n`,
+  "ROI_ALL_DATA_SWEEP_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_ALL_DATA_SWEEP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_JSON,
+  JSON.stringify({ generatedAt: now, sources: sourceMeta, verdict: "no_production_candidate", next: "wind-direction-normalization-and-T5-paper-forward" }, null, 2) + "\n",
+  "ROI_ALL_DATA_SWEEP_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_ALL_DATA_SWEEP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log(`[all-data-sweep] 完了 → ${OUT_MD}`);
