@@ -3,7 +3,8 @@
  * モデルは市場温度較正と買い目別残差の縮約だけ。外部特徴量は使わない。
  * 読み取り専用。本番判定・DB・app_settingsは変更しない。
  */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { evaluateProbabilityModel, fitSelectionResidual, fitTemperature, marketModel, selectionResidualModel, temperatureModel, type ResidualRace } from "../src/domain/t5ResidualModel";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
@@ -40,6 +41,27 @@ const gate={minimumForward:300,targetForward:1000,checks:{sample:forward.length>
 const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,dbWrites:false,productionChanged:false,pointInTime:"T-5 market only"},window:{from:FROM,to:TO,boundary:BOUNDARY},coverage:{races:races.length,train:train.length,forward:forward.length},fit:{temperature:fittedTemperature.temperature,residual:{temperature:fittedResidual.temperature,priorStrength:fittedResidual.priorStrength}},metrics,venueLoo:venues,gate,caveats:["ハイパーパラメータは6月trainだけで選択","7月forwardを再学習・条件探索へ戻していない","外部特徴量なし。買い目残差は構造的偏りの最小仮説","n<1000のため最終改善判定はBLOCKED"]};
 const p=(v:number|null)=>v==null?"-":`${(v*100).toFixed(2)}%`,n=(v:number|null)=>v==null?"-":v.toFixed(4),d=(v:number|null)=>v==null?"-":`${v>=0?"+":""}${v.toFixed(4)}`;
 const lines=["# T-5市場残差 forward評価", "", `生成日時: ${report.generatedAt}`, "", "> 6月だけで学習し、7月は完全forward。単一captured_atの完全市場だけを使用。読み取り専用・本番未接続。", "", `- 完全市場: ${races.length} / train: ${train.length} / forward: ${forward.length}`, `- 選択パラメータ: temperature=${fittedResidual.temperature}, prior=${fittedResidual.priorStrength}`, "", "## 同一race_id比較", "", "| モデル | train logloss / Brier / ROI / exTop2 | forward logloss / Brier / ROI / exTop2 |", "|---|---:|---:|", ...metrics.map(x=>`| ${x.label} | ${n(x.train.logLoss)} / ${n(x.train.brier)} / ${p(x.train.payoutRoi)} / ${p(x.train.payoutRoiExTop2)} | ${n(x.forward.logLoss)} / ${n(x.forward.brier)} / ${p(x.forward.payoutRoi)} / ${p(x.forward.payoutRoiExTop2)} |`), "", "## 会場LOO", "", "| 会場 | forward n | logloss差(残差-市場) | Brier差 | 市場ROI | 残差ROI |", "|---|---:|---:|---:|---:|---:|", ...venues.map(v=>`| ${v.venue} | ${v.n} | ${d(v.logLossDelta)} | ${d(v.brierDelta)} | ${p(v.market.payoutRoi)} | ${p(v.candidate.payoutRoi)} |`), "", "## 昇格gate", "", ...Object.entries(gate.checks).map(([key,value])=>`- ${value?"✅":"❌"} ${key}`), `- 最終判定: **${gate.passed?"PASS":"BLOCKED"}**（forward ${forward.length}/${gate.targetForward}）`, "", "## 結論", "", "- logloss/Brierと実払戻ROIを同時に市場より改善し、会場LOOと1,000件gateを通るまで本番へ接続しない。", "- 現在の結果が不合格なら、買い目残差だけでは予測改善にならない。次の特徴量を追加する前にこの失敗を固定する。"];
-mkdirSync("reports",{recursive:true});writeFileSync(OUT_JSON,`${JSON.stringify(report,null,2)}\n`);writeFileSync(OUT_MD,`${lines.join("\n")}\n`);console.log(`[t5-residual-forward] wrote ${OUT_MD} / ${OUT_JSON}`);
+
+function atomicPublish(path:string,contents:string,tempErrorCode:string,destinationErrorCode:string){
+  const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd:number|null=null;
+  try{
+    fd=openSync(tempPath,"wx",0o600);
+    writeFileSync(fd,contents,"utf8");
+    fsyncSync(fd);
+    closeSync(fd);fd=null;
+    const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,tempErrorCode);
+    if(existsSync(path))assertCanonicalSingleLinkRegularFile(path,destinationErrorCode);
+    renameSync(verifiedTempPath,path);
+  }finally{
+    if(fd!==null)closeSync(fd);
+    rmSync(tempPath,{force:true});
+  }
+}
+
+mkdirSync("reports",{recursive:true});
+atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"T5_RESIDUAL_FORWARD_JSON_PUBLISH_TEMP_IDENTITY_INVALID","T5_RESIDUAL_FORWARD_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
+atomicPublish(OUT_MD,`${lines.join("\n")}\n`,"T5_RESIDUAL_FORWARD_MD_PUBLISH_TEMP_IDENTITY_INVALID","T5_RESIDUAL_FORWARD_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
+console.log(`[t5-residual-forward] wrote ${OUT_MD} / ${OUT_JSON}`);
 function addDays(date:string,delta:number){const d=new Date(`${date}T00:00:00+09:00`);d.setUTCDate(d.getUTCDate()+delta);return d.toLocaleDateString("en-CA",{timeZone:"Asia/Tokyo"});}
 function todayJst(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Tokyo"}).format(new Date());}
