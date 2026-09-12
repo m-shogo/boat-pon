@@ -91,7 +91,12 @@ function verifyExistingOutputPaths(): void {
   }
 }
 
-function atomicPublish(path: string, content: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -100,7 +105,10 @@ function atomicPublish(path: string, content: string, errorCode: string): void {
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -210,11 +218,13 @@ try {
       OUT_MD,
       outputs.markdown,
       "BET_TYPE_SELECTOR_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+      "BET_TYPE_SELECTOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
     );
     atomicPublish(
       OUT_JSON,
       outputs.json,
       "BET_TYPE_SELECTOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+      "BET_TYPE_SELECTOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
     );
   }
 } finally {
