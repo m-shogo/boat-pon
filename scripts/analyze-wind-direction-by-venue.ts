@@ -2,7 +2,8 @@
  * 会場×風向×4号艇相対能力の exacta 1-4 仮説を実払戻しで再分解する。
  * historical closing odds / 読み取り専用。T-5・本番BUY・自動購入には接続しない。
  */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
@@ -136,6 +137,32 @@ for (const c of candidateResults) md += `|${c.label}|${c.discovery.n} / ${c.disc
 md += `\n## 会場×風向セル（両期間n>=20）\n\n|会場|風向|2024 n / ROI / max2|2025 n / ROI / max2|\n|---|---|---:|---:|\n`;
 for (const c of cells.slice(0, 30)) md += `|${c.venue}|${c.direction}|${c.discovery.n} / ${c.discovery.roi}% / ${c.discovery.top2ExclRoi}%|${c.forward.n} / ${c.forward.roi}% / ${c.forward.top2ExclRoi}%|\n`;
 md += `\n## 判定\n\n会場×風向×能力の組合せで、両期間・最大2件除外・十分な標本を同時に満たす本番候補は未確定。最有力の南西風セルも、T-5 exacta市場がないため、次はexacta T-5保存の品質監査→paper-forwardへ進める。\n`;
-mkdirSync("reports", { recursive: true }); writeFileSync(OUT_MD, md, "utf8"); writeFileSync(OUT_JSON, JSON.stringify(report, null, 2) + "\n", "utf8");
+mkdirSync("reports", { recursive: true });
+verifyExistingOutput(OUT_MD, "WIND_DIRECTION_PREEXISTING_MD_IDENTITY_INVALID");
+verifyExistingOutput(OUT_JSON, "WIND_DIRECTION_PREEXISTING_JSON_IDENTITY_INVALID");
+atomicPublish(OUT_MD, md, "WIND_DIRECTION_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "WIND_DIRECTION_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log(`[wind-direction] rows=${rows.length} cells=${cells.length}`); for (const c of candidateResults) console.log(`${c.label}: discovery=${c.discovery.n}/${c.discovery.roi}% test=${c.forward.n}/${c.forward.roi}%`);
 db.close();
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
