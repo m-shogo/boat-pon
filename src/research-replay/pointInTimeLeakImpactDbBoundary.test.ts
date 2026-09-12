@@ -21,3 +21,22 @@ test("point-in-time leak impact report fails closed without exposing configured 
   assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_PRIMARY_DB_MISSING/);
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
 });
+
+test("point-in-time leak impact validates existing reports and publishes atomically", () => {
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
+  const jsonPublish = source.indexOf("atomicPublish(\n  OUT_JSON");
+  const mdPublish = source.indexOf("atomicPublish(\n  OUT_MD");
+  assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
+
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = source.indexOf("fsyncSync(fd)", create);
+  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
+  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+
+  assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_PREEXISTING_JSON_IDENTITY_INVALID/);
+  assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_PREEXISTING_MD_IDENTITY_INVALID/);
+  assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /POINT_IN_TIME_LEAK_IMPACT_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+});
