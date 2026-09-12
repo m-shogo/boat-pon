@@ -5,6 +5,7 @@
 import { randomUUID } from "node:crypto";
 import {
   closeSync,
+  existsSync,
   fsyncSync,
   mkdirSync,
   openSync,
@@ -77,7 +78,12 @@ const dbPath = assertCanonicalSingleLinkRegularFile(
 const db = new DatabaseSync(dbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -86,7 +92,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -315,11 +324,13 @@ WHERE exhibition_time IS NOT NULL
     JSON_REPORT_PATH,
     `${JSON.stringify(report, null, 2)}\n`,
     "ABILITY_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ABILITY_MARKET_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     MARKDOWN_REPORT_PATH,
     `${lines.join("\n")}\n`,
     "ABILITY_MARKET_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ABILITY_MARKET_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   console.log(`ability-market validation: races=${evaluatedRaces} candidates=${candidates.length} discovery=${discoveryPassed.length} validation=${validationPassed.length} robust=${robust.length}`);
 } finally {
