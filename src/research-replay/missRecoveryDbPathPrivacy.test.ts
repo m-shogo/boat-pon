@@ -33,18 +33,34 @@ test("miss recovery wrapper redacts private database provenance after canonical 
   assert.ok(redact > analysis, "private DB provenance must be sanitized only after canonical analysis completes");
   assert.match(source, /const OPAQUE_DB_SOURCE = "primary research database"/u);
   assert.match(source, /const privateMarker = `DB: \$\{dbPath\}`/u);
-  assert.match(source, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
+  assert.match(source, /const redacted = report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
   assert.match(source, /MISS_RECOVERY_REPORT_MISSING_AFTER_ANALYSIS/u);
   assert.match(source, /MISS_RECOVERY_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
+  assert.match(source, /MISS_RECOVERY_PRIVATE_DB_PATH_REMAINS/u);
 });
 
-test("miss recovery wrapper verifies generated report identity before provenance read and again before write", () => {
+test("miss recovery wrapper verifies report identity and publishes provenance atomically", () => {
   const firstIdentity = source.indexOf('"MISS_RECOVERY_REPORT_IDENTITY_INVALID"');
   const read = source.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const privatePathCheck = source.indexOf("MISS_RECOVERY_PRIVATE_DB_PATH_REMAINS");
   const handoffIdentity = source.indexOf('"MISS_RECOVERY_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = source.indexOf("writeFileSync(\n    handoffReportPath");
+  const publishCall = source.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
+  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx")');
+  const fsync = source.indexOf("fsyncSync(fd)");
+  const tempIdentity = source.indexOf('"MISS_RECOVERY_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = source.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && privatePathCheck > read
+      && handoffIdentity > privatePathCheck
+      && publishCall > handoffIdentity,
+  );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.match(source, /writeFileSync\(fd, content, "utf8"\)/u);
+  assert.match(source, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
+  assert.doesNotMatch(source, /writeFileSync\(\s*handoffReportPath/u);
 });
