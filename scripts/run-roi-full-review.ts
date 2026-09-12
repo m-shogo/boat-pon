@@ -114,11 +114,13 @@ atomicPublish(
   OUT_JSON,
   `${JSON.stringify(report, null, 2)}\n`,
   "ROI_FULL_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_FULL_REVIEW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 atomicPublish(
   OUT_MD,
   renderMd(report),
   "ROI_FULL_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_FULL_REVIEW_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 console.log(`[roi-full-review] finalDecision=${finalDecision}`);
 console.log(`[roi-full-review] wrote ${OUT_MD}`);
@@ -235,7 +237,12 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -244,7 +251,10 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
