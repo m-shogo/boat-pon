@@ -52,7 +52,7 @@ function assertGeneratedOutputIdentity(path: string, missingCode: string, invali
   return assertCanonicalSingleLinkRegularFile(path, invalidCode);
 }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(path: string, contents: string, errorCode: string, destinationErrorCode: string): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -63,6 +63,7 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fd = null;
 
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    assertExistingOutputIdentity(path, destinationErrorCode);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -120,11 +121,13 @@ try {
     OUT_MD,
     markdown,
     "ROI_EDGE_MARKET_GAP_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_EDGE_MARKET_GAP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_JSON,
     json,
     "ROI_EDGE_MARKET_GAP_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_EDGE_MARKET_GAP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 
   if (!existsSync(OUT_MD) || !existsSync(OUT_JSON)) {
