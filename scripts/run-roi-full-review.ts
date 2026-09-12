@@ -1,5 +1,17 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/roi-full-review.md";
 const OUT_JSON = "reports/roi-full-review.json";
@@ -50,9 +62,18 @@ for (const [bin, args] of commands) {
   }
 }
 
-const allFeature = readOptional<GenericReport>("reports/roi-all-feature-search.json");
-const autopilot = readOptional<GenericReport>("reports/roi-autopilot-decision.json");
-const matrix = readOptional<GenericReport>("reports/roi-search-matrix.json");
+const allFeature = readOptional<GenericReport>(
+  "reports/roi-all-feature-search.json",
+  "ROI_FULL_REVIEW_ALL_FEATURE_IDENTITY_INVALID",
+);
+const autopilot = readOptional<GenericReport>(
+  "reports/roi-autopilot-decision.json",
+  "ROI_FULL_REVIEW_AUTOPILOT_IDENTITY_INVALID",
+);
+const matrix = readOptional<GenericReport>(
+  "reports/roi-search-matrix.json",
+  "ROI_FULL_REVIEW_MATRIX_IDENTITY_INVALID",
+);
 assertOfficialPayoutReport(allFeature);
 
 const baseline = allFeature?.baseline ?? autopilot?.baseline ?? matrix?.baseline ?? {};
@@ -87,14 +108,27 @@ const report = {
 };
 
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, renderMd(report));
+verifyExistingOutput(OUT_JSON, "ROI_FULL_REVIEW_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "ROI_FULL_REVIEW_PREEXISTING_MD_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "ROI_FULL_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  renderMd(report),
+  "ROI_FULL_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 console.log(`[roi-full-review] finalDecision=${finalDecision}`);
 console.log(`[roi-full-review] wrote ${OUT_MD}`);
 console.log(`[roi-full-review] wrote ${OUT_JSON}`);
 
 function assertRealizedPayoutMetricBasis() {
-  const source = readFileSync(ALL_FEATURE_SOURCE, "utf8");
+  const source = readRequiredText(
+    ALL_FEATURE_SOURCE,
+    "ROI_FULL_REVIEW_ALL_FEATURE_SOURCE_IDENTITY_INVALID",
+  );
   const usesQuoteReturn = source.includes("hitOdds.reduce((s, o) => s + o * STAKE_YEN, 0)");
   const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
   const declaresOfficialPayoutBasis = source.includes('metricBasis: "official_payout_yen"');
@@ -184,9 +218,38 @@ function table(items: EvalLike[]) {
   return `| judgement | label | removedN | removedROI | remainingN | remainingROI | improvement | train | validation | test | warnings |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|\n${items.slice(0, 30).map((x) => `| ${x.judgement ?? "-"} | ${md(x.label ?? "-")} | ${x.removed?.n ?? 0} | ${pct(Number(x.removed?.roi ?? 0))} | ${x.remaining?.n ?? 0} | ${pct(Number(x.remaining?.roi ?? 0))} | ${pct(Number(x.improvement ?? 0))} | ${pct(Number(x.trainRoi ?? 0))} | ${pct(Number(x.validationRoi ?? 0))} | ${pct(Number(x.testRoi ?? 0))} | ${md((x.warnings ?? []).join(", ") || "-")} |`).join("\n")}`;
 }
 
-function readOptional<T>(path: string): T | null {
+function readRequiredText(path: string, identityErrorCode: string): string {
+  if (!existsSync(path)) throw new Error("ROI_FULL_REVIEW_REQUIRED_SOURCE_MISSING");
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+  return readFileSync(verifiedPath, "utf8");
+}
+
+function readOptional<T>(path: string, identityErrorCode: string): T | null {
   if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+}
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function pct(value: number) { return `${(value * 100).toFixed(2)}%`; }
