@@ -3,7 +3,8 @@
  * 当時の番組情報と展示タイムだけを使用し、ST・着順・決まり手・将来統計は特徴量にしない。
  * 読み取り専用。本番判定・DB・app_settingsは変更しない。
  */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { validateHistoricalRankingPayoutIdentityRows } from "../src/research-replay/historicalRankingPayoutIdentity";
 import { validateHistoricalRankingResultIdentityRows } from "../src/research-replay/historicalRankingResultIdentity";
@@ -269,25 +270,73 @@ const lines = [
   "- gate不通過なら特徴量を追加せず、この最小仮説を棄却する。",
 ];
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, `${lines.join("\n")}\n`);
+verifyExistingOutput(OUT_JSON, "HISTORICAL_RANKING_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "HISTORICAL_RANKING_PREEXISTING_MD_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MODEL, "HISTORICAL_RANKING_PREEXISTING_MODEL_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "HISTORICAL_RANKING_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "HISTORICAL_RANKING_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  `${lines.join("\n")}\n`,
+  "HISTORICAL_RANKING_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "HISTORICAL_RANKING_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 const selectedModel = models.find((model) => model.featureSet.id === "program-exhibition");
 if (!selectedModel) throw new Error("program-exhibition model was not trained");
-writeFileSync(OUT_MODEL, `${JSON.stringify({
-  generatedAt: report.generatedAt,
-  modelId: selectedModel.featureSet.id,
-  trainedOn: report.contract.train,
-  featurePolicy: report.contract.featurePolicy,
-  featureNames: [
-    "course_1", "course_2", "course_3", "course_4", "course_5", "course_6",
-    "class_score", "national_win_rate_10", "national_top2_rate_100",
-    "local_win_rate_10", "local_top2_rate_100", "motor_top2_rate_100",
-    "boat_top2_rate_100", "exhibition_rank_score",
-  ],
-  fit: report.fit,
-  weights: selectedModel.weights,
-}, null, 2)}\n`);
+atomicPublish(
+  OUT_MODEL,
+  `${JSON.stringify({
+    generatedAt: report.generatedAt,
+    modelId: selectedModel.featureSet.id,
+    trainedOn: report.contract.train,
+    featurePolicy: report.contract.featurePolicy,
+    featureNames: [
+      "course_1", "course_2", "course_3", "course_4", "course_5", "course_6",
+      "class_score", "national_win_rate_10", "national_top2_rate_100",
+      "local_win_rate_10", "local_top2_rate_100", "motor_top2_rate_100",
+      "boat_top2_rate_100", "exhibition_rank_score",
+    ],
+    fit: report.fit,
+    weights: selectedModel.weights,
+  }, null, 2)}\n`,
+  "HISTORICAL_RANKING_MODEL_PUBLISH_TEMP_IDENTITY_INVALID",
+  "HISTORICAL_RANKING_MODEL_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log(`[historical-ranking-forward] wrote ${OUT_MD} / ${OUT_JSON} / ${OUT_MODEL}`);
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 function trainModel(training: Race[], featureSet: FeatureSet): RankingModel {
   const weights = Array.from({ length: 3 }, () => Array(featureSet.dimensions).fill(0));
