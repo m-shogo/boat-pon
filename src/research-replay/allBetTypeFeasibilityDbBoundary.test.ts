@@ -26,32 +26,38 @@ test("all-bet-type feasibility persisted DB provenance is fail-closed and opaque
   assert.doesNotMatch(entry, /`DB not found: \$\{configuredDbPath\}`/);
 });
 
-test("all-bet-type feasibility verifies generated report identity before read and write", () => {
+test("all-bet-type feasibility verifies generated report identity and publishes sanitized reports atomically", () => {
   const internalImport = entry.indexOf('await import("./audit-all-bet-type-data-feasibility-internal")');
   const jsonIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_IDENTITY_INVALID");
   const markdownIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_IDENTITY_INVALID");
   const jsonReadIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_READ_IDENTITY_INVALID");
   const jsonRead = entry.indexOf('readFileSync(jsonReadPath, "utf8")');
   const jsonHandoffIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_HANDOFF_IDENTITY_INVALID");
-  const jsonWrite = entry.indexOf("writeFileSync(jsonHandoffPath, sanitizedJson)");
+  const jsonPublish = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
   const markdownReadIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_READ_IDENTITY_INVALID");
   const markdownRead = entry.indexOf('readFileSync(markdownReadPath, "utf8")');
   const markdownHandoffIdentity = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_HANDOFF_IDENTITY_INVALID");
-  const markdownWrite = entry.indexOf("writeFileSync(markdownHandoffPath, sanitizedMarkdown)");
+  const markdownPublish = entry.indexOf("ALL_BET_TYPE_FEASIBILITY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");
 
   assert.ok(jsonIdentity > internalImport);
   assert.ok(markdownIdentity > internalImport);
   assert.ok(jsonReadIdentity > markdownIdentity, "JSON identity must be reverified immediately before JSON read");
   assert.ok(jsonRead > jsonReadIdentity);
   assert.ok(jsonHandoffIdentity > jsonRead);
-  assert.ok(jsonWrite > jsonHandoffIdentity);
-  assert.ok(markdownReadIdentity > jsonWrite, "markdown identity must be reverified after JSON sanitization before markdown read");
+  assert.ok(jsonPublish > jsonHandoffIdentity);
+  assert.ok(markdownReadIdentity > jsonPublish, "markdown identity must be reverified after JSON sanitization before markdown read");
   assert.ok(markdownRead > markdownReadIdentity);
   assert.ok(markdownHandoffIdentity > markdownRead);
-  assert.ok(markdownWrite > markdownHandoffIdentity);
+  assert.ok(markdownPublish > markdownHandoffIdentity);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedJsonPath,\s*"ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_READ_IDENTITY_INVALID"/u);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*verifiedMarkdownPath,\s*"ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_READ_IDENTITY_INVALID"/u);
-  assert.doesNotMatch(entry, /readFileSync\(REPORT_(?:JSON|MD)/);
+  assert.match(entry, /openSync\(tempPath, "wx", 0o600\)/);
+  assert.match(entry, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
+  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(tempPath, errorCode\);\s*renameSync\(verifiedTempPath, path\);/u);
+  assert.match(entry, /atomicPublish\(\s*REPORT_JSON,\s*sanitizedJson,/u);
+  assert.match(entry, /atomicPublish\(\s*REPORT_MD,\s*sanitizedMarkdown,/u);
+  assert.doesNotMatch(entry, /writeFileSync\(jsonHandoffPath/);
+  assert.doesNotMatch(entry, /writeFileSync\(markdownHandoffPath/);
   assert.doesNotMatch(entry, /writeFileSync\(REPORT_(?:JSON|MD)/);
 });
 
