@@ -84,7 +84,6 @@ function buildAppendId(report: QualityReport, args: RuleCandidateAppendOptions):
   return createHash("sha256")
     .update(
       JSON.stringify({
-        generatedAt: report.generatedAt ?? null,
         from: report.from ?? null,
         to: report.to ?? null,
         summary: report.summary ?? null,
