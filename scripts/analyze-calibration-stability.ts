@@ -118,8 +118,18 @@ try {
   mkdirSync("reports",{recursive:true});
   verifyExistingOutput(OUT_JSON, "CALIBRATION_STABILITY_PREEXISTING_JSON_IDENTITY_INVALID");
   verifyExistingOutput(OUT_MD, "CALIBRATION_STABILITY_PREEXISTING_MD_IDENTITY_INVALID");
-  atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`, "CALIBRATION_STABILITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD,`${lines.join("\n")}\n`, "CALIBRATION_STABILITY_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_JSON,
+    `${JSON.stringify(report,null,2)}\n`,
+    "CALIBRATION_STABILITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "CALIBRATION_STABILITY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    `${lines.join("\n")}\n`,
+    "CALIBRATION_STABILITY_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "CALIBRATION_STABILITY_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
   console.log(`[calibration-stability] wrote ${OUT_MD} / ${OUT_JSON}`);
 } finally {
   db.close();
@@ -199,7 +209,12 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -208,7 +223,8 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    verifyExistingOutput(path, destinationIdentityErrorCode);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
