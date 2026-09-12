@@ -20,7 +20,17 @@
  *   reports/point-in-time-leak-impact.json
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -186,15 +196,47 @@ const summary = {
 };
 
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(summary, null, 2)}\n`);
+verifyExistingOutput(OUT_JSON, "POINT_IN_TIME_LEAK_IMPACT_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "POINT_IN_TIME_LEAK_IMPACT_PREEXISTING_MD_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(summary, null, 2)}\n`,
+  "POINT_IN_TIME_LEAK_IMPACT_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 
 const md = renderMarkdown(summary);
-writeFileSync(OUT_MD, md);
+atomicPublish(
+  OUT_MD,
+  md,
+  "POINT_IN_TIME_LEAK_IMPACT_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 
 console.log(`[report-point-in-time-leak-impact] rows=${rows.length} buyChanged=${buySkipCount} skipToBuy=${skipBuyCount}`);
 console.log(`[report-point-in-time-leak-impact] conclusion: ${summary.decisionImpact.conclusion}`);
 console.log(`[report-point-in-time-leak-impact] wrote ${OUT_MD}`);
 console.log(`[report-point-in-time-leak-impact] wrote ${OUT_JSON}`);
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 function renderMarkdown(s: typeof summary): string {
   const lines: string[] = [];
