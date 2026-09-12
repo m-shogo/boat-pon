@@ -23,7 +23,8 @@ test("bet type risk analysis redacts configured DB provenance only after success
   assert.match(entrypoint, /OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entrypoint, /BET_TYPE_RISK_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(entrypoint, /BET_TYPE_RISK_DB_PROVENANCE_NOT_FOUND/);
-  assert.match(entrypoint, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(entrypoint, /const redacted = report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(entrypoint, /BET_TYPE_RISK_PRIVATE_DB_PATH_REMAINS/);
   const analysis = entrypoint.indexOf('run("scripts/analyze-bet-type-risk-factors-internal.ts"');
   const successGate = entrypoint.indexOf("if (analysis !== 0)");
   const redact = entrypoint.lastIndexOf("redactDbProvenance(verifiedDbPath)");
@@ -31,15 +32,30 @@ test("bet type risk analysis redacts configured DB provenance only after success
   assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
 });
 
-test("bet type risk verifies generated report identity before redaction read and again before write", () => {
+test("bet type risk verifies report identity and publishes sanitized provenance atomically", () => {
   const firstIdentity = entrypoint.indexOf('"BET_TYPE_RISK_REPORT_IDENTITY_INVALID"');
   const read = entrypoint.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const privatePathCheck = entrypoint.indexOf("BET_TYPE_RISK_PRIVATE_DB_PATH_REMAINS");
   const handoffIdentity = entrypoint.indexOf('"BET_TYPE_RISK_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = entrypoint.indexOf("writeFileSync(handoffReportPath");
+  const publishCall = entrypoint.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
+  const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx")');
+  const fsync = entrypoint.indexOf("fsyncSync(fd)");
+  const tempIdentity = entrypoint.indexOf('"BET_TYPE_RISK_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = entrypoint.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && privatePathCheck > read
+      && handoffIdentity > privatePathCheck
+      && publishCall > handoffIdentity,
+  );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
+  assert.match(entrypoint, /writeFileSync\(fd, content, "utf8"\)/);
+  assert.match(entrypoint, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/);
+  assert.doesNotMatch(entrypoint, /writeFileSync\(handoffReportPath/);
 });
 
 test("bet type risk cohort is fixed to unique settled trifecta historical BUY rows", () => {
