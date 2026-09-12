@@ -1,5 +1,6 @@
 /** 開催文脈×1着1号艇のexacta 5買い目を横断し、1-4だけの後付け物語を崩すread-only screen。 */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import { EVENT_CONTEXT_CATEGORIES, eventContextFlags } from "../src/domain/eventContext";
@@ -15,6 +16,8 @@ type EvalRow = OddsRow & { period: "discovery" | "forward"; implied: number; hit
 type Metric = { n: number; hits: number; edgePp: number; roi: number; max2HitExclRoi: number };
 const selections = ["1-2", "1-3", "1-4", "1-5", "1-6"];
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_JSON = "reports/event-selection-matrix.json";
+const OUT_MD = "reports/event-selection-matrix.md";
 
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
@@ -54,13 +57,15 @@ try {
     family: { categories: EVENT_CONTEXT_CATEGORIES.length, selections: selections.length, cells: cells.length, eligibleCells: eligible.length }, stable, robust,
     caveats: ["安定セル順位も探索結果でありfamily-wise補正前", "1着1号艇の5買い目だけを比較", "historical closing oddsでT-5価格ではない"] };
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/event-selection-matrix.json", `${JSON.stringify(report, null, 2)}\n`);
   const lines = ["# イベント文脈×exacta買い目matrix", "", `探索族: ${EVENT_CONTEXT_CATEGORIES.length}カテゴリ × ${selections.length}買い目 = ${cells.length}セル（両期n≥30: ${eligible.length}）`, "",
     "## 両期で市場残差がプラスのセル", "", "| 順位 | 文脈 | 買い目 | 2024 n / edge / ROI / max2 | 2025 n / edge / ROI / max2 |", "|---:|---|---:|---:|---:|",
     ...stable.map((cell, index) => `| ${index + 1} | ${cell.categoryLabel} | ${cell.selection} | ${metricCell(cell.inside.discovery)} | ${metricCell(cell.inside.forward)} |`), "",
     "## 最大2的中除外まで両期100%以上", "", robust.length ? robust.map(cell => `- ${cell.categoryLabel} × ${cell.selection}`).join("\n") : "該当なし。", "",
     "> この順位は仮説生成用。55セルを見た後の順位であり、future-only T-5へ事前固定するまではedge認定しない。"];
-  writeFileSync("reports/event-selection-matrix.md", `${lines.join("\n")}\n`);
+  verifyExistingOutput(OUT_JSON, "EVENT_SELECTION_MATRIX_PREEXISTING_JSON_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "EVENT_SELECTION_MATRIX_PREEXISTING_MD_IDENTITY_INVALID");
+  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "EVENT_SELECTION_MATRIX_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(OUT_MD, `${lines.join("\n")}\n`, "EVENT_SELECTION_MATRIX_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   console.log(`event selection matrix: races=${raceIds.length} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 } finally { db.close(); }
 
@@ -119,7 +124,33 @@ function assertSettlementCompleteness(): void {
   }
 }
 
-function readEventTitle(raceId: string, date: string) { const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`; if(!existsSync(path))return ""; const $=load(readFileSync(path,"utf8")); return $(".rname a").first().text().replace(/\s+/g," ").trim(); }
+function readEventTitle(raceId: string, date: string) {
+  const path = `data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;
+  if (!existsSync(path)) return "";
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "EVENT_SELECTION_MATRIX_EVENT_TITLE_IDENTITY_INVALID");
+  const $ = load(readFileSync(verifiedPath, "utf8"));
+  return $(".rname a").first().text().replace(/\s+/g, " ").trim();
+}
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 function byPeriod(rows: EvalRow[]) { return { discovery: metric(rows.filter(row => row.period === "discovery")), forward: metric(rows.filter(row => row.period === "forward")) }; }
 function metric(rows: EvalRow[]): Metric { const payouts=rows.filter(row=>row.hit).map(row=>requiredPayout(row)).sort((a,b)=>b-a); const total=payouts.reduce((a,b)=>a+b,0); const expected=rows.reduce((sum,row)=>sum+row.implied,0); return {n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0}; }
 function requiredPayout(row: EvalRow): number { if(row.payout_yen===null || row.payout_yen<=0) throw new Error(`EVENT_SELECTION_MATRIX_HIT_PAYOUT_MISSING race=${row.race_id} selection=${row.combination}`); return row.payout_yen; }
