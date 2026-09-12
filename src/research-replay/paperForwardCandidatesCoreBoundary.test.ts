@@ -27,20 +27,14 @@ test("paper-forward core validates provenance before atomic redaction publicatio
   const read = core.indexOf('readFileSync(verifiedReportPath, "utf-8")');
   const provenanceCheck = core.indexOf("PAPER_FORWARD_CORE_DB_PROVENANCE_UNEXPECTED");
   const handoffIdentity = core.indexOf('"PAPER_FORWARD_CORE_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const publishCall = core.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
   const exclusiveOpen = core.indexOf('openSync(tempPath, "wx")');
   const fsync = core.indexOf("fsyncSync(fd)");
   const tempIdentity = core.indexOf('"PAPER_FORWARD_CORE_TEMP_REPORT_IDENTITY_INVALID"');
   const rename = core.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(
-    read >= 0
-      && provenanceCheck > read
-      && handoffIdentity > provenanceCheck
-      && exclusiveOpen > handoffIdentity
-      && fsync > exclusiveOpen
-      && tempIdentity > fsync
-      && rename > tempIdentity,
-  );
+  assert.ok(read >= 0 && provenanceCheck > read && handoffIdentity > provenanceCheck && publishCall > handoffIdentity);
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(core, /writeFileSync\(fd, content, "utf-8"\)/u);
   assert.match(core, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
   assert.doesNotMatch(core, /writeFileSync\(handoffReportPath/u);
@@ -74,6 +68,7 @@ test("paper-forward raw verifies report identity and publishes provenance redact
   const read = raw.indexOf('readFileSync(verifiedReportPath, "utf-8")');
   const provenanceCheck = raw.indexOf("PAPER_FORWARD_RAW_DB_PROVENANCE_UNEXPECTED");
   const handoffIdentity = raw.indexOf('"PAPER_FORWARD_RAW_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const publishCall = raw.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
   const exclusiveOpen = raw.indexOf('openSync(tempPath, "wx")');
   const fsync = raw.indexOf("fsyncSync(fd)");
   const tempIdentity = raw.indexOf('"PAPER_FORWARD_RAW_TEMP_REPORT_IDENTITY_INVALID"');
@@ -84,11 +79,9 @@ test("paper-forward raw verifies report identity and publishes provenance redact
       && read > firstIdentity
       && provenanceCheck > read
       && handoffIdentity > provenanceCheck
-      && exclusiveOpen > handoffIdentity
-      && fsync > exclusiveOpen
-      && tempIdentity > fsync
-      && rename > tempIdentity,
+      && publishCall > handoffIdentity,
   );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
   assert.match(raw, /writeFileSync\(fd, content, "utf-8"\)/u);
