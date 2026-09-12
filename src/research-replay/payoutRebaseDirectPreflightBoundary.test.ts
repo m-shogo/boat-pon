@@ -70,16 +70,19 @@ test("canonical payout-rebase verifies both isolated outputs before provenance s
   assert.match(entrypointSource, /json: json\.split\(dbPath\)\.join\(OPAQUE_DB_SOURCE\)/u);
 });
 
-test("canonical payout-rebase publishes JSON and Markdown through exclusive fsynced temporary files", () => {
+test("canonical payout-rebase publishes JSON and Markdown through reverified atomic replacements", () => {
   const create = entrypointSource.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypointSource.indexOf("fsyncSync(fd)", create);
-  const tempIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
+  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const jsonPublish = entrypointSource.lastIndexOf("PAYOUT_REBASE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  const jsonDestination = entrypointSource.lastIndexOf("PAYOUT_REBASE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
   const mdPublish = entrypointSource.lastIndexOf("PAYOUT_REBASE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  const mdDestination = entrypointSource.lastIndexOf("PAYOUT_REBASE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
 
-  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && rename > tempIdentity);
-  assert.ok(jsonPublish > rename && mdPublish > jsonPublish);
+  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity);
+  assert.ok(jsonPublish > rename && jsonDestination > jsonPublish && mdPublish > jsonDestination && mdDestination > mdPublish);
 });
 
 test("internal payout-rebase analysis keeps canonical read-only database boundaries", () => {
