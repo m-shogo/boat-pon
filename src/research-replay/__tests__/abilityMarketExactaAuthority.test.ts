@@ -21,3 +21,16 @@ test("ability market validation fails closed on incomplete official payouts", ()
   assert.match(source, /requiredPayout\(race\)/);
   assert.doesNotMatch(source, /race\.payout_yen \?\? 0/);
 });
+
+test("ability market validation publishes reports via exclusive fsynced verified temp files and atomic rename", () => {
+  const source = readFileSync("scripts/analyze-ability-market-validation.ts", "utf8");
+
+  assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(source, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath, errorCode\);\s*renameSync\(verifiedTempPath, path\);/u);
+  assert.match(source, /ABILITY_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /ABILITY_MARKET_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /atomicPublish\(\s*JSON_REPORT_PATH,/u);
+  assert.match(source, /atomicPublish\(\s*MARKDOWN_REPORT_PATH,/u);
+  assert.doesNotMatch(source, /writeFileSync\("reports\/ability-market-validation\.(?:json|md)"/u);
+});
