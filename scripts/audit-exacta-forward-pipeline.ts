@@ -200,6 +200,12 @@ function writeAtomicReport(path: string, contents: string): void {
       tempPath,
       "EXACTA_FORWARD_PIPELINE_REPORT_TEMP_IDENTITY_INVALID",
     );
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        "EXACTA_FORWARD_PIPELINE_REPORT_TARGET_IDENTITY_INVALID",
+      );
+    }
     renameSync(tempPath, path);
   } catch (error) {
     if (fd != null) closeSync(fd);
