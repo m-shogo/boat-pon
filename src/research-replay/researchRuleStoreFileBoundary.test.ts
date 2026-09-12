@@ -27,11 +27,13 @@ test("research rule store publication uses exclusive fsynced temp plus atomic re
   const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = source.indexOf("fsyncSync(fd)");
   const tempIdentity = source.indexOf("RESEARCH_RULE_STORE_TEMP_IDENTITY_INVALID");
+  const destinationIdentity = source.lastIndexOf("RESEARCH_RULE_STORE_TARGET_IDENTITY_INVALID");
   const rename = source.indexOf("renameSync(tempPath, STORE_PATH)");
 
   assert.ok(tempCreate >= 0, "publication must use an exclusive temp file");
   assert.ok(fsync > tempCreate, "temp file must be fsynced after creation");
   assert.ok(tempIdentity > fsync, "temp identity must be verified after durable write");
-  assert.ok(rename > tempIdentity, "publication must rename only the verified temp file");
+  assert.ok(destinationIdentity > tempIdentity, "existing store destination must be revalidated after temp identity");
+  assert.ok(rename > destinationIdentity, "publication must rename only after destination revalidation");
   assert.doesNotMatch(source, /writeFileSync\(STORE_PATH/);
 });
