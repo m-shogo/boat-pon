@@ -7,12 +7,47 @@
  * read-only methodology implementation.
  */
 
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
+const OUT_MD = "reports/root-methodology-audit.md";
+const OUT_JSON = "reports/root-methodology-audit.json";
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 if (!existsSync(DB_PATH)) throw new Error("ROOT_METHODOLOGY_RESEARCH_DB_UNAVAILABLE");
 
@@ -65,5 +100,54 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   verifiedDbPath,
   "ROOT_METHODOLOGY_DB_HANDOFF_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
-await import("./audit-root-methodology-internal");
+const internalPath = fileURLToPath(new URL("./audit-root-methodology-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
+
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-root-methodology-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    handoffDbPath,
+    "ROOT_METHODOLOGY_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
+  const audit = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
+    cwd: workspace,
+    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (audit.error || audit.status !== 0) {
+    throw new Error("ROOT_METHODOLOGY_INTERNAL_FAILED");
+  }
+
+  const workspaceJson = join(workspace, OUT_JSON);
+  const workspaceMarkdown = join(workspace, OUT_MD);
+  if (!existsSync(workspaceJson)) throw new Error("ROOT_METHODOLOGY_JSON_OUTPUT_MISSING");
+  if (!existsSync(workspaceMarkdown)) throw new Error("ROOT_METHODOLOGY_MARKDOWN_OUTPUT_MISSING");
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    workspaceJson,
+    "ROOT_METHODOLOGY_JSON_OUTPUT_IDENTITY_INVALID",
+  );
+  const verifiedMarkdownPath = assertCanonicalSingleLinkRegularFile(
+    workspaceMarkdown,
+    "ROOT_METHODOLOGY_MARKDOWN_OUTPUT_IDENTITY_INVALID",
+  );
+  const json = readFileSync(verifiedJsonPath, "utf8");
+  const markdown = readFileSync(verifiedMarkdownPath, "utf8");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "ROOT_METHODOLOGY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "ROOT_METHODOLOGY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
+
+console.log("[root-methodology-audit] PASS: canonical cohort preflight and isolated report publication completed");
