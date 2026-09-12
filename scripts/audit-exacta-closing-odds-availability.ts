@@ -5,7 +5,18 @@
  * DB / decision / app_settings / production behavior は変更しない。
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -20,6 +31,32 @@ const OUT_JSON = "reports/exacta-closing-odds-availability.json";
 const CACHE_DIR = "data/raw/official/odds2tf";
 const SLEEP_MS = parseExactaClosingOddsAuditSleepMs(process.env.AUDIT_SLEEP_MS ?? "1500");
 const SAMPLES_PER_QUARTER = 2;
+
+function atomicPublishReport(
+  path: string,
+  content: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 if (!existsSync(DB_PATH)) throw new Error("EXACTA_CLOSING_ODDS_AUDIT_DB_MISSING");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
@@ -318,9 +355,7 @@ lines.push(
   "- historical_alternative_odds へ bet_type を持たせる設計変更は人間確認が必要。ここでは実行しない。",
 );
 
-if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_MD, lines.join("\n"), "utf-8");
-writeFileSync(OUT_JSON, JSON.stringify({
+const jsonReport = JSON.stringify({
   generatedAt: now,
   feasible,
   okCount,
@@ -336,7 +371,21 @@ writeFileSync(OUT_JSON, JSON.stringify({
     humanConfirmRequired: true,
   },
   samples: results,
-}, null, 2), "utf-8");
+}, null, 2);
+
+if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
+atomicPublishReport(
+  OUT_MD,
+  lines.join("\n"),
+  "EXACTA_CLOSING_ODDS_AUDIT_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "EXACTA_CLOSING_ODDS_AUDIT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublishReport(
+  OUT_JSON,
+  jsonReport,
+  "EXACTA_CLOSING_ODDS_AUDIT_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "EXACTA_CLOSING_ODDS_AUDIT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 
 console.log(`\n=== audit 判定 ===`);
 console.log(`  ${feasible ? "✅ 取得可能" : "❌ 要調査"} (${okCount}/${results.length} 検算成功)`);
