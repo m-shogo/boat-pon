@@ -121,6 +121,12 @@ function saveStore(store: RuleStoreFile) {
       tempPath,
       "RESEARCH_RULE_STORE_TEMP_IDENTITY_INVALID",
     );
+    if (existsSync(STORE_PATH)) {
+      assertCanonicalSingleLinkRegularFile(
+        STORE_PATH,
+        "RESEARCH_RULE_STORE_TARGET_IDENTITY_INVALID",
+      );
+    }
     renameSync(tempPath, STORE_PATH);
   } catch (error) {
     if (existsSync(tempPath)) unlinkSync(tempPath);
