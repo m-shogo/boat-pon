@@ -3,7 +3,8 @@
  * 6月trainで固定した最小候補だけを比較し、future cohortを再学習へ戻さない。
  * 読み取り専用。本番判定・DB・app_settingsは変更しない。
  */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
   evaluateProbabilityModel,
@@ -191,9 +192,37 @@ const lines = [
   `- 現行モデルの多クラス比較: ${report.unavailable.currentModelMulticlass}`,
 ];
 
+function atomicPublish(path: string, contents: string, tempErrorCode: string, destinationErrorCode: string) {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, `${lines.join("\n")}\n`);
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "T5_NETWORK_ONLY_FORWARD_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "T5_NETWORK_ONLY_FORWARD_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  `${lines.join("\n")}\n`,
+  "T5_NETWORK_ONLY_FORWARD_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "T5_NETWORK_ONLY_FORWARD_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log(`[t5-network-only-forward] wrote ${OUT_MD} / ${OUT_JSON}`);
 
 function loadLatestCompleteCaptures(from: string, to: string, capturedFrom: string | null) {
