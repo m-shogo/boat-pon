@@ -28,7 +28,18 @@
  *   --batch-size 30         1バッチ書き込み件数 (デフォルト 30)
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -37,6 +48,7 @@ import {
   requireExactaBackfillDateRange,
   requireExactaBackfillTargets,
 } from "../src/research-replay/exactaClosingOddsBackfillSafety";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH   = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD    = "reports/exacta-closing-odds-backfill.md";
@@ -57,6 +69,61 @@ const VENUE_CODES: Record<string, string> = {
   児島: "16", 宮島: "17", 徳山: "18", 下関: "19", 若松: "20",
   芦屋: "21", 福岡: "22", 唐津: "23", 大村: "24",
 };
+
+function atomicPublishReport(
+  path: string,
+  content: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
+function publishOfficialCache(path: string, content: string): string {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "EXACTA_CLOSING_ODDS_BACKFILL_CACHE_TEMP_IDENTITY_INVALID",
+    );
+    if (existsSync(path)) {
+      const verifiedExistingPath = assertCanonicalSingleLinkRegularFile(
+        path,
+        "EXACTA_CLOSING_ODDS_BACKFILL_CACHE_DESTINATION_IDENTITY_INVALID",
+      );
+      return readFileSync(verifiedExistingPath, "utf-8");
+    }
+    renameSync(verifiedTempPath, path);
+    return content;
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 // ─── CLI オプション ───────────────────────────────────────────────────────────
 
@@ -89,8 +156,13 @@ console.log();
 // ─── DB 初期化 ────────────────────────────────────────────────────────────────
 
 if (!existsSync(DB_PATH)) { console.error(`DB not found: ${DB_PATH}`); process.exit(1); }
-const db = new DatabaseSync(DB_PATH, { readOnly: !WRITE_MODE });
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
+  DB_PATH,
+  "EXACTA_CLOSING_ODDS_BACKFILL_DB_IDENTITY_INVALID",
+);
+const db = new DatabaseSync(verifiedDbPath, { readOnly: !WRITE_MODE });
 db.exec("PRAGMA busy_timeout = 5000;");
+if (!WRITE_MODE) db.exec("PRAGMA query_only = ON;");
 
 // テーブル存在確認 (bet_type 列が必須)
 const tableInfo = db.prepare(
@@ -196,15 +268,19 @@ async function fetchHtml(r: Race): Promise<{ html: string | null; cached: boolea
   if (!url) return { html: null, cached: false, url: "", error: `unknown venue: ${r.venue}` };
   const cp = cacheFilePath(r);
   if (existsSync(cp)) {
-    return { html: readFileSync(cp, "utf-8"), cached: true, url };
+    const verifiedCachePath = assertCanonicalSingleLinkRegularFile(
+      cp,
+      "EXACTA_CLOSING_ODDS_BACKFILL_CACHE_READ_IDENTITY_INVALID",
+    );
+    return { html: readFileSync(verifiedCachePath, "utf-8"), cached: true, url };
   }
   try {
     const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!res.ok) return { html: null, cached: false, url, error: `HTTP ${res.status}` };
     const html = await res.text();
     mkdirSync(dirname(cp), { recursive: true });
-    writeFileSync(cp, html, "utf-8");
-    return { html, cached: false, url };
+    const cachedHtml = publishOfficialCache(cp, html);
+    return { html: cachedHtml, cached: false, url };
   } catch (err) {
     return { html: null, cached: false, url: url ?? "", error: String(err) };
   }
@@ -473,8 +549,7 @@ lines.push(`---`);
 lines.push(`*生成: backfill-exacta-closing-odds.ts*`);
 
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_MD, lines.join("\n"), "utf-8");
-writeFileSync(OUT_JSON, JSON.stringify({
+const reportJson = JSON.stringify({
   generatedAt: now,
   writeMode: WRITE_MODE,
   allBuyRaces: allBuyRaces.length,
@@ -490,7 +565,19 @@ writeFileSync(OUT_JSON, JSON.stringify({
     status: r.status, cellCount: r.cellCount, isFRefund: r.isFRefund,
     combos: r.combosAvailable.length,
   })),
-}, null, 2), "utf-8");
+}, null, 2);
+atomicPublishReport(
+  OUT_MD,
+  lines.join("\n"),
+  "EXACTA_CLOSING_ODDS_BACKFILL_REPORT_MD_TEMP_IDENTITY_INVALID",
+  "EXACTA_CLOSING_ODDS_BACKFILL_REPORT_MD_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublishReport(
+  OUT_JSON,
+  reportJson,
+  "EXACTA_CLOSING_ODDS_BACKFILL_REPORT_JSON_TEMP_IDENTITY_INVALID",
+  "EXACTA_CLOSING_ODDS_BACKFILL_REPORT_JSON_DESTINATION_IDENTITY_INVALID",
+);
 
 console.log(`出力: ${OUT_MD}`);
 console.log(`出力: ${OUT_JSON}`);
