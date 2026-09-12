@@ -296,7 +296,12 @@ ${betTypeStats
 - BUY結合可能数はreturned=0のhistorical BUYと、positive/non-refundかつcombination確定済みのofficial payoutが存在するraceだけを数える。
 `;
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -305,7 +310,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -314,8 +322,18 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
 }
 
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
-atomicPublish(OUT_MD, md, "BET_TYPE_COVERAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_JSON, JSON.stringify(report, null, 2), "BET_TYPE_COVERAGE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(
+  OUT_MD,
+  md,
+  "BET_TYPE_COVERAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "BET_TYPE_COVERAGE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_JSON,
+  JSON.stringify(report, null, 2),
+  "BET_TYPE_COVERAGE_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "BET_TYPE_COVERAGE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 
 db.close();
 
