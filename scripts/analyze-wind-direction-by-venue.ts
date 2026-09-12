@@ -140,8 +140,8 @@ md += `\n## 判定\n\n会場×風向×能力の組合せで、両期間・最大
 mkdirSync("reports", { recursive: true });
 verifyExistingOutput(OUT_MD, "WIND_DIRECTION_PREEXISTING_MD_IDENTITY_INVALID");
 verifyExistingOutput(OUT_JSON, "WIND_DIRECTION_PREEXISTING_JSON_IDENTITY_INVALID");
-atomicPublish(OUT_MD, md, "WIND_DIRECTION_MD_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "WIND_DIRECTION_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD, md, "WIND_DIRECTION_MD_PUBLISH_TEMP_IDENTITY_INVALID", "WIND_DIRECTION_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "WIND_DIRECTION_JSON_PUBLISH_TEMP_IDENTITY_INVALID", "WIND_DIRECTION_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
 console.log(`[wind-direction] rows=${rows.length} cells=${cells.length}`); for (const c of candidateResults) console.log(`${c.label}: discovery=${c.discovery.n}/${c.discovery.roi}% test=${c.forward.n}/${c.forward.roi}%`);
 db.close();
 
@@ -150,7 +150,7 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(path: string, content: string, identityErrorCode: string, destinationIdentityErrorCode: string): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -160,6 +160,9 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
