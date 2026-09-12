@@ -76,20 +76,36 @@ test("direct wind24 entrypoint redacts private DB provenance after successful an
   assert.ok(redact > successGuard, "private DB provenance must be sanitized only after successful analysis");
   assert.match(directSource, /const OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(directSource, /const privateMarker = `DB: \$\{dbPath\}`/);
-  assert.match(directSource, /report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(directSource, /const redacted = report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
   assert.match(directSource, /WIND24_SWITCH_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(directSource, /WIND24_SWITCH_PRIVATE_DB_PROVENANCE_MARKER_MISSING/);
+  assert.match(directSource, /WIND24_SWITCH_PRIVATE_DB_PATH_REMAINS/);
 });
 
-test("direct wind24 entrypoint verifies generated report identity before provenance read and again before write", () => {
+test("direct wind24 entrypoint verifies report identity and publishes provenance atomically", () => {
   const firstIdentity = directSource.indexOf('"WIND24_SWITCH_REPORT_IDENTITY_INVALID"');
   const read = directSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const privatePathCheck = directSource.indexOf("WIND24_SWITCH_PRIVATE_DB_PATH_REMAINS");
   const handoffIdentity = directSource.indexOf('"WIND24_SWITCH_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = directSource.indexOf("writeFileSync(handoffReportPath");
+  const publishCall = directSource.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
+  const exclusiveOpen = directSource.indexOf('openSync(tempPath, "wx")');
+  const fsync = directSource.indexOf("fsyncSync(fd)");
+  const tempIdentity = directSource.indexOf('"WIND24_SWITCH_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = directSource.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && privatePathCheck > read
+      && handoffIdentity > privatePathCheck
+      && publishCall > handoffIdentity,
+  );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(directSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(directSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.match(directSource, /writeFileSync\(fd, content, "utf-8"\)/u);
+  assert.match(directSource, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
+  assert.doesNotMatch(directSource, /writeFileSync\(handoffReportPath/u);
 });
 
 test("wind24 payout preflight matches the deep-dive population and is read-only", () => {
