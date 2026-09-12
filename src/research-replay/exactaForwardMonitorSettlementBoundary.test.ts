@@ -19,7 +19,8 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   const stagedIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_STAGED_CANDIDATE_IDENTITY_INVALID", candidateCopy);
   const isolatedDbHandoff = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID", stagedIdentity);
   const launchDbHandoff = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_DB_CHILD_LAUNCH_IDENTITY_INVALID", isolatedDbHandoff);
-  const monitor = entrypoint.indexOf("const monitor = spawnSync", launchDbHandoff);
+  const candidateLaunchIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_CANDIDATE_CHILD_LAUNCH_IDENTITY_INVALID", launchDbHandoff);
+  const monitor = entrypoint.indexOf("const monitor = spawnSync", candidateLaunchIdentity);
   assert.ok(
     audit >= 0 &&
       guard > audit &&
@@ -32,7 +33,8 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
       stagedIdentity > candidateCopy &&
       isolatedDbHandoff > stagedIdentity &&
       launchDbHandoff > isolatedDbHandoff &&
-      monitor > launchDbHandoff,
+      candidateLaunchIdentity > launchDbHandoff &&
+      monitor > candidateLaunchIdentity,
   );
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_MISSING/u);
@@ -40,6 +42,7 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_CANDIDATES_MISSING/u);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_ISOLATED_CHILD_HANDOFF_IDENTITY_INVALID/u);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_DB_CHILD_LAUNCH_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_CANDIDATE_CHILD_LAUNCH_IDENTITY_INVALID/u);
   assert.match(entrypoint, /BOAT_PON_DB_PATH: launchDbPath/u);
   assert.doesNotMatch(entrypoint, /BOAT_PON_DB_PATH: childDbHandoffPath/u);
   assert.doesNotMatch(entrypoint, /await import\("\.\/report-exacta-forward-monitor-internal"\)/u);
