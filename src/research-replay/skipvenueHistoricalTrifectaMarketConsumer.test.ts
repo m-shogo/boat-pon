@@ -31,17 +31,21 @@ test("skipVenue historical switch internal independently fails closed before SQL
   assert.doesNotMatch(internal, /db\.(?:exec|prepare)\(\s*[`"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
 });
 
-test("skipVenue canonical entrypoint owns settlement preflight and the internal handoff", () => {
-  const audit = entry.indexOf('run("scripts/audit-skipvenue-historical-payout-completeness.ts")');
+test("skipVenue canonical entrypoint owns settlement preflight and isolated internal handoff", () => {
+  const audit = entry.indexOf('runAudit("scripts/audit-skipvenue-historical-payout-completeness.ts")');
   const gate = entry.indexOf("audit !== 0");
   const identity = entry.indexOf("SKIPVENUE_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID");
-  const internalImport = entry.indexOf('await import("./analyze-skipvenue-switch-historical-closing-odds-internal")');
+  const launchIdentity = entry.indexOf("SKIPVENUE_SWITCH_HISTORICAL_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const internalLaunch = entry.indexOf("const analysis = spawnSync");
 
   assert.ok(audit >= 0);
   assert.ok(gate > audit, "settlement audit must fail closed before analysis");
   assert.ok(identity > gate, "DB identity must be revalidated after settlement preflight");
-  assert.ok(internalImport > identity, "internal analyzer must run only after the canonical handoff identity check");
+  assert.ok(launchIdentity > identity, "DB identity must be revalidated again immediately before child launch");
+  assert.ok(internalLaunch > launchIdentity, "internal analyzer must run only after final launch identity verification");
+  assert.match(entry, /cwd: workspace/);
   assert.doesNotMatch(entry, /analyze-skipvenue-switch-historical-closing-odds-raw/);
+  assert.doesNotMatch(entry, /await import\("\.\/analyze-skipvenue-switch-historical-closing-odds-internal"\)/);
 });
 
 test("skipVenue raw compatibility path cannot bypass canonical settlement preflight", () => {
