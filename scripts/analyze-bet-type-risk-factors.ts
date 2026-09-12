@@ -70,8 +70,8 @@ function atomicPublish(path: string, content: string, code: string): void {
   }
 }
 
-function redactDbProvenance(content: string, dbPath: string, code: string): string {
-  if (!content.includes(dbPath)) {
+function redactDbProvenance(content: string, dbPath: string, code: string, requireProvenance: boolean): string {
+  if (requireProvenance && !content.includes(dbPath)) {
     throw new Error(`BET_TYPE_RISK_${code}_DB_PROVENANCE_NOT_FOUND`);
   }
   const redacted = content.split(dbPath).join(OPAQUE_DB_SOURCE);
@@ -130,8 +130,8 @@ try {
     stagedJsonPath,
     "BET_TYPE_RISK_JSON_STAGED_OUTPUT_IDENTITY_INVALID",
   );
-  const markdown = redactDbProvenance(readFileSync(verifiedMdPath, "utf8"), launchDbPath, "MD");
-  const json = redactDbProvenance(readFileSync(verifiedJsonPath, "utf8"), launchDbPath, "JSON");
+  const markdown = redactDbProvenance(readFileSync(verifiedMdPath, "utf8"), launchDbPath, "MD", true);
+  const json = redactDbProvenance(readFileSync(verifiedJsonPath, "utf8"), launchDbPath, "JSON", false);
 
   mkdirSync("reports", { recursive: true });
   atomicPublish(OUT_MD, markdown, "MD");
