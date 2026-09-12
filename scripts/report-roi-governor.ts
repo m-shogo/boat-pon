@@ -1,4 +1,20 @@
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REQUIRED_REPORTS = [
@@ -10,6 +26,13 @@ const REQUIRED_REPORTS = [
 const OPTIONAL_DECISION_REPORTS = [
   "reports/wind24-exh1-switch-deep-dive.json",
 ] as const;
+
+const OPTIONAL_CONTEXT_REPORTS = [
+  "reports/paper-forward-candidates.json",
+] as const;
+
+const OUT_MD = "reports/roi-governor.md";
+const OUT_JSON = "reports/roi-governor.json";
 
 type JsonObject = Record<string, unknown>;
 
@@ -114,20 +137,42 @@ function validateDecisionCriticalShape(reportPath: string, parsed: unknown): voi
   if (reportPath === "reports/wind24-exh1-switch-deep-dive.json") return validateWind24DeepDive(reportPath, parsed);
 }
 
-function validateReport(path: string, identityError: string, required: boolean): void {
+function validateReport(path: string, identityError: string, required: boolean, decisionCritical = true): string | null {
   if (!existsSync(path)) {
     if (required) fail(path, "missing");
-    return;
+    return null;
   }
   const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityError);
+  const contents = readFileSync(verifiedPath, "utf8");
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(verifiedPath, "utf8"));
+    parsed = JSON.parse(contents);
   } catch {
     fail(path, "invalid_json");
   }
   if (!isObject(parsed)) fail(path, "invalid_shape");
-  validateDecisionCriticalShape(path, parsed);
+  if (decisionCritical) validateDecisionCriticalShape(path, parsed);
+  return contents;
+}
+
+function atomicPublish(path: string, contents: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 for (const path of REQUIRED_REPORTS) {
@@ -136,15 +181,67 @@ for (const path of REQUIRED_REPORTS) {
 for (const path of OPTIONAL_DECISION_REPORTS) {
   validateReport(path, "ROI_GOVERNOR_OPTIONAL_DECISION_REPORT_IDENTITY_INVALID", false);
 }
-
-// Re-read and revalidate every decision-affecting artifact immediately before
-// the raw phase consumes it. This keeps both required inputs and any present
-// higher-precedence optional evidence fail-closed across the validation/use window.
-for (const path of REQUIRED_REPORTS) {
-  validateReport(path, "ROI_GOVERNOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID", true);
-}
-for (const path of OPTIONAL_DECISION_REPORTS) {
-  validateReport(path, "ROI_GOVERNOR_OPTIONAL_DECISION_REPORT_HANDOFF_IDENTITY_INVALID", false);
+for (const path of OPTIONAL_CONTEXT_REPORTS) {
+  validateReport(path, "ROI_GOVERNOR_OPTIONAL_CONTEXT_REPORT_IDENTITY_INVALID", false, false);
 }
 
-await import("./report-roi-governor-raw");
+const rawPath = fileURLToPath(new URL("./report-roi-governor-raw.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-roi-governor-"));
+
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+
+  // Re-read every consumed artifact immediately before child launch, then stage
+  // the verified bytes into an isolated workspace. The raw generator can no
+  // longer overwrite canonical reports directly or race a validated input.
+  for (const path of REQUIRED_REPORTS) {
+    const contents = validateReport(path, "ROI_GOVERNOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID", true);
+    writeFileSync(join(workspace, path), contents!, "utf8");
+  }
+  for (const path of OPTIONAL_DECISION_REPORTS) {
+    const contents = validateReport(path, "ROI_GOVERNOR_OPTIONAL_DECISION_REPORT_HANDOFF_IDENTITY_INVALID", false);
+    if (contents !== null) writeFileSync(join(workspace, path), contents, "utf8");
+  }
+  for (const path of OPTIONAL_CONTEXT_REPORTS) {
+    const contents = validateReport(path, "ROI_GOVERNOR_OPTIONAL_CONTEXT_REPORT_HANDOFF_IDENTITY_INVALID", false, false);
+    if (contents !== null) writeFileSync(join(workspace, path), contents, "utf8");
+  }
+
+  const raw = spawnSync(process.execPath, ["--import", tsxLoader, rawPath], {
+    cwd: workspace,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (raw.error || raw.status !== 0) {
+    throw new Error("ROI_GOVERNOR_RAW_ISOLATED_GENERATION_FAILED");
+  }
+
+  const stagedJson = join(workspace, OUT_JSON);
+  const stagedMarkdown = join(workspace, OUT_MD);
+  if (!existsSync(stagedJson)) throw new Error("ROI_GOVERNOR_JSON_OUTPUT_MISSING");
+  if (!existsSync(stagedMarkdown)) throw new Error("ROI_GOVERNOR_MARKDOWN_OUTPUT_MISSING");
+
+  const verifiedJson = assertCanonicalSingleLinkRegularFile(stagedJson, "ROI_GOVERNOR_JSON_OUTPUT_IDENTITY_INVALID");
+  const verifiedMarkdown = assertCanonicalSingleLinkRegularFile(stagedMarkdown, "ROI_GOVERNOR_MARKDOWN_OUTPUT_IDENTITY_INVALID");
+  const json = readFileSync(verifiedJson, "utf8");
+  const markdown = readFileSync(verifiedMarkdown, "utf8");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "ROI_GOVERNOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_GOVERNOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "ROI_GOVERNOR_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_GOVERNOR_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
+
+console.log("[roi-governor] PASS: validated inputs, isolated generation, and atomic publication completed");
