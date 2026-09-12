@@ -3,12 +3,23 @@
  * DB read-only。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_JSON = "reports/no-buy-next-candidates.json";
 const OUT_MD = "reports/no-buy-next-candidates.md";
 
 if (!existsSync(DB_PATH)) throw new Error("NO_BUY_NEXT_RESEARCH_DB_UNAVAILABLE");
@@ -39,10 +50,12 @@ try {
   }).filter((r) => r.removed.n >= 30).sort((a, b) => b.lift - a.lift || a.removed.roi - b.removed.roi);
   const report = { generatedAt: new Date().toISOString(), returnSource: "official race_payouts", before, ranked };
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/no-buy-next-candidates.json", `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, renderMarkdown(report));
+  verifyExistingOutput(OUT_JSON, "NO_BUY_NEXT_PREEXISTING_JSON_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "NO_BUY_NEXT_PREEXISTING_MD_IDENTITY_INVALID");
+  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "NO_BUY_NEXT_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(OUT_MD, renderMarkdown(report), "NO_BUY_NEXT_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   console.log(`[analyze-no-buy-next] wrote ${OUT_MD}`);
-  console.log("[analyze-no-buy-next] wrote reports/no-buy-next-candidates.json");
+  console.log(`[analyze-no-buy-next] wrote ${OUT_JSON}`);
 } finally {
   db.close();
 }
@@ -259,6 +272,28 @@ function renderMarkdown(report: { returnSource: string; before: ReturnType<typeo
   lines.push("- これはedge候補であり、本物のedgeではありません。");
   lines.push("- n<50、最大1hit依存、test逆行の条件は本番採用しません。");
   return `${lines.join("\n")}\n`;
+}
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function nullableNumber(value: unknown): number | null { if (value == null) return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
