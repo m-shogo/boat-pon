@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -23,6 +23,7 @@ const OUT_JSON = "reports/skipvenue-switch-historical-closing-odds.json";
 const internalPath = fileURLToPath(
   new URL("./analyze-skipvenue-switch-historical-closing-odds-internal.ts", import.meta.url),
 );
+const internalUrl = pathToFileURL(internalPath).href;
 const tsxLoader = import.meta.resolve("tsx");
 
 function atomicPublish(
@@ -92,12 +93,16 @@ try {
     handoffDbPath,
     "SKIPVENUE_SWITCH_HISTORICAL_DB_CHILD_LAUNCH_IDENTITY_INVALID",
   );
-  const analysis = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
-    cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  const analysis = spawnSync(
+    process.execPath,
+    ["--import", tsxLoader, "--input-type=module", "--eval", `await import(${JSON.stringify(internalUrl)})`],
+    {
+      cwd: workspace,
+      env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
   if (analysis.error || analysis.status !== 0) {
     throw new Error("SKIPVENUE_SWITCH_HISTORICAL_INTERNAL_FAILED");
   }
