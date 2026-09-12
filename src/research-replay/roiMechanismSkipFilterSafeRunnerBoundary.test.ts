@@ -52,7 +52,8 @@ test("ROI mechanism skip-filter verifies report identity and publishes provenanc
   const exclusiveOpen = entrypointSource.indexOf('openSync(tempPath, "wx")');
   const fsync = entrypointSource.indexOf("fsyncSync(fd)");
   const tempIdentity = entrypointSource.indexOf('"ROI_MECHANISM_SKIP_FILTER_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = entrypointSource.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = entrypointSource.indexOf('"ROI_MECHANISM_SKIP_FILTER_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -61,7 +62,13 @@ test("ROI mechanism skip-filter verifies report identity and publishes provenanc
       && handoffIdentity > privatePathCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(entrypointSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
   assert.match(entrypointSource, /writeFileSync\(fd, content, "utf-8"\)/u);
