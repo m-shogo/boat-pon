@@ -44,6 +44,8 @@ test("skipVenue canonical entrypoint owns settlement preflight and isolated inte
   assert.ok(launchIdentity > identity, "DB identity must be revalidated again immediately before child launch");
   assert.ok(internalLaunch > launchIdentity, "internal analyzer must run only after final launch identity verification");
   assert.match(entry, /cwd: workspace/);
+  assert.ok(entry.includes('"--input-type=module", "--eval"'), "guarded internal must be imported as a module, not executed as argv[1]");
+  assert.ok(entry.includes("JSON.stringify(internalUrl)"), "module import must use the verified internal file URL");
   assert.doesNotMatch(entry, /analyze-skipvenue-switch-historical-closing-odds-raw/);
   assert.doesNotMatch(entry, /await import\("\.\/analyze-skipvenue-switch-historical-closing-odds-internal"\)/);
 });
