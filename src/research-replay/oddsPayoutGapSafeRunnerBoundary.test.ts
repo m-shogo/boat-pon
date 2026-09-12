@@ -38,21 +38,24 @@ test("odds-payout-gap normal entrypoint fails closed before analysis when prefli
   assert.ok(guard >= 0 && guard < analysis, "preflight failure guard must precede analysis execution");
 });
 
-test("odds-payout-gap isolated analysis verifies child outputs and publishes final reports atomically", () => {
+test("odds-payout-gap isolated analysis verifies child outputs and reverifies final destinations before atomic publication", () => {
   const analysis = runnerSource.indexOf("const analysis = spawnSync");
   const mdIdentity = runnerSource.indexOf("ODDS_PAYOUT_GAP_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
   const jsonIdentity = runnerSource.indexOf("ODDS_PAYOUT_GAP_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
   const tempCreate = runnerSource.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = runnerSource.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = runnerSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = runnerSource.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = runnerSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = runnerSource.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
+  const rename = runnerSource.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
 
   assert.ok(mdIdentity > analysis && jsonIdentity > analysis);
   assert.ok(tempCreate >= 0 && fsync > tempCreate);
-  assert.ok(tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity);
   assert.match(runnerSource, /ODDS_PAYOUT_GAP_INTERNAL_FAILED/);
   assert.match(runnerSource, /ODDS_PAYOUT_GAP_MD_OUTPUT_IDENTITY_INVALID/);
   assert.match(runnerSource, /ODDS_PAYOUT_GAP_JSON_OUTPUT_IDENTITY_INVALID/);
+  assert.match(runnerSource, /ODDS_PAYOUT_GAP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(runnerSource, /ODDS_PAYOUT_GAP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
 
 test("odds-payout-gap raw compatibility module forbids direct CLI execution and routes through canonical preflight", () => {
