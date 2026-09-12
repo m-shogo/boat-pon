@@ -5,6 +5,7 @@
 import { randomUUID } from "node:crypto";
 import {
   closeSync,
+  existsSync,
   fsyncSync,
   mkdirSync,
   openSync,
@@ -31,7 +32,12 @@ type Stat = { n: number; hits: number };
 type RacerState = { date: string; venue: string; won: boolean };
 type PairState = { meetings: number; lastWinner: string | null; wins: Map<string, number> };
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -40,7 +46,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -164,11 +173,13 @@ try {
     JSON_REPORT_PATH,
     `${JSON.stringify(report, null, 2)}\n`,
     "UNCONVENTIONAL_FEATURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "UNCONVENTIONAL_FEATURE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     MARKDOWN_REPORT_PATH,
     md,
     "UNCONVENTIONAL_FEATURE_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+    "UNCONVENTIONAL_FEATURE_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   console.log(`races=${races.length} / stable=${stable.length}`);
   for (const row of stable) console.log(`${row.feature}: 2024 ${pp(row.trainLift)} n=${row.train.n} / 2025 ${pp(row.forwardLift)} n=${row.forward.n}`);
