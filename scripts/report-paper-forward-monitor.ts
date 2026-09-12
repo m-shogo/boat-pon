@@ -48,6 +48,12 @@ function atomicPublishSanitizedReport(path: string, content: string): void {
       tempPath,
       "PAPER_FORWARD_MONITOR_SANITIZED_TEMP_IDENTITY_INVALID",
     );
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        "PAPER_FORWARD_MONITOR_SANITIZED_DESTINATION_IDENTITY_INVALID",
+      );
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
