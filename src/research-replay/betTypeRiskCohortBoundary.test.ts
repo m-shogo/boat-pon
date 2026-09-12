@@ -41,7 +41,8 @@ test("bet type risk verifies report identity and publishes sanitized provenance 
   const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx")');
   const fsync = entrypoint.indexOf("fsyncSync(fd)");
   const tempIdentity = entrypoint.indexOf('"BET_TYPE_RISK_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = entrypoint.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = entrypoint.indexOf('"BET_TYPE_RISK_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -50,7 +51,13 @@ test("bet type risk verifies report identity and publishes sanitized provenance 
       && handoffIdentity > privatePathCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
   assert.match(entrypoint, /writeFileSync\(fd, content, "utf8"\)/);
