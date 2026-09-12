@@ -17,10 +17,12 @@ test("local market anomaly entrypoint fails closed before internal analysis", ()
 
   const coverageIndex = source.indexOf("LOCAL_MARKET_EXACTA_PAYOUT_COVERAGE_INCOMPLETE");
   const handoffIndex = source.indexOf("LOCAL_MARKET_DB_HANDOFF_IDENTITY_INVALID");
-  const analysisIndex = source.indexOf('await import("./analyze-local-market-anomalies-internal")');
+  const launchIdentityIndex = source.indexOf("LOCAL_MARKET_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const analysisIndex = source.indexOf("const analysis = spawnSync");
   assert.ok(coverageIndex >= 0, "settlement coverage gate must exist");
   assert.ok(handoffIndex > coverageIndex, "DB handoff must be revalidated after settlement coverage passes");
-  assert.ok(analysisIndex > handoffIndex, "internal analysis must not run before settlement coverage and DB handoff pass");
+  assert.ok(launchIdentityIndex > handoffIndex, "DB identity must be revalidated again immediately before child launch");
+  assert.ok(analysisIndex > launchIdentityIndex, "internal analysis must not run before settlement coverage and launch identity pass");
 });
 
 test("local market settlement gate rejects ambiguous multi-line exacta winners", () => {
