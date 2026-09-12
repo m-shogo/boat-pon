@@ -102,14 +102,28 @@ test("bet-type selector summary verifies isolated Markdown and JSON outputs befo
   assert.match(entry, /JSON\.parse\(json\)/);
 });
 
-test("bet-type selector summary publishes both outputs through exclusive fsynced temporary files and atomic rename", () => {
+test("bet-type selector summary publishes both outputs through destination-reverified atomic replacements", () => {
+  assert.match(entry, /BET_TYPE_SELECTOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(entry, /BET_TYPE_SELECTOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   const tempCreate = entry.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entry.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationGuard = entry.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entry.indexOf(
+    "assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)",
+    destinationGuard,
+  );
+  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const mdPublish = entry.lastIndexOf("BET_TYPE_SELECTOR_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   const jsonPublish = entry.lastIndexOf("BET_TYPE_SELECTOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  assert.ok(tempCreate >= 0 && fsync > tempCreate && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    tempCreate >= 0 &&
+      fsync > tempCreate &&
+      tempIdentity > fsync &&
+      destinationGuard > tempIdentity &&
+      destinationIdentity > destinationGuard &&
+      rename > destinationIdentity,
+  );
   assert.ok(mdPublish > rename && jsonPublish > mdPublish);
 });
 
