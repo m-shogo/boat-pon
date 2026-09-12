@@ -45,8 +45,11 @@ test("ROI persona review validates existing outputs and publishes atomically", (
   const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = source.indexOf("fsyncSync(fd)", create);
   const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
-  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+  const destinationIdentity = source.indexOf("verifyExistingOutput(path, destinationIdentityErrorCode)", identity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  assert.ok(create >= 0 && fsync > create && identity > fsync && destinationIdentity > identity && rename > destinationIdentity);
   assert.match(source, /ROI_PERSONA_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source, /ROI_PERSONA_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /ROI_PERSONA_REVIEW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(source, /ROI_PERSONA_REVIEW_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
