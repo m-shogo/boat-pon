@@ -41,7 +41,12 @@ function assertGeneratedOutputIdentity(path: string, missingCode: string, invali
   return assertCanonicalSingleLinkRegularFile(path, invalidCode);
 }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -51,7 +56,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     closeSync(fd);
     fd = null;
 
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -114,11 +122,13 @@ try {
     OUT_MD,
     markdown,
     "ALL_BET_TYPES_ROI_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ALL_BET_TYPES_ROI_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_JSON,
     json,
     "ALL_BET_TYPES_ROI_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ALL_BET_TYPES_ROI_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 
   if (!existsSync(OUT_MD) || !existsSync(OUT_JSON)) {
