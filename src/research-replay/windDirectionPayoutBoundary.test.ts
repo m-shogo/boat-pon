@@ -16,3 +16,23 @@ test("wind direction venue screen fails closed on DB identity and exacta settlem
   assert.ok(coverageIndex >= 0, "settlement coverage gate must exist");
   assert.ok(analysisIndex > coverageIndex, "ROI analysis must not start before settlement coverage passes");
 });
+
+test("wind direction venue screen validates existing outputs and publishes atomically", () => {
+  const source = readFileSync("scripts/analyze-wind-direction-by-venue.ts", "utf8");
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
+  const mdPublish = source.indexOf("atomicPublish(OUT_MD");
+  const jsonPublish = source.indexOf("atomicPublish(OUT_JSON");
+  assert.ok(preflightMd >= 0 && preflightJson > preflightMd && mdPublish > preflightJson && jsonPublish > mdPublish);
+
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = source.indexOf("fsyncSync(fd)", create);
+  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
+  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+
+  assert.match(source, /WIND_DIRECTION_PREEXISTING_MD_IDENTITY_INVALID/);
+  assert.match(source, /WIND_DIRECTION_PREEXISTING_JSON_IDENTITY_INVALID/);
+  assert.match(source, /WIND_DIRECTION_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /WIND_DIRECTION_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+});
