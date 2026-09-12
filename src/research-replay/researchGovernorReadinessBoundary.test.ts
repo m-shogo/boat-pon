@@ -6,17 +6,26 @@ const entrypoint = readFileSync("scripts/report-research-governor.ts", "utf8");
 const preflight = readFileSync("scripts/audit-research-governor-readiness.ts", "utf8");
 const internal = readFileSync("scripts/report-research-governor-internal.ts", "utf8");
 
-test("research governor cannot publish readiness before its integrity preflight", () => {
+test("research governor cannot publish readiness before its integrity preflight and isolated child launch", () => {
   const audit = entrypoint.indexOf('run("scripts/audit-research-governor-readiness.ts")');
   const guard = entrypoint.indexOf("if (preflight !== 0)");
   const handoffIdentity = entrypoint.indexOf("RESEARCH_GOVERNOR_DB_HANDOFF_IDENTITY_INVALID");
-  const envHandoff = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = handoffDbPath");
-  const report = entrypoint.indexOf('await import("./report-research-governor-internal")');
-  assert.ok(audit >= 0 && guard > audit && handoffIdentity > guard && envHandoff > handoffIdentity && report > envHandoff);
+  const childLaunchIdentity = entrypoint.indexOf("RESEARCH_GOVERNOR_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const report = entrypoint.indexOf('spawnSync(process.execPath, ["--import", tsxLoader, internalPath]');
+  assert.ok(
+    audit >= 0 &&
+      guard > audit &&
+      handoffIdentity > guard &&
+      childLaunchIdentity > handoffIdentity &&
+      report > childLaunchIdentity,
+  );
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /RESEARCH_GOVERNOR_DB_MISSING/);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*DB_PATH,/u);
-  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/u);
+  assert.match(entrypoint, /cwd: workspace/u);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: launchDbPath/u);
+  assert.doesNotMatch(entrypoint, /process\.env\.BOAT_PON_DB_PATH = handoffDbPath/u);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/report-research-governor-internal"\)/u);
   assert.doesNotMatch(entrypoint, /report-research-governor-raw/u);
   assert.doesNotMatch(entrypoint, /run\("scripts\/report-research-governor-internal\.ts"/u);
 });
