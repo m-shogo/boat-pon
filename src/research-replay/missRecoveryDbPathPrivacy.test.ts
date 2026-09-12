@@ -48,7 +48,8 @@ test("miss recovery wrapper verifies report identity and publishes provenance at
   const exclusiveOpen = source.indexOf('openSync(tempPath, "wx")');
   const fsync = source.indexOf("fsyncSync(fd)");
   const tempIdentity = source.indexOf('"MISS_RECOVERY_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = source.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = source.indexOf('"MISS_RECOVERY_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = source.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -57,7 +58,13 @@ test("miss recovery wrapper verifies report identity and publishes provenance at
       && handoffIdentity > privatePathCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
   assert.match(source, /writeFileSync\(fd, content, "utf8"\)/u);
