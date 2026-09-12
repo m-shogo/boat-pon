@@ -246,7 +246,12 @@ const md = lines.join("\n");
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
 verifyExistingOutput(OUT_MD, "NEXT_RESEARCH_ACTION_PREEXISTING_MD_IDENTITY_INVALID");
 verifyExistingOutput(OUT_JSON, "NEXT_RESEARCH_ACTION_PREEXISTING_JSON_IDENTITY_INVALID");
-atomicPublish(OUT_MD, md, "NEXT_RESEARCH_ACTION_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(
+  OUT_MD,
+  md,
+  "NEXT_RESEARCH_ACTION_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "NEXT_RESEARCH_ACTION_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 
 const jsonOut = {
   generatedAt: now,
@@ -270,6 +275,7 @@ atomicPublish(
   OUT_JSON,
   JSON.stringify(jsonOut, null, 2),
   "NEXT_RESEARCH_ACTION_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "NEXT_RESEARCH_ACTION_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 
 console.log(`=== 次のリサーチアクション計画 ===`);
@@ -285,7 +291,12 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -294,7 +305,10 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
