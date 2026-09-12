@@ -89,7 +89,8 @@ test("skip-interactions verifies report identity and publishes provenance atomic
   const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx")');
   const fsync = entrypoint.indexOf("fsyncSync(fd)");
   const tempIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = entrypoint.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -98,7 +99,13 @@ test("skip-interactions verifies report identity and publishes provenance atomic
       && handoffIdentity > privatePathCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
   assert.match(entrypoint, /writeFileSync\(fd, content, "utf-8"\)/u);
