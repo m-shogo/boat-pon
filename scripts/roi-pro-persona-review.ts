@@ -1,5 +1,17 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const ALL_FEATURE_JSON = "reports/roi-all-feature-search.json";
 const ALL_FEATURE_SOURCE = "scripts/search-roi-all-features-lite.ts";
@@ -90,7 +102,10 @@ if (!existsSync(ALL_FEATURE_JSON)) {
   execFileSync("pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"], { stdio: "inherit" });
 }
 
-const allFeature = JSON.parse(readFileSync(ALL_FEATURE_JSON, "utf8")) as AllFeatureReport;
+const allFeature = readVerified<AllFeatureReport>(
+  ALL_FEATURE_JSON,
+  "ROI_PERSONA_REVIEW_ALL_FEATURE_IDENTITY_INVALID",
+);
 assertOfficialPayoutReport(allFeature);
 const allItems = uniqueByLabel([
   ...(allFeature.rankings.stability ?? []),
@@ -130,14 +145,27 @@ const report = {
 };
 
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, renderMarkdown(report));
+verifyExistingOutput(OUT_JSON, "ROI_PERSONA_REVIEW_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "ROI_PERSONA_REVIEW_PREEXISTING_MD_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "ROI_PERSONA_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  renderMarkdown(report),
+  "ROI_PERSONA_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 console.log(`[roi-pro-persona-review] finalDecision=${finalDecision}`);
 console.log(`[roi-pro-persona-review] wrote ${OUT_MD}`);
 console.log(`[roi-pro-persona-review] wrote ${OUT_JSON}`);
 
 function assertRealizedPayoutMetricBasis() {
-  const source = readFileSync(ALL_FEATURE_SOURCE, "utf8");
+  const source = readRequiredText(
+    ALL_FEATURE_SOURCE,
+    "ROI_PERSONA_REVIEW_ALL_FEATURE_SOURCE_IDENTITY_INVALID",
+  );
   const usesQuoteReturn = source.includes("hitOdds.reduce((s, o) => s + o * STAKE_YEN, 0)");
   const usesOfficialPayout = source.includes("race_payouts") && source.includes("payout_yen");
   const declaresOfficialPayoutBasis = source.includes('metricBasis: "official_payout_yen"');
@@ -229,6 +257,40 @@ function uniqueByLabel(items: Eval[]) {
 function compare(a: Eval, b: Eval) {
   const rank = { S: 5, A: 4, B: 3, C: 1, D: 0 } as Record<string, number>;
   return (rank[b.judgement ?? "D"] ?? 0) - (rank[a.judgement ?? "D"] ?? 0) || Number(b.improvement ?? 0) - Number(a.improvement ?? 0);
+}
+
+function readRequiredText(path: string, identityErrorCode: string): string {
+  if (!existsSync(path)) throw new Error("ROI_PERSONA_REVIEW_REQUIRED_SOURCE_MISSING");
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+  return readFileSync(verifiedPath, "utf8");
+}
+
+function readVerified<T>(path: string, identityErrorCode: string): T {
+  if (!existsSync(path)) throw new Error("ROI_PERSONA_REVIEW_REQUIRED_INPUT_MISSING");
+  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+}
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function pct(value: number) { return `${(value * 100).toFixed(2)}%`; }
