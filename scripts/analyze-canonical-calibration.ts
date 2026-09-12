@@ -2,7 +2,17 @@
  * 現行BUYの確率を、同一母集団・時系列分割・実払戻で再較正する。
  * 読み取り専用。decision/app_settings/DBは変更しない。
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -126,11 +136,43 @@ try {
   ];
 
   mkdirSync("reports", { recursive: true });
-  writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, `${lines.join("\n")}\n`);
+  verifyExistingOutput(OUT_JSON, "CANONICAL_CALIBRATION_PREEXISTING_JSON_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "CANONICAL_CALIBRATION_PREEXISTING_MD_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_JSON,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "CANONICAL_CALIBRATION_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    `${lines.join("\n")}\n`,
+    "CANONICAL_CALIBRATION_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
   console.log(`[canonical-calibration] wrote ${OUT_MD} / ${OUT_JSON}`);
 } finally {
   db.close();
+}
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function assertNonblankResultIntegrity(): void {

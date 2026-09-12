@@ -70,3 +70,23 @@ test("canonical calibration fails closed on DB identity and missing hit payouts"
   assert.match(source, /CANONICAL_CALIBRATION_HIT_PAYOUT_MISSING/);
   assert.doesNotMatch(source, /r\.payout_yen \?\? 0/);
 });
+
+test("canonical calibration validates existing reports and publishes through fsynced atomic replacement", () => {
+  const source = readFileSync("scripts/analyze-canonical-calibration.ts", "utf8");
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
+  const jsonPublish = source.indexOf("atomicPublish(\n    OUT_JSON");
+  const mdPublish = source.indexOf("atomicPublish(\n    OUT_MD");
+  assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
+
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = source.indexOf("fsyncSync(fd)", create);
+  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
+  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+
+  assert.match(source, /CANONICAL_CALIBRATION_PREEXISTING_JSON_IDENTITY_INVALID/);
+  assert.match(source, /CANONICAL_CALIBRATION_PREEXISTING_MD_IDENTITY_INVALID/);
+  assert.match(source, /CANONICAL_CALIBRATION_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /CANONICAL_CALIBRATION_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+});
