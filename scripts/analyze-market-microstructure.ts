@@ -1,5 +1,6 @@
 /** exacta全30通り内の相対価格・集中度を2024→2025で検証するread-only screen。 */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { adjacentSecondRatio, buildExactaMarketShape } from "../src/domain/exactaMarketShape";
 import {
@@ -28,9 +29,12 @@ const factors=[
   ["decimal7_placebo","オッズ小数第1位が7_placebo","placebo"],
 ] as const;
 
+const JSON_REPORT_PATH="reports/market-microstructure-screen.json";
+const MARKDOWN_REPORT_PATH="reports/market-microstructure-screen.md";
 const dbPath=assertCanonicalSingleLinkRegularFile(process.env.BOAT_PON_DB_PATH??"data/boat.sqlite","RESEARCH_DB_IDENTITY_INVALID");
 const db=new DatabaseSync(dbPath,{readOnly:true});
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+function atomicPublish(path:string,contents:string,errorCode:string):void{const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;let fd:number|null=null;try{fd=openSync(tempPath,"wx",0o600);writeFileSync(fd,contents,"utf8");fsyncSync(fd);closeSync(fd);fd=null;const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,errorCode);renameSync(verifiedTempPath,path);}finally{if(fd!==null)closeSync(fd);rmSync(tempPath,{force:true});}}
 try {
   const coverage=db.prepare(`
     WITH population AS (
@@ -90,9 +94,9 @@ try {
   const eligible=cells.filter(c=>c.discovery.n>=30&&c.forward.n>=30);const stable=eligible.filter(c=>c.discovery.edgePp>0&&c.forward.edgePp>0).sort((a,b)=>Math.min(b.discovery.edgePp,b.forward.edgePp)-Math.min(a.discovery.edgePp,a.forward.edgePp));const robust=stable.filter(c=>c.discovery.max2HitExclRoi>=1&&c.forward.max2HitExclRoi>=1);const placebo=eligible.filter(c=>c.group==="placebo");
   const quantiles={oneMass:q(distributions.map(d=>d.oneMass)),effectiveSelections:q(distributions.map(d=>d.effective))};
   const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,closingOddsOnly:true,productionConnected:false},coverage:{candidateRaces:byRace.size,evaluatedRaces,rejectedMarkets:byRace.size-evaluatedRaces,evaluatedRows:evalRows.length},quantiles,family:{factors:factors.length,selections:selections.length,cells:cells.length,eligible:eligible.length},stable,robust,placebo,caveats:["historical closing oddsでT-5ではない","30行でも組番重複・欠損があるmarketは除外","閾値は探索用で事前登録されていない","整数・小数末尾7は偽陽性対照","同一市場から条件とimpliedを作るため因果解釈しない"]};
-  mkdirSync("reports",{recursive:true});writeFileSync("reports/market-microstructure-screen.json",`${JSON.stringify(report,null,2)}\n`);
+  mkdirSync("reports",{recursive:true});
   const lines=["# exacta市場マイクロ構造screen","","> 全30通り内の相対価格・票の集中を調べるread-only探索。closing oddsでありT-5ではない。","",`coverage: 候補${byRace.size} / 厳密評価${evaluatedRaces} / 不完全market除外${byRace.size-evaluatedRaces}レース / ${evalRows.length}評価行`,`探索族: ${factors.length}因子×${selections.length}買い目=${cells.length}セル（両期n≥30: ${eligible.length}）`,"",`分布: 1号艇mass p10/p50/p90=${fmtQ(quantiles.oneMass,true)}、有効選択肢数=${fmtQ(quantiles.effectiveSelections,false)}`,"","## 2024・2025とも市場残差プラス","","| 順位 | 市場構造 | 買い目 | 2024 n / edge / ROI / max2 | 2025 n / edge / ROI / max2 |","|---:|---|---:|---:|---:|",...stable.map((c,i)=>`| ${i+1} | ${c.label} | ${c.selection} | ${cell(c.discovery)} | ${cell(c.forward)} |`),"","最大2的中除外まで両期100%以上:","",robust.length?robust.map(c=>`- ${c.label} × ${c.selection}`).join("\n"):"該当なし。","","## 偽陽性対照","","| placebo | 買い目 | 2024 n / edge / ROI | 2025 n / edge / ROI |","|---|---:|---:|---:|",...placebo.map(c=>`| ${c.label} | ${c.selection} | ${short(c.discovery)} | ${short(c.forward)} |`),"","## 判定","","- 相対価格の歪みがplaceboを明確に上回り、両期の外れ値除外ROIも100%以上の場合だけ次段階へ進める。","- closing oddsで見つけた条件を、そのまま通知・BUY・本番判定へ接続しない。"];
-  writeFileSync("reports/market-microstructure-screen.md",`${lines.join("\n")}\n`);console.log(`market microstructure: candidates=${byRace.size} evaluated=${evaluatedRaces} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
+  atomicPublish(JSON_REPORT_PATH,`${JSON.stringify(report,null,2)}\n`,"MARKET_MICROSTRUCTURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");atomicPublish(MARKDOWN_REPORT_PATH,`${lines.join("\n")}\n`,"MARKET_MICROSTRUCTURE_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");console.log(`market microstructure: candidates=${byRace.size} evaluated=${evaluatedRaces} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 } finally {db.close();}
 
 function assertSettlementCoverage(rows:CoverageRow[]):void{const byPeriod=Object.fromEntries(["discovery","forward"].map(period=>{const row=rows.find(candidate=>candidate.period===period);const total=Number(row?.total??0),settled=Number(row?.settled??0);return[period,{total,settled,missing:total-settled}];}));const invalid=["discovery","forward"].some(period=>{const {total,settled,missing}=byPeriod[period];return!Number.isInteger(total)||!Number.isInteger(settled)||total<=0||settled!==total||missing!==0;});if(invalid)throw new Error(`MARKET_MICROSTRUCTURE_EXACTA_SETTLEMENT_INTEGRITY_INVALID ${JSON.stringify(byPeriod)}`);}

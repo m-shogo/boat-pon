@@ -39,3 +39,16 @@ test("market microstructure preflights scalar exacta settlement integrity before
   assert.match(source, /winner_h\.combination=p\.combination/);
   assert.doesNotMatch(source, /LEFT JOIN race_payouts p/);
 });
+
+test("market microstructure publishes reports via exclusive fsynced verified temp files and atomic rename", () => {
+  const source = readFileSync("scripts/analyze-market-microstructure.ts", "utf8");
+
+  assert.match(source, /openSync\(tempPath,"wx",0o600\)/u);
+  assert.match(source, /writeFileSync\(fd,contents,"utf8"\);fsyncSync\(fd\);/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,errorCode\);renameSync\(verifiedTempPath,path\);/u);
+  assert.match(source, /MARKET_MICROSTRUCTURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /MARKET_MICROSTRUCTURE_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /atomicPublish\(JSON_REPORT_PATH,/u);
+  assert.match(source, /atomicPublish\(MARKDOWN_REPORT_PATH,/u);
+  assert.doesNotMatch(source, /writeFileSync\("reports\/market-microstructure-screen\.(?:json|md)"/u);
+});
