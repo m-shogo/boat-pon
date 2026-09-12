@@ -42,8 +42,10 @@ function atomicPublish(path: string, contents: string, tempErrorCode: string, de
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
-    const verifiedTargetPath = assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
-    renameSync(verifiedTempPath, verifiedTargetPath);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
     rmSync(tempPath, { force: true });
