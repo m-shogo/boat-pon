@@ -53,7 +53,12 @@ function assertGeneratedOutputIdentity(path: string, missingCode: string, invali
   return assertCanonicalSingleLinkRegularFile(path, invalidCode);
 }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -62,7 +67,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -115,8 +123,18 @@ try {
   const json = readFileSync(workspaceJson, "utf8");
 
   mkdirSync("reports", { recursive: true });
-  atomicPublish(OUT_MD, markdown, "ODDS_PAYOUT_GAP_MD_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_JSON, json, "ODDS_PAYOUT_GAP_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "ODDS_PAYOUT_GAP_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ODDS_PAYOUT_GAP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "ODDS_PAYOUT_GAP_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ODDS_PAYOUT_GAP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
 
   assertCanonicalSingleLinkRegularFile(OUT_MD, "ODDS_PAYOUT_GAP_MD_OUTPUT_IDENTITY_INVALID");
   assertCanonicalSingleLinkRegularFile(OUT_JSON, "ODDS_PAYOUT_GAP_JSON_OUTPUT_IDENTITY_INVALID");
