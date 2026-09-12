@@ -1,4 +1,14 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -54,6 +64,26 @@ type TicketOutcome = {
   payoutYen: number;
 };
 
+function atomicPublish(path: string, content: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 if (!existsSync(DB_PATH)) {
   console.error("[analyze-roi-strategy-after-filters] primary DB missing");
   process.exit(1);
@@ -92,8 +122,18 @@ try {
   };
 
   mkdirSync("reports", { recursive: true });
-  writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, renderMd(report));
+  atomicPublish(
+    OUT_JSON,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "ROI_STRATEGY_JSON_TEMP_IDENTITY_INVALID",
+    "ROI_STRATEGY_JSON_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    renderMd(report),
+    "ROI_STRATEGY_MD_TEMP_IDENTITY_INVALID",
+    "ROI_STRATEGY_MD_DESTINATION_IDENTITY_INVALID",
+  );
   console.log(`[analyze-roi-strategy-after-filters] wrote ${OUT_MD}`);
   console.log(`[analyze-roi-strategy-after-filters] wrote ${OUT_JSON}`);
 } finally {

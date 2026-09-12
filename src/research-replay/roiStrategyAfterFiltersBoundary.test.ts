@@ -12,6 +12,22 @@ test("ROI strategy analysis verifies canonical DB identity and never emits the p
   assert.match(source, /dbIdentity: "verified-canonical-research-db"/);
 });
 
+test("ROI strategy report publication is exclusive, durable, identity-checked, and atomic", () => {
+  assert.match(source, /openSync\(tempPath, "wx", 0o600\)/);
+  assert.match(source, /fsyncSync\(fd\)/);
+  assert.match(source, /const verifiedTempPath = assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\)/);
+  assert.match(source, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/);
+  assert.match(source, /renameSync\(verifiedTempPath, path\)/);
+  const tempIdentity = source.indexOf("const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
+  const destinationIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)");
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)");
+  assert.ok(tempIdentity >= 0 && destinationIdentity > tempIdentity && rename > destinationIdentity);
+  assert.match(source, /atomicPublish\(\s*OUT_JSON,/);
+  assert.match(source, /atomicPublish\(\s*OUT_MD,/);
+  assert.doesNotMatch(source, /writeFileSync\(OUT_JSON/);
+  assert.doesNotMatch(source, /writeFileSync\(OUT_MD/);
+});
+
 test("motor and boat enrichment joins by race_id plus selected head course", () => {
   assert.match(source, /dh\.race_id AS raceId/);
   assert.match(source, /const raceId = String\(row\.raceId\)/);
