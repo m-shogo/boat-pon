@@ -1,5 +1,6 @@
 /** 時系列重複のcompact計画を作る。読み取り専用でDB変更はしない。 */
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { selectRetainedCaptures, type OddsCaptureSummary } from "../src/domain/oddsTimeseriesCompaction";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -8,6 +9,8 @@ const argv = process.argv.slice(2);
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = valueOf("--from") ?? "2026-06-01";
 const TO = valueOf("--to") ?? todayJst();
+const OUT_JSON = "reports/odds-timeseries-compaction-plan.json";
+const OUT_MD = "reports/odds-timeseries-compaction-plan.md";
 if (!existsSync(DB_PATH)) throw new Error("ODDS_TIMESERIES_COMPACTION_PLAN_DB_UNAVAILABLE");
 
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
@@ -109,10 +112,32 @@ const lines = [
 ];
 
 mkdirSync("reports", { recursive: true });
-writeFileSync("reports/odds-timeseries-compaction-plan.json", `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync("reports/odds-timeseries-compaction-plan.md", `${lines.join("\n")}\n`);
+verifyExistingOutput(OUT_JSON, "ODDS_TIMESERIES_COMPACTION_PLAN_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "ODDS_TIMESERIES_COMPACTION_PLAN_PREEXISTING_MD_IDENTITY_INVALID");
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ODDS_TIMESERIES_COMPACTION_PLAN_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD, `${lines.join("\n")}\n`, "ODDS_TIMESERIES_COMPACTION_PLAN_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log("[odds-timeseries-compaction-plan] wrote reports/odds-timeseries-compaction-plan.md / .json");
 
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 function groupKey(row: OddsCaptureSummary) { return `${row.raceId}/${row.checkpointLabel ?? ""}`; }
 function valueOf(name: string) { const index = argv.indexOf(name); return index >= 0 ? argv[index + 1] ?? null : null; }
 function dateRange(from: string, to: string) { const dates: string[] = []; for (let date = from; date <= to; date = addDays(date, 1)) dates.push(date); return dates; }
