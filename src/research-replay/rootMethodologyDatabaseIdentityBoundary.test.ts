@@ -33,13 +33,25 @@ test("root methodology guarded entrypoint reverifies DB identity after cohort pr
 
 test("root methodology publishes only verified isolated outputs atomically", () => {
   const source = readFileSync("scripts/audit-root-methodology.ts", "utf8");
+  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = source.indexOf("fsyncSync(fd)");
+  const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
+  const destinationIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)");
+  const rename = source.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.match(source, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-root-methodology-"\)\)/u);
   assert.match(source, /ROOT_METHODOLOGY_JSON_OUTPUT_IDENTITY_INVALID/u);
   assert.match(source, /ROOT_METHODOLOGY_MARKDOWN_OUTPUT_IDENTITY_INVALID/u);
-  assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
+  assert.match(source, /ROOT_METHODOLOGY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(source, /ROOT_METHODOLOGY_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
-  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath, errorCode\);\s*renameSync\(verifiedTempPath, path\);/u);
   assert.match(source, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
   assert.match(source, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(source, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
