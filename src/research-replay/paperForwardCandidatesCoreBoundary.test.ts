@@ -23,6 +23,29 @@ test("paper-forward core cannot bypass official settlement completeness when inv
   assert.match(core, /BOAT_PON_PAPER_FORWARD_INTERNAL_GUARD: "1"/);
 });
 
+test("paper-forward core validates provenance before atomic redaction publication", () => {
+  const read = core.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const provenanceCheck = core.indexOf("PAPER_FORWARD_CORE_DB_PROVENANCE_UNEXPECTED");
+  const handoffIdentity = core.indexOf('"PAPER_FORWARD_CORE_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const exclusiveOpen = core.indexOf('openSync(tempPath, "wx")');
+  const fsync = core.indexOf("fsyncSync(fd)");
+  const tempIdentity = core.indexOf('"PAPER_FORWARD_CORE_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = core.indexOf("renameSync(tempPath, targetPath)");
+
+  assert.ok(
+    read >= 0
+      && provenanceCheck > read
+      && handoffIdentity > provenanceCheck
+      && exclusiveOpen > handoffIdentity
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && rename > tempIdentity,
+  );
+  assert.match(core, /writeFileSync\(fd, content, "utf-8"\)/u);
+  assert.match(core, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
+  assert.doesNotMatch(core, /writeFileSync\(handoffReportPath/u);
+});
+
 test("paper-forward public raw compatibility entrypoint is guarded, DB-free, and redacts DB provenance", () => {
   const scripts = Object.values(pkg.scripts ?? {});
   assert.equal(scripts.some((command) => command.includes("report-paper-forward-candidates-raw.ts")), false);
