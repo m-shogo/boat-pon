@@ -1,5 +1,6 @@
 /** odds時系列DBの肥大化を日別に監査する。読み取り専用。 */
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { resolveN2OddsTimeseriesStorageWindow } from "../src/research-replay/n2OddsTimeseriesStorageWindow";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -7,6 +8,8 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const FROM = process.env.BOAT_PON_FROM ?? "2026-06-01";
 const TO = process.env.BOAT_PON_TO ?? todayJst();
+const OUT_JSON = "reports/odds-timeseries-storage.json";
+const OUT_MD = "reports/odds-timeseries-storage.md";
 const window = resolveN2OddsTimeseriesStorageWindow(FROM, TO);
 if (!existsSync(DB_PATH)) throw new Error("ODDS_TIMESERIES_STORAGE_AUDIT_DB_UNAVAILABLE");
 
@@ -95,9 +98,33 @@ const lines = [
 ];
 
 mkdirSync("reports", { recursive: true });
-writeFileSync("reports/odds-timeseries-storage.json", `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync("reports/odds-timeseries-storage.md", `${lines.join("\n")}\n`);
+verifyExistingOutput(OUT_JSON, "ODDS_TIMESERIES_STORAGE_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "ODDS_TIMESERIES_STORAGE_PREEXISTING_MD_IDENTITY_INVALID");
+atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ODDS_TIMESERIES_STORAGE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(OUT_MD, `${lines.join("\n")}\n`, "ODDS_TIMESERIES_STORAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
 console.log("[odds-timeseries-storage] wrote reports/odds-timeseries-storage.md / .json");
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 function addDays(date: string, delta: number) {
   const value = new Date(`${date}T00:00:00+09:00`);
