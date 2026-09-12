@@ -5,12 +5,39 @@
  * validating the research DB identity immediately before the legacy read-only
  * implementation runs. Persisted reports must use opaque DB provenance.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REPORT_JSON = "reports/all-bet-type-data-feasibility.json";
 const REPORT_MD = "reports/all-bet-type-data-feasibility.md";
 const OPAQUE_DB_SOURCE = "canonical research database";
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 const configuredDbPath = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 if (!existsSync(configuredDbPath)) {
@@ -53,11 +80,15 @@ const sanitizedJson = `${JSON.stringify(parsed, null, 2)}\n`;
 if (sanitizedJson.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_PRIVATE_DB_PROVENANCE_REMAINED");
 }
-const jsonHandoffPath = assertCanonicalSingleLinkRegularFile(
+assertCanonicalSingleLinkRegularFile(
   jsonReadPath,
   "ALL_BET_TYPE_FEASIBILITY_JSON_REPORT_HANDOFF_IDENTITY_INVALID",
 );
-writeFileSync(jsonHandoffPath, sanitizedJson);
+atomicPublish(
+  REPORT_JSON,
+  sanitizedJson,
+  "ALL_BET_TYPE_FEASIBILITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 
 const markdownReadPath = assertCanonicalSingleLinkRegularFile(
   verifiedMarkdownPath,
@@ -71,10 +102,14 @@ const sanitizedMarkdown = markdown.replaceAll(verifiedDbPath, OPAQUE_DB_SOURCE);
 if (sanitizedMarkdown.includes(verifiedDbPath)) {
   throw new Error("ALL_BET_TYPE_FEASIBILITY_PRIVATE_DB_PROVENANCE_REMAINED");
 }
-const markdownHandoffPath = assertCanonicalSingleLinkRegularFile(
+assertCanonicalSingleLinkRegularFile(
   markdownReadPath,
   "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_REPORT_HANDOFF_IDENTITY_INVALID",
 );
-writeFileSync(markdownHandoffPath, sanitizedMarkdown);
+atomicPublish(
+  REPORT_MD,
+  sanitizedMarkdown,
+  "ALL_BET_TYPE_FEASIBILITY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+);
 
 console.log("[all-bet-type-feasibility] PASS: canonical DB identity verified and persisted provenance redacted");
