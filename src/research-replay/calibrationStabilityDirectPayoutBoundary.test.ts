@@ -24,6 +24,25 @@ test("calibration stability direct analyzer fails closed on non-canonical or amb
   assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
 });
 
+test("calibration stability validates existing reports and publishes atomically", () => {
+  const source = readFileSync("scripts/analyze-calibration-stability.ts", "utf8");
+
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
+  const jsonPublish = source.indexOf("atomicPublish(OUT_JSON");
+  const mdPublish = source.indexOf("atomicPublish(OUT_MD");
+  assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
+
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = source.indexOf("fsyncSync(fd)", create);
+  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
+  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+
+  assert.match(source, /CALIBRATION_STABILITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /CALIBRATION_STABILITY_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+});
+
 test("calibration stability payout audit uses the same official settlement authority", () => {
   const source = readFileSync("scripts/audit-calibration-stability-payout-completeness.ts", "utf8");
 
