@@ -41,7 +41,8 @@ test("ticket-selector verifies report identity and publishes sanitized provenanc
   const exclusiveOpen = entrySource.indexOf('openSync(tempPath, "wx")');
   const fsync = entrySource.indexOf("fsyncSync(fd)");
   const tempIdentity = entrySource.indexOf('"TICKET_SELECTOR_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = entrySource.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = entrySource.indexOf('"TICKET_SELECTOR_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = entrySource.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -50,7 +51,13 @@ test("ticket-selector verifies report identity and publishes sanitized provenanc
       && handoffIdentity > privatePathCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
   assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
   assert.match(entrySource, /writeFileSync\(fd, content, "utf8"\)/);
