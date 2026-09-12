@@ -36,13 +36,18 @@ test("H011 forward monitor validates exacta settlement integrity and DB handoff 
   assert.equal(entry.includes("report-h011-forward-monitor-raw"), false);
 });
 
-test("H011 forward monitor verifies isolated outputs and publishes atomically", () => {
+test("H011 forward monitor verifies isolated outputs and reverifies destinations before atomic publication", () => {
   assert.match(entry, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-h011-forward-"\)\)/u);
   assert.match(entry, /H011_FORWARD_MARKDOWN_OUTPUT_IDENTITY_INVALID/u);
   assert.match(entry, /H011_FORWARD_JSON_OUTPUT_IDENTITY_INVALID/u);
   assert.match(entry, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(entry, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
-  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(tempPath, errorCode\);\s*renameSync\(verifiedTempPath, path\);/u);
+  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
+  const destinationIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
+  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  assert.ok(tempIdentity >= 0 && destinationIdentity > tempIdentity && rename > destinationIdentity);
+  assert.match(entry, /H011_FORWARD_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(entry, /H011_FORWARD_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(entry, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(entry, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
   assert.match(entry, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
