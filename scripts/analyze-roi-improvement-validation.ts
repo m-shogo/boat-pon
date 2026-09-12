@@ -6,7 +6,17 @@
  * これは本番判定やapp_settingsを変更せず、購入推奨もしない。
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -25,6 +35,32 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "roi improv
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA busy_timeout = 5000;");
 db.exec("PRAGMA query_only = ON;");
+
+function atomicPublish(path: string, contents: string, code: "MD" | "JSON"): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      `ROI_IMPROVEMENT_VALIDATION_${code}_PUBLISH_TEMP_IDENTITY_INVALID`,
+    );
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        `ROI_IMPROVEMENT_VALIDATION_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
+      );
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 type SettlementIntegrityRow = {
   total: number;
@@ -221,8 +257,8 @@ md += `\n## 候補結果（ハイブリッド戦略）\n\n|候補|種別|探索R
 for (const x of verdicts) md += `|${x.label}|${x.kind}|${fmtPct(x.discovery.roi)}|${fmtPct(x.validation.roi)}|${fmtPct(x.test.roi)}|${fmtPct(x.test.top2ExclRoi)}|${x.test.missingPayoutRaces}|${x.test.n}|${!x.complete ? "払戻欠落・未判定" : x.passes ? "条件上は通過（紙運用のみ）" : x.enough ? "不採用" : "n不足・未判定"}|\n`;
 md += `\n## 読み方\n\n払戻カバレッジが100%に満たない区間は、欠落を0円としてROIへ混ぜずN/Aにする。この表でROIが100%を超えても、標本数・市場変化・払戻しの裾に依存する可能性が残る。特に探索で見つけた候補は、検証と未使用テストを同時に満たさない限り本番ロジックへ昇格させない。\n`;
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_MD, md, "utf8");
-writeFileSync(OUT_JSON, JSON.stringify(json, null, 2), "utf8");
+atomicPublish(OUT_MD, md, "MD");
+atomicPublish(OUT_JSON, JSON.stringify(json, null, 2), "JSON");
 db.close();
 console.log(`[roi-validation] rows=${rows.length}`);
 for (const x of verdicts) console.log(`${x.id}: discovery=${fmtPct(x.discovery.roi)} validation=${fmtPct(x.validation.roi)} test=${fmtPct(x.test.roi)} testTop2=${fmtPct(x.test.top2ExclRoi)} missing=${x.test.missingPayoutRaces} n=${x.test.n} => ${!x.complete ? "INCOMPLETE_PAYOUT_DATA" : x.passes ? "PASS (paper only)" : x.enough ? "REJECT" : "INSUFFICIENT"}`);
