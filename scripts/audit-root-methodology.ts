@@ -32,7 +32,7 @@ const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const OUT_MD = "reports/root-methodology-audit.md";
 const OUT_JSON = "reports/root-methodology-audit.json";
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(path: string, contents: string, tempErrorCode: string, destinationErrorCode: string): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -41,8 +41,9 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
-    renameSync(verifiedTempPath, path);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    const verifiedTargetPath = assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    renameSync(verifiedTempPath, verifiedTargetPath);
   } finally {
     if (fd !== null) closeSync(fd);
     rmSync(tempPath, { force: true });
@@ -140,11 +141,13 @@ try {
     OUT_JSON,
     json,
     "ROOT_METHODOLOGY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROOT_METHODOLOGY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_MD,
     markdown,
     "ROOT_METHODOLOGY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROOT_METHODOLOGY_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 } finally {
   rmSync(workspace, { recursive: true, force: true });
