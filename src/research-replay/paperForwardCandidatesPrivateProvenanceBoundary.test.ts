@@ -22,13 +22,27 @@ test("paper-forward core sanitizes all configured DB provenance after internal a
   assert.match(coreSource, /PAPER_FORWARD_CORE_PRIVATE_DB_PATH_REMAINS/);
 });
 
-test("paper-forward core verifies generated report identity before provenance read and again before write", () => {
+test("paper-forward core verifies generated report identity before atomic provenance publication", () => {
   const firstIdentity = coreSource.indexOf('"PAPER_FORWARD_CORE_REPORT_IDENTITY_INVALID"');
   const read = coreSource.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const provenanceCheck = coreSource.indexOf("PAPER_FORWARD_CORE_DB_PROVENANCE_UNEXPECTED");
   const handoffIdentity = coreSource.indexOf('"PAPER_FORWARD_CORE_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = coreSource.indexOf("writeFileSync(handoffReportPath");
+  const publishCall = coreSource.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
+  const exclusiveOpen = coreSource.indexOf('openSync(tempPath, "wx")');
+  const fsync = coreSource.indexOf("fsyncSync(fd)");
+  const tempIdentity = coreSource.indexOf('"PAPER_FORWARD_CORE_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = coreSource.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && provenanceCheck > read
+      && handoffIdentity > provenanceCheck
+      && publishCall > handoffIdentity,
+  );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(coreSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(coreSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.match(coreSource, /writeFileSync\(fd, content, "utf-8"\)/u);
+  assert.doesNotMatch(coreSource, /writeFileSync\(handoffReportPath/u);
 });

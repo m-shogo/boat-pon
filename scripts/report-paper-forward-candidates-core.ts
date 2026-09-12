@@ -8,7 +8,16 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/paper-forward-candidates.md";
@@ -26,6 +35,27 @@ function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   }
 
   return result.status ?? 1;
+}
+
+function publishRedactedReportAtomically(targetPath: string, content: string): void {
+  const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx");
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "PAPER_FORWARD_CORE_TEMP_REPORT_IDENTITY_INVALID",
+    );
+    renameSync(tempPath, targetPath);
+  } catch (error) {
+    if (fd !== null) closeSync(fd);
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    throw error;
+  }
 }
 
 function redactDbProvenance(handoffDbPath: string): void {
@@ -46,16 +76,16 @@ function redactDbProvenance(handoffDbPath: string): void {
     throw new Error("PAPER_FORWARD_CORE_PRIVATE_DB_PATH_REMAINS");
   }
 
-  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
-    verifiedReportPath,
-    "PAPER_FORWARD_CORE_REPORT_HANDOFF_IDENTITY_INVALID",
-  );
-  writeFileSync(handoffReportPath, redacted, "utf-8");
-
   const dbLines = redacted.match(/^DB:.*$/gm) ?? [];
   if (dbLines.length !== 1 || dbLines[0] !== `DB: ${OPAQUE_DB_SOURCE}`) {
     throw new Error("PAPER_FORWARD_CORE_DB_PROVENANCE_UNEXPECTED");
   }
+
+  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
+    verifiedReportPath,
+    "PAPER_FORWARD_CORE_REPORT_HANDOFF_IDENTITY_INVALID",
+  );
+  publishRedactedReportAtomically(handoffReportPath, redacted);
 }
 
 const preflight = run("scripts/audit-odds-payout-gap-completeness.ts");
