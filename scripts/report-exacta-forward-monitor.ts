@@ -107,6 +107,10 @@ try {
     childDbHandoffPath,
     "EXACTA_FORWARD_MONITOR_DB_CHILD_LAUNCH_IDENTITY_INVALID",
   );
+  assertCanonicalSingleLinkRegularFile(
+    workspaceCandidates,
+    "EXACTA_FORWARD_MONITOR_CANDIDATE_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
   const monitor = spawnSync(
     process.execPath,
     ["--import", tsxLoader, "--input-type=module", "--eval", loader],
