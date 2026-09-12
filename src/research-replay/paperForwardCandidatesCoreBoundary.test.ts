@@ -46,15 +46,31 @@ test("paper-forward public raw compatibility entrypoint is guarded, DB-free, and
   assert.doesNotMatch(raw, /new DatabaseSync/u);
 });
 
-test("paper-forward raw verifies generated report identity before provenance read and again before write", () => {
+test("paper-forward raw verifies report identity and publishes provenance redaction atomically", () => {
   const firstIdentity = raw.indexOf('"PAPER_FORWARD_RAW_REPORT_IDENTITY_INVALID"');
   const read = raw.indexOf('readFileSync(verifiedReportPath, "utf-8")');
+  const provenanceCheck = raw.indexOf("PAPER_FORWARD_RAW_DB_PROVENANCE_UNEXPECTED");
   const handoffIdentity = raw.indexOf('"PAPER_FORWARD_RAW_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = raw.indexOf("writeFileSync(handoffReportPath");
+  const exclusiveOpen = raw.indexOf('openSync(tempPath, "wx")');
+  const fsync = raw.indexOf("fsyncSync(fd)");
+  const tempIdentity = raw.indexOf('"PAPER_FORWARD_RAW_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = raw.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && provenanceCheck > read
+      && handoffIdentity > provenanceCheck
+      && exclusiveOpen > handoffIdentity
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && rename > tempIdentity,
+  );
   assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
+  assert.match(raw, /writeFileSync\(fd, content, "utf-8"\)/u);
+  assert.match(raw, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
+  assert.doesNotMatch(raw, /writeFileSync\(handoffReportPath/u);
 });
 
 test("paper-forward aggregation implementation fails closed and hardens the actual SQLite boundary", () => {
