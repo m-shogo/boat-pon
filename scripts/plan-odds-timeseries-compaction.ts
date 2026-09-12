@@ -114,15 +114,30 @@ const lines = [
 mkdirSync("reports", { recursive: true });
 verifyExistingOutput(OUT_JSON, "ODDS_TIMESERIES_COMPACTION_PLAN_PREEXISTING_JSON_IDENTITY_INVALID");
 verifyExistingOutput(OUT_MD, "ODDS_TIMESERIES_COMPACTION_PLAN_PREEXISTING_MD_IDENTITY_INVALID");
-atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ODDS_TIMESERIES_COMPACTION_PLAN_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_MD, `${lines.join("\n")}\n`, "ODDS_TIMESERIES_COMPACTION_PLAN_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "ODDS_TIMESERIES_COMPACTION_PLAN_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ODDS_TIMESERIES_COMPACTION_PLAN_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  `${lines.join("\n")}\n`,
+  "ODDS_TIMESERIES_COMPACTION_PLAN_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ODDS_TIMESERIES_COMPACTION_PLAN_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log("[odds-timeseries-compaction-plan] wrote reports/odds-timeseries-compaction-plan.md / .json");
 
 function verifyExistingOutput(path: string, identityErrorCode: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -131,7 +146,10 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
