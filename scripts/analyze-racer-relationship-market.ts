@@ -2,7 +2,8 @@
  * 選手間の公開レース履歴をpoint-in-timeで再構成し、exacta 1-4市場残差との関係を調べるread-only研究。
  * 師弟・私的関係は推測せず、過去日までの同走・直接対戦と登録番号近接proxyだけを使う。
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
 import {
@@ -19,6 +20,8 @@ type EvalRow = ExactaRow & { period: "discovery" | "forward"; hit: boolean; impl
 type Metric = { n: number; hits: number; edgePp: number; roi: number; max2HitExclRoi: number; zScore: number };
 type OfficialRelationshipRegistry = { relationships: Array<{ relationshipType: string; mentor: { registrationNo: string }; apprentice: { registrationNo: string }; sourcePublishedDate: string }> };
 
+const JSON_REPORT_PATH = "reports/racer-relationship-market-screen.json";
+const MARKDOWN_REPORT_PATH = "reports/racer-relationship-market-screen.md";
 const verifiedOfficialRegistryPath = assertCanonicalSingleLinkRegularFile(
   "docs/official-racer-relationships.json",
   "OFFICIAL_RACER_RELATIONSHIP_REGISTRY_IDENTITY_INVALID",
@@ -52,8 +55,8 @@ try {
               WHERE winner_h.race_id=rp.race_id
                 AND winner_h.bet_type='exacta'
                 AND ${historicalExactaCanonicalSourcePredicate("winner_h")}
-                AND winner_h.combination=rp.combination
-            ) THEN 1 ELSE 0 END)=1
+                AND winner_h.combination=rp.combination)
+          THEN 1 ELSE 0 END)=1
         THEN 1 ELSE 0 END AS settled
       FROM race_payouts rp
       WHERE rp.bet_type='exacta'
@@ -145,7 +148,7 @@ try {
     unavailable: ["網羅的な公式師弟pair registry", "支部・登録期のhistorical snapshot", "企画タイトルのhistorical保存"],
     caveats: ["登録番号近接は同期の近似であり公式登録期ではない", "同走・対戦は関係性の証拠ではない", "個人単位の不正判定には使わない"],
     results: results.map(({ filter: _filter, ...result }) => result) };
-  mkdirSync("reports", { recursive: true }); writeFileSync("reports/racer-relationship-market-screen.json", `${JSON.stringify(report, null, 2)}\n`);
+  mkdirSync("reports", { recursive: true });
   const lines = ["# 選手関係性と市場残差screen", "", "> 公開レース履歴だけをprior-dayで再構成。師弟・私的関係・不正を推測しない。", "", `評価exactaレース: ${evaluations.length}`, "",
     ...results.flatMap(result => [
       `## ${result.label}`, "", `base: 2024 ${cell(result.base.discovery)} / 2025 ${cell(result.base.forward)}`, "",
@@ -153,10 +156,12 @@ try {
       ...result.relationships.map(row => `| ${row.flag} | ${cell(row.inside.discovery)} | ${cell(row.inside.forward)} | ${deltaCell(row)} |`), "",
     ]),
     "## 解釈規則", "", `- 公式出典付き師弟registryは${officialRegistry.relationships.length}組だけの非網羅的な台帳。記事公開日以後だけをpoint-in-time利用する。`, "- 同支部は現在DBにないため推測しない。『事務所』に相当する公式構造も確認できていない。", "- 過去同走や直接対戦は『慣れ』のproxyであり、協調・忖度・不正の証拠ではない。", "- 個人名を異常ランキングに出さず、集団レベルの市場残差だけを扱う。", "- 企画番組・支部・師弟を追加しても、独立期間と価格時点同等性を通るまでproductionへ接続しない。"];
-  writeFileSync("reports/racer-relationship-market-screen.md", `${lines.join("\n")}\n`);
+  atomicPublish(JSON_REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "RACER_RELATIONSHIP_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(MARKDOWN_REPORT_PATH, `${lines.join("\n")}\n`, "RACER_RELATIONSHIP_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");
   console.log(`relationship market screen: exacta=${evaluations.length}`);
 } finally { db.close(); }
 
+function atomicPublish(path: string, contents: string, errorCode: string): void { const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`; let fd:number|null=null; try { fd=openSync(tempPath,"wx",0o600); writeFileSync(fd,contents,"utf8"); fsyncSync(fd); closeSync(fd); fd=null; const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,errorCode); renameSync(verifiedTempPath,path); } finally { if(fd!==null)closeSync(fd); rmSync(tempPath,{force:true}); } }
 function assertSettlementCoverage(rows: CoverageRow[]): void { const byPeriod=Object.fromEntries(["discovery","forward"].map(period=>{const row=rows.find(candidate=>candidate.period===period);const total=Number(row?.total??0),settled=Number(row?.settled??0);return[period,{total,settled,missing:total-settled}];})); const invalid=["discovery","forward"].some(period=>{const {total,settled,missing}=byPeriod[period];return !Number.isInteger(total)||!Number.isInteger(settled)||total<=0||settled!==total||missing!==0;}); if(invalid)throw new Error(`RACER_RELATIONSHIP_EXACTA_SETTLEMENT_INTEGRITY_INVALID ${JSON.stringify(byPeriod)}`); }
 function assertPayoutCompleteness(rows: ExactaRow[]): void { const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}}; for(const row of rows){const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;} const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total; if(invalid)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`); }
 function requiredPayout(row: EvalRow): number { if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_MISSING race=${row.race_id}`); return row.payout_yen; }

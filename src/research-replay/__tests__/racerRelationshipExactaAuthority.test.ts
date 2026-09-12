@@ -39,3 +39,15 @@ test("racer relationship exacta settlement is unambiguous before market aggregat
   assert.match(source, /winner_h\.combination=p\.combination/);
   assert.doesNotMatch(source, /LEFT JOIN race_payouts p/);
 });
+
+test("racer relationship reports publish through exclusive fsynced identity-verified temp files", () => {
+  const source = readFileSync("scripts/analyze-racer-relationship-market.ts", "utf8");
+
+  assert.match(source, /openSync\(tempPath,"wx",0o600\)/);
+  assert.match(source, /fsyncSync\(fd\)/);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,errorCode\)/);
+  assert.match(source, /renameSync\(verifiedTempPath,path\)/);
+  assert.match(source, /atomicPublish\(JSON_REPORT_PATH/);
+  assert.match(source, /atomicPublish\(MARKDOWN_REPORT_PATH/);
+  assert.doesNotMatch(source, /writeFileSync\("reports\/racer-relationship-market-screen\.(?:json|md)"/);
+});
