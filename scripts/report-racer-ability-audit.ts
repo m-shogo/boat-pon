@@ -98,6 +98,10 @@ try {
     childDbPath,
     "RACER_ABILITY_AUDIT_DB_CHILD_LAUNCH_IDENTITY_INVALID",
   );
+  assertCanonicalSingleLinkRegularFile(
+    stagedCandidatesPath,
+    "RACER_ABILITY_AUDIT_CANDIDATES_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
 
   const child = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     cwd: workspace,
