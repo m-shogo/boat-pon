@@ -7,20 +7,29 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   closeSync,
   existsSync,
   fsyncSync,
+  mkdirSync,
+  mkdtempSync,
   openSync,
   readFileSync,
   renameSync,
-  unlinkSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/bet-type-risk-factors.md";
+const OUT_JSON = "reports/bet-type-risk-factors.json";
 const OPAQUE_DB_SOURCE = "primary research database";
+const internalPath = fileURLToPath(new URL("./analyze-bet-type-risk-factors-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   const result = spawnSync(process.execPath, ["--import", "tsx", script], {
@@ -34,53 +43,42 @@ function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   return result.status ?? 1;
 }
 
-function publishRedactedReportAtomically(targetPath: string, content: string): void {
-  const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+function atomicPublish(path: string, content: string, code: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
-    fd = openSync(tempPath, "wx");
+    fd = openSync(tempPath, "wx", 0o600);
     writeFileSync(fd, content, "utf8");
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
+
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
       tempPath,
-      "BET_TYPE_RISK_TEMP_REPORT_IDENTITY_INVALID",
+      `BET_TYPE_RISK_${code}_PUBLISH_TEMP_IDENTITY_INVALID`,
     );
-    const verifiedTargetPath = assertCanonicalSingleLinkRegularFile(
-      targetPath,
-      "BET_TYPE_RISK_PUBLISH_DESTINATION_IDENTITY_INVALID",
-    );
-    renameSync(verifiedTempPath, verifiedTargetPath);
-  } catch (error) {
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        `BET_TYPE_RISK_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
+      );
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
     if (fd !== null) closeSync(fd);
-    if (existsSync(tempPath)) unlinkSync(tempPath);
-    throw error;
+    rmSync(tempPath, { force: true });
   }
 }
 
-function redactDbProvenance(dbPath: string): void {
-  if (!existsSync(OUT_MD)) {
-    throw new Error("BET_TYPE_RISK_REPORT_MISSING_AFTER_ANALYSIS");
+function redactDbProvenance(content: string, dbPath: string, code: string): string {
+  if (!content.includes(dbPath)) {
+    throw new Error(`BET_TYPE_RISK_${code}_DB_PROVENANCE_NOT_FOUND`);
   }
-  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
-    "BET_TYPE_RISK_REPORT_IDENTITY_INVALID",
-  );
-  const report = readFileSync(verifiedReportPath, "utf8");
-  const provenance = `DB: ${dbPath}`;
-  if (!report.includes(provenance)) {
-    throw new Error("BET_TYPE_RISK_DB_PROVENANCE_NOT_FOUND");
-  }
-  const redacted = report.replaceAll(provenance, `DB: ${OPAQUE_DB_SOURCE}`);
+  const redacted = content.split(dbPath).join(OPAQUE_DB_SOURCE);
   if (redacted.includes(dbPath)) {
-    throw new Error("BET_TYPE_RISK_PRIVATE_DB_PATH_REMAINS");
+    throw new Error(`BET_TYPE_RISK_${code}_PRIVATE_DB_PATH_REMAINS`);
   }
-  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
-    verifiedReportPath,
-    "BET_TYPE_RISK_REPORT_HANDOFF_IDENTITY_INVALID",
-  );
-  publishRedactedReportAtomically(handoffReportPath, redacted);
+  return redacted;
 }
 
 const preflight = run("scripts/audit-bet-type-risk-factors-cohort.ts");
@@ -95,21 +93,51 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "BET_TYPE_RISK_PRIMARY_DB_IDENTITY_INVALID",
 );
 
-if (existsSync(OUT_MD)) {
-  assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
-    "BET_TYPE_RISK_PREEXISTING_REPORT_IDENTITY_INVALID",
+// Reverify immediately before the isolated child launch so a path swap cannot
+// bypass the successful preflight/identity checks.
+const launchDbPath = assertCanonicalSingleLinkRegularFile(
+  verifiedDbPath,
+  "BET_TYPE_RISK_CHILD_LAUNCH_DB_IDENTITY_INVALID",
+);
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-bet-type-risk-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const analysis = spawnSync(
+    process.execPath,
+    ["--import", tsxLoader, "--input-type=module", "--eval", loader],
+    {
+      cwd: workspace,
+      env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
   );
+  if (analysis.error || analysis.status !== 0) {
+    throw new Error("BET_TYPE_RISK_INTERNAL_FAILED");
+  }
+
+  const stagedMdPath = join(workspace, OUT_MD);
+  const stagedJsonPath = join(workspace, OUT_JSON);
+  if (!existsSync(stagedMdPath)) throw new Error("BET_TYPE_RISK_MD_OUTPUT_MISSING");
+  if (!existsSync(stagedJsonPath)) throw new Error("BET_TYPE_RISK_JSON_OUTPUT_MISSING");
+
+  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(
+    stagedMdPath,
+    "BET_TYPE_RISK_MD_STAGED_OUTPUT_IDENTITY_INVALID",
+  );
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    stagedJsonPath,
+    "BET_TYPE_RISK_JSON_STAGED_OUTPUT_IDENTITY_INVALID",
+  );
+  const markdown = redactDbProvenance(readFileSync(verifiedMdPath, "utf8"), launchDbPath, "MD");
+  const json = redactDbProvenance(readFileSync(verifiedJsonPath, "utf8"), launchDbPath, "JSON");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(OUT_MD, markdown, "MD");
+  atomicPublish(OUT_JSON, json, "JSON");
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
 }
 
-const analysis = run("scripts/analyze-bet-type-risk-factors-internal.ts", {
-  ...process.env,
-  BOAT_PON_DB_PATH: verifiedDbPath,
-});
-if (analysis !== 0) {
-  console.error("[bet-type-risk] internal read-only analysis failed after a successful cohort preflight");
-  process.exit(analysis);
-}
-
-redactDbProvenance(verifiedDbPath);
-console.log("[bet-type-risk] PASS: cohort preflight passed before risk-factor analysis");
+console.log("[bet-type-risk] PASS: cohort preflight passed before isolated risk-factor analysis");
