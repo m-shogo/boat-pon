@@ -68,8 +68,18 @@ const report = {
 };
 
 mkdirSync("reports", { recursive: true });
-atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ROI_MASTER_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_MD, renderMd(report), "ROI_MASTER_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "ROI_MASTER_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_MASTER_REVIEW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  renderMd(report),
+  "ROI_MASTER_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_MASTER_REVIEW_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log(`[roi-master-review] finalDecision=${finalDecision}`);
 console.log(`[roi-master-review] wrote ${OUT_MD}`);
 console.log(`[roi-master-review] wrote ${OUT_JSON}`);
@@ -143,7 +153,12 @@ function read(path: string): AnyObj | null {
   return JSON.parse(readFileSync(verifiedPath, "utf8")) as AnyObj;
 }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -152,7 +167,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
