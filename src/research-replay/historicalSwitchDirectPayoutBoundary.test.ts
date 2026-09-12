@@ -47,15 +47,25 @@ for (const c of CASES) {
     const auditIndex = source.indexOf(c.audit);
     const gateIndex = source.indexOf("audit !== 0");
     const handoffIdentityIndex = source.indexOf(c.handoffIdentityError);
-    const analyzerIndex = source.indexOf(c.analyzer);
+    const isolatedChild = source.includes("DB_CHILD_LAUNCH_IDENTITY_INVALID");
+    const analyzerIndex = isolatedChild
+      ? source.indexOf("const analysis = spawnSync")
+      : source.indexOf(c.analyzer);
 
     assert.ok(primaryIdentityIndex >= 0, "canonical entrypoint must verify primary DB identity");
-    assert.ok(auditIndex > primaryIdentityIndex, "payout audit must receive only the verified DB path");
+    assert.ok(auditIndex > primaryIdentityIndex, "payout audit must receive only a verified DB path");
     assert.ok(gateIndex > auditIndex);
     assert.ok(handoffIdentityIndex > gateIndex, "DB identity must be reverified after payout preflight");
     assert.ok(analyzerIndex > handoffIdentityIndex, "analysis must start only after handoff identity revalidation");
-    assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
-    assert.match(source, /BOAT_PON_DB_PATH = handoffDbPath/);
+    if (isolatedChild) {
+      assert.match(source, /BOAT_PON_DB_PATH: auditDbPath/);
+      assert.match(source, /DB_CHILD_LAUNCH_IDENTITY_INVALID/);
+      assert.match(source, /cwd: workspace/);
+      assert.doesNotMatch(source, /BOAT_PON_DB_PATH = handoffDbPath/);
+    } else {
+      assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
+      assert.match(source, /BOAT_PON_DB_PATH = handoffDbPath/);
+    }
     assert.doesNotMatch(source, /DB not found: \$\{DB_PATH\}/);
     assert.doesNotMatch(source, /DatabaseSync/);
     assert.equal(pkg.scripts?.[c.alias], `tsx ${c.entry}`);
