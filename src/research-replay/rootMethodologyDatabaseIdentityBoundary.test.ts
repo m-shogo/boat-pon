@@ -36,8 +36,9 @@ test("root methodology publishes only verified isolated outputs atomically", () 
   const exclusiveOpen = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = source.indexOf("fsyncSync(fd)");
   const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
+  const destinationExistence = source.indexOf("if (existsSync(path))");
   const destinationIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)");
-  const rename = source.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)");
 
   assert.match(source, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-root-methodology-"\)\)/u);
   assert.match(source, /ROOT_METHODOLOGY_JSON_OUTPUT_IDENTITY_INVALID/u);
@@ -46,9 +47,11 @@ test("root methodology publishes only verified isolated outputs atomically", () 
     exclusiveOpen >= 0
       && fsync > exclusiveOpen
       && tempIdentity > fsync
-      && destinationIdentity > tempIdentity
+      && destinationExistence > tempIdentity
+      && destinationIdentity > destinationExistence
       && rename > destinationIdentity,
   );
+  assert.match(source, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/u);
   assert.match(source, /ROOT_METHODOLOGY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /ROOT_METHODOLOGY_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
