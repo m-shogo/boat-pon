@@ -6,7 +6,7 @@ const entrypoint = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8"
 const raw = readFileSync("scripts/analyze-roi-hypothesis-sets-raw.ts", "utf8");
 const internal = readFileSync("scripts/analyze-roi-hypothesis-sets-internal.ts", "utf8");
 
-test("ROI hypothesis entrypoint verifies the database and every settled denominator before internal analysis", () => {
+test("ROI hypothesis entrypoint verifies the database and every settled denominator before isolated internal analysis", () => {
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(DB_PATH/);
   assert.match(entrypoint, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
   assert.match(entrypoint, /PRAGMA query_only = ON/);
@@ -22,10 +22,13 @@ test("ROI hypothesis entrypoint verifies the database and every settled denomina
   assert.doesNotMatch(entrypoint, /rp\.bet_type = s\.bet_type/);
   const integrity = entrypoint.indexOf("WITH relevant_settled AS");
   const handoff = entrypoint.indexOf("ROI_HYPOTHESIS_DB_HANDOFF_IDENTITY_INVALID");
-  const internalLaunch = entrypoint.indexOf('await import("./analyze-roi-hypothesis-sets-internal")');
+  const launchIdentity = entrypoint.indexOf("ROI_HYPOTHESIS_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const internalLaunch = entrypoint.indexOf("const analysis = spawnSync");
   assert.ok(integrity >= 0);
   assert.ok(handoff > integrity);
-  assert.ok(internalLaunch > handoff);
+  assert.ok(launchIdentity > handoff);
+  assert.ok(internalLaunch > launchIdentity);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/analyze-roi-hypothesis-sets-internal"\)/u);
   assert.doesNotMatch(entrypoint, /analyze-roi-hypothesis-sets-raw/);
 });
 

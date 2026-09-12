@@ -3,17 +3,20 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = readFileSync("scripts/analyze-roi-hypothesis-sets.ts", "utf8");
-const GUARDED_ANALYZER_IMPORT = 'await import("./analyze-roi-hypothesis-sets-internal")';
+const CHILD_LAUNCH = "const analysis = spawnSync";
 
-test("ROI hypothesis analysis rejects unknown or returned historical BUY rows before settlement and guarded analysis", () => {
+test("ROI hypothesis analysis rejects unknown or returned historical BUY rows before settlement and isolated analysis", () => {
   assert.match(source, /dh\.returned IS NULL OR dh\.returned != 0/);
   assert.match(source, /unknown or returned settlement state/);
   const returnGate = source.indexOf("const invalidReturn = db.prepare");
   const integrity = source.indexOf("WITH relevant_settled AS");
-  const guardedAnalysis = source.indexOf(GUARDED_ANALYZER_IMPORT);
+  const childIdentity = source.indexOf("ROI_HYPOTHESIS_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const isolatedAnalysis = source.indexOf(CHILD_LAUNCH);
   assert.ok(returnGate >= 0);
   assert.ok(integrity > returnGate);
-  assert.ok(guardedAnalysis > integrity);
+  assert.ok(childIdentity > integrity);
+  assert.ok(isolatedAnalysis > childIdentity);
+  assert.doesNotMatch(source, /await import\("\.\/analyze-roi-hypothesis-sets-internal"\)/u);
 });
 
 test("ROI hypothesis analysis maps decision 3連単 rows to canonical trifecta winning-result settlements", () => {
@@ -35,13 +38,21 @@ test("ROI hypothesis analysis fails closed on ambiguous settled denominator winn
   assert.match(source, /settled denominator race\(s\) do not have exactly one positive non-refund official winning settlement/);
 });
 
-test("ROI hypothesis settlement gate runs read-only before guarded analysis", () => {
+test("ROI hypothesis settlement gate runs read-only before isolated analysis", () => {
   const identity = source.indexOf("assertCanonicalSingleLinkRegularFile");
   const queryOnly = source.indexOf("PRAGMA query_only = ON");
   const returnGate = source.indexOf("const invalidReturn = db.prepare");
   const integrity = source.indexOf("WITH relevant_settled AS");
-  const guardedAnalysis = source.indexOf(GUARDED_ANALYZER_IMPORT);
-  assert.ok(identity >= 0 && queryOnly > identity && returnGate > queryOnly && integrity > returnGate && guardedAnalysis > integrity);
+  const childIdentity = source.indexOf("ROI_HYPOTHESIS_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const isolatedAnalysis = source.indexOf(CHILD_LAUNCH);
+  assert.ok(
+    identity >= 0 &&
+      queryOnly > identity &&
+      returnGate > queryOnly &&
+      integrity > returnGate &&
+      childIdentity > integrity &&
+      isolatedAnalysis > childIdentity,
+  );
   assert.match(source, /new DatabaseSync\(verifiedDbPath, \{ readOnly: true \}\)/);
 });
 
