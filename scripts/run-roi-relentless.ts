@@ -62,8 +62,24 @@ for (const [index, pass] of passes.entries()) {
   const allFeature = readOptional<AllFeatureReport>(ALL_FEATURE_JSON);
   const archivedPro = join(OUT_DIR, `${index + 1}-${pass.name}-pro-loop.json`);
   const archivedAll = join(OUT_DIR, `${index + 1}-${pass.name}-all-feature.json`);
-  if (existsSync(PRO_LOOP_JSON)) archiveVerifiedSource(PRO_LOOP_JSON, archivedPro, "ROI_RELENTLESS_PRO_LOOP_ARCHIVE_SOURCE_IDENTITY_INVALID", "ROI_RELENTLESS_PRO_LOOP_ARCHIVE_TEMP_IDENTITY_INVALID");
-  if (existsSync(ALL_FEATURE_JSON)) archiveVerifiedSource(ALL_FEATURE_JSON, archivedAll, "ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_SOURCE_IDENTITY_INVALID", "ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_TEMP_IDENTITY_INVALID");
+  if (existsSync(PRO_LOOP_JSON)) {
+    archiveVerifiedSource(
+      PRO_LOOP_JSON,
+      archivedPro,
+      "ROI_RELENTLESS_PRO_LOOP_ARCHIVE_SOURCE_IDENTITY_INVALID",
+      "ROI_RELENTLESS_PRO_LOOP_ARCHIVE_TEMP_IDENTITY_INVALID",
+      "ROI_RELENTLESS_PRO_LOOP_ARCHIVE_DESTINATION_IDENTITY_INVALID",
+    );
+  }
+  if (existsSync(ALL_FEATURE_JSON)) {
+    archiveVerifiedSource(
+      ALL_FEATURE_JSON,
+      archivedAll,
+      "ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_SOURCE_IDENTITY_INVALID",
+      "ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_TEMP_IDENTITY_INVALID",
+      "ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_DESTINATION_IDENTITY_INVALID",
+    );
+  }
 
   const strong = isStrong(proLoop);
   const paper = isPaper(proLoop, allFeature);
@@ -98,8 +114,18 @@ const report = {
   nextActions: nextActions(finalDecision),
 };
 
-atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ROI_RELENTLESS_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_MD, renderMd(report), "ROI_RELENTLESS_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "ROI_RELENTLESS_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_RELENTLESS_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  renderMd(report),
+  "ROI_RELENTLESS_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_RELENTLESS_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log(`[roi-relentless] finalDecision=${finalDecision}`);
 console.log(`[roi-relentless] wrote ${OUT_MD}`);
 console.log(`[roi-relentless] wrote ${OUT_JSON}`);
@@ -173,12 +199,23 @@ function readOptional<T>(path: string): T | null {
   return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
 }
 
-function archiveVerifiedSource(sourcePath: string, destinationPath: string, sourceErrorCode: string, tempErrorCode: string): void {
+function archiveVerifiedSource(
+  sourcePath: string,
+  destinationPath: string,
+  sourceErrorCode: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const verifiedSourcePath = assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
-  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode);
+  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode, destinationErrorCode);
 }
 
-function atomicPublish(path: string, contents: string | Buffer, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string | Buffer,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -187,7 +224,10 @@ function atomicPublish(path: string, contents: string | Buffer, errorCode: strin
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
