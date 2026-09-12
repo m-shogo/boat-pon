@@ -2,7 +2,23 @@
  * Fail-closed local-market anomaly entrypoint.
  * Historical closing-odds research only. No T-5/private/production/BUY wiring.
  */
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
@@ -11,6 +27,32 @@ import {
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const OUT_JSON = "reports/local-market-anomaly-deep-dive.json";
+const OUT_MD = "reports/local-market-anomaly-deep-dive.md";
+const internalPath = fileURLToPath(new URL("./analyze-local-market-anomalies-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
+
+function atomicPublish(path: string, content: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 if (!existsSync(DB_PATH)) throw new Error("LOCAL_MARKET_PRIMARY_DB_MISSING");
 
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "LOCAL_MARKET_PRIMARY_DB_IDENTITY_INVALID");
@@ -92,6 +134,59 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   verifiedDbPath,
   "LOCAL_MARKET_DB_HANDOFF_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
 
-await import("./analyze-local-market-anomalies-internal");
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-local-market-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    handoffDbPath,
+    "LOCAL_MARKET_DB_CHILD_LAUNCH_IDENTITY_INVALID",
+  );
+  const analysis = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
+    cwd: workspace,
+    env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (analysis.error || analysis.status !== 0) {
+    throw new Error("LOCAL_MARKET_INTERNAL_FAILED");
+  }
+
+  const workspaceJson = join(workspace, OUT_JSON);
+  const workspaceMd = join(workspace, OUT_MD);
+  if (!existsSync(workspaceJson)) throw new Error("LOCAL_MARKET_JSON_OUTPUT_MISSING");
+  if (!existsSync(workspaceMd)) throw new Error("LOCAL_MARKET_MD_OUTPUT_MISSING");
+
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    workspaceJson,
+    "LOCAL_MARKET_JSON_OUTPUT_IDENTITY_INVALID",
+  );
+  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(
+    workspaceMd,
+    "LOCAL_MARKET_MD_OUTPUT_IDENTITY_INVALID",
+  );
+  const json = readFileSync(verifiedJsonPath, "utf8")
+    .split(launchDbPath)
+    .join("verified read-only research DB");
+  const markdown = readFileSync(verifiedMdPath, "utf8")
+    .split(launchDbPath)
+    .join("verified read-only research DB");
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "LOCAL_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "LOCAL_MARKET_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "LOCAL_MARKET_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "LOCAL_MARKET_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
+
+console.log("[local-market-anomalies] PASS: settlement preflight passed before isolated analysis publication");
