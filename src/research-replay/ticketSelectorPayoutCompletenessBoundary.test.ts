@@ -23,7 +23,8 @@ test("ticket-selector redacts configured DB provenance only after successful gua
   assert.match(entrySource, /OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entrySource, /TICKET_SELECTOR_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(entrySource, /TICKET_SELECTOR_DB_PROVENANCE_NOT_FOUND/);
-  assert.match(entrySource, /report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(entrySource, /const redacted = report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(entrySource, /TICKET_SELECTOR_PRIVATE_DB_PATH_REMAINS/);
   const analysis = entrySource.indexOf('run("scripts/analyze-ticket-selector-strategies-core.ts"');
   const successGate = entrySource.indexOf("if (analysis !== 0)");
   const redact = entrySource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
@@ -31,15 +32,30 @@ test("ticket-selector redacts configured DB provenance only after successful gua
   assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
 });
 
-test("ticket-selector verifies generated report identity before redaction read and again before write", () => {
+test("ticket-selector verifies report identity and publishes sanitized provenance atomically", () => {
   const firstIdentity = entrySource.indexOf('"TICKET_SELECTOR_REPORT_IDENTITY_INVALID"');
   const read = entrySource.indexOf('readFileSync(verifiedReportPath, "utf8")');
+  const privatePathCheck = entrySource.indexOf("TICKET_SELECTOR_PRIVATE_DB_PATH_REMAINS");
   const handoffIdentity = entrySource.indexOf('"TICKET_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const write = entrySource.indexOf("writeFileSync(handoffReportPath");
+  const publishCall = entrySource.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
+  const exclusiveOpen = entrySource.indexOf('openSync(tempPath, "wx")');
+  const fsync = entrySource.indexOf("fsyncSync(fd)");
+  const tempIdentity = entrySource.indexOf('"TICKET_SELECTOR_TEMP_REPORT_IDENTITY_INVALID"');
+  const rename = entrySource.indexOf("renameSync(tempPath, targetPath)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && write > handoffIdentity);
+  assert.ok(
+    firstIdentity >= 0
+      && read > firstIdentity
+      && privatePathCheck > read
+      && handoffIdentity > privatePathCheck
+      && publishCall > handoffIdentity,
+  );
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
   assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
   assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
+  assert.match(entrySource, /writeFileSync\(fd, content, "utf8"\)/);
+  assert.match(entrySource, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/);
+  assert.doesNotMatch(entrySource, /writeFileSync\(handoffReportPath/);
 });
 
 test("ticket-selector preflight covers the exact base population and every compared market", () => {
