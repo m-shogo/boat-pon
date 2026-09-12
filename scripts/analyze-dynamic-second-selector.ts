@@ -1,5 +1,14 @@
 /** exacta 1-Xの2着艇をレース前情報で動的に1艇選ぶread-only比較。 */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { selectDynamicSecond, type RivalContext, type RivalStrategy } from "../src/domain/dynamicSecondSelector";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
@@ -45,9 +54,28 @@ const strategyDefs: Array<{ id: string; label: string; strategy?: RivalStrategy;
 ];
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
+const JSON_REPORT_PATH = "reports/dynamic-second-selector.json";
+const MARKDOWN_REPORT_PATH = "reports/dynamic-second-selector.md";
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "DYNAMIC_SECOND_PRIMARY_DB_IDENTITY_INVALID");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
 db.exec("PRAGMA query_only=ON; PRAGMA busy_timeout=30000;");
+
+function atomicPublish(path: string, contents: string, errorCode: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 try {
   assertSettlementCompleteness();
@@ -187,7 +215,6 @@ try {
     ],
   };
   mkdirSync("reports", { recursive: true });
-  writeFileSync("reports/dynamic-second-selector.json", `${JSON.stringify(report, null, 2)}\n`);
   const lines = [
     "# exacta 1-X 動的2着艇セレクター",
     "",
@@ -206,7 +233,16 @@ try {
     "- 的中率が上がっても、正規化市場確率を超えず控除後ROIが100%未満なら改善ではない。",
     "- 動的選択が固定1-4とplaceboを両年・外れ値除外・会場除外で上回る場合だけ次段階へ進める。",
   ];
-  writeFileSync("reports/dynamic-second-selector.md", `${lines.join("\n")}\n`);
+  atomicPublish(
+    JSON_REPORT_PATH,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "DYNAMIC_SECOND_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    MARKDOWN_REPORT_PATH,
+    `${lines.join("\n")}\n`,
+    "DYNAMIC_SECOND_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+  );
   console.log(`dynamic second: candidates=${races.length} evaluated=${evaluatedRaces} strategies=${results.length} robust=${robust.length}`);
 } finally {
   db.close();
