@@ -13,17 +13,21 @@ test("skip6R historical switch uses the shared canonical trifecta market authori
   assert.doesNotMatch(internal, /WHERE source_quality = 'historical_closing_odds'/);
 });
 
-test("skip6R canonical entrypoint owns settlement preflight and the internal handoff", () => {
-  const audit = entry.indexOf('run("scripts/audit-skip6r-historical-payout-completeness.ts")');
+test("skip6R canonical entrypoint owns settlement preflight and isolated internal handoff", () => {
+  const audit = entry.indexOf('runAudit("scripts/audit-skip6r-historical-payout-completeness.ts")');
   const gate = entry.indexOf("audit !== 0");
   const identity = entry.indexOf("SKIP6R_SWITCH_HISTORICAL_DB_HANDOFF_IDENTITY_INVALID");
-  const internalImport = entry.indexOf('await import("./analyze-skip6r-switch-historical-closing-odds-internal")');
+  const launchIdentity = entry.indexOf("SKIP6R_SWITCH_HISTORICAL_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const internalLaunch = entry.indexOf("const analysis = spawnSync");
 
   assert.ok(audit >= 0);
   assert.ok(gate > audit, "settlement audit must fail closed before analysis");
   assert.ok(identity > gate, "DB identity must be revalidated after settlement preflight");
-  assert.ok(internalImport > identity, "internal analyzer must run only after the canonical handoff identity check");
+  assert.ok(launchIdentity > identity, "DB identity must be revalidated again immediately before child launch");
+  assert.ok(internalLaunch > launchIdentity, "internal analyzer must run only after final launch identity verification");
+  assert.match(entry, /cwd: workspace/);
   assert.doesNotMatch(entry, /analyze-skip6r-switch-historical-closing-odds-raw/);
+  assert.doesNotMatch(entry, /await import\("\.\/analyze-skip6r-switch-historical-closing-odds-internal"\)/);
 });
 
 test("skip6R raw compatibility path cannot bypass canonical settlement preflight", () => {
