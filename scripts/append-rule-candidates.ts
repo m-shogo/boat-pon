@@ -1,4 +1,15 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import {
   parseRuleCandidateAppendOptions,
   type RuleCandidateAppendOptions,
@@ -23,7 +34,15 @@ if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
   process.exit(0);
 }
 const args = parseRuleCandidateAppendOptions(rawArgs);
-const input = args.input ? readFileSync(args.input, "utf-8") : readFileSync(0, "utf-8");
+const input = args.input
+  ? readFileSync(
+      assertCanonicalSingleLinkRegularFile(
+        args.input,
+        "rule-candidate append input",
+      ),
+      "utf-8",
+    )
+  : readFileSync(0, "utf-8");
 const report = JSON.parse(input) as QualityReport;
 
 if (!Array.isArray(report.ruleSuggestions) || report.ruleSuggestions.length === 0) {
@@ -38,15 +57,55 @@ const today = new Intl.DateTimeFormat("sv-SE", {
   day: "2-digit",
 }).format(new Date());
 
-const block = buildCandidateBlock(today, report, args);
-const current = existsSync(args.output) ? readFileSync(args.output, "utf-8") : "";
-writeFileSync(args.output, `${current.trimEnd()}\n${block}\n`, "utf-8");
+const appendId = buildAppendId(report, args);
+const marker = `<!-- boat-pon-rule-candidate:${appendId} -->`;
+const block = buildCandidateBlock(today, report, args, marker);
+const current = existsSync(args.output)
+  ? readFileSync(
+      assertCanonicalSingleLinkRegularFile(
+        args.output,
+        "rule-candidate append output",
+      ),
+      "utf-8",
+    )
+  : "";
+
+if (current.includes(marker)) {
+  console.log("Rule suggestions already appended; no change.");
+  process.exit(0);
+}
+
+verifyExistingOutput(args.output);
+atomicPublish(args.output, `${current.trimEnd()}\n${block}\n`);
 
 console.log(`Appended ${report.ruleSuggestions.length} rule suggestions to ${args.output}`);
 
-function buildCandidateBlock(today: string, report: QualityReport, args: RuleCandidateAppendOptions) {
+function buildAppendId(report: QualityReport, args: RuleCandidateAppendOptions): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        from: report.from ?? null,
+        to: report.to ?? null,
+        summary: report.summary ?? null,
+        ruleSuggestions: report.ruleSuggestions ?? [],
+        status: args.status,
+        evidence: args.evidence,
+        action: args.action,
+        nextCheck: args.nextCheck,
+      }),
+    )
+    .digest("hex");
+}
+
+function buildCandidateBlock(
+  today: string,
+  report: QualityReport,
+  args: RuleCandidateAppendOptions,
+  marker: string,
+) {
   return [
     "",
+    marker,
     `## ${today} auto candidate review`,
     "",
     "### Source",
@@ -67,6 +126,32 @@ function buildCandidateBlock(today: string, report: QualityReport, args: RuleCan
     ),
     "",
   ].join("\n");
+}
+
+function verifyExistingOutput(path: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, "rule-candidate append output");
+}
+
+function atomicPublish(path: string, content: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf-8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "rule-candidate append temporary output",
+    );
+    verifyExistingOutput(path);
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
 }
 
 function formatNumber(value: number | null) {
