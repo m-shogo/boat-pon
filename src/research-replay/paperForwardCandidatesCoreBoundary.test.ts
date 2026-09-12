@@ -79,7 +79,8 @@ test("paper-forward raw verifies report identity and publishes provenance redact
   const exclusiveOpen = raw.indexOf('openSync(tempPath, "wx")');
   const fsync = raw.indexOf("fsyncSync(fd)");
   const tempIdentity = raw.indexOf('"PAPER_FORWARD_RAW_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = raw.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = raw.indexOf('"PAPER_FORWARD_RAW_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = raw.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -88,7 +89,13 @@ test("paper-forward raw verifies report identity and publishes provenance redact
       && handoffIdentity > provenanceCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
   assert.match(raw, /writeFileSync\(fd, content, "utf-8"\)/u);
