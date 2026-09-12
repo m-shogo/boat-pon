@@ -38,3 +38,14 @@ test("dynamic second selector consumes only the one validated non-refund exacta 
   assert.match(source, /p\.payout_yen IS NOT NULL AND p\.payout_yen>0/);
   assert.doesNotMatch(source, /LEFT JOIN race_payouts p ON p\.race_id=h\.race_id AND p\.bet_type='exacta'/);
 });
+
+test("dynamic second selector publishes reports via exclusive fsynced verified temp files and atomic rename", () => {
+  assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(source, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath, errorCode\);\s*renameSync\(verifiedTempPath, path\);/u);
+  assert.match(source, /DYNAMIC_SECOND_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /DYNAMIC_SECOND_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /atomicPublish\(\s*JSON_REPORT_PATH,/u);
+  assert.match(source, /atomicPublish\(\s*MARKDOWN_REPORT_PATH,/u);
+  assert.doesNotMatch(source, /writeFileSync\("reports\/dynamic-second-selector\.(?:json|md)"/u);
+});
