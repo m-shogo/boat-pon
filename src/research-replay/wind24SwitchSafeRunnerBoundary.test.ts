@@ -91,7 +91,8 @@ test("direct wind24 entrypoint verifies report identity and publishes provenance
   const exclusiveOpen = directSource.indexOf('openSync(tempPath, "wx")');
   const fsync = directSource.indexOf("fsyncSync(fd)");
   const tempIdentity = directSource.indexOf('"WIND24_SWITCH_TEMP_REPORT_IDENTITY_INVALID"');
-  const rename = directSource.indexOf("renameSync(tempPath, targetPath)");
+  const destinationIdentity = directSource.indexOf('"WIND24_SWITCH_PUBLISH_DESTINATION_IDENTITY_INVALID"');
+  const rename = directSource.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
 
   assert.ok(
     firstIdentity >= 0
@@ -100,7 +101,13 @@ test("direct wind24 entrypoint verifies report identity and publishes provenance
       && handoffIdentity > privatePathCheck
       && publishCall > handoffIdentity,
   );
-  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && tempIdentity > fsync && rename > tempIdentity);
+  assert.ok(
+    exclusiveOpen >= 0
+      && fsync > exclusiveOpen
+      && tempIdentity > fsync
+      && destinationIdentity > tempIdentity
+      && rename > destinationIdentity,
+  );
   assert.match(directSource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
   assert.match(directSource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
   assert.match(directSource, /writeFileSync\(fd, content, "utf-8"\)/u);
