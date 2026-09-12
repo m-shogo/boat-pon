@@ -19,9 +19,20 @@
  * data/research-rules.json は一切書き換えず、書き込まれるはずだった内容をJSONで表示するだけ。
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { addRule, applyRuleTransition, createResearchRule } from "../src/domain/researchRuleStore";
 import type { ForwardTestResult, ResearchRule } from "../src/domain/researchRule";
+import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import {
   parseResearchRuleFlags,
   parseResearchRuleStatus,
@@ -77,12 +88,44 @@ function defaultStore(): RuleStoreFile {
 
 function loadStore(): RuleStoreFile {
   if (!existsSync(STORE_PATH)) return defaultStore();
-  return JSON.parse(readFileSync(STORE_PATH, "utf8")) as RuleStoreFile;
+  const verifiedStorePath = assertCanonicalSingleLinkRegularFile(
+    STORE_PATH,
+    "RESEARCH_RULE_STORE_IDENTITY_INVALID",
+  );
+  return JSON.parse(readFileSync(verifiedStorePath, "utf8")) as RuleStoreFile;
 }
 
 function saveStore(store: RuleStoreFile) {
   store._meta.lastUpdated = new Date().toISOString();
-  writeFileSync(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+  if (existsSync(STORE_PATH)) {
+    assertCanonicalSingleLinkRegularFile(
+      STORE_PATH,
+      "RESEARCH_RULE_STORE_TARGET_IDENTITY_INVALID",
+    );
+  }
+
+  const tempPath = join(
+    dirname(STORE_PATH),
+    `.${basename(STORE_PATH)}.tmp-${process.pid}-${Date.now()}`,
+  );
+  const fd = openSync(tempPath, "wx", 0o600);
+  try {
+    writeFileSync(fd, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+
+  try {
+    assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "RESEARCH_RULE_STORE_TEMP_IDENTITY_INVALID",
+    );
+    renameSync(tempPath, STORE_PATH);
+  } catch (error) {
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    throw error;
+  }
 }
 
 function runList(argv: string[]) {
@@ -97,8 +140,8 @@ function runList(argv: string[]) {
   if (rules.length === 0) {
     console.log(
       statusFilter
-        ? `no rules with status="${statusFilter}" in ${STORE_PATH}`
-        : `no rules registered in ${STORE_PATH}`,
+        ? `no rules with status="${statusFilter}" in configured rule store`
+        : "no rules registered in configured rule store",
     );
     return;
   }
@@ -149,10 +192,14 @@ function runTransition(rawArgv: string[]) {
   const evaluationFile = args["--evaluation-file"];
   if (evaluationFile) {
     if (!existsSync(evaluationFile)) {
-      console.error(`evaluation file not found: ${evaluationFile}`);
+      console.error("evaluation file not found");
       process.exit(1);
     }
-    evaluation = JSON.parse(readFileSync(evaluationFile, "utf8")) as ForwardTestResult;
+    const verifiedEvaluationPath = assertCanonicalSingleLinkRegularFile(
+      evaluationFile,
+      "RESEARCH_RULE_EVALUATION_IDENTITY_INVALID",
+    );
+    evaluation = JSON.parse(readFileSync(verifiedEvaluationPath, "utf8")) as ForwardTestResult;
   }
 
   const store = loadStore();
@@ -178,13 +225,13 @@ function printHelp() {
   pnpm manage:research-rules -- add --rule-id <id> --reason <text> [--title <text>] [--dry-run]
   pnpm manage:research-rules -- transition --rule-id <id> --to <status> [--evaluation-file <path>] [--dry-run]
 
-Reads/writes only ${STORE_PATH} (override with $BOAT_PON_RULE_STORE_PATH).
+Reads/writes only the configured research rule store (override with $BOAT_PON_RULE_STORE_PATH).
 Never touches the SQLite DB, app_settings, or decision_history.
 Status transitions are validated by src/domain/researchRuleStore.ts —
 production requires a forward-tested, eligible evaluation and the rule
 must already be "approved".
 
 --dry-run (add / transition only): runs the same validation but never
-writes ${STORE_PATH}; prints the JSON that would have been written.
+writes the configured rule store; prints the JSON that would have been written.
 An invalid transition still fails under --dry-run.`);
 }

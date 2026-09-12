@@ -55,10 +55,12 @@ try {
   ]) {
     copyFileSync(join(repoRoot, "src", "domain", name), join(tempDomainDir, name));
   }
-  copyFileSync(
-    join(repoRoot, "src", "research-replay", "researchRuleCliOptions.ts"),
-    join(tempResearchReplayDir, "researchRuleCliOptions.ts"),
-  );
+  for (const name of ["researchFileIdentity.ts", "researchRuleCliOptions.ts"]) {
+    copyFileSync(
+      join(repoRoot, "src", "research-replay", name),
+      join(tempResearchReplayDir, name),
+    );
+  }
   copyFileSync(join(repoRoot, "scripts", "manage-research-rules.ts"), join(tempScriptsDir, "manage-research-rules.ts"));
   addExplicitTsExtensions(tempDomainDir);
   addExplicitTsExtensions(tempResearchReplayDir);
