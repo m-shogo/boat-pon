@@ -11,3 +11,16 @@ test("unconventional feature analysis verifies primary database identity before 
   assert.match(source, /PRAGMA query_only = ON/);
   assert.doesNotMatch(source, /new DatabaseSync\("data\/boat\.sqlite"/);
 });
+
+test("unconventional feature analysis publishes reports via exclusive fsynced verified temp files and atomic rename", () => {
+  const source = readFileSync("scripts/analyze-unconventional-features.ts", "utf8");
+
+  assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(source, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath, errorCode\);\s*renameSync\(verifiedTempPath, path\);/u);
+  assert.match(source, /UNCONVENTIONAL_FEATURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /UNCONVENTIONAL_FEATURE_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /atomicPublish\(\s*JSON_REPORT_PATH,/u);
+  assert.match(source, /atomicPublish\(\s*MARKDOWN_REPORT_PATH,/u);
+  assert.doesNotMatch(source, /writeFileSync\("reports\/unconventional-feature-screen\.(?:json|md)"/u);
+});
