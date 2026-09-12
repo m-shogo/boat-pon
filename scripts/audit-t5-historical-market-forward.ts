@@ -3,7 +3,8 @@
  * 修正前T-5は混合係数の事前校正だけに使い、formal futureの結果は調整へ戻さない。
  * 読み取り専用。本番判定・DB・app_settingsは変更しない。
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
@@ -228,9 +229,51 @@ const lines = [
 ];
 
 mkdirSync("reports", { recursive: true });
-writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-writeFileSync(OUT_MD, `${lines.join("\n")}\n`);
+verifyExistingOutput(OUT_JSON, "T5_HISTORICAL_MARKET_PREEXISTING_JSON_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "T5_HISTORICAL_MARKET_PREEXISTING_MD_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "T5_HISTORICAL_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "T5_HISTORICAL_MARKET_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  `${lines.join("\n")}\n`,
+  "T5_HISTORICAL_MARKET_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "T5_HISTORICAL_MARKET_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log(`[t5-historical-market-forward] wrote ${OUT_MD} / ${OUT_JSON}`);
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
 
 function loadCohort(from: string, to: string, capturedFrom: string | null, allowedRaceIds: Set<string> | null) {
   const odds = loadLatestCompleteCaptures(from, to, capturedFrom)
