@@ -43,15 +43,32 @@ test("all-bet-type screening payout audit pins return-state validation and cover
   assert.ok(coverage > returnState);
 });
 
-test("normal all-bet-type screening entrypoint cannot bypass payout audit", () => {
+test("normal all-bet-type screening entrypoint cannot bypass payout audit or DB revalidation", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
   const runner = readFileSync("scripts/run-all-bet-type-screening-safe.ts", "utf8");
 
   assert.equal(pkg.scripts["analyze:all-bet-type-screening"], "tsx scripts/run-all-bet-type-screening-safe.ts");
-  assert.match(runner, /run\("scripts\/audit-all-bet-type-screening-payout-completeness\.ts"\)/);
-  assert.match(runner, /run\("scripts\/analyze-all-bet-type-screening\.ts"\)/);
-  assert.ok(
-    runner.indexOf('run("scripts/audit-all-bet-type-screening-payout-completeness.ts")')
-      < runner.indexOf('run("scripts/analyze-all-bet-type-screening.ts")'),
-  );
+  assert.match(runner, /run\(auditPath\)/);
+  assert.match(runner, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
+  assert.match(runner, /run\(analyzerPath, \{/);
+  const audit = runner.indexOf("run(auditPath);");
+  const reverify = runner.indexOf('assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID")');
+  const analyzer = runner.indexOf("run(analyzerPath, {");
+  assert.ok(audit >= 0 && reverify > audit && analyzer > reverify);
+});
+
+test("all-bet-type screening analyzer publishes only verified staged outputs through atomic destinations", () => {
+  const runner = readFileSync("scripts/run-all-bet-type-screening-safe.ts", "utf8");
+
+  assert.match(runner, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-all-bet-screening-"\)\)/);
+  assert.match(runner, /cwd: workspace/);
+  assert.match(runner, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(runner, /assertCanonicalSingleLinkRegularFile\(\s*stagedPath,/);
+  assert.match(runner, /openSync\(tempPath, "wx", 0o600\)/);
+  assert.match(runner, /fsyncSync\(fd\)/);
+  assert.match(runner, /assertCanonicalSingleLinkRegularFile\(\s*path,\s*`ALL_BET_TYPE_SCREENING_\$\{code\}_PUBLISH_DESTINATION_IDENTITY_INVALID`/);
+  assert.match(runner, /renameSync\(verifiedTempPath, path\)/);
+  const staged = runner.indexOf("const verifiedStagedPath = assertCanonicalSingleLinkRegularFile");
+  const publish = runner.indexOf("atomicPublish(output.destination");
+  assert.ok(staged >= 0 && publish > staged);
 });
