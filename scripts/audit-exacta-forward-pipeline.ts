@@ -4,12 +4,25 @@
  * 禁止: DBへのINSERT/UPDATE/DELETE/DROP、app_settings・本番判定の変更。
  * このスクリプトが書くのは reports 配下の監査結果だけ。
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const LOCK_PATH = "data/exacta-forward-candidates.json";
+const AUTO_FETCH_PATH = "scripts/auto-fetch-odds.ts";
+const H011_MONITOR_PATH = "scripts/report-h011-forward-monitor.ts";
+const EXACTA_MONITOR_PATH = "scripts/report-exacta-forward-monitor.ts";
 const OUT_JSON = "reports/exacta-forward-pipeline-audit.json";
 const OUT_MD = "reports/exacta-forward-pipeline-audit.md";
 const RECENT_TIMESERIES_ROWS = 5_000;
@@ -20,10 +33,28 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   "EXACTA_FORWARD_PIPELINE_DB_IDENTITY_INVALID",
 );
 
-const autoFetchSource = readFileSync("scripts/auto-fetch-odds.ts", "utf8");
-const h011Source = readFileSync("scripts/report-h011-forward-monitor.ts", "utf8");
-const exactaMonitorSource = readFileSync("scripts/report-exacta-forward-monitor.ts", "utf8");
-const lock = JSON.parse(readFileSync(LOCK_PATH, "utf8")) as {
+const verifiedAutoFetchPath = assertCanonicalSingleLinkRegularFile(
+  AUTO_FETCH_PATH,
+  "EXACTA_FORWARD_PIPELINE_AUTO_FETCH_SOURCE_IDENTITY_INVALID",
+);
+const verifiedH011MonitorPath = assertCanonicalSingleLinkRegularFile(
+  H011_MONITOR_PATH,
+  "EXACTA_FORWARD_PIPELINE_H011_SOURCE_IDENTITY_INVALID",
+);
+const verifiedExactaMonitorPath = assertCanonicalSingleLinkRegularFile(
+  EXACTA_MONITOR_PATH,
+  "EXACTA_FORWARD_PIPELINE_EXACTA_MONITOR_SOURCE_IDENTITY_INVALID",
+);
+if (!existsSync(LOCK_PATH)) throw new Error("EXACTA_FORWARD_PIPELINE_CANDIDATE_LOCK_MISSING");
+const verifiedLockPath = assertCanonicalSingleLinkRegularFile(
+  LOCK_PATH,
+  "EXACTA_FORWARD_PIPELINE_CANDIDATE_LOCK_IDENTITY_INVALID",
+);
+
+const autoFetchSource = readFileSync(verifiedAutoFetchPath, "utf8");
+const h011Source = readFileSync(verifiedH011MonitorPath, "utf8");
+const exactaMonitorSource = readFileSync(verifiedExactaMonitorPath, "utf8");
+const lock = JSON.parse(readFileSync(verifiedLockPath, "utf8")) as {
   lockedAt: string;
   basePopulation: { runKind: string; decision: string; selection: string };
 };
@@ -140,13 +171,41 @@ try {
   };
 
   mkdirSync("reports", { recursive: true });
-  writeFileSync(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(OUT_MD, renderMarkdown(report));
+  writeAtomicReport(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
+  writeAtomicReport(OUT_MD, renderMarkdown(report));
   console.log(`[audit-exacta-forward-pipeline] verdict=${report.verdict} blockers=${blockers.length}`);
   console.log(`[audit-exacta-forward-pipeline] recent exacta-shaped=${recentTimeseries.exacta_shaped}/${recentTimeseries.n}`);
-  console.log(`[audit-exacta-forward-pipeline] wrote ${OUT_MD}`);
+  console.log("[audit-exacta-forward-pipeline] wrote verified research audit reports");
 } finally {
   db.close();
+}
+
+function writeAtomicReport(path: string, contents: string): void {
+  if (existsSync(path)) {
+    assertCanonicalSingleLinkRegularFile(
+      path,
+      "EXACTA_FORWARD_PIPELINE_REPORT_TARGET_IDENTITY_INVALID",
+    );
+  }
+
+  const tempPath = `${path}.tmp-${process.pid}-${Date.now()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, contents, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+    assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      "EXACTA_FORWARD_PIPELINE_REPORT_TEMP_IDENTITY_INVALID",
+    );
+    renameSync(tempPath, path);
+  } catch (error) {
+    if (fd != null) closeSync(fd);
+    if (existsSync(tempPath)) unlinkSync(tempPath);
+    throw error;
+  }
 }
 
 function renderMarkdown(report: {
