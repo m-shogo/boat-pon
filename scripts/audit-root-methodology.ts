@@ -31,8 +31,6 @@ const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const OUT_MD = "reports/root-methodology-audit.md";
 const OUT_JSON = "reports/root-methodology-audit.json";
-const internalPath = fileURLToPath(new URL("./audit-root-methodology-internal.ts", import.meta.url));
-const tsxLoader = import.meta.resolve("tsx");
 
 function atomicPublish(path: string, contents: string, errorCode: string): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
@@ -102,6 +100,8 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   verifiedDbPath,
   "ROOT_METHODOLOGY_DB_HANDOFF_IDENTITY_INVALID",
 );
+const internalPath = fileURLToPath(new URL("./audit-root-methodology-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 const workspace = mkdtempSync(join(tmpdir(), "boat-pon-root-methodology-"));
 try {
