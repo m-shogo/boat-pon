@@ -21,7 +21,12 @@ test("racer ability canonical entrypoint verifies research inputs and redacts fi
   const redactMarkdown = source.indexOf('"DB: verified read-only research DB"');
   const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const tempIdentity = source.indexOf("RACER_ABILITY_AUDIT_PUBLISH_TEMP_IDENTITY_INVALID");
-  const atomicRename = source.indexOf("renameSync(verifiedTempPath, path)");
+  const destinationGuard = source.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = source.indexOf(
+    "RACER_ABILITY_AUDIT_PUBLISH_DESTINATION_IDENTITY_INVALID",
+    destinationGuard,
+  );
+  const atomicRename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
   const jsonPublish = source.indexOf('atomicPublish(outJson, `${JSON.stringify(report, null, 2)}\\n`)');
   const markdownPublish = source.indexOf("atomicPublish(outMd, markdown)");
 
@@ -41,7 +46,9 @@ test("racer ability canonical entrypoint verifies research inputs and redacts fi
   assert.ok(redactMarkdown > markdownRead, "Markdown filesystem provenance must be redacted before publishing");
   assert.ok(tempCreate >= 0, "published reports must be staged with exclusive creation");
   assert.ok(tempIdentity > tempCreate, "publish temp identity must be verified before replacement");
-  assert.ok(atomicRename > tempIdentity, "only a verified single-link temp may atomically replace a report path");
+  assert.ok(destinationGuard > tempIdentity, "existing publish destinations must be checked after temp verification");
+  assert.ok(destinationIdentity > destinationGuard, "existing publish destinations must be identity-verified before replacement");
+  assert.ok(atomicRename > destinationIdentity, "only a verified temp may replace a verified existing destination");
   assert.ok(jsonPublish > redactJson, "sanitized JSON must publish through the atomic writer");
   assert.ok(markdownPublish > redactMarkdown, "sanitized Markdown must publish through the atomic writer");
   assert.doesNotMatch(source, /writeFileSync\(out(?:Json|Md)/u);
