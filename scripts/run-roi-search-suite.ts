@@ -78,6 +78,12 @@ function atomicPublish(path: string, contents: string): void {
       tempPath,
       "ROI_SEARCH_SUITE_SUMMARY_PUBLISH_TEMP_IDENTITY_INVALID",
     );
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        "ROI_SEARCH_SUITE_SUMMARY_PUBLISH_DESTINATION_IDENTITY_INVALID",
+      );
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
