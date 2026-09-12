@@ -40,12 +40,14 @@ test("exacta forward audit publishes reports through verified atomic temp files"
   const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = source.indexOf("fsyncSync(fd)");
   const tempIdentity = source.indexOf("EXACTA_FORWARD_PIPELINE_REPORT_TEMP_IDENTITY_INVALID");
+  const destinationIdentity = source.lastIndexOf("EXACTA_FORWARD_PIPELINE_REPORT_TARGET_IDENTITY_INVALID");
   const rename = source.indexOf("renameSync(tempPath, path)");
 
   assert.match(source, /EXACTA_FORWARD_PIPELINE_REPORT_TARGET_IDENTITY_INVALID/u);
   assert.ok(tempCreate >= 0, "report publication must use an exclusive temp file");
   assert.ok(fsync > tempCreate, "report temp file must be fsynced");
   assert.ok(tempIdentity > fsync, "temp identity must be checked after durable write");
-  assert.ok(rename > tempIdentity, "verified temp file must be atomically renamed");
+  assert.ok(destinationIdentity > tempIdentity, "existing destination must be revalidated after temp identity");
+  assert.ok(rename > destinationIdentity, "verified destination must be followed by atomic rename");
   assert.doesNotMatch(source, /writeFileSync\(OUT_(?:JSON|MD)/u);
 });
