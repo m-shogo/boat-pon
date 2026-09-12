@@ -29,18 +29,21 @@ test("calibration stability validates existing reports and publishes atomically"
 
   const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
   const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
-  const jsonPublish = source.indexOf("atomicPublish(OUT_JSON");
-  const mdPublish = source.indexOf("atomicPublish(OUT_MD");
+  const jsonPublish = source.indexOf("atomicPublish(", preflightMd);
+  const mdPublish = source.indexOf("atomicPublish(", jsonPublish + 1);
   assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
 
   const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = source.indexOf("fsyncSync(fd)", create);
-  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
-  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
+  const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode)", fsync);
+  const destinationIdentity = source.indexOf("verifyExistingOutput(path, destinationIdentityErrorCode)", tempIdentity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity);
 
   assert.match(source, /CALIBRATION_STABILITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /CALIBRATION_STABILITY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(source, /CALIBRATION_STABILITY_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /CALIBRATION_STABILITY_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
 
 test("calibration stability payout audit uses the same official settlement authority", () => {
