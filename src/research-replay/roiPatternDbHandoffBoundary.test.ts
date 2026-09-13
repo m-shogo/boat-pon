@@ -28,7 +28,7 @@ test("ROI pattern entrypoint revalidates DB identity after settlement preflight 
   assert.doesNotMatch(entrypoint, /search-roi-patterns-raw/);
 });
 
-test("ROI pattern entrypoint revalidates staged reports across read and publication handoff", () => {
+test("ROI pattern entrypoint revalidates staged reports and complete canonical destination set before publication", () => {
   const analysis = entrypoint.indexOf("const analysis = spawnSync");
   const mdIdentity = entrypoint.indexOf("ROI_PATTERN_MD_OUTPUT_IDENTITY_INVALID", analysis);
   const jsonIdentity = entrypoint.indexOf("ROI_PATTERN_JSON_OUTPUT_IDENTITY_INVALID", analysis);
@@ -40,13 +40,12 @@ test("ROI pattern entrypoint revalidates staged reports across read and publicat
   const provenance = entrypoint.indexOf("ROI_PATTERN_PRIVATE_DB_PROVENANCE_REMAINED", jsonRead);
   const mdHandoff = entrypoint.indexOf("ROI_PATTERN_MD_HANDOFF_IDENTITY_INVALID", provenance);
   const jsonHandoff = entrypoint.indexOf("ROI_PATTERN_JSON_HANDOFF_IDENTITY_INVALID", mdHandoff);
-  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
-  const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
-  const destinationCheck = entrypoint.indexOf("if (existsSync(path))", tempIdentity);
-  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationCheck);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
-  const mdPublish = entrypoint.indexOf("ROI_PATTERN_MD_PUBLISH_TEMP_IDENTITY_INVALID", jsonHandoff);
+  const publishMkdir = entrypoint.indexOf('mkdirSync("reports", { recursive: true })', jsonHandoff);
+  const reportsIdentity = entrypoint.indexOf("ROI_PATTERN_REPORTS_DIRECTORY_IDENTITY_INVALID", publishMkdir);
+  const mdPrepublish = entrypoint.indexOf("ROI_PATTERN_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID", reportsIdentity);
+  const jsonPrepublish = entrypoint.indexOf("ROI_PATTERN_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID", mdPrepublish);
+  const firstPublish = entrypoint.indexOf("atomicPublish(", jsonPrepublish);
+  const mdPublish = entrypoint.indexOf("ROI_PATTERN_MD_PUBLISH_TEMP_IDENTITY_INVALID", firstPublish);
   const jsonPublish = entrypoint.indexOf("ROI_PATTERN_JSON_PUBLISH_TEMP_IDENTITY_INVALID", mdPublish);
 
   assert.ok(mdIdentity > analysis && jsonIdentity > mdIdentity, "both staged reports must be identity-verified before reads begin");
@@ -55,22 +54,37 @@ test("ROI pattern entrypoint revalidates staged reports across read and publicat
   assert.ok(redaction > mdRead, "DB filesystem provenance must be redacted before publication");
   assert.ok(provenance > jsonRead, "redacted outputs must fail closed if private DB provenance remains");
   assert.ok(mdHandoff > provenance && jsonHandoff > mdHandoff, "staged artifacts must be reverified after reads before canonical publication");
-  assert.ok(
-    tempCreate >= 0
-      && fsync > tempCreate
-      && tempIdentity > fsync
-      && destinationCheck > tempIdentity
-      && destinationIdentity > destinationCheck
-      && rename > destinationIdentity,
-    "publication must use exclusive durable temp output and reverify any existing canonical destination before replacement",
-  );
-  assert.ok(mdPublish > jsonHandoff && jsonPublish > mdPublish, "both reports must publish only after staged handoff revalidation");
+  assert.ok(publishMkdir > jsonHandoff && reportsIdentity > publishMkdir);
+  assert.ok(mdPrepublish > reportsIdentity && jsonPrepublish > mdPrepublish);
+  assert.ok(firstPublish > jsonPrepublish, "both canonical destinations must be preflighted before the first replacement");
+  assert.ok(mdPublish > firstPublish && jsonPublish > mdPublish, "both reports must publish only after complete destination preflight");
   assert.match(entrypoint, /markdown\.includes\(launchDbPath\) \|\| json\.includes\(launchDbPath\)/);
   assert.match(entrypoint, /ROI_PATTERN_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /ROI_PATTERN_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /ROI_PATTERN_MD_OUTPUT_MISSING/);
   assert.match(entrypoint, /ROI_PATTERN_JSON_OUTPUT_MISSING/);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
+});
+
+test("ROI pattern atomic publication reverifies parent and destination identities at handoff", () => {
+  const atomic = entrypoint.indexOf("function atomicPublish");
+  const parentIdentity = entrypoint.indexOf("ROI_PATTERN_PUBLISH_PARENT_IDENTITY_INVALID", atomic);
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationCheck = entrypoint.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationCheck);
+  const parentHandoff = entrypoint.indexOf("ROI_PATTERN_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+
+  assert.ok(parentIdentity > atomic);
+  assert.ok(tempCreate > parentIdentity && fsync > tempCreate);
+  assert.ok(tempIdentity > fsync);
+  assert.ok(destinationCheck > tempIdentity && destinationIdentity > destinationCheck);
+  assert.ok(parentHandoff > destinationIdentity);
+  assert.ok(rename > parentHandoff, "atomic rename must occur only after parent and destination identity revalidation");
+  assert.match(entrypoint, /ROI_PATTERN_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(entrypoint, /ROI_PATTERN_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
 });
 
 test("ROI pattern guarded raw compatibility module routes through canonical DB and settlement preflight", () => {
