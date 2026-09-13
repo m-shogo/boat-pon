@@ -5,16 +5,18 @@ import {
   copyFileSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -42,6 +44,14 @@ type ReportEnvelope = {
 function fail(path: string, reason: string): never {
   console.error(`BET_TYPE_SELECTOR_INPUT_REPORT_INVALID ${JSON.stringify({ path, reason })}`);
   process.exit(2);
+}
+
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
 }
 
 function verifyRequiredReports(): void {
@@ -97,6 +107,8 @@ function atomicPublish(
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "BET_TYPE_SELECTOR_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -109,6 +121,7 @@ function atomicPublish(
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
     }
+    assertCanonicalDirectory(parentPath, "BET_TYPE_SELECTOR_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -214,6 +227,8 @@ try {
   if (status === 0) {
     const outputs = readIsolatedOutputs(workspace, verifiedDbPath);
     mkdirSync("reports", { recursive: true });
+    assertCanonicalDirectory("reports", "BET_TYPE_SELECTOR_REPORTS_DIRECTORY_IDENTITY_INVALID");
+    verifyExistingOutputPaths();
     atomicPublish(
       OUT_MD,
       outputs.markdown,
