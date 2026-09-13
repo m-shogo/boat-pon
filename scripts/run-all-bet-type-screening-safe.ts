@@ -65,24 +65,48 @@ function atomicPublish(path: string, content: string, code: string): void {
 run(auditPath);
 
 // The audit and analyzer remain separate read-only processes. Reverify the DB
-// immediately before the analyzer launch so a path swap cannot bypass the audit.
+// before preparing the analyzer handoff, and again immediately before launch,
+// so a path swap cannot bypass the payout audit or the research DB boundary.
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID");
 const workspace = mkdtempSync(join(tmpdir(), "boat-pon-all-bet-screening-"));
 try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
+  const childDbPath = assertCanonicalSingleLinkRegularFile(
+    verifiedDbPath,
+    "ALL_BET_TYPE_SCREENING_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+  );
   run(analyzerPath, {
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: childDbPath },
   });
 
-  mkdirSync("reports", { recursive: true });
-  for (const output of OUTPUTS) {
+  // Validate every staged artifact before canonical publication begins. This
+  // prevents a malformed second artifact from leaving only the first report
+  // updated. Revalidate each staged path immediately before its read as well.
+  const stagedOutputs = OUTPUTS.map((output) => {
     const stagedPath = join(workspace, output.staged);
     const verifiedStagedPath = assertCanonicalSingleLinkRegularFile(
       stagedPath,
       `ALL_BET_TYPE_SCREENING_${output.code}_STAGED_OUTPUT_IDENTITY_INVALID`,
     );
-    atomicPublish(output.destination, readFileSync(verifiedStagedPath, "utf8"), output.code);
+    return { output, verifiedStagedPath };
+  });
+  const preparedOutputs = stagedOutputs.map(({ output, verifiedStagedPath }) => {
+    const readPath = assertCanonicalSingleLinkRegularFile(
+      verifiedStagedPath,
+      `ALL_BET_TYPE_SCREENING_${output.code}_STAGED_READ_IDENTITY_INVALID`,
+    );
+    const content = readFileSync(readPath, "utf8");
+    assertCanonicalSingleLinkRegularFile(
+      readPath,
+      `ALL_BET_TYPE_SCREENING_${output.code}_STAGED_HANDOFF_IDENTITY_INVALID`,
+    );
+    return { output, content };
+  });
+
+  mkdirSync("reports", { recursive: true });
+  for (const { output, content } of preparedOutputs) {
+    atomicPublish(output.destination, content, output.code);
   }
 } finally {
   rmSync(workspace, { recursive: true, force: true });
