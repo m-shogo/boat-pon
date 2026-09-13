@@ -8,13 +8,16 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -26,6 +29,29 @@ const EXACTA_MONITOR_PATH = "scripts/report-exacta-forward-monitor.ts";
 const OUT_JSON = "reports/exacta-forward-pipeline-audit.json";
 const OUT_MD = "reports/exacta-forward-pipeline-audit.md";
 const RECENT_TIMESERIES_ROWS = 5_000;
+
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingReport(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function verifyExistingReports(): void {
+  verifyExistingReport(
+    OUT_JSON,
+    "EXACTA_FORWARD_PIPELINE_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  verifyExistingReport(
+    OUT_MD,
+    "EXACTA_FORWARD_PIPELINE_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+}
 
 if (!existsSync(DB_PATH)) throw new Error("EXACTA_FORWARD_PIPELINE_DB_MISSING");
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
@@ -171,6 +197,11 @@ try {
   };
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory(
+    "reports",
+    "EXACTA_FORWARD_PIPELINE_REPORTS_DIRECTORY_IDENTITY_INVALID",
+  );
+  verifyExistingReports();
   writeAtomicReport(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`);
   writeAtomicReport(OUT_MD, renderMarkdown(report));
   console.log(`[audit-exacta-forward-pipeline] verdict=${report.verdict} blockers=${blockers.length}`);
@@ -181,6 +212,11 @@ try {
 }
 
 function writeAtomicReport(path: string, contents: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(
+    parentPath,
+    "EXACTA_FORWARD_PIPELINE_REPORT_PARENT_IDENTITY_INVALID",
+  );
   if (existsSync(path)) {
     assertCanonicalSingleLinkRegularFile(
       path,
@@ -206,6 +242,10 @@ function writeAtomicReport(path: string, contents: string): void {
         "EXACTA_FORWARD_PIPELINE_REPORT_TARGET_IDENTITY_INVALID",
       );
     }
+    assertCanonicalDirectory(
+      parentPath,
+      "EXACTA_FORWARD_PIPELINE_REPORT_PARENT_HANDOFF_IDENTITY_INVALID",
+    );
     renameSync(tempPath, path);
   } catch (error) {
     if (fd != null) closeSync(fd);
