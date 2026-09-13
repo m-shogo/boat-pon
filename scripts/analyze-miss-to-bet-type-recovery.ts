@@ -1,20 +1,30 @@
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   closeSync,
   existsSync,
   fsyncSync,
+  mkdirSync,
+  mkdtempSync,
   openSync,
   readFileSync,
   renameSync,
-  unlinkSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const OUT_MD = "reports/miss-to-bet-type-recovery.md";
+const OUT_JSON = "reports/miss-to-bet-type-recovery.json";
 const OPAQUE_DB_SOURCE = "primary research database";
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
+const internalPath = fileURLToPath(new URL("./analyze-miss-to-bet-type-recovery-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 if (!existsSync(DB_PATH)) {
   throw new Error("MISS_RECOVERY_DB_NOT_FOUND");
@@ -96,70 +106,89 @@ function assertPayoutCompleteness(): void {
   }
 }
 
-function publishRedactedReportAtomically(targetPath: string, content: string): void {
-  const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+function atomicPublish(path: string, content: string, code: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
-    fd = openSync(tempPath, "wx");
+    fd = openSync(tempPath, "wx", 0o600);
     writeFileSync(fd, content, "utf8");
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
+
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
       tempPath,
-      "MISS_RECOVERY_TEMP_REPORT_IDENTITY_INVALID",
+      `MISS_RECOVERY_${code}_PUBLISH_TEMP_IDENTITY_INVALID`,
     );
-    const verifiedTargetPath = assertCanonicalSingleLinkRegularFile(
-      targetPath,
-      "MISS_RECOVERY_PUBLISH_DESTINATION_IDENTITY_INVALID",
-    );
-    renameSync(verifiedTempPath, verifiedTargetPath);
-  } catch (error) {
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        `MISS_RECOVERY_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
+      );
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
     if (fd !== null) closeSync(fd);
-    if (existsSync(tempPath)) unlinkSync(tempPath);
-    throw error;
+    rmSync(tempPath, { force: true });
   }
 }
 
-function redactDbProvenance(dbPath: string): void {
-  if (!existsSync(OUT_MD)) {
-    throw new Error("MISS_RECOVERY_REPORT_MISSING_AFTER_ANALYSIS");
+function redactDbProvenance(content: string, dbPath: string, code: string, requireProvenance: boolean): string {
+  if (requireProvenance && !content.includes(dbPath)) {
+    throw new Error(`MISS_RECOVERY_${code}_DB_PROVENANCE_NOT_FOUND`);
   }
-
-  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
-    "MISS_RECOVERY_REPORT_IDENTITY_INVALID",
-  );
-  const report = readFileSync(verifiedReportPath, "utf8");
-  const privateMarker = `DB: ${dbPath}`;
-  if (!report.includes(privateMarker)) {
-    throw new Error("MISS_RECOVERY_PRIVATE_DB_PROVENANCE_MARKER_MISSING");
-  }
-
-  const redacted = report.replaceAll(privateMarker, `DB: ${OPAQUE_DB_SOURCE}`);
+  const redacted = content.split(dbPath).join(OPAQUE_DB_SOURCE);
   if (redacted.includes(dbPath)) {
-    throw new Error("MISS_RECOVERY_PRIVATE_DB_PATH_REMAINS");
+    throw new Error(`MISS_RECOVERY_${code}_PRIVATE_DB_PATH_REMAINS`);
   }
-
-  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
-    verifiedReportPath,
-    "MISS_RECOVERY_REPORT_HANDOFF_IDENTITY_INVALID",
-  );
-  publishRedactedReportAtomically(handoffReportPath, redacted);
+  return redacted;
 }
 
 const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   dbPath,
   "MISS_RECOVERY_DB_HANDOFF_IDENTITY_INVALID",
 );
-process.env.BOAT_PON_DB_PATH = handoffDbPath;
-
-if (existsSync(OUT_MD)) {
-  assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
-    "MISS_RECOVERY_PREEXISTING_REPORT_IDENTITY_INVALID",
+const launchDbPath = assertCanonicalSingleLinkRegularFile(
+  handoffDbPath,
+  "MISS_RECOVERY_CHILD_LAUNCH_DB_IDENTITY_INVALID",
+);
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-miss-recovery-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const analysis = spawnSync(
+    process.execPath,
+    ["--import", tsxLoader, "--input-type=module", "--eval", loader],
+    {
+      cwd: workspace,
+      env: { ...process.env, BOAT_PON_DB_PATH: launchDbPath },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
   );
-}
+  if (analysis.error || analysis.status !== 0) {
+    throw new Error("MISS_RECOVERY_INTERNAL_FAILED");
+  }
 
-await import("./analyze-miss-to-bet-type-recovery-internal");
-redactDbProvenance(handoffDbPath);
+  const stagedMdPath = join(workspace, OUT_MD);
+  const stagedJsonPath = join(workspace, OUT_JSON);
+  if (!existsSync(stagedMdPath)) throw new Error("MISS_RECOVERY_MD_OUTPUT_MISSING");
+  if (!existsSync(stagedJsonPath)) throw new Error("MISS_RECOVERY_JSON_OUTPUT_MISSING");
+
+  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(
+    stagedMdPath,
+    "MISS_RECOVERY_MD_STAGED_OUTPUT_IDENTITY_INVALID",
+  );
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+    stagedJsonPath,
+    "MISS_RECOVERY_JSON_STAGED_OUTPUT_IDENTITY_INVALID",
+  );
+  const markdown = redactDbProvenance(readFileSync(verifiedMdPath, "utf8"), launchDbPath, "MD", true);
+  const json = redactDbProvenance(readFileSync(verifiedJsonPath, "utf8"), launchDbPath, "JSON", false);
+
+  mkdirSync("reports", { recursive: true });
+  atomicPublish(OUT_MD, markdown, "MD");
+  atomicPublish(OUT_JSON, json, "JSON");
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
