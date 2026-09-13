@@ -42,14 +42,17 @@ test("bet-type selector summary reverifies prerequisite reports and DB identity 
   assert.match(entry, /env: \{ \.\.\.process\.env, BOAT_PON_DB_PATH: launchDbPath \}/);
 
   const calls = [...entry.matchAll(/verifyRequiredReports\(\);/g)].map((match) => match.index ?? -1);
+  const outputPreflights = [...entry.matchAll(/verifyExistingOutputPaths\(\);/g)].map((match) => match.index ?? -1);
   assert.equal(calls.length, 2, "prerequisite reports must be validated initially and again before staging");
-  const outputPreflight = entry.lastIndexOf("verifyExistingOutputPaths()");
+  assert.equal(outputPreflights.length, 2, "outputs must be preflighted before child work and again before publication");
+  const initialOutputPreflight = outputPreflights[0];
   const handoff = entry.lastIndexOf("const verifiedDbPath = verifyDbHandoff()");
   const workspace = entry.lastIndexOf("mkdtempSync(");
   const stage = entry.lastIndexOf("stageRequiredReports(workspace)");
   const internalRun = entry.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
-  assert.ok(calls[0] >= 0 && outputPreflight > calls[0]);
-  assert.ok(calls[1] > outputPreflight && handoff > calls[1] && workspace > handoff && stage > workspace && internalRun > stage);
+  assert.ok(calls[0] >= 0 && initialOutputPreflight > calls[0]);
+  assert.ok(calls[1] > initialOutputPreflight && handoff > calls[1] && workspace > handoff && stage > workspace && internalRun > stage);
+  assert.ok(outputPreflights[1] > internalRun, "publication preflight must remain after isolated analysis");
 });
 
 test("bet-type selector summary stages verified prerequisite reports into an isolated workspace", () => {
@@ -74,9 +77,11 @@ test("bet-type selector summary redacts configured DB provenance before canonica
 });
 
 test("bet-type selector summary rejects unsafe pre-existing Markdown and JSON outputs before child write", () => {
-  const firstInputPreflight = entry.lastIndexOf("verifyRequiredReports();", entry.lastIndexOf("verifyExistingOutputPaths()"));
-  const outputPreflight = entry.lastIndexOf("verifyExistingOutputPaths()");
-  const finalInputPreflight = entry.lastIndexOf("verifyRequiredReports();");
+  const outputPreflights = [...entry.matchAll(/verifyExistingOutputPaths\(\);/g)].map((match) => match.index ?? -1);
+  assert.equal(outputPreflights.length, 2);
+  const outputPreflight = outputPreflights[0];
+  const firstInputPreflight = entry.lastIndexOf("verifyRequiredReports();", outputPreflight);
+  const finalInputPreflight = entry.indexOf("verifyRequiredReports();", outputPreflight);
   const markdownIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_REPORT_IDENTITY_INVALID");
   const jsonIdentity = entry.indexOf("BET_TYPE_SELECTOR_PREEXISTING_JSON_REPORT_IDENTITY_INVALID");
   const workspace = entry.lastIndexOf("mkdtempSync(");
