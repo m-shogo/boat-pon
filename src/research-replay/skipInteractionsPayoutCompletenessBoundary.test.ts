@@ -93,7 +93,7 @@ test("skip-interactions verifies staged outputs and atomically publishes Markdow
   assert.match(entrypoint, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(entrypoint, /writeFileSync\(fd, content, "utf-8"\);\s*fsyncSync\(fd\);/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\)/u);
-  assert.match(entrypoint, /if \(existsSync\(targetPath\)\) \{\s*assertCanonicalSingleLinkRegularFile\(targetPath, destinationErrorCode\);\s*\}\s*renameSync\(verifiedTempPath, targetPath\);/u);
+  assert.match(entrypoint, /if \(existsSync\(targetPath\)\) \{\s*assertCanonicalSingleLinkRegularFile\(targetPath, destinationErrorCode\);\s*\}\s*assertCanonicalDirectory\(\s*parentPath,\s*"ROI_SKIP_INTERACTIONS_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",\s*\);\s*renameSync\(verifiedTempPath, targetPath\);/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
