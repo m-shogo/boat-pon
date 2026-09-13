@@ -24,16 +24,20 @@ test("research rule evaluation input is identity-verified and missing diagnostic
 });
 
 test("research rule store publication uses exclusive fsynced temp plus atomic rename", () => {
+  const parentIdentity = source.indexOf("RESEARCH_RULE_STORE_PARENT_IDENTITY_INVALID");
   const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = source.indexOf("fsyncSync(fd)");
   const tempIdentity = source.indexOf("RESEARCH_RULE_STORE_TEMP_IDENTITY_INVALID");
   const destinationIdentity = source.lastIndexOf("RESEARCH_RULE_STORE_TARGET_IDENTITY_INVALID");
+  const parentHandoff = source.indexOf("RESEARCH_RULE_STORE_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
   const rename = source.indexOf("renameSync(tempPath, STORE_PATH)");
 
-  assert.ok(tempCreate >= 0, "publication must use an exclusive temp file");
+  assert.ok(parentIdentity >= 0, "canonical store parent must be verified before temp creation");
+  assert.ok(tempCreate > parentIdentity, "publication must create its temp only after parent identity verification");
   assert.ok(fsync > tempCreate, "temp file must be fsynced after creation");
   assert.ok(tempIdentity > fsync, "temp identity must be verified after durable write");
   assert.ok(destinationIdentity > tempIdentity, "existing store destination must be revalidated after temp identity");
-  assert.ok(rename > destinationIdentity, "publication must rename only after destination revalidation");
+  assert.ok(parentHandoff > destinationIdentity, "parent identity must be revalidated after destination handoff");
+  assert.ok(rename > parentHandoff, "publication must rename only after parent handoff revalidation");
   assert.doesNotMatch(source, /writeFileSync\(STORE_PATH/);
 });

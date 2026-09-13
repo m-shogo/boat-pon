@@ -23,13 +23,15 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { addRule, applyRuleTransition, createResearchRule } from "../src/domain/researchRuleStore";
 import type { ForwardTestResult, ResearchRule } from "../src/domain/researchRule";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -95,6 +97,14 @@ function loadStore(): RuleStoreFile {
   return JSON.parse(readFileSync(verifiedStorePath, "utf8")) as RuleStoreFile;
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function saveStore(store: RuleStoreFile) {
   store._meta.lastUpdated = new Date().toISOString();
   if (existsSync(STORE_PATH)) {
@@ -104,8 +114,10 @@ function saveStore(store: RuleStoreFile) {
     );
   }
 
+  const parentPath = dirname(STORE_PATH);
+  assertCanonicalDirectory(parentPath, "RESEARCH_RULE_STORE_PARENT_IDENTITY_INVALID");
   const tempPath = join(
-    dirname(STORE_PATH),
+    parentPath,
     `.${basename(STORE_PATH)}.tmp-${process.pid}-${Date.now()}`,
   );
   const fd = openSync(tempPath, "wx", 0o600);
@@ -127,6 +139,7 @@ function saveStore(store: RuleStoreFile) {
         "RESEARCH_RULE_STORE_TARGET_IDENTITY_INVALID",
       );
     }
+    assertCanonicalDirectory(parentPath, "RESEARCH_RULE_STORE_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(tempPath, STORE_PATH);
   } catch (error) {
     if (existsSync(tempPath)) unlinkSync(tempPath);
