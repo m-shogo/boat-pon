@@ -21,7 +21,7 @@ test("ROI full review accepts only realized-payout all-feature search output", (
 
 test("ROI full review checks metric basis before running all-feature search or producing GO/PAPER", () => {
   const gate = reviewSource.indexOf("assertRealizedPayoutMetricBasis();");
-  const command = reviewSource.indexOf('["pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"]]');
+  const command = reviewSource.indexOf('["pnpm", ["tsx", "scripts/run-roi-all-features-lite-safe.ts"]]');
   const reportGate = reviewSource.indexOf("assertOfficialPayoutReport(allFeature);");
   const finalDecision = reviewSource.indexOf("const finalDecision = decide(");
   assert.ok(gate >= 0);
