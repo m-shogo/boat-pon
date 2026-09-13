@@ -12,7 +12,7 @@ test("skip-interactions command cannot bypass settlement completeness", () => {
   assert.equal(pkg.scripts?.["analyze:roi-skip-interactions"], "tsx scripts/analyze-roi-skip-interactions.ts");
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
   const verify = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID"');
-  const analysis = entrypoint.indexOf('await import("./analyze-roi-skip-interactions-core")');
+  const analysis = entrypoint.indexOf("const analysis = spawnSync");
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight);
   assert.ok(analysis > verify);
@@ -22,18 +22,22 @@ test("skip-interactions command cannot bypass settlement completeness", () => {
   assert.doesNotMatch(entrypoint, /run\("scripts\/analyze-roi-skip-interactions-raw\.ts"/);
 });
 
-test("skip-interactions canonical entrypoint re-verifies DB identity before core in-process handoff", () => {
+test("skip-interactions canonical entrypoint re-verifies DB identity before isolated core handoff", () => {
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIMARY_DB_MISSING/);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID/);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
   assert.doesNotMatch(entrypoint, /DB not found:/);
-  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = verifiedDbPath/);
 
   const preflight = entrypoint.indexOf('run("scripts/audit-roi-skip-interactions-payout-completeness.ts")');
   const verify = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_PRIMARY_DB_IDENTITY_INVALID"');
-  const envHandoff = entrypoint.indexOf("process.env.BOAT_PON_DB_PATH = verifiedDbPath");
-  const analysis = entrypoint.indexOf('await import("./analyze-roi-skip-interactions-core")');
-  assert.ok(preflight >= 0 && verify > preflight && envHandoff > verify && analysis > envHandoff);
+  const workspace = entrypoint.indexOf('mkdtempSync(join(tmpdir(), "boat-pon-roi-skip-interactions-")');
+  const childIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_DB_CHILD_LAUNCH_IDENTITY_INVALID"');
+  const analysis = entrypoint.indexOf("const analysis = spawnSync");
+  assert.ok(preflight >= 0 && verify > preflight && workspace > verify && childIdentity > workspace && analysis > childIdentity);
+  assert.match(entrypoint, /cwd: workspace/u);
+  assert.match(entrypoint, /env: \{ \.\.\.process\.env, BOAT_PON_DB_PATH: launchDbPath \}/u);
   assert.equal(entrypoint.includes("analyze-roi-skip-interactions-raw.ts"), false);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/analyze-roi-skip-interactions-core"\)/u);
 });
 
 test("skip-interactions guarded raw compatibility module routes through canonical settlement preflight", () => {
@@ -66,51 +70,38 @@ test("skip-interactions core independently fails closed before SQLite reads", ()
   assert.doesNotMatch(core, /db\.(?:exec|prepare)\(\s*[`\"']\s*(?:INSERT|UPDATE|DELETE|DROP)\b/i);
 });
 
-test("skip-interactions canonical entrypoint redacts private DB provenance only after core analysis returns", () => {
-  const analysis = entrypoint.indexOf('await import("./analyze-roi-skip-interactions-core")');
-  const redact = entrypoint.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+test("skip-interactions redacts private DB provenance before canonical publication", () => {
+  const analysis = entrypoint.indexOf("const analysis = spawnSync");
+  const stagedIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_MD_OUTPUT_IDENTITY_INVALID"');
+  const redact = entrypoint.indexOf('redactDbProvenance(readFileSync(verifiedMdPath, "utf-8"), launchDbPath)');
+  const publish = entrypoint.indexOf("atomicPublish(", redact);
 
   assert.ok(analysis >= 0);
-  assert.ok(redact > analysis, "private DB provenance must be sanitized only after successful core analysis");
+  assert.ok(stagedIdentity > analysis, "staged report identity must be verified only after successful core analysis");
+  assert.ok(redact > stagedIdentity, "private DB provenance must be removed from the verified staged report");
+  assert.ok(publish > redact, "canonical publication must occur only after provenance redaction");
   assert.match(entrypoint, /const OPAQUE_DB_SOURCE = "primary research database"/u);
   assert.match(entrypoint, /const privateMarker = `DB: \$\{dbPath\}`/u);
-  assert.match(entrypoint, /const redacted = report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
-  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_REPORT_MISSING_AFTER_ANALYSIS/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
   assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_PRIVATE_DB_PATH_REMAINS/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_JSON_PRIVATE_DB_PATH_REMAINS/u);
 });
 
-test("skip-interactions verifies report identity and publishes provenance atomically", () => {
-  const firstIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_REPORT_IDENTITY_INVALID"');
-  const read = entrypoint.indexOf('readFileSync(verifiedReportPath, "utf-8")');
-  const privatePathCheck = entrypoint.indexOf("ROI_SKIP_INTERACTIONS_PRIVATE_DB_PATH_REMAINS");
-  const handoffIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const publishCall = entrypoint.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
-  const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx")');
-  const fsync = entrypoint.indexOf("fsyncSync(fd)");
-  const tempIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_TEMP_REPORT_IDENTITY_INVALID"');
-  const destinationIdentity = entrypoint.indexOf('"ROI_SKIP_INTERACTIONS_PUBLISH_DESTINATION_IDENTITY_INVALID"');
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
-
-  assert.ok(
-    firstIdentity >= 0
-      && read > firstIdentity
-      && privatePathCheck > read
-      && handoffIdentity > privatePathCheck
-      && publishCall > handoffIdentity,
-  );
-  assert.ok(
-    exclusiveOpen >= 0
-      && fsync > exclusiveOpen
-      && tempIdentity > fsync
-      && destinationIdentity > tempIdentity
-      && rename > destinationIdentity,
-  );
-  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
-  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
-  assert.match(entrypoint, /writeFileSync\(fd, content, "utf-8"\)/u);
-  assert.match(entrypoint, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
-  assert.doesNotMatch(entrypoint, /writeFileSync\(\s*handoffReportPath/u);
+test("skip-interactions verifies staged outputs and atomically publishes Markdown and JSON", () => {
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_MD_OUTPUT_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_JSON_OUTPUT_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /openSync\(tempPath, "wx", 0o600\)/u);
+  assert.match(entrypoint, /writeFileSync\(fd, content, "utf-8"\);\s*fsyncSync\(fd\);/u);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\)/u);
+  assert.match(entrypoint, /if \(existsSync\(targetPath\)\) \{\s*assertCanonicalSingleLinkRegularFile\(targetPath, destinationErrorCode\);\s*\}\s*renameSync\(verifiedTempPath, targetPath\);/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /ROI_SKIP_INTERACTIONS_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
+  assert.match(entrypoint, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
+  assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
+  assert.doesNotMatch(entrypoint, /writeFileSync\(\s*OUT_(?:MD|JSON)/u);
 });
 
 test("skip-interactions preflight matches the exact forward population and validates settlement line integrity", () => {
