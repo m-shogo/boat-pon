@@ -28,19 +28,29 @@ test("ROI full review keeps official-payout gate before final decision", () => {
   assert.match(source, /metricBasis: "official_payout_yen"/);
 });
 
-test("ROI full review validates existing outputs and revalidates destinations before atomic replacement", () => {
-  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
-  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
-  const jsonPublish = source.indexOf("atomicPublish(\n  OUT_JSON");
-  const mdPublish = source.indexOf("atomicPublish(\n  OUT_MD");
-  assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
+test("ROI full review preflights canonical reports directory and both destinations before first replacement", () => {
+  const reportsDirectory = source.indexOf("ROI_FULL_REVIEW_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON", reportsDirectory);
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD", preflightJson);
+  const jsonPublish = source.indexOf("atomicPublish(\n  OUT_JSON", preflightMd);
+  const mdPublish = source.indexOf("atomicPublish(\n  OUT_MD", jsonPublish);
+  assert.ok(reportsDirectory >= 0);
+  assert.ok(preflightJson > reportsDirectory && preflightMd > preflightJson);
+  assert.ok(jsonPublish > preflightMd && mdPublish > jsonPublish, "both destinations must be preflighted before the first replacement");
+});
 
-  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+test("ROI full review validates publish parent handoff and uses fsynced exclusive temp files", () => {
+  const helper = source.indexOf("function atomicPublish(");
+  const parentIdentity = source.indexOf("ROI_FULL_REVIEW_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = source.indexOf("fsyncSync(fd)", create);
   const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode)", fsync);
   const destinationIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode)", tempIdentity);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
-  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity);
+  const parentHandoff = source.indexOf("ROI_FULL_REVIEW_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+  assert.ok(helper >= 0 && parentIdentity > helper);
+  assert.ok(create > parentIdentity && fsync > create && tempIdentity > fsync);
+  assert.ok(destinationIdentity > tempIdentity && parentHandoff > destinationIdentity && rename > parentHandoff);
   assert.match(source, /ROI_FULL_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source, /ROI_FULL_REVIEW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(source, /ROI_FULL_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
