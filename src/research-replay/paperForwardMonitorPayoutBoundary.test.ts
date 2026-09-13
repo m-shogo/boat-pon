@@ -8,62 +8,68 @@ const internal = readFileSync("scripts/report-paper-forward-monitor-internal.ts"
 const audit = readFileSync("scripts/audit-paper-forward-monitor-payout-completeness.ts", "utf-8");
 const pkg = readFileSync("package.json", "utf-8");
 
-test("paper-forward monitor entrypoint fails closed before verified internal report generation", () => {
+test("paper-forward monitor entrypoint fails closed before verified isolated internal report generation", () => {
   const preflight = entrypoint.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
   const verify = entrypoint.indexOf("PAPER_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID");
-  const report = entrypoint.indexOf('run("scripts/report-paper-forward-monitor-internal.ts"');
-  const handoff = entrypoint.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
+  const outputPreflight = entrypoint.indexOf("verifyExistingOutputs();", verify);
+  const isolated = entrypoint.indexOf("runIsolated(workspace, handoffDbPath)");
+  const childVerify = entrypoint.indexOf("PAPER_FORWARD_MONITOR_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const handoff = entrypoint.indexOf("BOAT_PON_DB_PATH: launchDbPath");
   const internalGuard = entrypoint.indexOf('BOAT_PON_PAPER_FORWARD_MONITOR_INTERNAL_GUARD: "1"');
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight, "DB identity must be reverified after settlement preflight");
-  assert.ok(report > verify, "internal report must start only after DB identity revalidation");
-  assert.ok(handoff > report, "internal report must receive only the verified DB path");
-  assert.ok(internalGuard > handoff, "internal execution guard must be handed off with the verified DB path");
+  assert.ok(outputPreflight > verify, "canonical destinations must be checked before analysis");
+  assert.ok(isolated > outputPreflight, "internal report must start only after output-path preflight");
+  assert.ok(childVerify >= 0 && childVerify < handoff, "DB must be reverified immediately before child handoff");
+  assert.ok(handoff > isolated, "isolated internal report must receive only the verified DB path");
+  assert.ok(internalGuard > handoff, "internal execution guard must accompany the verified DB handoff");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
-  assert.match(entrypoint, /PAPER_FORWARD_MONITOR_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.match(entrypoint, /cwd: workspace/);
 });
 
-test("paper-forward monitor raw compatibility entrypoint is independently guarded and redacts DB provenance", () => {
+test("paper-forward monitor raw compatibility entrypoint is independently guarded and isolated", () => {
   const preflight = raw.indexOf('run("scripts/audit-paper-forward-monitor-payout-completeness.ts")');
   const verify = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID");
-  const outputPreflight = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_PREEXISTING_REPORT_IDENTITY_INVALID");
-  const report = raw.indexOf('run("scripts/report-paper-forward-monitor-internal.ts"');
-  const handoff = raw.indexOf("BOAT_PON_DB_PATH: handoffDbPath");
+  const outputPreflight = raw.indexOf("verifyExistingOutputs();", verify);
+  const isolated = raw.indexOf("runIsolated(workspace, handoffDbPath)");
+  const childVerify = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_DB_CHILD_LAUNCH_IDENTITY_INVALID");
+  const handoff = raw.indexOf("BOAT_PON_DB_PATH: launchDbPath");
   const internalGuard = raw.indexOf('BOAT_PON_PAPER_FORWARD_MONITOR_INTERNAL_GUARD: "1"');
-  const sanitize = raw.indexOf("sanitizeDbProvenance(handoffDbPath)");
+  const staged = raw.indexOf("readStagedOutputs(workspace, handoffDbPath)", isolated);
   assert.ok(preflight >= 0);
   assert.ok(verify > preflight, "raw DB identity must be reverified after settlement preflight");
-  assert.ok(outputPreflight > verify, "raw existing report identity must be verified after DB handoff");
-  assert.ok(report > outputPreflight, "raw internal aggregation must start only after report-path identity preflight");
-  assert.ok(handoff > report, "raw internal aggregation must receive only the verified DB path");
-  assert.ok(internalGuard > handoff, "raw internal execution guard must accompany the verified DB handoff");
-  assert.ok(sanitize > internalGuard, "raw report must sanitize provenance after successful internal aggregation");
-  assert.match(raw, /if \(existsSync\(OUT_MD\)\)/u);
-  assert.match(raw, /FAIL CLOSED: official trifecta settlement coverage\/integrity did not pass/);
-  assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.ok(outputPreflight > verify, "raw canonical destinations must be checked before analysis");
+  assert.ok(isolated > outputPreflight, "raw internal aggregation must be isolated after path preflight");
+  assert.ok(childVerify >= 0 && childVerify < handoff, "raw DB must be reverified before child handoff");
+  assert.ok(handoff > isolated && internalGuard > handoff);
+  assert.ok(staged > internalGuard, "raw staged outputs must be verified before publication");
   assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_PRIVATE_DB_PATH_REMAINS/);
   assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_DB_PROVENANCE_UNEXPECTED/);
-  assert.match(raw, /\.split\(handoffDbPath\)\.join\(OPAQUE_DB_SOURCE\)/);
-  assert.match(raw, /replace\(\/\^DB:\.\*\$\/gm, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
+  assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_PREEXISTING_JSON_IDENTITY_INVALID/);
   assert.doesNotMatch(raw, /new DatabaseSync/);
+  assert.doesNotMatch(raw, /sanitizeDbProvenance/);
 });
 
-test("paper-forward monitor raw verifies generated report identity before provenance read and reverifies destination before atomic sanitized publication", () => {
-  const firstIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORT_IDENTITY_INVALID"');
-  const read = raw.indexOf('readFileSync(verifiedReportPath, "utf-8")');
-  const handoffIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const atomicPublish = raw.indexOf("atomicPublishSanitizedReport(handoffReportPath, sanitized)");
-  const tempIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_SANITIZED_TEMP_IDENTITY_INVALID"');
-  const destinationIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_SANITIZED_DESTINATION_IDENTITY_INVALID"', tempIdentity);
-  const rename = raw.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+test("paper-forward monitor raw verifies and atomically publishes both staged artifacts", () => {
+  const mdIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORT_IDENTITY_INVALID"');
+  const jsonIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_JSON_IDENTITY_INVALID"');
+  const jsonParse = raw.indexOf("JSON.parse(json)");
+  const reportsIdentity = raw.indexOf('"PAPER_FORWARD_MONITOR_RAW_REPORTS_DIRECTORY_IDENTITY_INVALID"');
+  const completePreflight = raw.indexOf("verifyExistingOutputs();", reportsIdentity);
+  const firstPublish = raw.indexOf("atomicPublish(", completePreflight);
+  const parentInitial = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_PUBLISH_PARENT_IDENTITY_INVALID");
+  const exclusiveOpen = raw.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = raw.indexOf("fsyncSync(fd)");
+  const parentHandoff = raw.indexOf("PAPER_FORWARD_MONITOR_RAW_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
+  const rename = raw.indexOf("renameSync(verifiedTempPath, path)");
 
-  assert.ok(firstIdentity >= 0 && read > firstIdentity && handoffIdentity > read && atomicPublish > handoffIdentity);
-  assert.match(raw, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
-  assert.match(raw, /openSync\(tempPath, "wx", 0o600\)/u);
-  assert.match(raw, /fsyncSync\(fd\)/u);
-  assert.ok(tempIdentity >= 0 && destinationIdentity > tempIdentity && rename > destinationIdentity);
-  assert.doesNotMatch(raw, /writeFileSync\(handoffReportPath/u);
+  assert.ok(mdIdentity >= 0 && jsonIdentity > mdIdentity && jsonParse > jsonIdentity);
+  assert.ok(reportsIdentity > jsonParse && completePreflight > reportsIdentity && firstPublish > completePreflight);
+  assert.ok(parentInitial >= 0 && exclusiveOpen > parentInitial && fsync > exclusiveOpen);
+  assert.ok(parentHandoff > fsync && rename > parentHandoff);
+  assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
 
 test("paper-forward monitor payout preflight covers only settled historical trifecta 1-2-3 BUY rows and stays read-only", () => {
