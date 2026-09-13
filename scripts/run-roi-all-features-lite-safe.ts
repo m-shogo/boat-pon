@@ -4,16 +4,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -37,7 +39,17 @@ function run(script: string, options: { cwd?: string; env?: NodeJS.ProcessEnv } 
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(path: string, content: string, code: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, `ROI_ALL_FEATURE_${code}_PUBLISH_PARENT_IDENTITY_INVALID`);
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -56,6 +68,7 @@ function atomicPublish(path: string, content: string, code: string): void {
         `ROI_ALL_FEATURE_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
       );
     }
+    assertCanonicalDirectory(parentPath, `ROI_ALL_FEATURE_${code}_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID`);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -79,19 +92,43 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 const workspace = mkdtempSync(join(tmpdir(), "boat-pon-roi-all-feature-"));
 try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
+  const childDbPath = assertCanonicalSingleLinkRegularFile(
+    verifiedDbPath,
+    "ROI_ALL_FEATURE_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+  );
   run(analyzerPath, {
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: childDbPath },
   });
 
-  mkdirSync("reports", { recursive: true });
-  for (const output of OUTPUTS) {
+  // Validate every staged artifact before canonical publication begins. Then
+  // revalidate at the read and handoff boundaries so a staged path swap cannot
+  // produce a partial or unverified canonical report set.
+  const stagedOutputs = OUTPUTS.map((output) => {
     const stagedPath = join(workspace, output.staged);
     const verifiedStagedPath = assertCanonicalSingleLinkRegularFile(
       stagedPath,
       `ROI_ALL_FEATURE_${output.code}_STAGED_OUTPUT_IDENTITY_INVALID`,
     );
-    atomicPublish(output.destination, readFileSync(verifiedStagedPath, "utf8"), output.code);
+    return { output, verifiedStagedPath };
+  });
+  const preparedOutputs = stagedOutputs.map(({ output, verifiedStagedPath }) => {
+    const readPath = assertCanonicalSingleLinkRegularFile(
+      verifiedStagedPath,
+      `ROI_ALL_FEATURE_${output.code}_STAGED_READ_IDENTITY_INVALID`,
+    );
+    const content = readFileSync(readPath, "utf8");
+    assertCanonicalSingleLinkRegularFile(
+      readPath,
+      `ROI_ALL_FEATURE_${output.code}_STAGED_HANDOFF_IDENTITY_INVALID`,
+    );
+    return { output, content };
+  });
+
+  mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ROI_ALL_FEATURE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  for (const { output, content } of preparedOutputs) {
+    atomicPublish(output.destination, content, output.code);
   }
 } finally {
   rmSync(workspace, { recursive: true, force: true });
