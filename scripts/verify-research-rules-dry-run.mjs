@@ -38,6 +38,7 @@ const tempDomainDir = join(tempDir, "src", "domain");
 const tempResearchReplayDir = join(tempDir, "src", "research-replay");
 const tempScriptsDir = join(tempDir, "scripts");
 const storePath = join(tempDir, "rules.json");
+const lockPath = `${storePath}.lock`;
 
 let failures = 0;
 
@@ -76,7 +77,16 @@ try {
   const realAdd = run(["add", "--rule-id", "r1", "--reason", "x"]);
   check("real add exits 0", realAdd.status === 0);
   check("real add creates the store file", existsSync(storePath));
+  check("successful real add releases its write lock", !existsSync(lockPath));
   const hashBefore = hashFile(storePath);
+
+  console.log("--- real writes fail closed while another writer holds the lock ---");
+  writeFileSync(lockPath, "busy\n", { mode: 0o600 });
+  const blockedAdd = run(["add", "--rule-id", "r2", "--reason", "x"]);
+  check("locked real add exits non-zero", blockedAdd.status !== 0);
+  check("locked real add does not change the store file", hashFile(storePath) === hashBefore);
+  check("locked real add does not remove another writer's lock", existsSync(lockPath));
+  rmSync(lockPath, { force: true });
 
   const dryTransition = run(["transition", "--rule-id", "r1", "--to", "backtest", "--dry-run"]);
   check("dry-run transition exits 0", dryTransition.status === 0);
