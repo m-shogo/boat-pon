@@ -19,24 +19,43 @@ test("local market entrypoint revalidates DB identity after settlement preflight
   assert.doesNotMatch(entrypoint, /analyze-local-market-anomalies-raw/);
 });
 
-test("local market isolated publication verifies outputs and atomic destinations", () => {
+test("local market validates the complete destination set before paired publication", () => {
   const launch = entrypoint.indexOf("const analysis = spawnSync");
   const jsonOutput = entrypoint.indexOf("LOCAL_MARKET_JSON_OUTPUT_IDENTITY_INVALID");
   const mdOutput = entrypoint.indexOf("LOCAL_MARKET_MD_OUTPUT_IDENTITY_INVALID");
-  const jsonPublish = entrypoint.indexOf("LOCAL_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  const mdPublish = entrypoint.indexOf("LOCAL_MARKET_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  const reportsIdentity = entrypoint.indexOf("LOCAL_MARKET_REPORTS_DIRECTORY_IDENTITY_INVALID", mdOutput);
+  const jsonPrepublish = entrypoint.indexOf("LOCAL_MARKET_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID", reportsIdentity);
+  const mdPrepublish = entrypoint.indexOf("LOCAL_MARKET_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID", jsonPrepublish);
+  const firstPublish = entrypoint.indexOf("atomicPublish(", mdPrepublish);
 
   assert.match(entrypoint, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-local-market-"\)\)/);
   assert.ok(jsonOutput > launch);
   assert.ok(mdOutput > launch);
-  assert.ok(jsonPublish > jsonOutput);
-  assert.ok(mdPublish > mdOutput);
-  assert.match(entrypoint, /openSync\(tempPath, "wx", 0o600\)/);
-  assert.match(entrypoint, /fsyncSync\(fd\)/);
+  assert.ok(reportsIdentity > mdOutput);
+  assert.ok(jsonPrepublish > reportsIdentity && mdPrepublish > jsonPrepublish);
+  assert.ok(firstPublish > mdPrepublish, "both canonical destinations must be preflighted before the first replacement");
   assert.match(entrypoint, /LOCAL_MARKET_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /LOCAL_MARKET_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
-  assert.match(entrypoint, /renameSync\(verifiedTempPath, path\)/);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
+});
+
+test("local market atomic publication reverifies parent and destination identities at handoff", () => {
+  const atomic = entrypoint.indexOf("function atomicPublish");
+  const parentIdentity = entrypoint.indexOf("LOCAL_MARKET_PUBLISH_PARENT_IDENTITY_INVALID", atomic);
+  const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = entrypoint.indexOf("fsyncSync(fd)", exclusiveOpen);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationExistence = entrypoint.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationExistence);
+  const parentHandoff = entrypoint.indexOf("LOCAL_MARKET_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+
+  assert.ok(parentIdentity > atomic);
+  assert.ok(exclusiveOpen > parentIdentity && fsync > exclusiveOpen);
+  assert.ok(tempIdentity > fsync);
+  assert.ok(destinationExistence > tempIdentity && destinationIdentity > destinationExistence);
+  assert.ok(parentHandoff > destinationIdentity);
+  assert.ok(rename > parentHandoff, "atomic rename must occur only after parent and destination identity revalidation");
 });
 
 test("local market guarded raw module cannot bypass canonical settlement preflight", () => {
