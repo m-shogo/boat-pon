@@ -2,43 +2,55 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const safeRunner = readFileSync("scripts/run-roi-all-features-lite-safe.ts", "utf8");
-const fullReview = readFileSync("scripts/run-roi-full-review.ts", "utf8");
-const proLoop = readFileSync("scripts/run-roi-pro-loop.ts", "utf8");
+const entrypoint = readFileSync("scripts/search-roi-all-features-lite.ts", "utf8");
 
-test("all-feature ROI safe runner isolates raw output and atomically publishes all artifacts", () => {
-  assert.ok(safeRunner.includes('new URL("./assert-roi-all-feature-settlement-integrity.ts", import.meta.url)'));
-  assert.ok(safeRunner.includes('new URL("./search-roi-all-features-lite.ts", import.meta.url)'));
-  assert.ok(safeRunner.includes('assertCanonicalSingleLinkRegularFile(\n  DB_PATH,\n  "ROI_ALL_FEATURE_PREFLIGHT_DB_IDENTITY_INVALID"'));
-  assert.ok(safeRunner.includes('assertCanonicalSingleLinkRegularFile(\n  DB_PATH,\n  "ROI_ALL_FEATURE_ANALYZER_DB_IDENTITY_INVALID"'));
-  assert.ok(safeRunner.includes('ROI_ALL_FEATURE_DB_CHILD_HANDOFF_IDENTITY_INVALID'));
-  assert.ok(safeRunner.includes('mkdtempSync(join(tmpdir(), "boat-pon-roi-all-feature-"))'));
-  assert.ok(safeRunner.includes("cwd: workspace"));
-  assert.ok(safeRunner.includes('BOAT_PON_DB_PATH: childDbPath'));
-  assert.ok(safeRunner.includes('staged: "reports/roi-all-feature-search.md"'));
-  assert.ok(safeRunner.includes('staged: "reports/roi-all-feature-search.json"'));
-  assert.ok(safeRunner.includes('staged: "reports/roi-all-feature-search.csv"'));
-  assert.ok(safeRunner.includes('STAGED_READ_IDENTITY_INVALID'));
-  assert.ok(safeRunner.includes('STAGED_HANDOFF_IDENTITY_INVALID'));
-  assert.ok(safeRunner.includes('ROI_ALL_FEATURE_REPORTS_DIRECTORY_IDENTITY_INVALID'));
-  assert.ok(safeRunner.includes('PUBLISH_PARENT_IDENTITY_INVALID'));
-  assert.ok(safeRunner.includes('PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID'));
-  assert.ok(safeRunner.includes('openSync(tempPath, "wx", 0o600)'));
-  assert.ok(safeRunner.includes("fsyncSync(fd)"));
-  assert.ok(safeRunner.includes("PUBLISH_DESTINATION_IDENTITY_INVALID"));
-  assert.ok(safeRunner.includes("renameSync(verifiedTempPath, path)"));
+test("all-feature ROI search isolates analysis before canonical publication", () => {
+  const dbIdentity = entrypoint.indexOf("ROI_ALL_FEATURE_PRIMARY_DB_IDENTITY_INVALID");
+  const workspace = entrypoint.indexOf("mkdtempSync(", dbIdentity);
+  const launchIdentity = entrypoint.indexOf("ROI_ALL_FEATURE_DB_CHILD_LAUNCH_IDENTITY_INVALID", workspace);
+  const analysis = entrypoint.indexOf("const analysis = spawnSync", launchIdentity);
+  const mdIdentity = entrypoint.indexOf("ROI_ALL_FEATURE_MD_OUTPUT_IDENTITY_INVALID", analysis);
+  const jsonIdentity = entrypoint.indexOf("ROI_ALL_FEATURE_JSON_OUTPUT_IDENTITY_INVALID", analysis);
+  const csvIdentity = entrypoint.indexOf("ROI_ALL_FEATURE_CSV_OUTPUT_IDENTITY_INVALID", analysis);
+  const privatePathGuard = entrypoint.indexOf("ROI_ALL_FEATURE_PRIVATE_DB_PATH_REMAINS", csvIdentity);
 
-  const prepareAll = safeRunner.indexOf('const preparedOutputs = stagedOutputs.map');
-  const publishLoop = safeRunner.indexOf('for (const { output, content } of preparedOutputs)');
-  assert.ok(prepareAll >= 0 && prepareAll < publishLoop, "all staged artifacts must be prepared before canonical publication");
+  assert.ok(dbIdentity >= 0);
+  assert.ok(workspace > dbIdentity);
+  assert.ok(launchIdentity > workspace);
+  assert.ok(analysis > launchIdentity);
+  assert.ok(mdIdentity > analysis && jsonIdentity > analysis && csvIdentity > analysis);
+  assert.ok(privatePathGuard > csvIdentity);
+  assert.match(entrypoint, /cwd: workspace/);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: launchDbPath/);
+  assert.match(entrypoint, /JSON\.parse\(json\)/);
 });
 
-test("high-level ROI research runners use the safe all-feature publication boundary", () => {
-  const safeCommand = 'scripts/run-roi-all-features-lite-safe.ts';
-  const rawCommand = 'scripts/search-roi-all-features-lite.ts';
-  assert.ok(fullReview.includes(safeCommand));
-  assert.ok(proLoop.includes(safeCommand));
-  assert.ok(!fullReview.includes('["pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"]]'));
-  assert.ok(!proLoop.includes('["tsx", "scripts/search-roi-all-features-lite.ts"]'));
-  assert.ok(fullReview.includes(rawCommand), "full review must still inspect raw analyzer source for metric-basis governance");
+test("all-feature ROI search preflights all three destinations before atomic replacement", () => {
+  const privatePathGuard = entrypoint.indexOf("ROI_ALL_FEATURE_PRIVATE_DB_PATH_REMAINS");
+  const reportsIdentity = entrypoint.indexOf(
+    'assertCanonicalDirectory("reports", "ROI_ALL_FEATURE_REPORTS_DIRECTORY_IDENTITY_INVALID")',
+    privatePathGuard,
+  );
+  const completePreflight = entrypoint.indexOf("verifyExistingOutputs();", reportsIdentity);
+  const jsonPublish = entrypoint.indexOf("  atomicPublish(\n    OUT_JSON,", completePreflight);
+  const csvPublish = entrypoint.indexOf("  atomicPublish(\n    OUT_CSV,", jsonPublish + 1);
+  const mdPublish = entrypoint.indexOf("  atomicPublish(\n    OUT_MD,", csvPublish + 1);
+  const parentIdentity = entrypoint.indexOf("ROI_ALL_FEATURE_PUBLISH_PARENT_IDENTITY_INVALID");
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(targetPath, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entrypoint.indexOf("ROI_ALL_FEATURE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, targetPath)", parentHandoff);
+
+  assert.ok(reportsIdentity > privatePathGuard);
+  assert.ok(completePreflight > reportsIdentity);
+  assert.ok(jsonPublish > completePreflight && csvPublish > jsonPublish && mdPublish > csvPublish);
+  assert.ok(parentIdentity >= 0 && tempCreate > parentIdentity);
+  assert.ok(fsync > tempCreate && tempIdentity > fsync);
+  assert.ok(destinationIdentity > tempIdentity);
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff);
+  assert.match(entrypoint, /ROI_ALL_FEATURE_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entrypoint, /ROI_ALL_FEATURE_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entrypoint, /ROI_ALL_FEATURE_CSV_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
