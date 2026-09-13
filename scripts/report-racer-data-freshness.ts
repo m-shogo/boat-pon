@@ -16,14 +16,17 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -557,12 +560,35 @@ function generateMarkdown(r: FreshnessReport): string {
   return lines.join("\n");
 }
 
+function assertCanonicalDirectory(path: string, errorCode: string): void {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      console.error(errorCode);
+      process.exit(1);
+    }
+    if (realpathSync(path) !== resolve(path)) {
+      console.error(errorCode);
+      process.exit(1);
+    }
+  } catch {
+    console.error(errorCode);
+    process.exit(1);
+  }
+}
+
+function verifyExistingOutput(path: string, errorCode: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, errorCode);
+}
+
 function atomicPublish(
   path: string,
   contents: string,
   tempIdentityErrorCode: string,
   destinationIdentityErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "RACER_FRESHNESS_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -572,9 +598,8 @@ function atomicPublish(
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
-    if (existsSync(path)) {
-      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
-    }
+    verifyExistingOutput(path, destinationIdentityErrorCode);
+    assertCanonicalDirectory(parentPath, "RACER_FRESHNESS_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -585,7 +610,10 @@ function atomicPublish(
 const report = run();
 
 const md = generateMarkdown(report);
-mkdirSync("reports", { recursive: true });
+if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
+assertCanonicalDirectory("reports", "RACER_FRESHNESS_REPORTS_DIRECTORY_IDENTITY_INVALID");
+verifyExistingOutput(REPORT_MD, "RACER_FRESHNESS_PREEXISTING_MD_IDENTITY_INVALID");
+verifyExistingOutput(REPORT_JSON, "RACER_FRESHNESS_PREEXISTING_JSON_IDENTITY_INVALID");
 atomicPublish(
   REPORT_MD,
   md,
