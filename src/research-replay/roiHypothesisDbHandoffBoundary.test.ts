@@ -27,7 +27,9 @@ test("ROI hypothesis publication uses verified isolated outputs and atomic repla
   assert.match(entrypoint, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(entrypoint, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\);/u);
-  assert.match(entrypoint, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}\s*renameSync\(verifiedTempPath, path\);/u);
+  assert.match(entrypoint, /verifyExistingOutput\(path, destinationErrorCode\);/u);
+  assert.match(entrypoint, /ROI_HYPOTHESIS_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /renameSync\(verifiedTempPath, path\);/u);
   assert.match(entrypoint, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
   assert.match(entrypoint, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
