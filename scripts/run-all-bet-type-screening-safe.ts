@@ -4,16 +4,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -36,7 +38,20 @@ function run(script: string, options: { cwd?: string; env?: NodeJS.ProcessEnv } 
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(path: string, content: string, code: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(
+    parentPath,
+    `ALL_BET_TYPE_SCREENING_${code}_PUBLISH_PARENT_IDENTITY_INVALID`,
+  );
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -55,6 +70,10 @@ function atomicPublish(path: string, content: string, code: string): void {
         `ALL_BET_TYPE_SCREENING_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
       );
     }
+    assertCanonicalDirectory(
+      parentPath,
+      `ALL_BET_TYPE_SCREENING_${code}_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID`,
+    );
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -105,6 +124,7 @@ try {
   });
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ALL_BET_TYPE_SCREENING_REPORTS_DIRECTORY_IDENTITY_INVALID");
   for (const { output, content } of preparedOutputs) {
     atomicPublish(output.destination, content, output.code);
   }
