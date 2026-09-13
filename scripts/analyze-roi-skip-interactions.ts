@@ -11,16 +11,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -45,12 +47,37 @@ function run(script: string, env = process.env): number {
   return result.status ?? 1;
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingOutput(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function verifyExistingOutputs(): void {
+  verifyExistingOutput(
+    OUT_MD,
+    "ROI_SKIP_INTERACTIONS_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  verifyExistingOutput(
+    OUT_JSON,
+    "ROI_SKIP_INTERACTIONS_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+}
+
 function atomicPublish(
   targetPath: string,
   content: string,
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(targetPath);
+  assertCanonicalDirectory(parentPath, "ROI_SKIP_INTERACTIONS_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${targetPath}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -64,6 +91,10 @@ function atomicPublish(
     if (existsSync(targetPath)) {
       assertCanonicalSingleLinkRegularFile(targetPath, destinationErrorCode);
     }
+    assertCanonicalDirectory(
+      parentPath,
+      "ROI_SKIP_INTERACTIONS_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    );
     renameSync(verifiedTempPath, targetPath);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -147,7 +178,11 @@ try {
     throw new Error("ROI_SKIP_INTERACTIONS_JSON_PRIVATE_DB_PATH_REMAINS");
   }
 
+  // Validate the canonical parent and complete destination set after staged
+  // outputs are sanitized but before either canonical artifact is replaced.
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ROI_SKIP_INTERACTIONS_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutputs();
   atomicPublish(
     OUT_MD,
     markdown,
