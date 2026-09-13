@@ -16,9 +16,11 @@ test("ROI bet full review verifies required and optional inputs before parsing",
 test("ROI bet full review publishes JSON and Markdown through verified atomic temp files", () => {
   assert.match(source, /ROI_BET_FULL_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(source, /ROI_BET_FULL_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /ROI_BET_FULL_REVIEW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(source, /ROI_BET_FULL_REVIEW_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(source, /fsyncSync\(fd\)/u);
-  assert.match(source, /renameSync\(verifiedTempPath, path\)/u);
+  assert.match(source, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}\s*renameSync\(verifiedTempPath, path\)/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_JSON,/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_MD,/u);
 });
