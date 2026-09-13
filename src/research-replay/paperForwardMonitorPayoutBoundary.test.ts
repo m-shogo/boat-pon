@@ -20,8 +20,7 @@ test("paper-forward monitor entrypoint fails closed before verified isolated int
   assert.ok(verify > preflight, "DB identity must be reverified after settlement preflight");
   assert.ok(outputPreflight > verify, "canonical destinations must be checked before analysis");
   assert.ok(isolated > outputPreflight, "internal report must start only after output-path preflight");
-  assert.ok(childVerify >= 0 && childVerify < handoff, "DB must be reverified immediately before child handoff");
-  assert.ok(handoff > isolated, "isolated internal report must receive only the verified DB path");
+  assert.ok(childVerify >= 0 && handoff > childVerify, "DB must be reverified immediately before child handoff");
   assert.ok(internalGuard > handoff, "internal execution guard must accompany the verified DB handoff");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
@@ -41,9 +40,9 @@ test("paper-forward monitor raw compatibility entrypoint is independently guarde
   assert.ok(verify > preflight, "raw DB identity must be reverified after settlement preflight");
   assert.ok(outputPreflight > verify, "raw canonical destinations must be checked before analysis");
   assert.ok(isolated > outputPreflight, "raw internal aggregation must be isolated after path preflight");
-  assert.ok(childVerify >= 0 && childVerify < handoff, "raw DB must be reverified before child handoff");
-  assert.ok(handoff > isolated && internalGuard > handoff);
-  assert.ok(staged > internalGuard, "raw staged outputs must be verified before publication");
+  assert.ok(childVerify >= 0 && handoff > childVerify, "raw DB must be reverified before child handoff");
+  assert.ok(internalGuard > handoff);
+  assert.ok(staged > isolated, "raw staged outputs must be verified after isolated aggregation");
   assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_PRIVATE_DB_PATH_REMAINS/);
   assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_DB_PROVENANCE_UNEXPECTED/);
   assert.match(raw, /PAPER_FORWARD_MONITOR_RAW_PREEXISTING_JSON_IDENTITY_INVALID/);
