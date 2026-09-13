@@ -50,25 +50,40 @@ test("normal all-bet-type screening entrypoint cannot bypass payout audit or DB 
   assert.equal(pkg.scripts["analyze:all-bet-type-screening"], "tsx scripts/run-all-bet-type-screening-safe.ts");
   assert.match(runner, /run\(auditPath\)/);
   assert.match(runner, /assertCanonicalSingleLinkRegularFile\(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID"\)/);
+  assert.match(runner, /ALL_BET_TYPE_SCREENING_DB_CHILD_HANDOFF_IDENTITY_INVALID/);
   assert.match(runner, /run\(analyzerPath, \{/);
+  assert.match(runner, /BOAT_PON_DB_PATH: childDbPath/);
   const audit = runner.indexOf("run(auditPath);");
   const reverify = runner.indexOf('assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_DB_IDENTITY_INVALID")');
+  const childReverify = runner.indexOf("ALL_BET_TYPE_SCREENING_DB_CHILD_HANDOFF_IDENTITY_INVALID");
   const analyzer = runner.indexOf("run(analyzerPath, {");
-  assert.ok(audit >= 0 && reverify > audit && analyzer > reverify);
+  assert.ok(audit >= 0 && reverify > audit && childReverify > reverify && analyzer > childReverify);
 });
 
-test("all-bet-type screening analyzer publishes only verified staged outputs through atomic destinations", () => {
+test("all-bet-type screening validates every staged artifact before canonical publication", () => {
   const runner = readFileSync("scripts/run-all-bet-type-screening-safe.ts", "utf8");
 
   assert.match(runner, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-all-bet-screening-"\)\)/);
   assert.match(runner, /cwd: workspace/);
-  assert.match(runner, /BOAT_PON_DB_PATH: verifiedDbPath/);
-  assert.match(runner, /assertCanonicalSingleLinkRegularFile\(\s*stagedPath,/);
+  assert.match(runner, /const stagedOutputs = OUTPUTS\.map/);
+  assert.match(runner, /ALL_BET_TYPE_SCREENING_\$\{output\.code\}_STAGED_OUTPUT_IDENTITY_INVALID/);
+  assert.match(runner, /const preparedOutputs = stagedOutputs\.map/);
+  assert.match(runner, /ALL_BET_TYPE_SCREENING_\$\{output\.code\}_STAGED_READ_IDENTITY_INVALID/);
+  assert.match(runner, /ALL_BET_TYPE_SCREENING_\$\{output\.code\}_STAGED_HANDOFF_IDENTITY_INVALID/);
   assert.match(runner, /openSync\(tempPath, "wx", 0o600\)/);
   assert.match(runner, /fsyncSync\(fd\)/);
   assert.match(runner, /assertCanonicalSingleLinkRegularFile\(\s*path,\s*`ALL_BET_TYPE_SCREENING_\$\{code\}_PUBLISH_DESTINATION_IDENTITY_INVALID`/);
   assert.match(runner, /renameSync\(verifiedTempPath, path\)/);
-  const staged = runner.indexOf("const verifiedStagedPath = assertCanonicalSingleLinkRegularFile");
-  const publish = runner.indexOf("atomicPublish(output.destination");
-  assert.ok(staged >= 0 && publish > staged);
+
+  const stagedValidation = runner.indexOf("const stagedOutputs = OUTPUTS.map");
+  const preparedReads = runner.indexOf("const preparedOutputs = stagedOutputs.map");
+  const canonicalMkdir = runner.indexOf('mkdirSync("reports", { recursive: true });');
+  const publishLoop = runner.indexOf("for (const { output, content } of preparedOutputs)");
+  const publish = runner.indexOf("atomicPublish(output.destination, content, output.code)");
+  assert.ok(stagedValidation >= 0);
+  assert.ok(preparedReads > stagedValidation);
+  assert.ok(canonicalMkdir > preparedReads, "canonical report directory must not be touched until all staged artifacts are validated and read");
+  assert.ok(publishLoop > canonicalMkdir);
+  assert.ok(publish > publishLoop);
+  assert.doesNotMatch(runner, /for \(const output of OUTPUTS\)[\s\S]*?atomicPublish\(output\.destination, readFileSync/u);
 });
