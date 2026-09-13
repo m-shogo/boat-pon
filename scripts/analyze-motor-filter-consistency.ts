@@ -4,7 +4,8 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -44,8 +45,21 @@ try {
   const summaries = conditions.map(([label, fn]) => ({ condition: label, ...metric(rows.filter(fn)), recommendation: recommendation(label, metric(rows.filter(fn))) }));
   const report = { generatedAt: new Date().toISOString(), roiBasis: "official-race-payouts", summaries };
   mkdirSync("reports", { recursive: true });
-  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "MOTOR_FILTER_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD, renderMarkdown(report), "MOTOR_FILTER_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  assertCanonicalDirectory("reports", "MOTOR_FILTER_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingDestination(OUT_JSON, "MOTOR_FILTER_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  verifyExistingDestination(OUT_MD, "MOTOR_FILTER_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_JSON,
+    `${JSON.stringify(report, null, 2)}\n`,
+    "MOTOR_FILTER_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "MOTOR_FILTER_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    renderMarkdown(report),
+    "MOTOR_FILTER_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "MOTOR_FILTER_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
   console.log(`[analyze-motor-filter-consistency] wrote ${OUT_MD}`);
   console.log(`[analyze-motor-filter-consistency] wrote ${OUT_JSON}`);
 } finally {
@@ -221,7 +235,26 @@ function recommendation(label: string, m: ReturnType<typeof metric>) {
   return "観察";
 }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingDestination(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "MOTOR_FILTER_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -230,7 +263,9 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    verifyExistingDestination(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "MOTOR_FILTER_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
