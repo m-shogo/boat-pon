@@ -4,13 +4,16 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 /**
@@ -147,6 +150,7 @@ const report = {
 };
 
 mkdirSync("reports", { recursive: true });
+assertCanonicalDirectory("reports", "ROI_AUTOPILOT_REPORTS_DIRECTORY_IDENTITY_INVALID");
 verifyExistingOutput(OUT_JSON, "ROI_AUTOPILOT_PREEXISTING_JSON_IDENTITY_INVALID");
 verifyExistingOutput(OUT_MD, "ROI_AUTOPILOT_PREEXISTING_MD_IDENTITY_INVALID");
 atomicPublish(
@@ -352,6 +356,14 @@ function readOptionalJson<T>(path: string, identityErrorCode: string): T | null 
   return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function verifyExistingOutput(path: string, identityErrorCode: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
@@ -363,6 +375,8 @@ function atomicPublish(
   identityErrorCode: string,
   destinationIdentityErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_AUTOPILOT_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -373,6 +387,7 @@ function atomicPublish(
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
     verifyExistingOutput(path, destinationIdentityErrorCode);
+    assertCanonicalDirectory(parentPath, "ROI_AUTOPILOT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);

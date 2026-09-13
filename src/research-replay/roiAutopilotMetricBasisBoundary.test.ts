@@ -36,19 +36,29 @@ test("ROI autopilot verifies upstream JSON identities before parsing", () => {
   assert.doesNotMatch(source, /throw new Error\(`\$\{path\} does not exist`\)/);
 });
 
-test("ROI autopilot validates existing outputs and publishes through fsynced exclusive temp files", () => {
-  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
-  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
-  const jsonPublish = source.indexOf("atomicPublish(\n  OUT_JSON");
-  const mdPublish = source.indexOf("atomicPublish(\n  OUT_MD");
-  assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
+test("ROI autopilot preflights the canonical report directory and complete paired destination set before publication", () => {
+  const reportsDirectory = source.indexOf("ROI_AUTOPILOT_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON", reportsDirectory);
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD", preflightJson);
+  const jsonPublish = source.indexOf("atomicPublish(\n  OUT_JSON", preflightMd);
+  const mdPublish = source.indexOf("atomicPublish(\n  OUT_MD", jsonPublish);
+  assert.ok(reportsDirectory >= 0);
+  assert.ok(preflightJson > reportsDirectory && preflightMd > preflightJson);
+  assert.ok(jsonPublish > preflightMd && mdPublish > jsonPublish, "both destinations must be preflighted before the first replacement");
+});
 
-  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+test("ROI autopilot validates publish parent handoff and uses fsynced exclusive temp files", () => {
+  const helper = source.indexOf("function atomicPublish(");
+  const parentIdentity = source.indexOf("ROI_AUTOPILOT_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = source.indexOf("fsyncSync(fd)", create);
   const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
   const destinationIdentity = source.indexOf("verifyExistingOutput(path, destinationIdentityErrorCode)", identity);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
-  assert.ok(create >= 0 && fsync > create && identity > fsync && destinationIdentity > identity && rename > destinationIdentity);
+  const parentHandoff = source.indexOf("ROI_AUTOPILOT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+  assert.ok(helper >= 0 && parentIdentity > helper);
+  assert.ok(create > parentIdentity && fsync > create && identity > fsync);
+  assert.ok(destinationIdentity > identity && parentHandoff > destinationIdentity && rename > parentHandoff);
   assert.match(source, /ROI_AUTOPILOT_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source, /ROI_AUTOPILOT_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source, /ROI_AUTOPILOT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
