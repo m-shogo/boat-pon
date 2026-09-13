@@ -28,6 +28,9 @@ test("bet-type course verifies, sanitizes, and revalidates isolated outputs befo
   const provenance = entrypoint.indexOf("BET_TYPE_COURSE_PRIVATE_DB_PROVENANCE_REMAINED");
   const mdHandoff = entrypoint.indexOf("BET_TYPE_COURSE_MD_HANDOFF_IDENTITY_INVALID");
   const jsonHandoff = entrypoint.indexOf("BET_TYPE_COURSE_JSON_HANDOFF_IDENTITY_INVALID");
+  const reportsDirectory = entrypoint.indexOf("BET_TYPE_COURSE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const mdDestinationPreflight = entrypoint.indexOf("BET_TYPE_COURSE_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  const jsonDestinationPreflight = entrypoint.indexOf("BET_TYPE_COURSE_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
   const mdPublish = entrypoint.indexOf("BET_TYPE_COURSE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   const jsonPublish = entrypoint.indexOf("BET_TYPE_COURSE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
 
@@ -39,11 +42,16 @@ test("bet-type course verifies, sanitizes, and revalidates isolated outputs befo
   assert.ok(provenance > jsonRead);
   assert.ok(mdHandoff > provenance);
   assert.ok(jsonHandoff > mdHandoff);
-  assert.ok(mdPublish > jsonHandoff, "canonical publication must wait for staged reads, sanitization, and handoff revalidation");
+  assert.ok(reportsDirectory > jsonHandoff, "canonical report directory must be checked after staged output preparation");
+  assert.ok(mdDestinationPreflight > reportsDirectory);
+  assert.ok(jsonDestinationPreflight > mdDestinationPreflight, "both canonical destinations must preflight before the first replacement");
+  assert.ok(mdPublish > jsonDestinationPreflight, "canonical publication must wait for the complete destination-set preflight");
   assert.ok(jsonPublish > mdPublish);
   assert.match(entrypoint, /markdown\.includes\(launchDbPath\) \|\| json\.includes\(launchDbPath\)/);
   assert.match(entrypoint, /openSync\(tempPath, "wx", 0o600\)/);
   assert.match(entrypoint, /fsyncSync\(fd\)/);
+  assert.match(entrypoint, /BET_TYPE_COURSE_PUBLISH_PARENT_IDENTITY_INVALID/);
+  assert.match(entrypoint, /BET_TYPE_COURSE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/);
   assert.match(entrypoint, /BET_TYPE_COURSE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /BET_TYPE_COURSE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /renameSync\(verifiedTempPath, path\)/);
