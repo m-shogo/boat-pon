@@ -25,29 +25,47 @@ test("odds-payout-gap canonical entrypoint verifies DB identity after preflight 
   assert.doesNotMatch(entry, /analyze-odds-payout-gap-raw/);
 });
 
-test("odds-payout-gap canonical entrypoint verifies generated artifacts before read and reverifies destinations before atomic publication", () => {
+test("odds-payout-gap canonical entrypoint verifies generated artifacts and the complete destination set before atomic publication", () => {
   const analysis = entry.indexOf("const analysis = spawnSync");
   const mdIdentity = entry.indexOf("ODDS_PAYOUT_GAP_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
   const jsonIdentity = entry.indexOf("ODDS_PAYOUT_GAP_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
   const mdRead = entry.indexOf('readFileSync(workspaceMd, "utf8")', mdIdentity);
   const jsonRead = entry.indexOf('readFileSync(workspaceJson, "utf8")', jsonIdentity);
-  const tempCreate = entry.indexOf('openSync(tempPath, "wx", 0o600)');
+  const publishMkdir = entry.indexOf('mkdirSync("reports", { recursive: true })', jsonRead);
+  const reportsIdentity = entry.indexOf("ODDS_PAYOUT_GAP_REPORTS_DIRECTORY_IDENTITY_INVALID", publishMkdir);
+  const mdPrepublish = entry.indexOf("ODDS_PAYOUT_GAP_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID", reportsIdentity);
+  const jsonPrepublish = entry.indexOf("ODDS_PAYOUT_GAP_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID", mdPrepublish);
+  const firstPublish = entry.indexOf("atomicPublish(", jsonPrepublish);
+  const postflight = entry.indexOf("ODDS_PAYOUT_GAP_MD_OUTPUT_IDENTITY_INVALID", firstPublish);
+
+  assert.ok(mdIdentity > analysis && jsonIdentity > analysis);
+  assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity);
+  assert.ok(publishMkdir > jsonRead);
+  assert.ok(reportsIdentity > publishMkdir);
+  assert.ok(mdPrepublish > reportsIdentity && jsonPrepublish > mdPrepublish);
+  assert.ok(firstPublish > jsonPrepublish, "both canonical destinations must be preflighted before the first replacement");
+  assert.ok(postflight > firstPublish);
+  assert.match(entry, /ODDS_PAYOUT_GAP_MD_PREEXISTING_IDENTITY_INVALID/);
+  assert.match(entry, /ODDS_PAYOUT_GAP_JSON_PREEXISTING_IDENTITY_INVALID/);
+});
+
+test("odds-payout-gap atomic publication reverifies parent and destination identities at handoff", () => {
+  const atomic = entry.indexOf("function atomicPublish");
+  const parentIdentity = entry.indexOf("ODDS_PAYOUT_GAP_PUBLISH_PARENT_IDENTITY_INVALID", atomic);
+  const tempCreate = entry.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = entry.indexOf("fsyncSync(fd)", tempCreate);
   const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
   const destinationGuard = entry.indexOf("if (existsSync(path))", tempIdentity);
   const destinationIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationGuard);
-  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
-  const postflight = entry.indexOf("ODDS_PAYOUT_GAP_MD_OUTPUT_IDENTITY_INVALID", analysis);
+  const parentHandoff = entry.indexOf("ODDS_PAYOUT_GAP_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
 
-  assert.ok(mdIdentity > analysis && jsonIdentity > analysis);
-  assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity);
-  assert.ok(tempCreate >= 0 && fsync > tempCreate);
+  assert.ok(parentIdentity > atomic);
+  assert.ok(tempCreate > parentIdentity && fsync > tempCreate);
   assert.ok(tempIdentity > fsync);
   assert.ok(destinationGuard > tempIdentity && destinationIdentity > destinationGuard);
-  assert.ok(rename > destinationIdentity, "atomic rename must occur only after destination identity revalidation");
-  assert.ok(postflight > rename);
-  assert.match(entry, /ODDS_PAYOUT_GAP_MD_PREEXISTING_IDENTITY_INVALID/);
-  assert.match(entry, /ODDS_PAYOUT_GAP_JSON_PREEXISTING_IDENTITY_INVALID/);
+  assert.ok(parentHandoff > destinationIdentity);
+  assert.ok(rename > parentHandoff, "atomic rename must occur only after parent and destination identity revalidation");
   assert.match(entry, /ODDS_PAYOUT_GAP_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(entry, /ODDS_PAYOUT_GAP_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(entry, /ODDS_PAYOUT_GAP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
