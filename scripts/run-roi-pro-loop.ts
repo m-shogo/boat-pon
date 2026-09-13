@@ -68,7 +68,7 @@ const runs: RunSummary[] = [];
 
 for (const [index, c] of cases.entries()) {
   console.log(`[roi-pro-loop] ${index + 1}/${cases.length} ${c.name}`);
-  execFileSync("pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"], {
+  execFileSync("pnpm", ["tsx", "scripts/run-roi-all-features-lite-safe.ts"], {
     stdio: "inherit",
     env: {
       ...process.env,
