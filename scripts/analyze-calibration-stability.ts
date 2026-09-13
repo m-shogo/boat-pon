@@ -8,12 +8,15 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -116,6 +119,7 @@ try {
   const lines = ["# 較正安定性監査", "", `生成日時: ${report.generatedAt}`, "", "> 読み取り専用。公式実払戻ベース。再較正係数を本番へ自動適用していない。", "", "## 全体・最大払戻除外", "", "| 期間 | n | 的中率 | 平均推定 | 較正係数 | ROI | 最大払戻1件除外ROI |", "|---|---:|---:|---:|---:|---:|---:|", `| train | ${trainAll.n} | ${pct(trainAll.hitRate)} | ${pct(trainAll.estimated)} | ${f(trainAll.factor)} | ${pct(trainAll.roi)} | ${pct(trainExMax.roiExMax)} |`, `| forward | ${forwardAll.n} | ${pct(forwardAll.hitRate)} | ${pct(forwardAll.estimated)} | ${f(forwardAll.factor)} | ${pct(forwardAll.roi)} | ${pct(forwardExMax.roiExMax)} |`, "", "## forward月別", "", "| 月 | n | 的中率 | 平均推定 | 較正係数 | ROI |", "|---|---:|---:|---:|---:|---:|", ...months.map(m=>`| ${m.month} | ${m.n} | ${pct(m.hitRate)} | ${pct(m.estimated)} | ${f(m.factor)} | ${pct(m.roi)} |`), "", "## 会場LOO（会場を学習から外して係数算出）", "", "| 会場 | train LOO n | LOO係数 | forward n | forward係数 | forward ROI | 再生n | 再生ROI |", "|---|---:|---:|---:|---:|---:|---:|---:|", ...venues.map(v=>`| ${v.venue} | ${v.trainLooN} | ${f(v.trainLooFactor)} | ${v.forwardN} | ${f(v.forwardFactor)} | ${pct(v.forwardRoi)} | ${v.replayN} | ${pct(v.replayRoi)} |`), "", "## 判定", "", `- train全体の係数: **${f(trainAll.factor)}** / 最大払戻1件除外: **${f(trainExMax.factor)}**`, `- forwardでn>=30の月: ${months.filter(m=>m.n>=30).length}件。係数が月をまたいで安定するかを確認する。`, `- 会場LOO再生でn>=30の候補が残る会場: ${venues.filter(v=>v.replayN>=30).length}件。`, "- 月・会場で係数やROIが揺れる場合、単一係数の本番適用は行わず、BUYを増やさない。", "- ROIはrace_payoutsの公式settlementのみを使い、current_oddsは再生条件の補助値に限定する。", "- 本監査は既存BUYの再生であり、再較正後に新規候補を生成したforward検証ではない。"];
 
   mkdirSync("reports",{recursive:true});
+  assertCanonicalDirectory("reports", "CALIBRATION_STABILITY_REPORTS_DIRECTORY_IDENTITY_INVALID");
   verifyExistingOutput(OUT_JSON, "CALIBRATION_STABILITY_PREEXISTING_JSON_IDENTITY_INVALID");
   verifyExistingOutput(OUT_MD, "CALIBRATION_STABILITY_PREEXISTING_MD_IDENTITY_INVALID");
   atomicPublish(
@@ -204,6 +208,14 @@ WHERE total_rows != 1 OR valid_rows != 1
   }
 }
 
+function assertCanonicalDirectory(path: string, identityErrorCode: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(identityErrorCode);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(identityErrorCode);
+  return resolvedPath;
+}
+
 function verifyExistingOutput(path: string, identityErrorCode: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
@@ -215,6 +227,8 @@ function atomicPublish(
   tempIdentityErrorCode: string,
   destinationIdentityErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "CALIBRATION_STABILITY_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -225,6 +239,10 @@ function atomicPublish(
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
     verifyExistingOutput(path, destinationIdentityErrorCode);
+    assertCanonicalDirectory(
+      parentPath,
+      "CALIBRATION_STABILITY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    );
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
