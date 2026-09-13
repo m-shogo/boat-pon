@@ -3,8 +3,20 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { dirname, resolve } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -34,16 +46,51 @@ WHERE run_kind='historical-backfill' AND decision='BUY' AND current_odds IS NOT 
     return { length: n };
   });
   const report = { generatedAt: new Date().toISOString(), indexes, total, scoped, targetRaceIds: targetRaceIds.length };
+  const json = `${JSON.stringify(report, null, 2)}\n`;
+  const markdown = renderMarkdown(report);
   mkdirSync("reports", { recursive: true });
-  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "MOTOR_BOAT_LOAD_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD, renderMarkdown(report), "MOTOR_BOAT_LOAD_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  assertCanonicalDirectory("reports", "MOTOR_BOAT_LOAD_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_JSON, "MOTOR_BOAT_LOAD_PREEXISTING_JSON_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "MOTOR_BOAT_LOAD_PREEXISTING_MD_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "MOTOR_BOAT_LOAD_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "MOTOR_BOAT_LOAD_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "MOTOR_BOAT_LOAD_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "MOTOR_BOAT_LOAD_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
   console.log(`[analyze-motor-boat-load-performance] wrote ${OUT_MD}`);
   console.log(`[analyze-motor-boat-load-performance] wrote ${OUT_JSON}`);
 } finally {
   db.close();
 }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function assertCanonicalDirectory(path: string, errorCode: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(errorCode);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(errorCode);
+  return resolvedPath;
+}
+
+function verifyExistingOutput(path: string, identityErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
+}
+
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "MOTOR_BOAT_LOAD_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -52,7 +99,11 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
+    assertCanonicalDirectory(parentPath, "MOTOR_BOAT_LOAD_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
