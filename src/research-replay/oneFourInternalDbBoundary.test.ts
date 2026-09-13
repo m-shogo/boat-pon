@@ -9,17 +9,14 @@ const internal = readFileSync("scripts/analyze-one-four-structure-internal.ts", 
 test("one-four canonical entrypoint revalidates DB after payout audit and immediately before isolated internal analysis", () => {
   const audit = entrypoint.indexOf("audit !== 0");
   const handoffIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_DB_HANDOFF_IDENTITY_INVALID");
-  const mdPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_PREEXISTING_IDENTITY_INVALID", handoffIdentity);
-  const jsonPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_PREEXISTING_IDENTITY_INVALID", handoffIdentity);
-  const childIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_DB_CHILD_HANDOFF_IDENTITY_INVALID", jsonPreflight);
+  const childIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_DB_CHILD_HANDOFF_IDENTITY_INVALID", handoffIdentity);
   const workspace = entrypoint.indexOf("mkdtempSync(", childIdentity);
   const launchIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_DB_CHILD_LAUNCH_IDENTITY_INVALID", workspace);
   const internalRun = entrypoint.indexOf("const analysis = spawnSync", launchIdentity);
 
   assert.ok(audit >= 0);
   assert.ok(handoffIdentity > audit, "DB identity must be revalidated only after payout audit passes");
-  assert.ok(mdPreflight > handoffIdentity && jsonPreflight > handoffIdentity, "report paths must be checked after initial DB handoff");
-  assert.ok(childIdentity > mdPreflight && childIdentity > jsonPreflight, "DB identity must be revalidated after report-path checks");
+  assert.ok(childIdentity > handoffIdentity, "DB identity must be revalidated for child handoff");
   assert.ok(workspace > childIdentity, "isolated workspace must be created only after child handoff verification");
   assert.ok(launchIdentity > workspace, "DB identity must be revalidated again after workspace setup");
   assert.ok(internalRun > launchIdentity, "internal analyzer must run only after launch-time verified DB handoff");
@@ -31,38 +28,46 @@ test("one-four canonical entrypoint revalidates DB after payout audit and immedi
   assert.doesNotMatch(entrypoint, /analyze-one-four-structure-raw/);
 });
 
-test("one-four canonical entrypoint isolates legacy writes and atomically publishes verified reports", () => {
-  const mdPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_PREEXISTING_IDENTITY_INVALID");
-  const jsonPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_PREEXISTING_IDENTITY_INVALID");
-  const workspace = entrypoint.indexOf("mkdtempSync(", jsonPreflight);
+test("one-four canonical entrypoint isolates legacy writes and preflights the complete paired destination set before publication", () => {
+  const workspace = entrypoint.indexOf("mkdtempSync(");
   const internalRun = entrypoint.indexOf("const analysis = spawnSync", workspace);
   const mdWorkspaceIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID", internalRun);
   const jsonWorkspaceIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID", internalRun);
   const mdRead = entrypoint.indexOf('readFileSync(workspaceMd, "utf8")', mdWorkspaceIdentity);
   const jsonRead = entrypoint.indexOf('readFileSync(workspaceJson, "utf8")', jsonWorkspaceIdentity);
-  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
-  const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
-  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
-  const outputMissing = entrypoint.indexOf("ONE_FOUR_STRUCTURE_OUTPUT_MISSING", internalRun);
-  const mdPostflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_OUTPUT_IDENTITY_INVALID", outputMissing);
-  const jsonPostflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_OUTPUT_IDENTITY_INVALID", outputMissing);
+  const reportsIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_REPORTS_DIRECTORY_IDENTITY_INVALID", jsonRead);
+  const mdPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_PREEXISTING_IDENTITY_INVALID", reportsIdentity);
+  const jsonPreflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_PREEXISTING_IDENTITY_INVALID", mdPreflight);
+  const firstPublish = entrypoint.indexOf("atomicPublish(", jsonPreflight);
 
-  assert.ok(mdPreflight >= 0 && jsonPreflight >= 0);
-  assert.ok(workspace > mdPreflight && workspace > jsonPreflight, "isolated workspace must follow existing report identity checks");
   assert.ok(internalRun > workspace, "legacy analyzer must run inside the isolated workspace");
   assert.ok(mdWorkspaceIdentity > internalRun && jsonWorkspaceIdentity > internalRun, "workspace outputs must be verified before reads");
   assert.ok(mdRead > mdWorkspaceIdentity && jsonRead > jsonWorkspaceIdentity, "workspace outputs must be read only after verification");
-  assert.ok(tempCreate >= 0 && fsync > tempCreate, "publication must use exclusive temp creation and fsync");
-  assert.ok(
-    tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity,
-    "temp identity and destination revalidation must precede atomic rename",
-  );
-  assert.ok(outputMissing > internalRun, "successful internal execution must still prove final outputs exist");
-  assert.ok(mdPostflight > outputMissing && jsonPostflight > outputMissing, "published outputs must be canonical single-link files before success");
+  assert.ok(reportsIdentity > jsonRead, "canonical reports directory must be verified only after staged outputs are complete");
+  assert.ok(mdPreflight > reportsIdentity && jsonPreflight > mdPreflight, "both canonical destinations must be preflighted together");
+  assert.ok(firstPublish > jsonPreflight, "no canonical replacement may start before the complete paired destination preflight");
   assert.match(entrypoint, /cwd: workspace/);
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_INTERNAL_FAILED/);
+});
+
+test("one-four publication revalidates destination and parent handoff before atomic rename", () => {
+  const helper = entrypoint.indexOf("function atomicPublish(");
+  const parentIdentity = entrypoint.indexOf("ONE_FOUR_STRUCTURE_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationGuard = entrypoint.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationGuard);
+  const parentHandoff = entrypoint.indexOf("ONE_FOUR_STRUCTURE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+  const outputMissing = entrypoint.indexOf("ONE_FOUR_STRUCTURE_OUTPUT_MISSING");
+  const mdPostflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_MD_OUTPUT_IDENTITY_INVALID", outputMissing);
+  const jsonPostflight = entrypoint.indexOf("ONE_FOUR_STRUCTURE_JSON_OUTPUT_IDENTITY_INVALID", outputMissing);
+
+  assert.ok(parentIdentity > helper && tempCreate > parentIdentity && fsync > tempCreate);
+  assert.ok(tempIdentity > fsync && destinationGuard > tempIdentity && destinationIdentity > destinationGuard);
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff, "destination and parent handoff must precede atomic rename");
+  assert.ok(mdPostflight > outputMissing && jsonPostflight > outputMissing, "published outputs must be canonical single-link files before success");
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypoint, /ONE_FOUR_STRUCTURE_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
