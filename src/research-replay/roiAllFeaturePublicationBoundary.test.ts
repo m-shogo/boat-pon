@@ -29,8 +29,16 @@ test("all-feature ROI safe runner isolates raw output and atomically publishes a
   assert.ok(safeRunner.includes("renameSync(verifiedTempPath, path)"));
 
   const prepareAll = safeRunner.indexOf('const preparedOutputs = stagedOutputs.map');
-  const publishLoop = safeRunner.indexOf('for (const { output, content } of preparedOutputs)');
-  assert.ok(prepareAll >= 0 && prepareAll < publishLoop, "all staged artifacts must be prepared before canonical publication");
+  const reportsIdentity = safeRunner.indexOf(
+    'assertCanonicalDirectory("reports", "ROI_ALL_FEATURE_REPORTS_DIRECTORY_IDENTITY_INVALID")',
+    prepareAll,
+  );
+  const destinationPreflight = safeRunner.indexOf("verifyExistingDestinations();", reportsIdentity);
+  const publishLoop = safeRunner.indexOf('for (const { output, content } of preparedOutputs)', destinationPreflight);
+  assert.ok(prepareAll >= 0 && prepareAll < reportsIdentity, "all staged artifacts must be prepared before canonical publication");
+  assert.ok(reportsIdentity < destinationPreflight, "canonical reports identity must be verified before destination preflight");
+  assert.ok(destinationPreflight < publishLoop, "all canonical destinations must be preflighted before the first replacement");
+  assert.ok(safeRunner.includes('ROI_ALL_FEATURE_${output.code}_PREPUBLISH_DESTINATION_IDENTITY_INVALID'));
 });
 
 test("high-level ROI research runners use the safe all-feature publication boundary", () => {
