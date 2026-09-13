@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("promising bet normal entrypoint validates settlement integrity before guarded internal analyzer", () => {
+test("promising bet normal entrypoint validates settlement integrity before isolated internal analyzer", () => {
   const source = readFileSync("scripts/analyze-promising-bet-type-strategies.ts", "utf8");
   const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
 
@@ -31,27 +31,25 @@ test("promising bet normal entrypoint validates settlement integrity before guar
   );
   assert.match(source, /assertPayoutCompleteness\(\)/);
   assert.match(source, /PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID/);
-  assert.match(source, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
-  assert.ok(
-    source.indexOf("PROMISING_BET_RETURNED_BUY_UNSUPPORTED")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
-  );
-  assert.ok(
-    source.indexOf("PROMISING_BET_PAYOUT_RETURN_STATE_INVALID")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
-  );
-  assert.ok(
-    source.indexOf("PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
-  );
-  assert.ok(
-    source.indexOf("assertPayoutCompleteness();")
-      < source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID"),
-  );
-  assert.ok(
-    source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID")
-      < source.indexOf('await import("./analyze-promising-bet-type-strategies-internal")'),
-  );
+  assert.match(source, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-promising-bet-"\)\)/);
+  assert.match(source, /cwd: workspace/);
+  assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(source, /code: "MD"/);
+  assert.match(source, /code: "JSON"/);
+  assert.match(source, /PROMISING_BET_\$\{output\.code\}_STAGED_OUTPUT_IDENTITY_INVALID/);
+  assert.match(source, /openSync\(tempPath, "wx", 0o600\)/);
+  assert.match(source, /fsyncSync\(fd\)/);
+  assert.match(source, /PROMISING_BET_\$\{code\}_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(source, /renameSync\(verifiedTempPath, path\)/);
+  assert.doesNotMatch(source, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
+
+  const launch = source.indexOf("spawnSync(process.execPath");
+  assert.ok(launch > 0);
+  assert.ok(source.indexOf("PROMISING_BET_RETURNED_BUY_UNSUPPORTED") < launch);
+  assert.ok(source.indexOf("PROMISING_BET_PAYOUT_RETURN_STATE_INVALID") < launch);
+  assert.ok(source.indexOf("PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED") < launch);
+  assert.ok(source.indexOf("assertPayoutCompleteness();") < source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID"));
+  assert.ok(source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID") < launch);
 });
 
 test("promising bet raw compatibility module blocks direct CLI bypass and routes imports through canonical preflight", () => {

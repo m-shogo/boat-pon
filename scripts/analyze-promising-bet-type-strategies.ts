@@ -1,9 +1,31 @@
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
+const internalPath = fileURLToPath(new URL("./analyze-promising-bet-type-strategies-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
+const OUTPUTS = [
+  { staged: "reports/promising-bet-type-strategies.md", destination: "reports/promising-bet-type-strategies.md", code: "MD" },
+  { staged: "reports/promising-bet-type-strategies.json", destination: "reports/promising-bet-type-strategies.json", code: "JSON" },
+] as const;
 
 if (!existsSync(DB_PATH)) {
   throw new Error("PROMISING_BET_PRIMARY_DB_MISSING");
@@ -31,6 +53,7 @@ const returnedBuy = db.prepare(`
 `).get() as { count: number };
 
 if (Number(returnedBuy.count) > 0) {
+  db.close();
   throw new Error(`PROMISING_BET_RETURNED_BUY_UNSUPPORTED ${JSON.stringify({ count: Number(returnedBuy.count) })}`);
 }
 
@@ -53,15 +76,18 @@ for (const p of db.prepare(`
 `).all() as PayoutRow[]) {
   const key = `${p.race_id}|${p.bet_type}|${p.combination}`;
   if (seenSettlementKeys.has(key)) {
+    db.close();
     throw new Error(`PROMISING_BET_PAYOUT_DUPLICATE_COMBINATION ${key}`);
   }
   seenSettlementKeys.add(key);
 
   if (p.returned !== 0 && p.returned !== 1) {
+    db.close();
     throw new Error(`PROMISING_BET_PAYOUT_RETURN_STATE_INVALID ${key}`);
   }
   const isPositivePayout = p.payout_yen != null && p.payout_yen > 0;
   if (p.returned === 0 && !isPositivePayout) {
+    db.close();
     throw new Error(`PROMISING_BET_PAYOUT_INVALID_LINE ${key}`);
   }
   if (p.returned === 0 && isPositivePayout) {
@@ -97,12 +123,63 @@ function assertPayoutCompleteness(): void {
   }
 }
 
+function atomicPublish(path: string, content: string, code: string): void {
+  const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
+  let fd: number | null = null;
+  try {
+    fd = openSync(tempPath, "wx", 0o600);
+    writeFileSync(fd, content, "utf8");
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = null;
+
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
+      tempPath,
+      `PROMISING_BET_${code}_PUBLISH_TEMP_IDENTITY_INVALID`,
+    );
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(
+        path,
+        `PROMISING_BET_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
+      );
+    }
+    renameSync(verifiedTempPath, path);
+  } finally {
+    if (fd !== null) closeSync(fd);
+    rmSync(tempPath, { force: true });
+  }
+}
+
 if (!existsSync(DB_PATH)) {
   throw new Error("PROMISING_BET_PRIMARY_DB_MISSING");
 }
-process.env.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile(
+const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
   DB_PATH,
   "PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID",
 );
 
-await import("./analyze-promising-bet-type-strategies-internal");
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-promising-bet-"));
+try {
+  mkdirSync(join(workspace, "reports"), { recursive: true });
+  const result = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
+    stdio: "inherit",
+    cwd: workspace,
+    env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`PROMISING_BET_INTERNAL_ANALYZER_FAILED status=${result.status ?? "unknown"}`);
+  }
+
+  mkdirSync("reports", { recursive: true });
+  for (const output of OUTPUTS) {
+    const stagedPath = join(workspace, output.staged);
+    const verifiedStagedPath = assertCanonicalSingleLinkRegularFile(
+      stagedPath,
+      `PROMISING_BET_${output.code}_STAGED_OUTPUT_IDENTITY_INVALID`,
+    );
+    atomicPublish(output.destination, readFileSync(verifiedStagedPath, "utf8"), output.code);
+  }
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
+}
