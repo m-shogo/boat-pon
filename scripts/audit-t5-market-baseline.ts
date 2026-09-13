@@ -4,7 +4,8 @@
  * 読み取り専用。本番判定・DB・app_settingsは変更しない。
  */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { n2CanonicalT5CompleteCaptureSelectionHavingSql } from "../src/research-replay/n2T5CompleteCaptureSelectionSql";
 import { n2CanonicalT5ForwardCaptureTimingHavingSql } from "../src/research-replay/n2T5ForwardCaptureTimingSql";
@@ -90,7 +91,21 @@ const p=(v:number|null)=>v==null?"-":`${(v*100).toFixed(2)}%`; const n=(v:number
 const periodRows = [["全体",report.marketFavorite.all],["discovery",report.marketFavorite.discovery],["forward",report.marketFavorite.forward]] as const;
 const lines=["# T-5 純市場ベースライン", "", `生成日時: ${report.generatedAt}`, "", "> モデル候補を経由せず、単一captured_atで揃ったT-5全120通りから直接計算。読み取り専用。", "", "## Coverage", "", `- T-5あり: ${byRace.size}レース / 完全市場・結果確定: ${evaluated.length}レース`, `- 不完全: ${rejectedIncomplete} / 不正値: ${rejectedInvalid} / 未確定・返還: ${unsettled}`, `- research gate: **${report.gate.passed?"PASS":"BLOCKED"}**（${report.gate.reasons.join(" / ")||"条件達成"}）`, "", "## 市場1番人気を1点選ぶベースライン", "", "| 期間 | n | 的中 | 的中率 | 実払戻ROI | 最大2的中除外ROI | 平均市場確率 | log loss | Brier |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|", ...periodRows.map(([label,s])=>`| ${label} | ${s.n} | ${s.hits} | ${p(s.hitRate)} | ${p(s.payoutRoi)} | ${p(s.payoutRoiExTop2)} | ${p(s.avgFavoriteProbability)} | ${n(s.logLoss)} | ${n(s.brier)} |`), "", "## 月別", "", "| 月 | n | 的中率 | ROI | 最大2件除外ROI |", "|---|---:|---:|---:|---:|", ...monthly.map(m=>`| ${m.month} | ${m.n} | ${p(m.hitRate)} | ${p(m.payoutRoi)} | ${p(m.payoutRoiExTop2)} |`), "", "## 判定", "", "- これを今後の最低比較基準に固定する。モデル候補を経由した旧market-only集計は基準に使わない。", "- 残差モデルは同じ完全市場race_id集合でのみ比較する。", "- 1,000 settled到達までは予測改善を確定しない。"];
 
-function atomicPublish(path:string,contents:string,errorCode:string){
+function assertCanonicalDirectory(path:string,code:string){
+  const stat=lstatSync(path);
+  if(!stat.isDirectory()||stat.isSymbolicLink())throw new Error(code);
+  const resolvedPath=resolve(path);
+  if(realpathSync(path)!==resolvedPath)throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingDestination(path:string,errorCode:string){
+  if(existsSync(path))assertCanonicalSingleLinkRegularFile(path,errorCode);
+}
+
+function atomicPublish(path:string,contents:string,tempErrorCode:string,destinationErrorCode:string){
+  const parentPath=dirname(path);
+  assertCanonicalDirectory(parentPath,"T5_MARKET_BASELINE_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd:number|null=null;
   try{
@@ -98,7 +113,9 @@ function atomicPublish(path:string,contents:string,errorCode:string){
     writeFileSync(fd,contents,"utf8");
     fsyncSync(fd);
     closeSync(fd);fd=null;
-    const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,errorCode);
+    const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,tempErrorCode);
+    verifyExistingDestination(path,destinationErrorCode);
+    assertCanonicalDirectory(parentPath,"T5_MARKET_BASELINE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath,path);
   }finally{
     if(fd!==null)closeSync(fd);
@@ -107,8 +124,11 @@ function atomicPublish(path:string,contents:string,errorCode:string){
 }
 
 mkdirSync("reports",{recursive:true});
-atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"T5_MARKET_BASELINE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_MD,`${lines.join("\n")}\n`,"T5_MARKET_BASELINE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+assertCanonicalDirectory("reports","T5_MARKET_BASELINE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+verifyExistingDestination(OUT_JSON,"T5_MARKET_BASELINE_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+verifyExistingDestination(OUT_MD,"T5_MARKET_BASELINE_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"T5_MARKET_BASELINE_JSON_PUBLISH_TEMP_IDENTITY_INVALID","T5_MARKET_BASELINE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
+atomicPublish(OUT_MD,`${lines.join("\n")}\n`,"T5_MARKET_BASELINE_MD_PUBLISH_TEMP_IDENTITY_INVALID","T5_MARKET_BASELINE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
 db.close();console.log(`[t5-market-baseline] wrote ${OUT_MD} / ${OUT_JSON}`);
 
 function avg(v:number[]){return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
