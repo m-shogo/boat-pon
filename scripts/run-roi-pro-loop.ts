@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -81,8 +81,20 @@ for (const [index, c] of cases.entries()) {
 
   const allArchive = join(OUT_DIR, `${index + 1}-${c.name}-all.json`);
   const personaArchive = join(OUT_DIR, `${index + 1}-${c.name}-persona.json`);
-  archiveVerifiedSource(ALL_JSON, allArchive, "ROI_PRO_LOOP_ALL_SOURCE_IDENTITY_INVALID", "ROI_PRO_LOOP_ALL_ARCHIVE_TEMP_IDENTITY_INVALID");
-  archiveVerifiedSource(PERSONA_JSON, personaArchive, "ROI_PRO_LOOP_PERSONA_SOURCE_IDENTITY_INVALID", "ROI_PRO_LOOP_PERSONA_ARCHIVE_TEMP_IDENTITY_INVALID");
+  archiveVerifiedSource(
+    ALL_JSON,
+    allArchive,
+    "ROI_PRO_LOOP_ALL_SOURCE_IDENTITY_INVALID",
+    "ROI_PRO_LOOP_ALL_ARCHIVE_TEMP_IDENTITY_INVALID",
+    "ROI_PRO_LOOP_ALL_ARCHIVE_DESTINATION_IDENTITY_INVALID",
+  );
+  archiveVerifiedSource(
+    PERSONA_JSON,
+    personaArchive,
+    "ROI_PRO_LOOP_PERSONA_SOURCE_IDENTITY_INVALID",
+    "ROI_PRO_LOOP_PERSONA_ARCHIVE_TEMP_IDENTITY_INVALID",
+    "ROI_PRO_LOOP_PERSONA_ARCHIVE_DESTINATION_IDENTITY_INVALID",
+  );
 
   const all = readVerified<AllReport>(ALL_JSON, "ROI_PRO_LOOP_ALL_INPUT_IDENTITY_INVALID");
   const persona = readVerified<PersonaReport>(PERSONA_JSON, "ROI_PRO_LOOP_PERSONA_INPUT_IDENTITY_INVALID");
@@ -113,8 +125,18 @@ const report = {
   nextActions: nextActions(finalDecision),
 };
 
-atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "ROI_PRO_LOOP_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-atomicPublish(OUT_MD, renderMd(report), "ROI_PRO_LOOP_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+atomicPublish(
+  OUT_JSON,
+  `${JSON.stringify(report, null, 2)}\n`,
+  "ROI_PRO_LOOP_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_PRO_LOOP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
+atomicPublish(
+  OUT_MD,
+  renderMd(report),
+  "ROI_PRO_LOOP_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+  "ROI_PRO_LOOP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+);
 console.log(`[roi-pro-loop] finalDecision=${finalDecision}`);
 console.log(`[roi-pro-loop] wrote ${OUT_MD}`);
 console.log(`[roi-pro-loop] wrote ${OUT_JSON}`);
@@ -206,12 +228,23 @@ function readVerified<T>(path: string, errorCode: string): T {
   return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
 }
 
-function archiveVerifiedSource(sourcePath: string, destinationPath: string, sourceErrorCode: string, tempErrorCode: string): void {
+function archiveVerifiedSource(
+  sourcePath: string,
+  destinationPath: string,
+  sourceErrorCode: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const verifiedSourcePath = assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
-  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode);
+  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode, destinationErrorCode);
 }
 
-function atomicPublish(path: string, contents: string | Buffer, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string | Buffer,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -220,7 +253,10 @@ function atomicPublish(path: string, contents: string | Buffer, errorCode: strin
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
