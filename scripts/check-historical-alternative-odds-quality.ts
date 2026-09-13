@@ -13,16 +13,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -35,6 +37,14 @@ const EXCL_RACES = [10, 11, 12];
 const internalPath = fileURLToPath(new URL("./check-historical-alternative-odds-quality-internal.ts", import.meta.url));
 const tsxLoader = import.meta.resolve("tsx");
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function assertExistingOutputIdentity(path: string, code: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, code);
@@ -45,7 +55,9 @@ function assertGeneratedOutputIdentity(path: string, missingCode: string, invali
   return assertCanonicalSingleLinkRegularFile(path, invalidCode);
 }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(path: string, contents: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "HISTORICAL_ALT_ODDS_QUALITY_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -55,7 +67,9 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     closeSync(fd);
     fd = null;
 
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    assertExistingOutputIdentity(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "HISTORICAL_ALT_ODDS_QUALITY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -143,15 +157,20 @@ try {
   const json = readFileSync(workspaceJson, "utf8");
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "HISTORICAL_ALT_ODDS_QUALITY_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  assertExistingOutputIdentity(OUT_MD, "HISTORICAL_ALT_ODDS_QUALITY_MD_PREPUBLISH_IDENTITY_INVALID");
+  assertExistingOutputIdentity(OUT_JSON, "HISTORICAL_ALT_ODDS_QUALITY_JSON_PREPUBLISH_IDENTITY_INVALID");
   atomicPublish(
     OUT_MD,
     markdown,
     "HISTORICAL_ALT_ODDS_QUALITY_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "HISTORICAL_ALT_ODDS_QUALITY_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_JSON,
     json,
     "HISTORICAL_ALT_ODDS_QUALITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "HISTORICAL_ALT_ODDS_QUALITY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 
   assertGeneratedOutputIdentity(
