@@ -105,6 +105,33 @@ function assertCanonicalDirectory(path: string, code: string): string {
   return resolvedPath;
 }
 
+function withStoreWriteLock<T>(operation: () => T): T {
+  const parentPath = dirname(STORE_PATH);
+  assertCanonicalDirectory(parentPath, "RESEARCH_RULE_STORE_LOCK_PARENT_IDENTITY_INVALID");
+  const lockPath = `${STORE_PATH}.lock`;
+  let lockFd: number | null = null;
+  let lockAcquired = false;
+  try {
+    lockFd = openSync(lockPath, "wx", 0o600);
+    lockAcquired = true;
+    assertCanonicalSingleLinkRegularFile(
+      lockPath,
+      "RESEARCH_RULE_STORE_LOCK_IDENTITY_INVALID",
+    );
+    return operation();
+  } finally {
+    if (lockFd !== null) closeSync(lockFd);
+    if (lockAcquired) {
+      assertCanonicalDirectory(parentPath, "RESEARCH_RULE_STORE_LOCK_PARENT_HANDOFF_IDENTITY_INVALID");
+      assertCanonicalSingleLinkRegularFile(
+        lockPath,
+        "RESEARCH_RULE_STORE_LOCK_HANDOFF_IDENTITY_INVALID",
+      );
+      unlinkSync(lockPath);
+    }
+  }
+}
+
 function saveStore(store: RuleStoreFile) {
   store._meta.lastUpdated = new Date().toISOString();
   if (existsSync(STORE_PATH)) {
@@ -180,20 +207,33 @@ function runAdd(rawArgv: string[]) {
   const ruleId = requireCanonicalRuleId(args["--rule-id"]);
   const reason = requireNonBlankText(args["--reason"], "--reason");
 
-  const store = loadStore();
-  const result = addRule(store.rules, createResearchRule(ruleId, reason, new Date().toISOString(), args["--title"]));
-  if (!result.ok) {
-    console.error(`error: ${result.error.reason}`);
-    process.exit(1);
-  }
-
-  const addedRule = result.rules[result.rules.length - 1];
   if (dryRun) {
+    const store = loadStore();
+    const result = addRule(store.rules, createResearchRule(ruleId, reason, new Date().toISOString(), args["--title"]));
+    if (!result.ok) {
+      console.error(`error: ${result.error.reason}`);
+      process.exit(1);
+    }
+    const addedRule = result.rules[result.rules.length - 1];
     console.log(JSON.stringify({ dryRun: true, action: "add", wouldAdd: addedRule }, null, 2));
     return;
   }
-  store.rules = result.rules;
-  saveStore(store);
+
+  let failureReason: string | null = null;
+  withStoreWriteLock(() => {
+    const store = loadStore();
+    const result = addRule(store.rules, createResearchRule(ruleId, reason, new Date().toISOString(), args["--title"]));
+    if (!result.ok) {
+      failureReason = result.error.reason;
+      return;
+    }
+    store.rules = result.rules;
+    saveStore(store);
+  });
+  if (failureReason !== null) {
+    console.error(`error: ${failureReason}`);
+    process.exit(1);
+  }
   console.log(`added rule "${ruleId}" at status=candidate`);
 }
 
@@ -221,20 +261,33 @@ function runTransition(rawArgv: string[]) {
     evaluation = JSON.parse(readFileSync(verifiedEvaluationPath, "utf8")) as ForwardTestResult;
   }
 
-  const store = loadStore();
-  const result = applyRuleTransition(store.rules, ruleId, to, evaluation);
-  if (!result.ok) {
-    console.error(`error: ${result.error.reason}`);
-    process.exit(1);
-  }
-
-  const updatedRule = result.rules.find((rule) => rule.ruleId === ruleId);
   if (dryRun) {
+    const store = loadStore();
+    const result = applyRuleTransition(store.rules, ruleId, to, evaluation);
+    if (!result.ok) {
+      console.error(`error: ${result.error.reason}`);
+      process.exit(1);
+    }
+    const updatedRule = result.rules.find((rule) => rule.ruleId === ruleId);
     console.log(JSON.stringify({ dryRun: true, action: "transition", to, wouldUpdate: updatedRule }, null, 2));
     return;
   }
-  store.rules = result.rules;
-  saveStore(store);
+
+  let failureReason: string | null = null;
+  withStoreWriteLock(() => {
+    const store = loadStore();
+    const result = applyRuleTransition(store.rules, ruleId, to, evaluation);
+    if (!result.ok) {
+      failureReason = result.error.reason;
+      return;
+    }
+    store.rules = result.rules;
+    saveStore(store);
+  });
+  if (failureReason !== null) {
+    console.error(`error: ${failureReason}`);
+    process.exit(1);
+  }
   console.log(`rule "${ruleId}" transitioned to "${to}"`);
 }
 
