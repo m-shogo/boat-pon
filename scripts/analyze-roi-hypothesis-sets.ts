@@ -25,7 +25,12 @@ const PAYOUT_BET_TYPE = "trifecta";
 const OUT_MD = "reports/roi-hypothesis-sets.md";
 const OUT_JSON = "reports/roi-hypothesis-sets.json";
 
-function atomicPublish(path: string, contents: string, errorCode: string): void {
+function atomicPublish(
+  path: string,
+  contents: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -34,7 +39,10 @@ function atomicPublish(path: string, contents: string, errorCode: string): void 
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+    }
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -151,8 +159,18 @@ try {
   const markdown = readFileSync(verifiedMarkdownPath, "utf8");
 
   mkdirSync("reports", { recursive: true });
-  atomicPublish(OUT_JSON, json, "ROI_HYPOTHESIS_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD, markdown, "ROI_HYPOTHESIS_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "ROI_HYPOTHESIS_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_HYPOTHESIS_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "ROI_HYPOTHESIS_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_HYPOTHESIS_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
 } finally {
   rmSync(workspace, { recursive: true, force: true });
 }
