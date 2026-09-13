@@ -165,12 +165,31 @@ try {
     workspaceJson,
     "ROI_PATTERN_JSON_OUTPUT_IDENTITY_INVALID",
   );
-  const markdown = readFileSync(verifiedMdPath, "utf8")
+  const mdReadPath = assertCanonicalSingleLinkRegularFile(
+    verifiedMdPath,
+    "ROI_PATTERN_MD_READ_IDENTITY_INVALID",
+  );
+  const jsonReadPath = assertCanonicalSingleLinkRegularFile(
+    verifiedJsonPath,
+    "ROI_PATTERN_JSON_READ_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(mdReadPath, "utf8")
     .split(launchDbPath)
     .join("verified read-only research DB");
-  const json = readFileSync(verifiedJsonPath, "utf8")
+  const json = readFileSync(jsonReadPath, "utf8")
     .split(launchDbPath)
     .join("verified read-only research DB");
+  if (markdown.includes(launchDbPath) || json.includes(launchDbPath)) {
+    throw new Error("ROI_PATTERN_PRIVATE_DB_PROVENANCE_REMAINED");
+  }
+  assertCanonicalSingleLinkRegularFile(
+    mdReadPath,
+    "ROI_PATTERN_MD_HANDOFF_IDENTITY_INVALID",
+  );
+  assertCanonicalSingleLinkRegularFile(
+    jsonReadPath,
+    "ROI_PATTERN_JSON_HANDOFF_IDENTITY_INVALID",
+  );
 
   mkdirSync("reports", { recursive: true });
   atomicPublish(
