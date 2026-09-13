@@ -34,8 +34,9 @@ test("promising bet normal entrypoint validates settlement integrity before isol
   assert.match(source, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-promising-bet-"\)\)/);
   assert.match(source, /cwd: workspace/);
   assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
-  assert.match(source, /PROMISING_BET_MD_STAGED_OUTPUT_IDENTITY_INVALID/);
-  assert.match(source, /PROMISING_BET_JSON_STAGED_OUTPUT_IDENTITY_INVALID/);
+  assert.match(source, /code: "MD"/);
+  assert.match(source, /code: "JSON"/);
+  assert.match(source, /PROMISING_BET_\$\{output\.code\}_STAGED_OUTPUT_IDENTITY_INVALID/);
   assert.match(source, /openSync\(tempPath, "wx", 0o600\)/);
   assert.match(source, /fsyncSync\(fd\)/);
   assert.match(source, /PROMISING_BET_\$\{code\}_PUBLISH_DESTINATION_IDENTITY_INVALID/);
