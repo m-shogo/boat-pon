@@ -72,11 +72,41 @@ test("historical alternative-odds quality isolates implementation writes and pub
   assert.match(entrypoint, /randomUUID/u);
   assert.match(entrypoint, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(entrypoint, /fsyncSync\(fd\)/u);
-  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*tempPath,/u);
+  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\)/u);
+  assert.match(entrypoint, /assertExistingOutputIdentity\(path, destinationErrorCode\)/u);
+  assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/u);
   assert.match(entrypoint, /renameSync\(verifiedTempPath, path\)/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(entrypoint, /HISTORICAL_ALT_ODDS_QUALITY_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(entrypoint, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(entrypoint, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
   assert.doesNotMatch(entrypoint, /await import\("\.\/check-historical-alternative-odds-quality-internal"\)/u);
+
+  const helperStart = entrypoint.indexOf("function atomicPublish(");
+  const executionStart = entrypoint.indexOf("if (!existsSync(DB_PATH))", helperStart);
+  const helper = entrypoint.slice(helperStart, executionStart);
+  const parentIdentity = helper.indexOf("HISTORICAL_ALT_ODDS_QUALITY_PUBLISH_PARENT_IDENTITY_INVALID");
+  const exclusiveOpen = helper.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = helper.indexOf("fsyncSync(fd)");
+  const tempIdentity = helper.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
+  const destinationIdentity = helper.indexOf("assertExistingOutputIdentity(path, destinationErrorCode)");
+  const parentHandoff = helper.indexOf("HISTORICAL_ALT_ODDS_QUALITY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
+  const rename = helper.indexOf("renameSync(verifiedTempPath, path)");
+  assert.ok(parentIdentity >= 0 && exclusiveOpen > parentIdentity);
+  assert.ok(fsync > exclusiveOpen && tempIdentity > fsync);
+  assert.ok(destinationIdentity > tempIdentity && parentHandoff > destinationIdentity && rename > parentHandoff);
+});
+
+test("historical alternative-odds quality preflights both canonical destinations after isolated generation and before first replacement", () => {
+  const childSpawn = entrypoint.indexOf("spawnSync(process.execPath");
+  const reportsIdentity = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_REPORTS_DIRECTORY_IDENTITY_INVALID", childSpawn);
+  const mdPreflight = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_MD_PREPUBLISH_IDENTITY_INVALID", reportsIdentity);
+  const jsonPreflight = entrypoint.indexOf("HISTORICAL_ALT_ODDS_QUALITY_JSON_PREPUBLISH_IDENTITY_INVALID", reportsIdentity);
+  const mdPublish = entrypoint.indexOf("atomicPublish(\n    OUT_MD,", jsonPreflight);
+  const jsonPublish = entrypoint.indexOf("atomicPublish(\n    OUT_JSON,", mdPublish);
+
+  assert.ok(childSpawn >= 0);
+  assert.ok(reportsIdentity > childSpawn, "canonical reports identity must be verified after isolated generation");
+  assert.ok(mdPreflight > reportsIdentity && jsonPreflight > mdPreflight, "both destinations must be revalidated together before publication");
+  assert.ok(mdPublish > jsonPreflight && jsonPublish > mdPublish, "no canonical replacement may happen before complete destination preflight");
 });
