@@ -12,10 +12,26 @@ test("exacta backfill quality keeps canonical read-only DB isolation", () => {
   assert.match(source, /cwd: workspace/u);
 });
 
-test("exacta backfill quality reverifies existing destinations immediately before atomic replacement", () => {
+test("exacta backfill quality preflights both canonical destinations before the first replacement", () => {
+  const redaction = source.indexOf('.split(launchDbPath).join("verified read-only research DB")');
+  const reportsIdentity = source.indexOf("EXACTA_BACKFILL_QUALITY_REPORTS_DIRECTORY_IDENTITY_INVALID", redaction);
+  const completePreflight = source.indexOf("verifyExistingOutputs();", reportsIdentity);
+  const mdPublish = source.indexOf("  atomicPublish(\n    OUT_MD,", completePreflight);
+  const jsonPublish = source.indexOf("  atomicPublish(\n    OUT_JSON,", mdPublish + 1);
+
+  assert.ok(reportsIdentity > redaction);
+  assert.ok(completePreflight > reportsIdentity);
+  assert.ok(mdPublish > completePreflight);
+  assert.ok(jsonPublish > mdPublish);
+  assert.match(source, /EXACTA_BACKFILL_QUALITY_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(source, /EXACTA_BACKFILL_QUALITY_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID/u);
+});
+
+test("exacta backfill quality reverifies parent and destination immediately before atomic replacement", () => {
   assert.match(source, /EXACTA_BACKFILL_QUALITY_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /EXACTA_BACKFILL_QUALITY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
-  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const parentIdentity = source.indexOf("EXACTA_BACKFILL_QUALITY_PUBLISH_PARENT_IDENTITY_INVALID");
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = source.indexOf("fsyncSync(fd)", create);
   const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
   const destinationGuard = source.indexOf("if (existsSync(path))", tempIdentity);
@@ -23,13 +39,21 @@ test("exacta backfill quality reverifies existing destinations immediately befor
     "assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)",
     destinationGuard,
   );
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  const parentHandoff = source.indexOf(
+    "EXACTA_BACKFILL_QUALITY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    destinationIdentity,
+  );
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
   assert.ok(
-    create >= 0 &&
+    parentIdentity >= 0 &&
+      create > parentIdentity &&
       fsync > create &&
       tempIdentity > fsync &&
       destinationGuard > tempIdentity &&
       destinationIdentity > destinationGuard &&
-      rename > destinationIdentity,
+      parentHandoff > destinationIdentity &&
+      rename > parentHandoff,
   );
+  assert.match(source, /!stat\.isDirectory\(\) \|\| stat\.isSymbolicLink\(\)/u);
+  assert.match(source, /realpathSync\(path\) !== resolvedPath/u);
 });
