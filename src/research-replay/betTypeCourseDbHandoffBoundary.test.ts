@@ -19,18 +19,29 @@ test("bet-type course entrypoint revalidates DB identity after settlement prefli
   assert.doesNotMatch(entrypoint, /analyze-bet-type-course-edge-raw/);
 });
 
-test("bet-type course verifies isolated outputs and atomically publishes them", () => {
+test("bet-type course verifies, sanitizes, and revalidates isolated outputs before atomic publication", () => {
   const launch = entrypoint.indexOf("const analysis = spawnSync");
   const mdOutput = entrypoint.indexOf("BET_TYPE_COURSE_MD_OUTPUT_IDENTITY_INVALID");
   const jsonOutput = entrypoint.indexOf("BET_TYPE_COURSE_JSON_OUTPUT_IDENTITY_INVALID");
+  const mdRead = entrypoint.indexOf("BET_TYPE_COURSE_MD_READ_IDENTITY_INVALID");
+  const jsonRead = entrypoint.indexOf("BET_TYPE_COURSE_JSON_READ_IDENTITY_INVALID");
+  const provenance = entrypoint.indexOf("BET_TYPE_COURSE_PRIVATE_DB_PROVENANCE_REMAINED");
+  const mdHandoff = entrypoint.indexOf("BET_TYPE_COURSE_MD_HANDOFF_IDENTITY_INVALID");
+  const jsonHandoff = entrypoint.indexOf("BET_TYPE_COURSE_JSON_HANDOFF_IDENTITY_INVALID");
   const mdPublish = entrypoint.indexOf("BET_TYPE_COURSE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   const jsonPublish = entrypoint.indexOf("BET_TYPE_COURSE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
 
   assert.match(entrypoint, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-bet-type-course-"\)\)/);
   assert.ok(mdOutput > launch);
-  assert.ok(jsonOutput > launch);
-  assert.ok(mdPublish > mdOutput);
-  assert.ok(jsonPublish > jsonOutput);
+  assert.ok(jsonOutput > mdOutput, "both staged output identities must validate before staged content is read");
+  assert.ok(mdRead > jsonOutput);
+  assert.ok(jsonRead > mdRead);
+  assert.ok(provenance > jsonRead);
+  assert.ok(mdHandoff > provenance);
+  assert.ok(jsonHandoff > mdHandoff);
+  assert.ok(mdPublish > jsonHandoff, "canonical publication must wait for staged reads, sanitization, and handoff revalidation");
+  assert.ok(jsonPublish > mdPublish);
+  assert.match(entrypoint, /markdown\.includes\(launchDbPath\) \|\| json\.includes\(launchDbPath\)/);
   assert.match(entrypoint, /openSync\(tempPath, "wx", 0o600\)/);
   assert.match(entrypoint, /fsyncSync\(fd\)/);
   assert.match(entrypoint, /BET_TYPE_COURSE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
