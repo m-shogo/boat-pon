@@ -13,16 +13,18 @@ import {
   copyFileSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -33,7 +35,32 @@ const outJson = "reports/racer-ability-data-audit.json";
 const internalPath = fileURLToPath(new URL("./report-racer-ability-audit-internal.ts", import.meta.url));
 const tsxLoader = import.meta.resolve("tsx");
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingOutput(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function verifyExistingOutputs(): void {
+  verifyExistingOutput(
+    outJson,
+    "RACER_ABILITY_AUDIT_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  verifyExistingOutput(
+    outMd,
+    "RACER_ABILITY_AUDIT_MARKDOWN_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+}
+
 function atomicPublish(path: string, content: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "RACER_ABILITY_AUDIT_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -53,6 +80,10 @@ function atomicPublish(path: string, content: string): void {
         "RACER_ABILITY_AUDIT_PUBLISH_DESTINATION_IDENTITY_INVALID",
       );
     }
+    assertCanonicalDirectory(
+      parentPath,
+      "RACER_ABILITY_AUDIT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    );
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -140,7 +171,11 @@ try {
     "DB: verified read-only research DB",
   );
 
+  // Validate the canonical parent and complete paired destination set before
+  // the first replacement so a bad sibling fails closed without partial publication.
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "RACER_ABILITY_AUDIT_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutputs();
   atomicPublish(outJson, `${JSON.stringify(report, null, 2)}\n`);
   atomicPublish(outMd, markdown);
 
