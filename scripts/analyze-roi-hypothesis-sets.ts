@@ -4,16 +4,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -25,12 +27,28 @@ const PAYOUT_BET_TYPE = "trifecta";
 const OUT_MD = "reports/roi-hypothesis-sets.md";
 const OUT_JSON = "reports/roi-hypothesis-sets.json";
 
+function assertCanonicalDirectory(path: string, errorCode: string): void {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(errorCode);
+    if (realpathSync(path) !== resolve(path)) throw new Error(errorCode);
+  } catch {
+    throw new Error(errorCode);
+  }
+}
+
+function verifyExistingOutput(path: string, errorCode: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, errorCode);
+}
+
 function atomicPublish(
   path: string,
   contents: string,
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_HYPOTHESIS_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -40,9 +58,8 @@ function atomicPublish(
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
-    if (existsSync(path)) {
-      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
-    }
+    verifyExistingOutput(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "ROI_HYPOTHESIS_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -158,7 +175,10 @@ try {
   const json = readFileSync(verifiedJsonPath, "utf8");
   const markdown = readFileSync(verifiedMarkdownPath, "utf8");
 
-  mkdirSync("reports", { recursive: true });
+  if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ROI_HYPOTHESIS_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_JSON, "ROI_HYPOTHESIS_PREEXISTING_JSON_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "ROI_HYPOTHESIS_PREEXISTING_MARKDOWN_IDENTITY_INVALID");
   atomicPublish(
     OUT_JSON,
     json,
