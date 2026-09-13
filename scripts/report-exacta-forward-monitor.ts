@@ -13,16 +13,18 @@ import {
   copyFileSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -45,7 +47,28 @@ function run(script: string, env = process.env): number {
   return result.status ?? 1;
 }
 
-function atomicPublish(path: string, content: string, errorCode: string): void {
+function assertCanonicalDirectory(path: string, errorCode: string): void {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(errorCode);
+    if (realpathSync(path) !== resolve(path)) throw new Error(errorCode);
+  } catch {
+    throw new Error(errorCode);
+  }
+}
+
+function verifyExistingOutput(path: string, errorCode: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, errorCode);
+}
+
+function atomicPublish(
+  path: string,
+  content: string,
+  tempErrorCode: string,
+  destinationErrorCode: string,
+): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "EXACTA_FORWARD_MONITOR_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -54,7 +77,9 @@ function atomicPublish(path: string, content: string, errorCode: string): void {
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    verifyExistingOutput(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "EXACTA_FORWARD_MONITOR_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -144,16 +169,21 @@ try {
     .split(launchDbPath)
     .join("verified read-only research DB");
 
-  mkdirSync("reports", { recursive: true });
+  if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "EXACTA_FORWARD_MONITOR_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "EXACTA_FORWARD_MONITOR_PREEXISTING_MD_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_JSON, "EXACTA_FORWARD_MONITOR_PREEXISTING_JSON_IDENTITY_INVALID");
   atomicPublish(
     OUT_MD,
     markdown,
     "EXACTA_FORWARD_MONITOR_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "EXACTA_FORWARD_MONITOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_JSON,
     json,
     "EXACTA_FORWARD_MONITOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "EXACTA_FORWARD_MONITOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 } finally {
   rmSync(workspace, { recursive: true, force: true });
