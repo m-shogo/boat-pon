@@ -4,16 +4,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
@@ -27,7 +29,17 @@ const PAYOUT_BET_TYPE = "trifecta";
 const internalPath = fileURLToPath(new URL("./search-roi-patterns-internal.ts", import.meta.url));
 const tsxLoader = import.meta.resolve("tsx");
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(path: string, content: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_PATTERN_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -40,6 +52,7 @@ function atomicPublish(path: string, content: string, tempErrorCode: string, des
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
     }
+    assertCanonicalDirectory(parentPath, "ROI_PATTERN_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -192,6 +205,13 @@ try {
   );
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ROI_PATTERN_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  if (existsSync(OUT_MD)) {
+    assertCanonicalSingleLinkRegularFile(OUT_MD, "ROI_PATTERN_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  }
+  if (existsSync(OUT_JSON)) {
+    assertCanonicalSingleLinkRegularFile(OUT_JSON, "ROI_PATTERN_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  }
   atomicPublish(
     OUT_MD,
     markdown,
