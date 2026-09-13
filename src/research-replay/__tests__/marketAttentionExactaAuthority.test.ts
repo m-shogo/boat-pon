@@ -41,15 +41,53 @@ test("market attention preflights scalar exacta settlement integrity before eval
   assert.doesNotMatch(source, /LEFT JOIN race_payouts p/);
 });
 
-test("market attention publishes reports via exclusive fsynced verified temp files and atomic rename", () => {
+test("market attention preflights both report destinations before first replacement", () => {
   const source = readFileSync("scripts/analyze-market-attention.ts", "utf8");
+  const publicationStart = source.indexOf('mkdirSync("reports",{recursive:true});');
+  assert.notEqual(publicationStart, -1);
+  const publication = source.slice(publicationStart);
+  const reportsIdentity = publication.indexOf("MARKET_ATTENTION_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const jsonPreflight = publication.indexOf('verifyExistingOutput(JSON_REPORT_PATH,"MARKET_ATTENTION_PREEXISTING_JSON_IDENTITY_INVALID")');
+  const markdownPreflight = publication.indexOf('verifyExistingOutput(MARKDOWN_REPORT_PATH,"MARKET_ATTENTION_PREEXISTING_MARKDOWN_IDENTITY_INVALID")');
+  const jsonPublish = publication.indexOf("atomicPublish(JSON_REPORT_PATH");
+  const markdownPublish = publication.indexOf("atomicPublish(MARKDOWN_REPORT_PATH");
 
-  assert.match(source, /openSync\(tempPath,"wx",0o600\)/u);
-  assert.match(source, /writeFileSync\(fd,contents,"utf8"\);fsyncSync\(fd\);/u);
-  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,errorCode\);renameSync\(verifiedTempPath,path\);/u);
+  assert.ok(
+    reportsIdentity >= 0 &&
+      jsonPreflight > reportsIdentity &&
+      markdownPreflight > jsonPreflight &&
+      jsonPublish > markdownPreflight &&
+      markdownPublish > jsonPublish,
+  );
+});
+
+test("market attention publication verifies destination and parent handoff before atomic rename", () => {
+  const source = readFileSync("scripts/analyze-market-attention.ts", "utf8");
+  const helperStart = source.indexOf("function atomicPublish(");
+  const outerTry = source.indexOf("try{", helperStart + "function atomicPublish(".length);
+  assert.notEqual(helperStart, -1);
+  const helperEnd = source.indexOf("\ntry{", helperStart);
+  assert.notEqual(helperEnd, -1);
+  const helper = source.slice(helperStart, helperEnd);
+  const parentIdentity = helper.indexOf("MARKET_ATTENTION_PUBLISH_PARENT_IDENTITY_INVALID");
+  const create = helper.indexOf('openSync(tempPath,"wx",0o600)');
+  const fsync = helper.indexOf("fsyncSync(fd)", create);
+  const tempIdentity = helper.indexOf("assertCanonicalSingleLinkRegularFile(tempPath,tempIdentityErrorCode)", fsync);
+  const destinationIdentity = helper.indexOf("verifyExistingOutput(path,destinationIdentityErrorCode)", tempIdentity);
+  const parentHandoff = helper.indexOf("MARKET_ATTENTION_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = helper.indexOf("renameSync(verifiedTempPath,path)", parentHandoff);
+
+  assert.ok(outerTry >= 0);
+  assert.ok(
+    parentIdentity >= 0 &&
+      create > parentIdentity &&
+      fsync > create &&
+      tempIdentity > fsync &&
+      destinationIdentity > tempIdentity &&
+      parentHandoff > destinationIdentity &&
+      rename > parentHandoff,
+  );
   assert.match(source, /MARKET_ATTENTION_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(source, /MARKET_ATTENTION_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID/u);
-  assert.match(source, /atomicPublish\(JSON_REPORT_PATH,/u);
-  assert.match(source, /atomicPublish\(MARKDOWN_REPORT_PATH,/u);
   assert.doesNotMatch(source, /writeFileSync\("reports\/market-attention-screen\.(?:json|md)"/u);
 });
