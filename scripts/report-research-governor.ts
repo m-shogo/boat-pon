@@ -71,10 +71,19 @@ function writeExclusive(path: string, content: string | Buffer, errorCode: strin
 
 function stageVerifiedInput(sourcePath: string, workspace: string, errorCode: string): void {
   const verifiedSource = assertCanonicalSingleLinkRegularFile(sourcePath, errorCode);
+  const readSource = assertCanonicalSingleLinkRegularFile(
+    verifiedSource,
+    "RESEARCH_GOVERNOR_STAGED_INPUT_READ_IDENTITY_INVALID",
+  );
+  const content = readFileSync(readSource);
+  assertCanonicalSingleLinkRegularFile(
+    readSource,
+    "RESEARCH_GOVERNOR_STAGED_INPUT_HANDOFF_IDENTITY_INVALID",
+  );
   const destination = join(workspace, sourcePath);
   writeExclusive(
     destination,
-    readFileSync(verifiedSource),
+    content,
     "RESEARCH_GOVERNOR_STAGED_INPUT_IDENTITY_INVALID",
   );
 }
@@ -169,12 +178,31 @@ try {
     workspaceJson,
     "RESEARCH_GOVERNOR_JSON_OUTPUT_IDENTITY_INVALID",
   );
-  const markdown = readFileSync(verifiedMdPath, "utf8")
+  const mdReadPath = assertCanonicalSingleLinkRegularFile(
+    verifiedMdPath,
+    "RESEARCH_GOVERNOR_MD_READ_IDENTITY_INVALID",
+  );
+  const jsonReadPath = assertCanonicalSingleLinkRegularFile(
+    verifiedJsonPath,
+    "RESEARCH_GOVERNOR_JSON_READ_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(mdReadPath, "utf8")
     .split(launchDbPath)
     .join("verified read-only research DB");
-  const json = readFileSync(verifiedJsonPath, "utf8")
+  const json = readFileSync(jsonReadPath, "utf8")
     .split(launchDbPath)
     .join("verified read-only research DB");
+  if (markdown.includes(launchDbPath) || json.includes(launchDbPath)) {
+    throw new Error("RESEARCH_GOVERNOR_PRIVATE_DB_PROVENANCE_REMAINED");
+  }
+  assertCanonicalSingleLinkRegularFile(
+    mdReadPath,
+    "RESEARCH_GOVERNOR_MD_HANDOFF_IDENTITY_INVALID",
+  );
+  assertCanonicalSingleLinkRegularFile(
+    jsonReadPath,
+    "RESEARCH_GOVERNOR_JSON_HANDOFF_IDENTITY_INVALID",
+  );
 
   atomicPublish(
     OUT_MD,
