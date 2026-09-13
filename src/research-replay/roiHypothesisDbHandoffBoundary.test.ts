@@ -28,8 +28,8 @@ test("ROI hypothesis publication uses verified isolated outputs and atomic repla
   assert.match(entrypoint, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
   assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\);/u);
   assert.match(entrypoint, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}\s*renameSync\(verifiedTempPath, path\);/u);
-  assert.match(entrypoint, /atomicPublish\(OUT_JSON, json,/u);
-  assert.match(entrypoint, /atomicPublish\(OUT_MD, markdown,/u);
+  assert.match(entrypoint, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
+  assert.match(entrypoint, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
   assert.doesNotMatch(entrypoint, /writeFileSync\(OUT_(?:JSON|MD)/u);
 });
