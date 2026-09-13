@@ -13,26 +13,46 @@ test("next research action verifies governor identity before parsing", () => {
   assert.doesNotMatch(source, /readFileSync\(GOV_JSON/);
 });
 
-test("next research action validates existing outputs and revalidates destinations before atomic replacement", () => {
+test("next research action validates parent and complete destination set before publication", () => {
+  const parentPreflight = source.indexOf(
+    'assertCanonicalDirectory("reports", "NEXT_RESEARCH_ACTION_PUBLISH_PARENT_IDENTITY_INVALID")',
+  );
   const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
   const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
   const mdPublish = source.indexOf("atomicPublish(\n  OUT_MD");
   const jsonPublish = source.indexOf("atomicPublish(\n  OUT_JSON");
-  assert.ok(preflightMd >= 0 && preflightJson > preflightMd && mdPublish > preflightJson && jsonPublish > mdPublish);
+  assert.ok(
+    parentPreflight >= 0 &&
+      preflightMd > parentPreflight &&
+      preflightJson > preflightMd &&
+      mdPublish > preflightJson &&
+      jsonPublish > mdPublish,
+  );
 
-  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const parentIdentity = source.indexOf(
+    'assertCanonicalDirectory(parentPath, "NEXT_RESEARCH_ACTION_PUBLISH_PARENT_IDENTITY_INVALID")',
+  );
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = source.indexOf("fsyncSync(fd)", create);
   const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode)", fsync);
   const destinationIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode)", tempIdentity);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  const parentHandoff = source.indexOf(
+    'assertCanonicalDirectory(parentPath, "NEXT_RESEARCH_ACTION_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID")',
+    destinationIdentity,
+  );
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
   assert.ok(
-    create >= 0 &&
+    parentIdentity >= 0 &&
+      create > parentIdentity &&
       fsync > create &&
       tempIdentity > fsync &&
       destinationIdentity > tempIdentity &&
-      rename > destinationIdentity,
+      parentHandoff > destinationIdentity &&
+      rename > parentHandoff,
   );
 
+  assert.match(source, /NEXT_RESEARCH_ACTION_PUBLISH_PARENT_IDENTITY_INVALID/);
+  assert.match(source, /NEXT_RESEARCH_ACTION_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/);
   assert.match(source, /NEXT_RESEARCH_ACTION_PREEXISTING_MD_IDENTITY_INVALID/);
   assert.match(source, /NEXT_RESEARCH_ACTION_PREEXISTING_JSON_IDENTITY_INVALID/);
   assert.match(source, /NEXT_RESEARCH_ACTION_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
