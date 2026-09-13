@@ -6,63 +6,66 @@ const entrypoint = readFileSync("scripts/analyze-bet-type-risk-factors.ts", "utf
 const preflight = readFileSync("scripts/audit-bet-type-risk-factors-cohort.ts", "utf8");
 const internal = readFileSync("scripts/analyze-bet-type-risk-factors-internal.ts", "utf8");
 
-test("bet type risk analysis runs canonical cohort preflight before internal analysis", () => {
+test("bet type risk analysis runs canonical cohort preflight before isolated internal analysis", () => {
   const guard = entrypoint.indexOf('run("scripts/audit-bet-type-risk-factors-cohort.ts")');
   const identity = entrypoint.indexOf('"BET_TYPE_RISK_PRIMARY_DB_IDENTITY_INVALID"');
-  const analysis = entrypoint.indexOf('run("scripts/analyze-bet-type-risk-factors-internal.ts"');
+  const launchIdentity = entrypoint.indexOf('"BET_TYPE_RISK_CHILD_LAUNCH_DB_IDENTITY_INVALID"');
+  const workspace = entrypoint.indexOf('mkdtempSync(join(tmpdir(), "boat-pon-bet-type-risk-"))');
+  const analysis = entrypoint.indexOf("const analysis = spawnSync", workspace);
   assert.ok(guard >= 0, "entrypoint must invoke cohort preflight");
   assert.ok(identity > guard, "primary DB identity must be reverified after preflight");
-  assert.ok(analysis > identity, "internal analysis must run only after verified DB handoff");
+  assert.ok(launchIdentity > identity, "DB identity must be reverified immediately before child launch");
+  assert.ok(workspace > launchIdentity && analysis > workspace, "internal analysis must run only inside isolated workspace");
   assert.match(entrypoint, /if \(preflight !== 0\)/);
   assert.match(entrypoint, /process\.exit\(preflight\)/);
   assert.match(entrypoint, /BET_TYPE_RISK_PRIMARY_DB_IDENTITY_INVALID/);
-  assert.match(entrypoint, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: launchDbPath/);
+  assert.match(entrypoint, /cwd: workspace/);
+  assert.doesNotMatch(entrypoint, /run\("scripts\/analyze-bet-type-risk-factors-internal\.ts"/);
 });
 
-test("bet type risk analysis redacts configured DB provenance only after successful guarded analysis", () => {
+test("bet type risk analysis sanitizes staged DB provenance before canonical publication", () => {
   assert.match(entrypoint, /OPAQUE_DB_SOURCE = "primary research database"/);
-  assert.match(entrypoint, /BET_TYPE_RISK_REPORT_MISSING_AFTER_ANALYSIS/);
-  assert.match(entrypoint, /BET_TYPE_RISK_DB_PROVENANCE_NOT_FOUND/);
-  assert.match(entrypoint, /const redacted = report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
-  assert.match(entrypoint, /BET_TYPE_RISK_PRIVATE_DB_PATH_REMAINS/);
-  const analysis = entrypoint.indexOf('run("scripts/analyze-bet-type-risk-factors-internal.ts"');
-  const successGate = entrypoint.indexOf("if (analysis !== 0)");
-  const redact = entrypoint.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+  assert.match(entrypoint, /BET_TYPE_RISK_MD_OUTPUT_MISSING/);
+  assert.match(entrypoint, /BET_TYPE_RISK_JSON_OUTPUT_MISSING/);
+  assert.match(entrypoint, /BET_TYPE_RISK_\$\{code\}_DB_PROVENANCE_NOT_FOUND/);
+  assert.match(entrypoint, /const redacted = content\.split\(dbPath\)\.join\(OPAQUE_DB_SOURCE\)/);
+  assert.match(entrypoint, /BET_TYPE_RISK_\$\{code\}_PRIVATE_DB_PATH_REMAINS/);
+  const analysis = entrypoint.indexOf("const analysis = spawnSync");
+  const successGate = entrypoint.indexOf("if (analysis.error || analysis.status !== 0)", analysis);
+  const redactMd = entrypoint.indexOf('redactDbProvenance(readFileSync(verifiedMdPath, "utf8"), launchDbPath, "MD", true)', successGate);
+  const redactJson = entrypoint.indexOf('redactDbProvenance(readFileSync(verifiedJsonPath, "utf8"), launchDbPath, "JSON", false)', redactMd);
+  const publishMd = entrypoint.indexOf('atomicPublish(OUT_MD, markdown, "MD")', redactJson);
   const pass = entrypoint.lastIndexOf("[bet-type-risk] PASS");
-  assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
+  assert.ok(analysis >= 0 && successGate > analysis && redactMd > successGate && redactJson > redactMd && publishMd > redactJson && pass > publishMd);
 });
 
-test("bet type risk verifies report identity and publishes sanitized provenance atomically", () => {
-  const firstIdentity = entrypoint.indexOf('"BET_TYPE_RISK_REPORT_IDENTITY_INVALID"');
-  const read = entrypoint.indexOf('readFileSync(verifiedReportPath, "utf8")');
-  const privatePathCheck = entrypoint.indexOf("BET_TYPE_RISK_PRIVATE_DB_PATH_REMAINS");
-  const handoffIdentity = entrypoint.indexOf('"BET_TYPE_RISK_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const publishCall = entrypoint.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
-  const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx")');
-  const fsync = entrypoint.indexOf("fsyncSync(fd)");
-  const tempIdentity = entrypoint.indexOf('"BET_TYPE_RISK_TEMP_REPORT_IDENTITY_INVALID"');
-  const destinationIdentity = entrypoint.indexOf('"BET_TYPE_RISK_PUBLISH_DESTINATION_IDENTITY_INVALID"');
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
+test("bet type risk verifies staged identities and publishes both reports atomically", () => {
+  const mdIdentity = entrypoint.indexOf('"BET_TYPE_RISK_MD_STAGED_OUTPUT_IDENTITY_INVALID"');
+  const jsonIdentity = entrypoint.indexOf('"BET_TYPE_RISK_JSON_STAGED_OUTPUT_IDENTITY_INVALID"');
+  const privatePathCheck = entrypoint.indexOf("PRIVATE_DB_PATH_REMAINS");
+  const exclusiveOpen = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = entrypoint.indexOf("fsyncSync(fd)", exclusiveOpen);
+  const tempIdentity = entrypoint.indexOf("PUBLISH_TEMP_IDENTITY_INVALID", fsync);
+  const destinationGuard = entrypoint.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = entrypoint.indexOf("PUBLISH_DESTINATION_IDENTITY_INVALID", destinationGuard);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
 
-  assert.ok(
-    firstIdentity >= 0
-      && read > firstIdentity
-      && privatePathCheck > read
-      && handoffIdentity > privatePathCheck
-      && publishCall > handoffIdentity,
-  );
+  assert.ok(mdIdentity >= 0 && jsonIdentity > mdIdentity && privatePathCheck >= 0);
   assert.ok(
     exclusiveOpen >= 0
       && fsync > exclusiveOpen
       && tempIdentity > fsync
-      && destinationIdentity > tempIdentity
+      && destinationGuard > tempIdentity
+      && destinationIdentity > destinationGuard
       && rename > destinationIdentity,
   );
-  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
-  assert.match(entrypoint, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
+  assert.match(entrypoint, /atomicPublish\(OUT_MD, markdown, "MD"\)/);
+  assert.match(entrypoint, /atomicPublish\(OUT_JSON, json, "JSON"\)/);
   assert.match(entrypoint, /writeFileSync\(fd, content, "utf8"\)/);
-  assert.match(entrypoint, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/);
-  assert.doesNotMatch(entrypoint, /writeFileSync\(handoffReportPath/);
+  assert.match(entrypoint, /rmSync\(tempPath, \{ force: true \}\)/);
+  assert.doesNotMatch(entrypoint, /writeFileSync\(OUT_MD/);
+  assert.doesNotMatch(entrypoint, /writeFileSync\(OUT_JSON/);
 });
 
 test("bet type risk cohort is fixed to unique settled trifecta historical BUY rows", () => {
