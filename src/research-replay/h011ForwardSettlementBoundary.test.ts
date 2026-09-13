@@ -36,16 +36,34 @@ test("H011 forward monitor validates exacta settlement integrity and DB handoff 
   assert.equal(entry.includes("report-h011-forward-monitor-raw"), false);
 });
 
-test("H011 forward monitor verifies isolated outputs and reverifies destinations before atomic publication", () => {
+test("H011 forward monitor preflights both canonical destinations before publishing either output", () => {
+  const reportsIdentity = entry.indexOf('"H011_FORWARD_REPORTS_DIRECTORY_IDENTITY_INVALID"');
+  const markdownPreflight = entry.indexOf('verifyExistingOutput(OUT_MD, "H011_FORWARD_PREEXISTING_MARKDOWN_IDENTITY_INVALID")');
+  const jsonPreflight = entry.indexOf('verifyExistingOutput(OUT_JSON, "H011_FORWARD_PREEXISTING_JSON_IDENTITY_INVALID")');
+  const firstPublish = entry.indexOf("atomicPublish(\n    OUT_MD,");
+
+  assert.ok(reportsIdentity >= 0, "canonical reports directory identity must be checked");
+  assert.ok(markdownPreflight > reportsIdentity, "Markdown destination preflight must follow reports identity");
+  assert.ok(jsonPreflight > markdownPreflight, "JSON destination must also be preflighted before publication");
+  assert.ok(firstPublish > jsonPreflight, "neither paired output may publish until both destinations pass preflight");
+});
+
+test("H011 forward monitor verifies isolated outputs and revalidates parent and destination before atomic publication", () => {
   assert.match(entry, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-h011-forward-"\)\)/u);
   assert.match(entry, /H011_FORWARD_MARKDOWN_OUTPUT_IDENTITY_INVALID/u);
   assert.match(entry, /H011_FORWARD_JSON_OUTPUT_IDENTITY_INVALID/u);
   assert.match(entry, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(entry, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
-  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
-  const destinationIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
-  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
-  assert.ok(tempIdentity >= 0 && destinationIdentity > tempIdentity && rename > destinationIdentity);
+  const helper = entry.indexOf("function atomicPublish(");
+  const parentIdentity = entry.indexOf("H011_FORWARD_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const create = entry.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const tempIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", create);
+  const destinationIdentity = entry.indexOf("verifyExistingOutput(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entry.indexOf("H011_FORWARD_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+  assert.ok(parentIdentity >= 0 && create > parentIdentity, "temp creation must follow canonical parent identity");
+  assert.ok(tempIdentity > create && destinationIdentity > tempIdentity, "destination must be reverified after temp identity");
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff, "rename must follow parent handoff revalidation");
   assert.match(entry, /H011_FORWARD_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(entry, /H011_FORWARD_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(entry, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
