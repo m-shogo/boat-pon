@@ -46,16 +46,20 @@ test("ROI mechanism skip-filter keeps private DB provenance inside isolated stag
   const jsonIdentity = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_JSON_OUTPUT_IDENTITY_INVALID");
   const mdRedact = entrypointSource.indexOf('redactDbProvenance(readFileSync(verifiedMdPath, "utf-8"), launchDbPath)');
   const jsonRedact = entrypointSource.indexOf('redactDbProvenance(readFileSync(verifiedJsonPath, "utf-8"), launchDbPath)');
-  const reportsIdentity = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_REPORTS_DIRECTORY_IDENTITY_INVALID");
-  const prepublishMd = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
-  const prepublishJson = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  const reportsIdentity = entrypointSource.indexOf(
+    'assertCanonicalDirectory("reports", "ROI_MECHANISM_SKIP_FILTER_REPORTS_DIRECTORY_IDENTITY_INVALID")',
+    jsonRedact,
+  );
+  const prepublish = entrypointSource.indexOf("verifyPublishDestinations();", reportsIdentity);
   const publishMd = entrypointSource.indexOf("atomicPublish(\n    OUT_MD");
 
   assert.ok(analysis >= 0 && mdIdentity > analysis && jsonIdentity > mdIdentity);
   assert.ok(mdRedact > jsonIdentity && jsonRedact > mdRedact);
   assert.ok(reportsIdentity > jsonRedact, "canonical reports parent must be verified after isolated output validation");
-  assert.ok(prepublishMd > reportsIdentity && prepublishJson > prepublishMd);
-  assert.ok(publishMd > prepublishJson, "both canonical destinations must be revalidated before the first replacement");
+  assert.ok(prepublish > reportsIdentity, "complete canonical destination preflight must follow parent verification");
+  assert.ok(publishMd > prepublish, "both canonical destinations must be revalidated before the first replacement");
+  assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypointSource, /cwd: workspace/);
 });
 
