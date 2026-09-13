@@ -8,13 +8,16 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { dirname, resolve } from "node:path";
 
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -49,11 +52,24 @@ try {
     return { condition: c.label, removed, remaining, risk: c.risk, recommendation: recommend(removed, remaining, before, split), split, lift: remaining.roi - before.roi };
   }).filter((r) => r.removed.n >= 30).sort((a, b) => b.lift - a.lift || a.removed.roi - b.removed.roi);
   const report = { generatedAt: new Date().toISOString(), returnSource: "official race_payouts", before, ranked };
+  const json = `${JSON.stringify(report, null, 2)}\n`;
+  const markdown = renderMarkdown(report);
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "NO_BUY_NEXT_REPORTS_DIRECTORY_IDENTITY_INVALID");
   verifyExistingOutput(OUT_JSON, "NO_BUY_NEXT_PREEXISTING_JSON_IDENTITY_INVALID");
   verifyExistingOutput(OUT_MD, "NO_BUY_NEXT_PREEXISTING_MD_IDENTITY_INVALID");
-  atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "NO_BUY_NEXT_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD, renderMarkdown(report), "NO_BUY_NEXT_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(
+    OUT_JSON,
+    json,
+    "NO_BUY_NEXT_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "NO_BUY_NEXT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  atomicPublish(
+    OUT_MD,
+    markdown,
+    "NO_BUY_NEXT_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "NO_BUY_NEXT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
   console.log(`[analyze-no-buy-next] wrote ${OUT_MD}`);
   console.log(`[analyze-no-buy-next] wrote ${OUT_JSON}`);
 } finally {
@@ -274,12 +290,27 @@ function renderMarkdown(report: { returnSource: string; before: ReturnType<typeo
   return `${lines.join("\n")}\n`;
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function verifyExistingOutput(path: string, identityErrorCode: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
-function atomicPublish(path: string, content: string, identityErrorCode: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  tempIdentityErrorCode: string,
+  destinationIdentityErrorCode: string,
+): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "NO_BUY_NEXT_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -288,7 +319,11 @@ function atomicPublish(path: string, content: string, identityErrorCode: string)
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode);
+    if (existsSync(path)) {
+      assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
+    }
+    assertCanonicalDirectory(parentPath, "NO_BUY_NEXT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);

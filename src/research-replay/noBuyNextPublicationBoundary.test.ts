@@ -13,19 +13,44 @@ test("no-buy next analysis remains canonical read-only and query-only", () => {
   assert.match(source, /returnSource: "official race_payouts"/);
 });
 
-test("no-buy next validates existing outputs and publishes atomically", () => {
-  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON");
-  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD");
-  const jsonPublish = source.indexOf("atomicPublish(OUT_JSON");
-  const mdPublish = source.indexOf("atomicPublish(OUT_MD");
-  assert.ok(preflightJson >= 0 && preflightMd > preflightJson && jsonPublish > preflightMd && mdPublish > jsonPublish);
+test("no-buy next preflights the complete paired destination set before the first replacement", () => {
+  const reportsIdentity = source.indexOf("NO_BUY_NEXT_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const preflightJson = source.indexOf("verifyExistingOutput(OUT_JSON", reportsIdentity);
+  const preflightMd = source.indexOf("verifyExistingOutput(OUT_MD", preflightJson);
+  const jsonPublish = source.indexOf("atomicPublish(", preflightMd);
+  assert.ok(reportsIdentity >= 0 && preflightJson > reportsIdentity && preflightMd > preflightJson && jsonPublish > preflightMd);
+  assert.match(source, /NO_BUY_NEXT_PREEXISTING_JSON_IDENTITY_INVALID/);
+  assert.match(source, /NO_BUY_NEXT_PREEXISTING_MD_IDENTITY_INVALID/);
+});
 
-  const create = source.indexOf('openSync(tempPath, "wx", 0o600)');
-  const fsync = source.indexOf("fsyncSync(fd)", create);
-  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, identityErrorCode)", fsync);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", identity);
-  assert.ok(create >= 0 && fsync > create && identity > fsync && rename > identity);
-
+test("no-buy next publishes through verified atomic temp files with destination and parent handoff guards", () => {
   assert.match(source, /NO_BUY_NEXT_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source, /NO_BUY_NEXT_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source, /NO_BUY_NEXT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(source, /NO_BUY_NEXT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+
+  const helper = source.indexOf("function atomicPublish(");
+  const parentIdentity = source.indexOf("NO_BUY_NEXT_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const create = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = source.indexOf("fsyncSync(fd)", create);
+  const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempIdentityErrorCode)", fsync);
+  const destinationGuard = source.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = source.indexOf(
+    "assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode)",
+    destinationGuard,
+  );
+  const parentHandoff = source.indexOf("NO_BUY_NEXT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+
+  assert.ok(
+    helper >= 0 &&
+      parentIdentity > helper &&
+      create > parentIdentity &&
+      fsync > create &&
+      tempIdentity > fsync &&
+      destinationGuard > tempIdentity &&
+      destinationIdentity > destinationGuard &&
+      parentHandoff > destinationIdentity &&
+      rename > parentHandoff,
+  );
 });
