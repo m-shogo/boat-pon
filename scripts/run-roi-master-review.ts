@@ -1,6 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, resolve } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/roi-master-review.md";
@@ -67,16 +80,20 @@ const report = {
   nextActions: nextActions(finalDecision),
 };
 
+const json = `${JSON.stringify(report, null, 2)}\n`;
+const markdown = renderMd(report);
 mkdirSync("reports", { recursive: true });
+assertCanonicalDirectory("reports", "ROI_MASTER_REVIEW_REPORTS_DIRECTORY_IDENTITY_INVALID");
+verifyExistingOutputs();
 atomicPublish(
   OUT_JSON,
-  `${JSON.stringify(report, null, 2)}\n`,
+  json,
   "ROI_MASTER_REVIEW_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
   "ROI_MASTER_REVIEW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
 atomicPublish(
   OUT_MD,
-  renderMd(report),
+  markdown,
   "ROI_MASTER_REVIEW_MD_PUBLISH_TEMP_IDENTITY_INVALID",
   "ROI_MASTER_REVIEW_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
 );
@@ -153,12 +170,37 @@ function read(path: string): AnyObj | null {
   return JSON.parse(readFileSync(verifiedPath, "utf8")) as AnyObj;
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingOutputs(): void {
+  if (existsSync(OUT_JSON)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_JSON,
+      "ROI_MASTER_REVIEW_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+  }
+  if (existsSync(OUT_MD)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_MD,
+      "ROI_MASTER_REVIEW_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+  }
+}
+
 function atomicPublish(
   path: string,
   contents: string,
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_MASTER_REVIEW_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -171,6 +213,7 @@ function atomicPublish(
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
     }
+    assertCanonicalDirectory(parentPath, "ROI_MASTER_REVIEW_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
