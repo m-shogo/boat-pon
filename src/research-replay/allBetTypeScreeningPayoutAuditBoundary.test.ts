@@ -60,7 +60,7 @@ test("normal all-bet-type screening entrypoint cannot bypass payout audit or DB 
   assert.ok(audit >= 0 && reverify > audit && childReverify > reverify && analyzer > childReverify);
 });
 
-test("all-bet-type screening validates every staged artifact before canonical publication", () => {
+test("all-bet-type screening validates every staged artifact and complete destination set before canonical publication", () => {
   const runner = readFileSync("scripts/run-all-bet-type-screening-safe.ts", "utf8");
 
   assert.match(runner, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-all-bet-screening-"\)\)/);
@@ -70,6 +70,7 @@ test("all-bet-type screening validates every staged artifact before canonical pu
   assert.match(runner, /const preparedOutputs = stagedOutputs\.map/);
   assert.match(runner, /ALL_BET_TYPE_SCREENING_\$\{output\.code\}_STAGED_READ_IDENTITY_INVALID/);
   assert.match(runner, /ALL_BET_TYPE_SCREENING_\$\{output\.code\}_STAGED_HANDOFF_IDENTITY_INVALID/);
+  assert.match(runner, /ALL_BET_TYPE_SCREENING_\$\{output\.code\}_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(runner, /openSync\(tempPath, "wx", 0o600\)/);
   assert.match(runner, /fsyncSync\(fd\)/);
   assert.match(runner, /assertCanonicalSingleLinkRegularFile\(\s*path,\s*`ALL_BET_TYPE_SCREENING_\$\{code\}_PUBLISH_DESTINATION_IDENTITY_INVALID`/);
@@ -78,12 +79,16 @@ test("all-bet-type screening validates every staged artifact before canonical pu
   const stagedValidation = runner.indexOf("const stagedOutputs = OUTPUTS.map");
   const preparedReads = runner.indexOf("const preparedOutputs = stagedOutputs.map");
   const canonicalMkdir = runner.indexOf('mkdirSync("reports", { recursive: true });');
-  const publishLoop = runner.indexOf("for (const { output, content } of preparedOutputs)");
-  const publish = runner.indexOf("atomicPublish(output.destination, content, output.code)");
+  const reportsIdentity = runner.indexOf("ALL_BET_TYPE_SCREENING_REPORTS_DIRECTORY_IDENTITY_INVALID", canonicalMkdir);
+  const completePreflight = runner.indexOf("verifyExistingDestinations();", reportsIdentity);
+  const publishLoop = runner.indexOf("for (const { output, content } of preparedOutputs)", completePreflight);
+  const publish = runner.indexOf("atomicPublish(output.destination, content, output.code)", publishLoop);
   assert.ok(stagedValidation >= 0);
   assert.ok(preparedReads > stagedValidation);
   assert.ok(canonicalMkdir > preparedReads, "canonical report directory must not be touched until all staged artifacts are validated and read");
-  assert.ok(publishLoop > canonicalMkdir);
+  assert.ok(reportsIdentity > canonicalMkdir);
+  assert.ok(completePreflight > reportsIdentity, "all existing paired destinations must be verified before the first replacement");
+  assert.ok(publishLoop > completePreflight);
   assert.ok(publish > publishLoop);
   assert.doesNotMatch(runner, /for \(const output of OUTPUTS\)[\s\S]*?atomicPublish\(output\.destination, readFileSync/u);
 });
