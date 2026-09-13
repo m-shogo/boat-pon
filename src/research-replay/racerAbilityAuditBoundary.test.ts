@@ -19,6 +19,7 @@ test("racer ability canonical entrypoint verifies research inputs and redacts fi
   const markdownRead = source.indexOf('readFileSync(generatedMdReadPath, "utf8")');
   const redactJson = source.indexOf("delete report.dbPath");
   const redactMarkdown = source.indexOf('"DB: verified read-only research DB"');
+  const parentIdentity = source.indexOf("RACER_ABILITY_AUDIT_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
   const tempIdentity = source.indexOf("RACER_ABILITY_AUDIT_PUBLISH_TEMP_IDENTITY_INVALID");
   const destinationGuard = source.indexOf("if (existsSync(path))", tempIdentity);
@@ -26,7 +27,16 @@ test("racer ability canonical entrypoint verifies research inputs and redacts fi
     "RACER_ABILITY_AUDIT_PUBLISH_DESTINATION_IDENTITY_INVALID",
     destinationGuard,
   );
-  const atomicRename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  const parentHandoffIdentity = source.indexOf(
+    "RACER_ABILITY_AUDIT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    destinationIdentity,
+  );
+  const atomicRename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoffIdentity);
+  const canonicalReportsPreflight = source.indexOf(
+    'assertCanonicalDirectory("reports", "RACER_ABILITY_AUDIT_REPORTS_DIRECTORY_IDENTITY_INVALID")',
+    redactMarkdown,
+  );
+  const pairedDestinationPreflight = source.indexOf("verifyExistingOutputs();", canonicalReportsPreflight);
   const jsonPublish = source.indexOf('atomicPublish(outJson, `${JSON.stringify(report, null, 2)}\\n`)');
   const markdownPublish = source.indexOf("atomicPublish(outMd, markdown)");
 
@@ -44,13 +54,17 @@ test("racer ability canonical entrypoint verifies research inputs and redacts fi
   assert.ok(markdownRead > markdownOutputIdentity, "generated Markdown must not be read before identity verification");
   assert.ok(redactJson > jsonRead, "JSON filesystem provenance must be removed before publishing");
   assert.ok(redactMarkdown > markdownRead, "Markdown filesystem provenance must be redacted before publishing");
-  assert.ok(tempCreate >= 0, "published reports must be staged with exclusive creation");
+  assert.ok(parentIdentity >= 0, "publish parent directory must be canonical before temp creation");
+  assert.ok(tempCreate > parentIdentity, "exclusive temp creation must follow parent identity verification");
   assert.ok(tempIdentity > tempCreate, "publish temp identity must be verified before replacement");
   assert.ok(destinationGuard > tempIdentity, "existing publish destinations must be checked after temp verification");
   assert.ok(destinationIdentity > destinationGuard, "existing publish destinations must be identity-verified before replacement");
-  assert.ok(atomicRename > destinationIdentity, "only a verified temp may replace a verified existing destination");
-  assert.ok(jsonPublish > redactJson, "sanitized JSON must publish through the atomic writer");
-  assert.ok(markdownPublish > redactMarkdown, "sanitized Markdown must publish through the atomic writer");
+  assert.ok(parentHandoffIdentity > destinationIdentity, "publish parent must be reverified immediately before rename");
+  assert.ok(atomicRename > parentHandoffIdentity, "only a verified temp may replace a verified destination under a reverified parent");
+  assert.ok(canonicalReportsPreflight > redactMarkdown, "canonical reports directory must be verified after staged outputs are sanitized");
+  assert.ok(pairedDestinationPreflight > canonicalReportsPreflight, "the complete paired destination set must be preflighted under the canonical reports directory");
+  assert.ok(jsonPublish > pairedDestinationPreflight, "no JSON replacement may happen before the complete destination preflight");
+  assert.ok(markdownPublish > jsonPublish, "Markdown publication must follow the preflighted JSON publication");
   assert.doesNotMatch(source, /writeFileSync\(out(?:Json|Md)/u);
   assert.doesNotMatch(source, /DB not found: \\?\$\{[^}]+\}/u);
   assert.doesNotMatch(source, /new DatabaseSync/u);
