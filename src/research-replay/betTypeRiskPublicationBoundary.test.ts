@@ -10,7 +10,7 @@ test("bet-type risk analysis runs the internal analyzer only inside an isolated 
   const launchIdentity = source.indexOf("BET_TYPE_RISK_CHILD_LAUNCH_DB_IDENTITY_INVALID");
 
   assert.ok(workspace >= 0 && childLaunch > workspace && launchIdentity >= 0 && childLaunch > launchIdentity);
-  assert.doesNotMatch(source, /run\(\"scripts\/analyze-bet-type-risk-factors-internal\.ts\"/u);
+  assert.ok(!source.includes('run("scripts/analyze-bet-type-risk-factors-internal.ts"'));
 });
 
 test("bet-type risk markdown and JSON are verified, redacted, then atomically published", () => {
