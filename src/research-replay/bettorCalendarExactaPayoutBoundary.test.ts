@@ -28,7 +28,7 @@ test("bettor-calendar publishes reports via exclusive fsynced verified temp file
 
   assert.match(source, /openSync\(tempPath,"wx",0o600\)/u);
   assert.match(source, /writeFileSync\(fd,contents,"utf8"\);fsyncSync\(fd\);/u);
-  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,tempErrorCode\);if\(existsSync\(path\)\)\{assertCanonicalSingleLinkRegularFile\(path,destinationErrorCode\);\}renameSync\(verifiedTempPath,path\);/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,tempErrorCode\);verifyExistingDestination\(path,destinationErrorCode\);assertCanonicalDirectory\(parentPath,"BETTOR_CALENDAR_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID"\);renameSync\(verifiedTempPath,path\);/u);
   assert.match(source, /BETTOR_CALENDAR_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(source, /BETTOR_CALENDAR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /BETTOR_CALENDAR_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID/u);
