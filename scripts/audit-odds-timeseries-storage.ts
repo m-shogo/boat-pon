@@ -1,6 +1,7 @@
 /** odds時系列DBの肥大化を日別に監査する。読み取り専用。 */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { resolveN2OddsTimeseriesStorageWindow } from "../src/research-replay/n2OddsTimeseriesStorageWindow";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -98,6 +99,7 @@ const lines = [
 ];
 
 mkdirSync("reports", { recursive: true });
+assertCanonicalDirectory("reports", "ODDS_TIMESERIES_STORAGE_PUBLISH_PARENT_IDENTITY_INVALID");
 verifyExistingOutput(OUT_JSON, "ODDS_TIMESERIES_STORAGE_PREEXISTING_JSON_IDENTITY_INVALID");
 verifyExistingOutput(OUT_MD, "ODDS_TIMESERIES_STORAGE_PREEXISTING_MD_IDENTITY_INVALID");
 atomicPublish(
@@ -119,12 +121,22 @@ function verifyExistingOutput(path: string, identityErrorCode: string): void {
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(
   path: string,
   content: string,
   tempIdentityErrorCode: string,
   destinationIdentityErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ODDS_TIMESERIES_STORAGE_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -137,6 +149,7 @@ function atomicPublish(
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
     }
+    assertCanonicalDirectory(parentPath, "ODDS_TIMESERIES_STORAGE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
