@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("human profile market uses canonical historical exacta source and completeness authority", () => {
-  const source = readFileSync("scripts/analyze-human-profile-market.ts", "utf8");
+const source = readFileSync("scripts/analyze-human-profile-market.ts", "utf8");
 
+test("human profile market uses canonical historical exacta source and completeness authority", () => {
   assert.match(source, /historicalExactaCanonicalSourcePredicate\("h"\)/);
   assert.match(source, /historicalExactaCompleteMarketPredicate\("h\.race_id"\)/);
   assert.match(source, /HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING/);
@@ -12,8 +12,6 @@ test("human profile market uses canonical historical exacta source and completen
 });
 
 test("human profile ROI fails closed on incomplete official payouts", () => {
-  const source = readFileSync("scripts/analyze-human-profile-market.ts", "utf8");
-
   assert.match(source, /assertCanonicalSingleLinkRegularFile/);
   assert.match(source, /new DatabaseSync\(dbPath,\{readOnly:true\}\)/);
   assert.match(source, /PRAGMA query_only=ON/);
@@ -24,7 +22,6 @@ test("human profile ROI fails closed on incomplete official payouts", () => {
 });
 
 test("human profile exacta settlement integrity is preflighted before selected rows", () => {
-  const source = readFileSync("scripts/analyze-human-profile-market.ts", "utf8");
   const preflight = source.indexOf("assertSettlementCoverage(coverage)");
   const analysis = source.indexOf("const odds=db.prepare");
 
@@ -42,7 +39,6 @@ test("human profile exacta settlement integrity is preflighted before selected r
 });
 
 test("human profile metadata is identity-verified before parsing", () => {
-  const source = readFileSync("scripts/analyze-human-profile-market.ts", "utf8");
   const identity = source.indexOf('assertCanonicalSingleLinkRegularFile(path,"HUMAN_PROFILE_METADATA_IDENTITY_INVALID")');
   const read = source.indexOf('readFileSync(verifiedPath,"utf8")');
 
@@ -51,14 +47,35 @@ test("human profile metadata is identity-verified before parsing", () => {
   assert.doesNotMatch(source, /parseKyotei24RacerMetadata\(readFileSync\(path,/);
 });
 
-test("human profile reports publish through exclusive fsynced identity-verified temp files", () => {
-  const source = readFileSync("scripts/analyze-human-profile-market.ts", "utf8");
+test("human profile reports preflight both destinations before first replacement", () => {
+  const publicationStart=source.indexOf('mkdirSync("reports",{recursive:true});');
+  assert.notEqual(publicationStart,-1);
+  const publication=source.slice(publicationStart);
+  const reportsIdentity=publication.indexOf("HUMAN_PROFILE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const jsonPreflight=publication.indexOf('verifyExistingOutput(JSON_REPORT_PATH,"HUMAN_PROFILE_PREEXISTING_JSON_IDENTITY_INVALID")');
+  const markdownPreflight=publication.indexOf('verifyExistingOutput(MARKDOWN_REPORT_PATH,"HUMAN_PROFILE_PREEXISTING_MARKDOWN_IDENTITY_INVALID")');
+  const jsonPublish=publication.indexOf("atomicPublish(JSON_REPORT_PATH");
+  const markdownPublish=publication.indexOf("atomicPublish(MARKDOWN_REPORT_PATH");
+  assert.ok(reportsIdentity>=0&&jsonPreflight>reportsIdentity&&markdownPreflight>jsonPreflight&&jsonPublish>markdownPreflight&&markdownPublish>jsonPublish);
+});
 
-  assert.match(source, /openSync\(tempPath,"wx",0o600\)/);
-  assert.match(source, /fsyncSync\(fd\)/);
-  assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath,errorCode\)/);
-  assert.match(source, /renameSync\(verifiedTempPath,path\)/);
-  assert.match(source, /atomicPublish\(JSON_REPORT_PATH/);
-  assert.match(source, /atomicPublish\(MARKDOWN_REPORT_PATH/);
+test("human profile publication verifies destination and parent handoff before atomic rename", () => {
+  const helperStart=source.indexOf("function atomicPublish(");
+  const settlementStart=source.indexOf("function assertSettlementCoverage",helperStart);
+  assert.notEqual(helperStart,-1);
+  assert.notEqual(settlementStart,-1);
+  const helper=source.slice(helperStart,settlementStart);
+  const parentIdentity=helper.indexOf("HUMAN_PROFILE_PUBLISH_PARENT_IDENTITY_INVALID");
+  const create=helper.indexOf('openSync(tempPath,"wx",0o600)');
+  const fsync=helper.indexOf("fsyncSync(fd)",create);
+  const tempIdentity=helper.indexOf("assertCanonicalSingleLinkRegularFile(tempPath,tempIdentityErrorCode)",fsync);
+  const destinationIdentity=helper.indexOf("verifyExistingOutput(path,destinationIdentityErrorCode)",tempIdentity);
+  const parentHandoff=helper.indexOf("HUMAN_PROFILE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",destinationIdentity);
+  const rename=helper.indexOf("renameSync(verifiedTempPath,path)",parentHandoff);
+  assert.ok(parentIdentity>=0&&create>parentIdentity&&fsync>create&&tempIdentity>fsync&&destinationIdentity>tempIdentity&&parentHandoff>destinationIdentity&&rename>parentHandoff);
+  assert.match(source,/HUMAN_PROFILE_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source,/HUMAN_PROFILE_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source,/HUMAN_PROFILE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(source,/HUMAN_PROFILE_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.doesNotMatch(source, /writeFileSync\("reports\/human-profile-market-screen\.(?:json|md)"/);
 });
