@@ -1,6 +1,7 @@
 /** ルーキー・若手開催のexacta 1-4残差を4号艇能力・機力・世代proxyへ分解するread-only研究。 */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import type { UnconventionalBoat, UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
@@ -48,10 +49,11 @@ try {
   const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,postHocMechanismScreen:true,productionConnected:false},scope:{rookieRaces:evaluations.length},result,caveats:["登録番号は年齢ではなくデビュー時期のproxy","各機序は相関であり独立因果ではない","細分化後の小標本は採用判断に使わない"]};
   const lines=["# ルーキー開催1-4 edge分解","",`対象: ${evaluations.length}レース / base 2024 ${cell(result.base.discovery)} / 2025 ${cell(result.base.forward)}`,"","| 機序proxy | 2024 該当 n / edge / ROI / max2 | 2025 該当 n / edge / ROI / max2 | 条件外とのedge差 |","|---|---:|---:|---:|",...result.mechanisms.map(r=>`| ${r.label} | ${cell(r.inside.discovery)} | ${cell(r.inside.forward)} | ${delta(r)} |`),"","## 解釈規則","","- 両期で条件外より残差が高く、十分なnと最大2的中除外が残る機序だけを次の固定候補にする。","- 登録番号は同期・年齢・師弟関係を意味しない。デビュー時期が近い可能性の粗いproxyに限定する。","- ルーキー開催1-4自体が55セル探索後の候補なので、この分解は独立検証ではない。",""];
   mkdirSync("reports",{recursive:true});
+  assertCanonicalDirectory("reports","ROOKIE_EVENT_REPORTS_DIRECTORY_IDENTITY_INVALID");
   verifyExistingOutput(OUT_JSON,"ROOKIE_EVENT_PREEXISTING_JSON_IDENTITY_INVALID");
   verifyExistingOutput(OUT_MD,"ROOKIE_EVENT_PREEXISTING_MD_IDENTITY_INVALID");
-  atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"ROOKIE_EVENT_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD,lines.join("\n"),"ROOKIE_EVENT_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"ROOKIE_EVENT_JSON_PUBLISH_TEMP_IDENTITY_INVALID","ROOKIE_EVENT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
+  atomicPublish(OUT_MD,lines.join("\n"),"ROOKIE_EVENT_MD_PUBLISH_TEMP_IDENTITY_INVALID","ROOKIE_EVENT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
   console.log(`rookie event edge: races=${evaluations.length}`);
 }finally{db.close();}
 
@@ -59,8 +61,9 @@ function assertPayoutCompleteness(rows:EvalRow[]):void{const byPeriod=Object.fro
 function requiredPayout(row:EvalRow):number{if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`ROOKIE_EVENT_EXACTA_PAYOUT_MISSING race=${row.race_id}`);return row.payout_yen;}
 function mechanismFlags(boats:UnconventionalBoat[],one:UnconventionalBoat,four:UnconventionalBoat){const flags:string[]=[];const others=boats.filter(b=>b.course!==1&&b.course!==4);const own=four.nationalWinRate;if(own!=null&&others.every(b=>own>=(b.nationalWinRate??Infinity)))flags.push("boat4_top_rival");if(own!=null&&others.every(b=>own-(b.nationalWinRate??Infinity)>=0.5))flags.push("boat4_gap05");if((four.className??"").startsWith("A"))flags.push("boat4_a_class");const a=boats.filter(b=>(b.className??"").startsWith("A")).map(b=>b.course);if(a.length===2&&a.includes(1)&&a.includes(4))flags.push("head4_only_a");if(four.localWinRate!=null&&own!=null&&four.localWinRate-own>=1)flags.push("boat4_local_up");if((four.motorTop2Rate??-1)>=40)flags.push("boat4_good_motor");const oneReg=Number(one.registrationNo),fourReg=Number(four.registrationNo);if(Number.isFinite(oneReg)&&Number.isFinite(fourReg)&&fourReg-oneReg>=200)flags.push("boat4_newer_head200");const regs=boats.map(b=>Number(b.registrationNo));if(Number.isFinite(fourReg)&&regs.every(reg=>Number.isFinite(reg)&&fourReg>=reg))flags.push("boat4_newest_field");return flags;}
 function readTitle(raceId:string,date:string){const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;if(!existsSync(path))return"";const verifiedPath=assertCanonicalSingleLinkRegularFile(path,"ROOKIE_EVENT_EVENT_HTML_IDENTITY_INVALID");const $=load(readFileSync(verifiedPath,"utf8"));return $(".rname a").first().text().replace(/\s+/g," ").trim();}
+function assertCanonicalDirectory(path:string,errorCode:string):string{const stat=lstatSync(path);if(!stat.isDirectory()||stat.isSymbolicLink())throw new Error(errorCode);const resolvedPath=resolve(path);if(realpathSync(path)!==resolvedPath)throw new Error(errorCode);return resolvedPath;}
 function verifyExistingOutput(path:string,identityErrorCode:string){if(!existsSync(path))return;assertCanonicalSingleLinkRegularFile(path,identityErrorCode);}
-function atomicPublish(path:string,content:string,identityErrorCode:string){const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;let fd:number|null=null;try{fd=openSync(tempPath,"wx",0o600);writeFileSync(fd,content,"utf8");fsyncSync(fd);closeSync(fd);fd=null;const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,identityErrorCode);renameSync(verifiedTempPath,path);}finally{if(fd!==null)closeSync(fd);rmSync(tempPath,{force:true});}}
+function atomicPublish(path:string,content:string,tempIdentityErrorCode:string,destinationIdentityErrorCode:string){const parentPath=dirname(path);assertCanonicalDirectory(parentPath,"ROOKIE_EVENT_PUBLISH_PARENT_IDENTITY_INVALID");const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;let fd:number|null=null;try{fd=openSync(tempPath,"wx",0o600);writeFileSync(fd,content,"utf8");fsyncSync(fd);closeSync(fd);fd=null;const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,tempIdentityErrorCode);verifyExistingOutput(path,destinationIdentityErrorCode);assertCanonicalDirectory(parentPath,"ROOKIE_EVENT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");renameSync(verifiedTempPath,path);}finally{if(fd!==null)closeSync(fd);rmSync(tempPath,{force:true});}}
 function byPeriod(rows:EvalRow[]){return{discovery:metric(rows.filter(r=>r.period==="discovery")),forward:metric(rows.filter(r=>r.period==="forward"))};}
 function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(requiredPayout).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
 function pct(v:number){return`${(v*100).toFixed(1)}%`;}function cell(v:Metric){return`${v.n} / ${v.edgePp>=0?"+":""}${v.edgePp.toFixed(2)}pt / ${pct(v.roi)} / ${pct(v.max2HitExclRoi)}`;}
