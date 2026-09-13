@@ -35,15 +35,13 @@ test("canonical payout-rebase passes only a reverified DB identity to the isolat
 
 test("canonical payout-rebase rejects unsafe pre-existing Markdown and JSON paths before isolated analysis", () => {
   const dbVerify = entrypointSource.indexOf('"PAYOUT_REBASE_PRIMARY_DB_IDENTITY_INVALID"');
-  const outputPreflight = entrypointSource.lastIndexOf("verifyExistingOutputs();");
-  const workspace = entrypointSource.lastIndexOf("mkdtempSync(");
+  const outputPreflight = entrypointSource.indexOf("verifyExistingOutputs();", dbVerify);
+  const workspace = entrypointSource.indexOf("mkdtempSync(", outputPreflight);
 
   assert.ok(outputPreflight > dbVerify, "output path preflight must follow verified DB handoff");
   assert.ok(workspace > outputPreflight, "legacy analysis must not start before output path preflight");
-  assert.match(entrypointSource, /if \(existsSync\(OUT_MD\)\)/u);
-  assert.match(entrypointSource, /PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID/);
-  assert.match(entrypointSource, /if \(existsSync\(OUT_JSON\)\)/u);
-  assert.match(entrypointSource, /PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /verifyExistingOutput\(OUT_MD, "PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID"\)/u);
+  assert.match(entrypointSource, /verifyExistingOutput\(OUT_JSON, "PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID"\)/u);
 });
 
 test("canonical payout-rebase runs legacy analysis only inside an isolated workspace", () => {
@@ -74,14 +72,16 @@ test("canonical payout-rebase publishes JSON and Markdown through reverified ato
   const create = entrypointSource.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrypointSource.indexOf("fsyncSync(fd)", create);
   const tempIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
-  const destinationIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
-  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  const destinationIdentity = entrypointSource.indexOf("verifyExistingOutput(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entrypointSource.indexOf('"PAYOUT_REBASE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID"', destinationIdentity);
+  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
   const jsonPublish = entrypointSource.lastIndexOf("PAYOUT_REBASE_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
   const jsonDestination = entrypointSource.lastIndexOf("PAYOUT_REBASE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
   const mdPublish = entrypointSource.lastIndexOf("PAYOUT_REBASE_MD_PUBLISH_TEMP_IDENTITY_INVALID");
   const mdDestination = entrypointSource.lastIndexOf("PAYOUT_REBASE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
 
-  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && destinationIdentity > tempIdentity && rename > destinationIdentity);
+  assert.ok(create >= 0 && fsync > create && tempIdentity > fsync && destinationIdentity > tempIdentity);
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff);
   assert.ok(jsonPublish > rename && jsonDestination > jsonPublish && mdPublish > jsonDestination && mdDestination > mdPublish);
 });
 
