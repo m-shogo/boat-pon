@@ -155,12 +155,31 @@ try {
     workspaceJson,
     "BET_TYPE_COURSE_JSON_OUTPUT_IDENTITY_INVALID",
   );
-  const markdown = readFileSync(verifiedMdPath, "utf8")
+  const mdReadPath = assertCanonicalSingleLinkRegularFile(
+    verifiedMdPath,
+    "BET_TYPE_COURSE_MD_READ_IDENTITY_INVALID",
+  );
+  const jsonReadPath = assertCanonicalSingleLinkRegularFile(
+    verifiedJsonPath,
+    "BET_TYPE_COURSE_JSON_READ_IDENTITY_INVALID",
+  );
+  const markdown = readFileSync(mdReadPath, "utf8")
     .split(launchDbPath)
     .join("verified read-only research DB");
-  const json = readFileSync(verifiedJsonPath, "utf8")
+  const json = readFileSync(jsonReadPath, "utf8")
     .split(launchDbPath)
     .join("verified read-only research DB");
+  if (markdown.includes(launchDbPath) || json.includes(launchDbPath)) {
+    throw new Error("BET_TYPE_COURSE_PRIVATE_DB_PROVENANCE_REMAINED");
+  }
+  assertCanonicalSingleLinkRegularFile(
+    mdReadPath,
+    "BET_TYPE_COURSE_MD_HANDOFF_IDENTITY_INVALID",
+  );
+  assertCanonicalSingleLinkRegularFile(
+    jsonReadPath,
+    "BET_TYPE_COURSE_JSON_HANDOFF_IDENTITY_INVALID",
+  );
 
   mkdirSync("reports", { recursive: true });
   atomicPublish(
