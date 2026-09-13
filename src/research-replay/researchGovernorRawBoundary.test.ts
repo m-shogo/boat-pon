@@ -29,8 +29,8 @@ test("research governor enters the internal report only after canonical readines
   const childSpawn = entry.indexOf('spawnSync(process.execPath, ["--import", tsxLoader, internalPath]');
   const outputMdIdentity = entry.indexOf("RESEARCH_GOVERNOR_MD_OUTPUT_IDENTITY_INVALID");
   const outputJsonIdentity = entry.indexOf("RESEARCH_GOVERNOR_JSON_OUTPUT_IDENTITY_INVALID");
-  const publishMdDestination = entry.indexOf("RESEARCH_GOVERNOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
-  const publishJsonDestination = entry.indexOf("RESEARCH_GOVERNOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
+  const publishMdDestination = entry.lastIndexOf("RESEARCH_GOVERNOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
+  const publishJsonDestination = entry.lastIndexOf("RESEARCH_GOVERNOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
 
   assert.ok(preflight >= 0);
   assert.ok(handoff > preflight);

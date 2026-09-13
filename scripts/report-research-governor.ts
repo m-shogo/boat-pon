@@ -11,16 +11,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -54,6 +56,29 @@ function run(script: string, env = process.env): number {
   return result.status ?? 1;
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingOutputPaths(): void {
+  if (existsSync(OUT_MD)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_MD,
+      "RESEARCH_GOVERNOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+  }
+  if (existsSync(OUT_JSON)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_JSON,
+      "RESEARCH_GOVERNOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+  }
+}
+
 function writeExclusive(path: string, content: string | Buffer, errorCode: string): void {
   mkdirSync(dirname(path), { recursive: true });
   let fd: number | null = null;
@@ -80,7 +105,8 @@ function stageVerifiedInput(sourcePath: string, workspace: string, errorCode: st
 }
 
 function atomicPublish(path: string, content: string, tempErrorCode: string, destinationErrorCode: string): void {
-  mkdirSync(dirname(path), { recursive: true });
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "RESEARCH_GOVERNOR_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -93,6 +119,7 @@ function atomicPublish(path: string, content: string, tempErrorCode: string, des
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
     }
+    assertCanonicalDirectory(parentPath, "RESEARCH_GOVERNOR_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -176,6 +203,9 @@ try {
     .split(launchDbPath)
     .join("verified read-only research DB");
 
+  mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "RESEARCH_GOVERNOR_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutputPaths();
   atomicPublish(
     OUT_MD,
     markdown,
