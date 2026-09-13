@@ -48,28 +48,49 @@ test("alternative odds health internal revalidates the DB before read-only query
   assert.doesNotMatch(internal, /DB not found: \$\{DB_PATH\}/);
 });
 
-test("alternative odds health isolates internal writes and publishes verified outputs atomically", () => {
+test("alternative odds health re-preflights the complete paired destination set immediately before publication", () => {
+  const workspaceJsonRead = entrypoint.indexOf('readFileSync(workspaceJson, "utf8")');
+  const reportsIdentity = entrypoint.indexOf('"ALTERNATIVE_ODDS_HEALTH_REPORTS_DIRECTORY_IDENTITY_INVALID"', workspaceJsonRead);
+  const mdPrepublish = entrypoint.indexOf('assertExistingOutputIdentity(OUT_MD, "ALTERNATIVE_ODDS_HEALTH_MD_PREPUBLISH_IDENTITY_INVALID")', reportsIdentity);
+  const jsonPrepublish = entrypoint.indexOf('assertExistingOutputIdentity(OUT_JSON, "ALTERNATIVE_ODDS_HEALTH_JSON_PREPUBLISH_IDENTITY_INVALID")', mdPrepublish);
+  const firstPublish = entrypoint.indexOf("atomicPublish(\n    OUT_MD,", jsonPrepublish);
+
+  assert.ok(reportsIdentity > workspaceJsonRead, "canonical reports identity must be checked after staged outputs are read");
+  assert.ok(mdPrepublish > reportsIdentity, "Markdown destination must be re-preflighted after isolated analysis");
+  assert.ok(jsonPrepublish > mdPrepublish, "JSON destination must also be re-preflighted before publication");
+  assert.ok(firstPublish > jsonPrepublish, "neither paired output may publish until both destinations pass final preflight");
+});
+
+test("alternative odds health isolates internal writes and publishes verified outputs with destination and parent handoff checks", () => {
   const workspace = entrypoint.indexOf('mkdtempSync(join(tmpdir(), "boat-pon-alternative-odds-health-"))');
   const internalRun = entrypoint.indexOf("const health = spawnSync", workspace);
   const workspaceMdIdentity = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID", internalRun);
   const workspaceJsonIdentity = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID", internalRun);
   const mdRead = entrypoint.indexOf('readFileSync(workspaceMd, "utf8")', workspaceMdIdentity);
   const jsonRead = entrypoint.indexOf('readFileSync(workspaceJson, "utf8")', workspaceJsonIdentity);
-  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
+  const helper = entrypoint.indexOf("function atomicPublish(");
+  const parentIdentity = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = entrypoint.indexOf("assertExistingOutputIdentity(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entrypoint.indexOf("ALTERNATIVE_ODDS_HEALTH_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
   assert.ok(workspace >= 0, "internal writer must run in an isolated workspace");
   assert.ok(internalRun > workspace, "internal process must start only after workspace creation");
   assert.ok(workspaceMdIdentity > internalRun && workspaceJsonIdentity > internalRun, "workspace outputs must be identity-verified before reads");
   assert.ok(mdRead > workspaceMdIdentity && jsonRead > workspaceJsonIdentity, "workspace outputs must be read only after identity verification");
-  assert.ok(tempCreate >= 0 && fsync > tempCreate, "atomic publication must use exclusive temp creation and fsync");
-  assert.ok(tempIdentity > fsync && rename > tempIdentity, "temp identity verification must precede atomic rename");
+  assert.ok(parentIdentity >= 0 && tempCreate > parentIdentity, "temp creation must follow canonical parent verification");
+  assert.ok(fsync > tempCreate && tempIdentity > fsync, "atomic publication must use exclusive temp creation, fsync, and temp identity verification");
+  assert.ok(destinationIdentity > tempIdentity, "destination identity must be revalidated after temp identity");
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff, "atomic rename must follow canonical parent handoff revalidation");
   assert.match(entrypoint, /cwd: workspace/u);
   assert.match(entrypoint, /stdio: \["ignore", "pipe", "pipe"\]/u);
   assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_INTERNAL_FAILED/u);
   assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /ALTERNATIVE_ODDS_HEALTH_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(entrypoint, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(entrypoint, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
 });
