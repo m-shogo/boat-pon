@@ -152,8 +152,10 @@ function withOutputLock<T>(path: string, operation: () => T): T {
   assertCanonicalDirectory(parentPath, "RULE_CANDIDATE_APPEND_PARENT_IDENTITY_INVALID");
   const lockPath = `${path}.lock`;
   let lockFd: number | null = null;
+  let lockAcquired = false;
   try {
     lockFd = openSync(lockPath, "wx", 0o600);
+    lockAcquired = true;
     closeSync(lockFd);
     lockFd = null;
     assertCanonicalSingleLinkRegularFile(
@@ -163,7 +165,7 @@ function withOutputLock<T>(path: string, operation: () => T): T {
     return operation();
   } finally {
     if (lockFd !== null) closeSync(lockFd);
-    rmSync(lockPath, { force: true });
+    if (lockAcquired) rmSync(lockPath, { force: true });
   }
 }
 
