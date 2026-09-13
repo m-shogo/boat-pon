@@ -21,6 +21,7 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
 const BET_TYPES = ["trifecta", "trio", "exacta", "quinella", "wide"] as const;
 const internalPath = fileURLToPath(new URL("./analyze-promising-bet-type-strategies-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 const OUTPUTS = [
   { staged: "reports/promising-bet-type-strategies.md", destination: "reports/promising-bet-type-strategies.md", code: "MD" },
   { staged: "reports/promising-bet-type-strategies.json", destination: "reports/promising-bet-type-strategies.json", code: "JSON" },
@@ -160,7 +161,7 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 const workspace = mkdtempSync(join(tmpdir(), "boat-pon-promising-bet-"));
 try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
-  const result = spawnSync(process.execPath, ["--import", "tsx", internalPath], {
+  const result = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     stdio: "inherit",
     cwd: workspace,
     env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
