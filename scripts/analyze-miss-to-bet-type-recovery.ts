@@ -4,16 +4,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -106,7 +108,21 @@ function assertPayoutCompleteness(): void {
   }
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingDestination(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
 function atomicPublish(path: string, content: string, code: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, `MISS_RECOVERY_${code}_PUBLISH_PARENT_IDENTITY_INVALID`);
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -126,6 +142,7 @@ function atomicPublish(path: string, content: string, code: string): void {
         `MISS_RECOVERY_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
       );
     }
+    assertCanonicalDirectory(parentPath, `MISS_RECOVERY_${code}_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID`);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -187,6 +204,9 @@ try {
   const json = redactDbProvenance(readFileSync(verifiedJsonPath, "utf8"), launchDbPath, "JSON", false);
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "MISS_RECOVERY_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingDestination(OUT_MD, "MISS_RECOVERY_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  verifyExistingDestination(OUT_JSON, "MISS_RECOVERY_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
   atomicPublish(OUT_MD, markdown, "MD");
   atomicPublish(OUT_JSON, json, "JSON");
 } finally {

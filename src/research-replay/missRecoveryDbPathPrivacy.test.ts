@@ -33,29 +33,40 @@ test("miss recovery wrapper redacts private database provenance before canonical
   const stagedJson = source.indexOf("MISS_RECOVERY_JSON_STAGED_OUTPUT_IDENTITY_INVALID");
   const redactMd = source.indexOf('redactDbProvenance(readFileSync(verifiedMdPath, "utf8")', stagedMd);
   const redactJson = source.indexOf('redactDbProvenance(readFileSync(verifiedJsonPath, "utf8")', stagedJson);
-  const publishMd = source.indexOf('atomicPublish(OUT_MD, markdown, "MD")', redactMd);
-  const publishJson = source.indexOf('atomicPublish(OUT_JSON, json, "JSON")', redactJson);
+  const reportsIdentity = source.indexOf('assertCanonicalDirectory("reports", "MISS_RECOVERY_REPORTS_DIRECTORY_IDENTITY_INVALID")', redactJson);
+  const preflightMd = source.indexOf('verifyExistingDestination(OUT_MD, "MISS_RECOVERY_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID")', reportsIdentity);
+  const preflightJson = source.indexOf('verifyExistingDestination(OUT_JSON, "MISS_RECOVERY_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID")', preflightMd);
+  const publishMd = source.indexOf('atomicPublish(OUT_MD, markdown, "MD")', preflightJson);
+  const publishJson = source.indexOf('atomicPublish(OUT_JSON, json, "JSON")', publishMd);
 
   assert.ok(redactMd > stagedMd && redactJson > stagedJson);
-  assert.ok(publishMd > redactMd && publishJson > redactJson);
+  assert.ok(reportsIdentity > redactJson);
+  assert.ok(preflightMd > reportsIdentity && preflightJson > preflightMd);
+  assert.ok(publishMd > preflightJson && publishJson > publishMd);
   assert.match(source, /const OPAQUE_DB_SOURCE = "primary research database"/u);
   assert.match(source, /MISS_RECOVERY_\$\{code\}_PRIVATE_DB_PATH_REMAINS/u);
 });
 
-test("miss recovery wrapper atomically publishes verified Markdown and JSON destinations", () => {
-  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx", 0o600)');
+test("miss recovery wrapper atomically publishes through verified parent handoff", () => {
+  const helperStart = source.indexOf("function atomicPublish(");
+  const parentIdentity = source.indexOf("PUBLISH_PARENT_IDENTITY_INVALID", helperStart);
+  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = source.indexOf("fsyncSync(fd)", exclusiveOpen);
   const tempIdentity = source.indexOf("PUBLISH_TEMP_IDENTITY_INVALID", fsync);
   const destinationGuard = source.indexOf("if (existsSync(path))", tempIdentity);
   const destinationIdentity = source.indexOf("PUBLISH_DESTINATION_IDENTITY_INVALID", destinationGuard);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  const parentHandoff = source.indexOf("PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
 
   assert.ok(
-    exclusiveOpen >= 0 &&
+    helperStart >= 0 &&
+      parentIdentity > helperStart &&
+      exclusiveOpen > parentIdentity &&
       fsync > exclusiveOpen &&
       tempIdentity > fsync &&
       destinationGuard > tempIdentity &&
       destinationIdentity > destinationGuard &&
-      rename > destinationIdentity,
+      parentHandoff > destinationIdentity &&
+      rename > parentHandoff,
   );
 });
