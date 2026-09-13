@@ -15,59 +15,47 @@ test("miss recovery wrapper preserves canonical read-only database boundary", ()
   assert.match(source, /PRAGMA query_only=ON/u);
 });
 
-test("miss recovery wrapper rejects unsafe pre-existing report paths before legacy analysis writes", () => {
-  const dbHandoff = source.indexOf("MISS_RECOVERY_DB_HANDOFF_IDENTITY_INVALID");
-  const reportPreflight = source.indexOf("MISS_RECOVERY_PREEXISTING_REPORT_IDENTITY_INVALID");
-  const analysis = source.indexOf('await import("./analyze-miss-to-bet-type-recovery-internal")');
+test("miss recovery wrapper isolates analysis before canonical report publication", () => {
+  const handoff = source.indexOf("MISS_RECOVERY_DB_HANDOFF_IDENTITY_INVALID");
+  const launch = source.indexOf("MISS_RECOVERY_CHILD_LAUNCH_DB_IDENTITY_INVALID");
+  const workspace = source.indexOf('mkdtempSync(join(tmpdir(), "boat-pon-miss-recovery-"))');
+  const child = source.indexOf("cwd: workspace", workspace);
+  const stagedMd = source.indexOf("MISS_RECOVERY_MD_STAGED_OUTPUT_IDENTITY_INVALID", child);
+  const stagedJson = source.indexOf("MISS_RECOVERY_JSON_STAGED_OUTPUT_IDENTITY_INVALID", child);
 
-  assert.ok(reportPreflight > dbHandoff, "report identity must be checked after verified DB handoff");
-  assert.ok(analysis > reportPreflight, "legacy analyzer must not write before an existing report path is verified");
-  assert.match(source, /if \(existsSync\(OUT_MD\)\)/u);
+  assert.ok(handoff >= 0 && launch > handoff && workspace > launch && child > workspace);
+  assert.ok(stagedMd > child && stagedJson > child);
+  assert.ok(!source.includes('await import("./analyze-miss-to-bet-type-recovery-internal")'));
 });
 
-test("miss recovery wrapper redacts private database provenance after canonical analysis", () => {
-  const analysis = source.indexOf('await import("./analyze-miss-to-bet-type-recovery-internal")');
-  const redact = source.lastIndexOf("redactDbProvenance(handoffDbPath)");
+test("miss recovery wrapper redacts private database provenance before canonical publication", () => {
+  const stagedMd = source.indexOf("MISS_RECOVERY_MD_STAGED_OUTPUT_IDENTITY_INVALID");
+  const stagedJson = source.indexOf("MISS_RECOVERY_JSON_STAGED_OUTPUT_IDENTITY_INVALID");
+  const redactMd = source.indexOf('redactDbProvenance(readFileSync(verifiedMdPath, "utf8")', stagedMd);
+  const redactJson = source.indexOf('redactDbProvenance(readFileSync(verifiedJsonPath, "utf8")', stagedJson);
+  const publishMd = source.indexOf('atomicPublish(OUT_MD, markdown, "MD")', redactMd);
+  const publishJson = source.indexOf('atomicPublish(OUT_JSON, json, "JSON")', redactJson);
 
-  assert.ok(analysis >= 0);
-  assert.ok(redact > analysis, "private DB provenance must be sanitized only after canonical analysis completes");
+  assert.ok(redactMd > stagedMd && redactJson > stagedJson);
+  assert.ok(publishMd > redactMd && publishJson > redactJson);
   assert.match(source, /const OPAQUE_DB_SOURCE = "primary research database"/u);
-  assert.match(source, /const privateMarker = `DB: \$\{dbPath\}`/u);
-  assert.match(source, /const redacted = report\.replaceAll\(privateMarker, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/u);
-  assert.match(source, /MISS_RECOVERY_REPORT_MISSING_AFTER_ANALYSIS/u);
-  assert.match(source, /MISS_RECOVERY_PRIVATE_DB_PROVENANCE_MARKER_MISSING/u);
-  assert.match(source, /MISS_RECOVERY_PRIVATE_DB_PATH_REMAINS/u);
+  assert.match(source, /MISS_RECOVERY_\$\{code\}_PRIVATE_DB_PATH_REMAINS/u);
 });
 
-test("miss recovery wrapper verifies report identity and publishes provenance atomically", () => {
-  const firstIdentity = source.indexOf('"MISS_RECOVERY_REPORT_IDENTITY_INVALID"');
-  const read = source.indexOf('readFileSync(verifiedReportPath, "utf8")');
-  const privatePathCheck = source.indexOf("MISS_RECOVERY_PRIVATE_DB_PATH_REMAINS");
-  const handoffIdentity = source.indexOf('"MISS_RECOVERY_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const publishCall = source.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
-  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx")');
-  const fsync = source.indexOf("fsyncSync(fd)");
-  const tempIdentity = source.indexOf('"MISS_RECOVERY_TEMP_REPORT_IDENTITY_INVALID"');
-  const destinationIdentity = source.indexOf('"MISS_RECOVERY_PUBLISH_DESTINATION_IDENTITY_INVALID"');
-  const rename = source.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
+test("miss recovery wrapper atomically publishes verified Markdown and JSON destinations", () => {
+  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const fsync = source.indexOf("fsyncSync(fd)", exclusiveOpen);
+  const tempIdentity = source.indexOf("PUBLISH_TEMP_IDENTITY_INVALID", fsync);
+  const destinationGuard = source.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = source.indexOf("PUBLISH_DESTINATION_IDENTITY_INVALID", destinationGuard);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
 
   assert.ok(
-    firstIdentity >= 0
-      && read > firstIdentity
-      && privatePathCheck > read
-      && handoffIdentity > privatePathCheck
-      && publishCall > handoffIdentity,
+    exclusiveOpen >= 0 &&
+      fsync > exclusiveOpen &&
+      tempIdentity > fsync &&
+      destinationGuard > tempIdentity &&
+      destinationIdentity > destinationGuard &&
+      rename > destinationIdentity,
   );
-  assert.ok(
-    exclusiveOpen >= 0
-      && fsync > exclusiveOpen
-      && tempIdentity > fsync
-      && destinationIdentity > tempIdentity
-      && rename > destinationIdentity,
-  );
-  assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/u);
-  assert.match(source, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/u);
-  assert.match(source, /writeFileSync\(fd, content, "utf8"\)/u);
-  assert.match(source, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/u);
-  assert.doesNotMatch(source, /writeFileSync\(\s*handoffReportPath/u);
 });
