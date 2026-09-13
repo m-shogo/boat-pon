@@ -15,7 +15,8 @@ test("bet-type coverage publishes both outputs through exclusive verified temp f
   assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(source, /fsyncSync\(fd\)/u);
   assert.match(source, /assertCanonicalSingleLinkRegularFile\(tempPath, tempErrorCode\)/u);
-  assert.match(source, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/u);
+  assert.match(source, /verifyExistingOutput\(path, destinationErrorCode\)/u);
+  assert.match(source, /BET_TYPE_COVERAGE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/u);
   assert.match(source, /renameSync\(verifiedTempPath, path\)/u);
   assert.match(source, /BET_TYPE_COVERAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(source, /BET_TYPE_COVERAGE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
@@ -23,4 +24,15 @@ test("bet-type coverage publishes both outputs through exclusive verified temp f
   assert.match(source, /BET_TYPE_COVERAGE_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_MD/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_JSON/u);
+});
+
+test("bet-type coverage preflights the complete destination set before publishing either output", () => {
+  const reportsIdentity = source.indexOf("BET_TYPE_COVERAGE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const mdPreflight = source.indexOf("BET_TYPE_COVERAGE_PREEXISTING_MD_IDENTITY_INVALID", reportsIdentity);
+  const jsonPreflight = source.indexOf("BET_TYPE_COVERAGE_PREEXISTING_JSON_IDENTITY_INVALID", mdPreflight);
+  const firstPublish = source.indexOf("atomicPublish(\n  OUT_MD", jsonPreflight);
+  assert.ok(reportsIdentity >= 0);
+  assert.ok(mdPreflight > reportsIdentity);
+  assert.ok(jsonPreflight > mdPreflight);
+  assert.ok(firstPublish > jsonPreflight);
 });
