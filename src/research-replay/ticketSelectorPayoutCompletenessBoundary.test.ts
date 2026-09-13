@@ -9,60 +9,65 @@ const coreSource = readFileSync("scripts/analyze-ticket-selector-strategies-core
 test("direct ticket-selector analysis cannot bypass compared-market payout completeness", () => {
   const preflight = entrySource.indexOf('run("scripts/audit-ticket-selector-payout-completeness.ts")');
   const identity = entrySource.indexOf('"TICKET_SELECTOR_PRIMARY_DB_IDENTITY_INVALID"');
-  const analysis = entrySource.indexOf('run("scripts/analyze-ticket-selector-strategies-core.ts"');
+  const analysis = entrySource.indexOf("runIsolated(workspace, verifiedDbPath)");
   assert.ok(preflight >= 0);
   assert.ok(identity > preflight);
   assert.ok(analysis > identity);
   assert.match(entrySource, /if \(preflight !== 0\)/);
   assert.match(entrySource, /process\.exit\(preflight\)/);
   assert.match(entrySource, /TICKET_SELECTOR_PRIMARY_DB_IDENTITY_INVALID/);
-  assert.match(entrySource, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(entrySource, /BOAT_PON_DB_PATH: launchDbPath/);
+  assert.match(entrySource, /TICKET_SELECTOR_DB_CHILD_LAUNCH_IDENTITY_INVALID/);
 });
 
-test("ticket-selector redacts configured DB provenance only after successful guarded analysis", () => {
+test("ticket-selector keeps raw core outputs isolated and sanitizes DB provenance before canonical publication", () => {
   assert.match(entrySource, /OPAQUE_DB_SOURCE = "primary research database"/);
+  assert.match(entrySource, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-ticket-selector-"\)\)/);
+  assert.match(entrySource, /cwd: workspace/);
   assert.match(entrySource, /TICKET_SELECTOR_REPORT_MISSING_AFTER_ANALYSIS/);
+  assert.match(entrySource, /TICKET_SELECTOR_JSON_REPORT_MISSING_AFTER_ANALYSIS/);
   assert.match(entrySource, /TICKET_SELECTOR_DB_PROVENANCE_NOT_FOUND/);
   assert.match(entrySource, /const redacted = report\.replaceAll\(provenance, `DB: \$\{OPAQUE_DB_SOURCE\}`\)/);
   assert.match(entrySource, /TICKET_SELECTOR_PRIVATE_DB_PATH_REMAINS/);
-  const analysis = entrySource.indexOf('run("scripts/analyze-ticket-selector-strategies-core.ts"');
-  const successGate = entrySource.indexOf("if (analysis !== 0)");
-  const redact = entrySource.lastIndexOf("redactDbProvenance(verifiedDbPath)");
+  assert.match(entrySource, /TICKET_SELECTOR_JSON_REPORT_INVALID/);
+
+  const analysis = entrySource.indexOf("runIsolated(workspace, verifiedDbPath)");
+  const successGate = entrySource.indexOf("if (status === 0)", analysis);
+  const readOutputs = entrySource.indexOf("readIsolatedOutputs(workspace, verifiedDbPath)", successGate);
+  const firstPublish = entrySource.indexOf("publishAtomically(", readOutputs);
   const pass = entrySource.lastIndexOf("[ticket-selector] PASS");
-  assert.ok(analysis >= 0 && successGate > analysis && redact > successGate && pass > redact);
+  assert.ok(analysis >= 0 && successGate > analysis && readOutputs > successGate && firstPublish > readOutputs && pass > firstPublish);
+  assert.doesNotMatch(entrySource, /cwd:\s*process\.cwd\(\)/u);
 });
 
-test("ticket-selector verifies report identity and publishes sanitized provenance atomically", () => {
+test("ticket-selector verifies staged outputs and publishes both sanitized artifacts atomically", () => {
   const firstIdentity = entrySource.indexOf('"TICKET_SELECTOR_REPORT_IDENTITY_INVALID"');
+  const jsonIdentity = entrySource.indexOf('"TICKET_SELECTOR_JSON_REPORT_IDENTITY_INVALID"');
   const read = entrySource.indexOf('readFileSync(verifiedReportPath, "utf8")');
   const privatePathCheck = entrySource.indexOf("TICKET_SELECTOR_PRIVATE_DB_PATH_REMAINS");
   const handoffIdentity = entrySource.indexOf('"TICKET_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID"');
-  const publishCall = entrySource.indexOf("publishRedactedReportAtomically(handoffReportPath, redacted)");
-  const exclusiveOpen = entrySource.indexOf('openSync(tempPath, "wx")');
+  const jsonHandoffIdentity = entrySource.indexOf('"TICKET_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID"');
+  const exclusiveOpen = entrySource.indexOf('openSync(tempPath, "wx", 0o600)');
   const fsync = entrySource.indexOf("fsyncSync(fd)");
-  const tempIdentity = entrySource.indexOf('"TICKET_SELECTOR_TEMP_REPORT_IDENTITY_INVALID"');
-  const destinationIdentity = entrySource.indexOf('"TICKET_SELECTOR_PUBLISH_DESTINATION_IDENTITY_INVALID"');
-  const rename = entrySource.indexOf("renameSync(verifiedTempPath, verifiedTargetPath)");
+  const parentHandoff = entrySource.indexOf('"TICKET_SELECTOR_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID"');
+  const rename = entrySource.indexOf("renameSync(verifiedTempPath, targetPath)");
+  const mdPublish = entrySource.indexOf("outputs.markdown");
+  const jsonPublish = entrySource.indexOf("outputs.json", mdPublish);
 
   assert.ok(
     firstIdentity >= 0
-      && read > firstIdentity
+      && jsonIdentity > firstIdentity
+      && read > jsonIdentity
       && privatePathCheck > read
       && handoffIdentity > privatePathCheck
-      && publishCall > handoffIdentity,
+      && jsonHandoffIdentity > handoffIdentity,
   );
-  assert.ok(
-    exclusiveOpen >= 0
-      && fsync > exclusiveOpen
-      && tempIdentity > fsync
-      && destinationIdentity > tempIdentity
-      && rename > destinationIdentity,
-  );
-  assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*OUT_MD,/);
-  assert.match(entrySource, /assertCanonicalSingleLinkRegularFile\(\s*verifiedReportPath,/);
+  assert.ok(exclusiveOpen >= 0 && fsync > exclusiveOpen && parentHandoff > fsync && rename > parentHandoff);
+  assert.ok(mdPublish >= 0 && jsonPublish > mdPublish);
   assert.match(entrySource, /writeFileSync\(fd, content, "utf8"\)/);
-  assert.match(entrySource, /if \(existsSync\(tempPath\)\) unlinkSync\(tempPath\)/);
-  assert.doesNotMatch(entrySource, /writeFileSync\(handoffReportPath/);
+  assert.match(entrySource, /rmSync\(tempPath, \{ force: true \}\)/);
+  assert.match(entrySource, /TICKET_SELECTOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entrySource, /TICKET_SELECTOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
 
 test("ticket-selector preflight covers the exact base population and every compared market", () => {
