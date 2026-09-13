@@ -12,22 +12,29 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/paper-forward-monitor.md";
+const OUT_JSON = "reports/paper-forward-monitor.json";
 const OPAQUE_DB_SOURCE = "primary research database";
+const internalPath = fileURLToPath(new URL("./report-paper-forward-monitor-internal.ts", import.meta.url));
+const tsxLoader = import.meta.resolve("tsx");
 
 function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
-  const result = spawnSync(process.execPath, ["--import", "tsx", script], {
-    stdio: "inherit",
-    env,
-  });
+  const result = spawnSync(process.execPath, ["--import", "tsx", script], { stdio: "inherit", env });
   if (result.error) {
     console.error(`[paper-forward-monitor-raw] failed to start ${script}: ${result.error.message}`);
     return 1;
@@ -35,7 +42,26 @@ function run(script: string, env: NodeJS.ProcessEnv = process.env): number {
   return result.status ?? 1;
 }
 
-function atomicPublishSanitizedReport(path: string, content: string): void {
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingOutputs(): void {
+  if (existsSync(OUT_MD)) {
+    assertCanonicalSingleLinkRegularFile(OUT_MD, "PAPER_FORWARD_MONITOR_RAW_PREEXISTING_REPORT_IDENTITY_INVALID");
+  }
+  if (existsSync(OUT_JSON)) {
+    assertCanonicalSingleLinkRegularFile(OUT_JSON, "PAPER_FORWARD_MONITOR_RAW_PREEXISTING_JSON_IDENTITY_INVALID");
+  }
+}
+
+function atomicPublish(path: string, content: string, tempCode: string, destinationCode: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "PAPER_FORWARD_MONITOR_RAW_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -44,17 +70,9 @@ function atomicPublishSanitizedReport(path: string, content: string): void {
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(
-      tempPath,
-      "PAPER_FORWARD_MONITOR_RAW_SANITIZED_TEMP_IDENTITY_INVALID",
-    );
-    if (existsSync(path)) {
-      assertCanonicalSingleLinkRegularFile(
-        path,
-        "PAPER_FORWARD_MONITOR_RAW_SANITIZED_DESTINATION_IDENTITY_INVALID",
-      );
-    }
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempCode);
+    if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, destinationCode);
+    assertCanonicalDirectory(parentPath, "PAPER_FORWARD_MONITOR_RAW_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -62,34 +80,57 @@ function atomicPublishSanitizedReport(path: string, content: string): void {
   }
 }
 
-function sanitizeDbProvenance(handoffDbPath: string): void {
-  if (!existsSync(OUT_MD)) {
-    throw new Error("PAPER_FORWARD_MONITOR_RAW_REPORT_MISSING_AFTER_INTERNAL_SUCCESS");
-  }
-
-  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
-    "PAPER_FORWARD_MONITOR_RAW_REPORT_IDENTITY_INVALID",
+function runIsolated(workspace: string, verifiedDbPath: string): number {
+  const launchDbPath = assertCanonicalSingleLinkRegularFile(
+    verifiedDbPath,
+    "PAPER_FORWARD_MONITOR_RAW_DB_CHILD_LAUNCH_IDENTITY_INVALID",
   );
-  const report = readFileSync(verifiedReportPath, "utf-8");
-  const sanitized = report
-    .split(handoffDbPath).join(OPAQUE_DB_SOURCE)
-    .replace(/^DB:.*$/gm, `DB: ${OPAQUE_DB_SOURCE}`);
-
-  if (sanitized.includes(handoffDbPath)) {
-    throw new Error("PAPER_FORWARD_MONITOR_RAW_PRIVATE_DB_PATH_REMAINS");
+  const loader = `await import(${JSON.stringify(pathToFileURL(internalPath).href)})`;
+  const result = spawnSync(process.execPath, ["--import", tsxLoader, "--input-type=module", "--eval", loader], {
+    cwd: workspace,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      BOAT_PON_DB_PATH: launchDbPath,
+      BOAT_PON_PAPER_FORWARD_MONITOR_INTERNAL_GUARD: "1",
+    },
+  });
+  if (result.error) throw new Error("PAPER_FORWARD_MONITOR_RAW_INTERNAL_SPAWN_FAILED");
+  const status = result.status ?? 1;
+  if (status !== 0) {
+    if (result.stderr) process.stderr.write(result.stderr);
+    return status;
   }
+  if (result.stdout) process.stdout.write(result.stdout);
+  return status;
+}
 
-  const handoffReportPath = assertCanonicalSingleLinkRegularFile(
-    verifiedReportPath,
-    "PAPER_FORWARD_MONITOR_RAW_REPORT_HANDOFF_IDENTITY_INVALID",
-  );
-  atomicPublishSanitizedReport(handoffReportPath, sanitized);
+function readStagedOutputs(workspace: string, handoffDbPath: string): { markdown: string; json: string } {
+  const stagedMdPath = join(workspace, OUT_MD);
+  const stagedJsonPath = join(workspace, OUT_JSON);
+  if (!existsSync(stagedMdPath)) throw new Error("PAPER_FORWARD_MONITOR_RAW_REPORT_MISSING_AFTER_INTERNAL_SUCCESS");
+  if (!existsSync(stagedJsonPath)) throw new Error("PAPER_FORWARD_MONITOR_RAW_JSON_MISSING_AFTER_INTERNAL_SUCCESS");
 
-  const dbLines = sanitized.match(/^DB:.*$/gm) ?? [];
+  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(stagedMdPath, "PAPER_FORWARD_MONITOR_RAW_REPORT_IDENTITY_INVALID");
+  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(stagedJsonPath, "PAPER_FORWARD_MONITOR_RAW_JSON_IDENTITY_INVALID");
+  const markdown = readFileSync(verifiedMdPath, "utf-8");
+  const json = readFileSync(verifiedJsonPath, "utf-8");
+  const dbLines = markdown.match(/^DB:.*$/gm) ?? [];
   if (dbLines.length !== 1 || dbLines[0] !== `DB: ${OPAQUE_DB_SOURCE}`) {
     throw new Error("PAPER_FORWARD_MONITOR_RAW_DB_PROVENANCE_UNEXPECTED");
   }
+  if (markdown.includes(handoffDbPath) || json.includes(handoffDbPath)) {
+    throw new Error("PAPER_FORWARD_MONITOR_RAW_PRIVATE_DB_PATH_REMAINS");
+  }
+  try {
+    JSON.parse(json);
+  } catch {
+    throw new Error("PAPER_FORWARD_MONITOR_RAW_JSON_INVALID");
+  }
+  assertCanonicalSingleLinkRegularFile(verifiedMdPath, "PAPER_FORWARD_MONITOR_RAW_REPORT_HANDOFF_IDENTITY_INVALID");
+  assertCanonicalSingleLinkRegularFile(verifiedJsonPath, "PAPER_FORWARD_MONITOR_RAW_JSON_HANDOFF_IDENTITY_INVALID");
+  return { markdown, json };
 }
 
 const preflight = run("scripts/audit-paper-forward-monitor-payout-completeness.ts");
@@ -103,23 +144,36 @@ const handoffDbPath = assertCanonicalSingleLinkRegularFile(
   configuredDbPath,
   "PAPER_FORWARD_MONITOR_RAW_DB_HANDOFF_IDENTITY_INVALID",
 );
+verifyExistingOutputs();
 
-if (existsSync(OUT_MD)) {
-  assertCanonicalSingleLinkRegularFile(
-    OUT_MD,
-    "PAPER_FORWARD_MONITOR_RAW_PREEXISTING_REPORT_IDENTITY_INVALID",
-  );
+const workspace = mkdtempSync(join(tmpdir(), "boat-pon-paper-forward-monitor-raw-"));
+let status = 1;
+try {
+  status = runIsolated(workspace, handoffDbPath);
+  if (status === 0) {
+    const outputs = readStagedOutputs(workspace, handoffDbPath);
+    mkdirSync("reports", { recursive: true });
+    assertCanonicalDirectory("reports", "PAPER_FORWARD_MONITOR_RAW_REPORTS_DIRECTORY_IDENTITY_INVALID");
+    verifyExistingOutputs();
+    atomicPublish(
+      OUT_MD,
+      outputs.markdown,
+      "PAPER_FORWARD_MONITOR_RAW_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+      "PAPER_FORWARD_MONITOR_RAW_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+    atomicPublish(
+      OUT_JSON,
+      outputs.json,
+      "PAPER_FORWARD_MONITOR_RAW_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+      "PAPER_FORWARD_MONITOR_RAW_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+  }
+} finally {
+  rmSync(workspace, { recursive: true, force: true });
 }
 
-const report = run("scripts/report-paper-forward-monitor-internal.ts", {
-  ...process.env,
-  BOAT_PON_DB_PATH: handoffDbPath,
-  BOAT_PON_PAPER_FORWARD_MONITOR_INTERNAL_GUARD: "1",
-});
-if (report !== 0) {
+if (status !== 0) {
   console.error("[paper-forward-monitor-raw] internal monitor aggregation failed after a successful settlement preflight");
-  process.exit(report);
+  process.exit(status);
 }
-
-sanitizeDbProvenance(handoffDbPath);
-console.log("[paper-forward-monitor-raw] PASS: settlement preflight passed before internal monitor aggregation");
+console.log("[paper-forward-monitor-raw] PASS: settlement preflight passed before isolated monitor publication");
