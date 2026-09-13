@@ -87,17 +87,33 @@ test("ROI governor validates measured readiness counts and ROI inputs instead of
   assert.match(entry, /Number\.isFinite\(value\)/);
 });
 
-test("ROI governor publishes only verified isolated outputs through fsynced temp files and atomic rename", () => {
+test("ROI governor preflights the complete paired destination set before the first replacement", () => {
+  const stagedIdentity = entry.indexOf("ROI_GOVERNOR_JSON_OUTPUT_IDENTITY_INVALID");
+  const reportsIdentity = entry.indexOf("ROI_GOVERNOR_REPORTS_DIRECTORY_IDENTITY_INVALID", stagedIdentity);
+  const completePreflight = entry.indexOf("verifyExistingOutputs();", reportsIdentity);
+  const firstPublish = entry.indexOf("atomicPublish(", completePreflight);
+
+  assert.ok(stagedIdentity >= 0 && reportsIdentity > stagedIdentity);
+  assert.ok(completePreflight > reportsIdentity && firstPublish > completePreflight);
+  assert.match(entry, /ROI_GOVERNOR_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entry, /ROI_GOVERNOR_MARKDOWN_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
+});
+
+test("ROI governor publishes only verified isolated outputs through fsynced temp files, parent handoff checks, and atomic rename", () => {
   const rawSpawn = entry.indexOf("spawnSync(process.execPath");
   const stagedIdentity = entry.indexOf("ROI_GOVERNOR_JSON_OUTPUT_IDENTITY_INVALID");
-  const tempIdentity = entry.indexOf("const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
-  const destinationIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)");
-  const rename = entry.indexOf("renameSync(verifiedTempPath, path)");
+  const helper = entry.indexOf("function atomicPublish(");
+  const parentIdentity = entry.indexOf("ROI_GOVERNOR_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const exclusiveOpen = entry.indexOf('openSync(tempPath, "wx", 0o600)', helper);
+  const fsync = entry.indexOf("fsyncSync(fd)", helper);
+  const tempIdentity = entry.indexOf("const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", helper);
+  const destinationIdentity = entry.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", helper);
+  const parentHandoff = entry.indexOf("ROI_GOVERNOR_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", helper);
+  const rename = entry.indexOf("renameSync(verifiedTempPath, path)", helper);
 
   assert.ok(rawSpawn >= 0 && stagedIdentity > rawSpawn);
-  assert.ok(tempIdentity >= 0 && destinationIdentity > tempIdentity && rename > destinationIdentity);
-  assert.match(entry, /openSync\(tempPath, "wx", 0o600\)/);
-  assert.match(entry, /fsyncSync\(fd\)/);
+  assert.ok(helper >= 0 && parentIdentity > helper && exclusiveOpen > parentIdentity && fsync > exclusiveOpen);
+  assert.ok(tempIdentity > fsync && destinationIdentity > tempIdentity && parentHandoff > destinationIdentity && rename > parentHandoff);
   assert.match(entry, /ROI_GOVERNOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entry, /ROI_GOVERNOR_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.equal(entry.includes('await import("./report-roi-governor-raw")'), false);
