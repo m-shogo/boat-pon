@@ -25,25 +25,45 @@ test("ROI edge market-gap isolates legacy writes and revalidates DB immediately 
   assert.match(source, /ROI_EDGE_MARKET_GAP_INTERNAL_FAILED/);
 });
 
-test("ROI edge market-gap verifies workspace outputs before read and publishes atomically", () => {
+test("ROI edge market-gap verifies the paired canonical publication handoff", () => {
   const analysis = source.indexOf("const analysis = spawnSync");
   const mdIdentity = source.indexOf("ROI_EDGE_MARKET_GAP_MD_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
   const jsonIdentity = source.indexOf("ROI_EDGE_MARKET_GAP_JSON_WORKSPACE_OUTPUT_IDENTITY_INVALID", analysis);
   const mdRead = source.indexOf('readFileSync(workspaceMd, "utf8")', mdIdentity);
   const jsonRead = source.indexOf('readFileSync(workspaceJson, "utf8")', jsonIdentity);
-  const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
+  const parentIdentity = source.indexOf("ROI_EDGE_MARKET_GAP_PUBLISH_PARENT_IDENTITY_INVALID");
+  const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = source.indexOf("fsyncSync(fd)", tempCreate);
   const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
-  const postflight = source.indexOf("ROI_EDGE_MARKET_GAP_MD_OUTPUT_IDENTITY_INVALID", analysis);
+  const destinationIdentity = source.indexOf("assertExistingOutputIdentity(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = source.indexOf(
+    "ROI_EDGE_MARKET_GAP_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    destinationIdentity,
+  );
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+  const reportsPreflight = source.indexOf(
+    'assertCanonicalDirectory("reports", "ROI_EDGE_MARKET_GAP_REPORTS_DIRECTORY_IDENTITY_INVALID")',
+    jsonRead,
+  );
+  const pairedPreflight = source.indexOf("verifyExistingOutputs();", reportsPreflight);
+  const mdPublish = source.indexOf("  atomicPublish(\n    OUT_MD,", pairedPreflight);
+  const jsonPublish = source.indexOf("  atomicPublish(\n    OUT_JSON,", mdPublish + 1);
+  const postflight = source.indexOf("ROI_EDGE_MARKET_GAP_MD_OUTPUT_IDENTITY_INVALID", jsonPublish);
 
   assert.ok(mdIdentity > analysis && jsonIdentity > analysis);
   assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity);
-  assert.ok(tempCreate >= 0 && fsync > tempCreate);
-  assert.ok(tempIdentity > fsync && rename > tempIdentity);
-  assert.ok(postflight > rename);
+  assert.ok(parentIdentity >= 0 && tempCreate > parentIdentity);
+  assert.ok(fsync > tempCreate && tempIdentity > fsync);
+  assert.ok(destinationIdentity > tempIdentity);
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff);
+  assert.ok(reportsPreflight > jsonRead);
+  assert.ok(pairedPreflight > reportsPreflight);
+  assert.ok(mdPublish > pairedPreflight && jsonPublish > mdPublish);
+  assert.ok(postflight > jsonPublish);
   assert.match(source, /ROI_EDGE_MARKET_GAP_MD_PREEXISTING_IDENTITY_INVALID/);
   assert.match(source, /ROI_EDGE_MARKET_GAP_JSON_PREEXISTING_IDENTITY_INVALID/);
+  assert.match(source, /ROI_EDGE_MARKET_GAP_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(source, /ROI_EDGE_MARKET_GAP_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(source, /ROI_EDGE_MARKET_GAP_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source, /ROI_EDGE_MARKET_GAP_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
 });

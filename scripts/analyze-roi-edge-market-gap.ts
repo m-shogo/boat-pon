@@ -11,16 +11,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -52,7 +54,28 @@ function assertGeneratedOutputIdentity(path: string, missingCode: string, invali
   return assertCanonicalSingleLinkRegularFile(path, invalidCode);
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingOutputs(): void {
+  assertExistingOutputIdentity(
+    OUT_MD,
+    "ROI_EDGE_MARKET_GAP_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+  assertExistingOutputIdentity(
+    OUT_JSON,
+    "ROI_EDGE_MARKET_GAP_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+  );
+}
+
 function atomicPublish(path: string, contents: string, errorCode: string, destinationErrorCode: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_EDGE_MARKET_GAP_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -64,6 +87,10 @@ function atomicPublish(path: string, contents: string, errorCode: string, destin
 
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
     assertExistingOutputIdentity(path, destinationErrorCode);
+    assertCanonicalDirectory(
+      parentPath,
+      "ROI_EDGE_MARKET_GAP_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    );
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -116,7 +143,11 @@ try {
   const markdown = readFileSync(workspaceMd, "utf8");
   const json = readFileSync(workspaceJson, "utf8");
 
+  // Validate the canonical parent and the complete paired destination set
+  // before the first replacement so an invalid sibling fails closed.
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ROI_EDGE_MARKET_GAP_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutputs();
   atomicPublish(
     OUT_MD,
     markdown,
