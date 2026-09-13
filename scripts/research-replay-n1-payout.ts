@@ -2,15 +2,17 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   auditAllLocalKArchives,
   reconcileSanitizedKFixture,
@@ -26,7 +28,17 @@ const root = resolve(process.cwd());
 const command = process.argv[2] ?? "readiness";
 const writeReports = process.argv.includes("--write-reports");
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(path: string, content: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "N1_PAYOUT_REPORT_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   let fd: number | null = null;
   try {
@@ -45,6 +57,7 @@ function atomicPublish(path: string, content: string): void {
         "N1_PAYOUT_REPORT_DESTINATION_IDENTITY_INVALID",
       );
     }
+    assertCanonicalDirectory(parentPath, "N1_PAYOUT_REPORT_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } catch (error) {
     if (fd !== null) closeSync(fd);
