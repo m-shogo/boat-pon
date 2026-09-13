@@ -35,17 +35,21 @@ test("rule candidate append serializes competing writers before reading the appe
   const lockHelper = source.indexOf("function withOutputLock");
   const parentIdentity = source.indexOf("RULE_CANDIDATE_APPEND_PARENT_IDENTITY_INVALID", lockHelper);
   const lockCreate = source.indexOf('openSync(lockPath, "wx", 0o600)', parentIdentity);
-  const lockIdentity = source.indexOf("RULE_CANDIDATE_APPEND_LOCK_IDENTITY_INVALID", lockCreate);
+  const acquired = source.indexOf("lockAcquired = true", lockCreate);
+  const lockIdentity = source.indexOf("RULE_CANDIDATE_APPEND_LOCK_IDENTITY_INVALID", acquired);
   const lockedCall = source.indexOf("const appended = withOutputLock(args.output", 0);
   const currentRead = source.indexOf("const current = existsSync(args.output)", lockedCall);
+  const ownedCleanup = source.indexOf("if (lockAcquired) rmSync(lockPath, { force: true })", lockIdentity);
 
   assert.ok(lockHelper >= 0);
   assert.ok(parentIdentity > lockHelper);
   assert.ok(lockCreate > parentIdentity);
-  assert.ok(lockIdentity > lockCreate);
+  assert.ok(acquired > lockCreate);
+  assert.ok(lockIdentity > acquired);
+  assert.ok(ownedCleanup > lockIdentity);
   assert.ok(lockedCall >= 0 && currentRead > lockedCall);
   assert.match(source, /const lockPath = `\$\{path\}\.lock`/u);
-  assert.match(source, /rmSync\(lockPath, \{ force: true \}\)/u);
+  assert.match(source, /let lockAcquired = false/u);
   assert.match(source, /!stat\.isDirectory\(\) \|\| stat\.isSymbolicLink\(\)/u);
   assert.match(source, /realpathSync\(path\) !== resolvedPath/u);
 });
