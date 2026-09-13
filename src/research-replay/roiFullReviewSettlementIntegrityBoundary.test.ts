@@ -7,7 +7,7 @@ const gate = readFileSync("scripts/assert-roi-all-feature-settlement-integrity.t
 
 test("ROI full review verifies all-feature settlement integrity before search and verdict generation", () => {
   const integrityCommand = runner.indexOf('["pnpm", ["tsx", "scripts/assert-roi-all-feature-settlement-integrity.ts"]]');
-  const searchCommand = runner.indexOf('["pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"]]');
+  const searchCommand = runner.indexOf('["pnpm", ["tsx", "scripts/run-roi-all-features-lite-safe.ts"]]');
   const finalDecision = runner.indexOf("const finalDecision = decide(");
   assert.ok(integrityCommand >= 0);
   assert.ok(searchCommand > integrityCommand);
