@@ -12,16 +12,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -34,12 +36,34 @@ const EXCL_RACES = [10, 11, 12];
 const OUT_MD = "reports/h011-forward-monitor.md";
 const OUT_JSON = "reports/h011-forward-monitor.json";
 
+function assertCanonicalDirectory(path: string, errorCode: string): void {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      throw new Error(errorCode);
+    }
+    if (realpathSync(path) !== resolve(path)) {
+      throw new Error(errorCode);
+    }
+  } catch {
+    throw new Error(errorCode);
+  }
+}
+
+function verifyExistingOutput(path: string, errorCode: string): void {
+  if (existsSync(path)) {
+    assertCanonicalSingleLinkRegularFile(path, errorCode);
+  }
+}
+
 function atomicPublish(
   path: string,
   contents: string,
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "H011_FORWARD_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -49,9 +73,8 @@ function atomicPublish(
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
-    if (existsSync(path)) {
-      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
-    }
+    verifyExistingOutput(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "H011_FORWARD_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -168,7 +191,10 @@ try {
   const markdown = readFileSync(verifiedMarkdownPath, "utf8");
   const json = readFileSync(verifiedJsonPath, "utf8");
 
-  mkdirSync("reports", { recursive: true });
+  if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "H011_FORWARD_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "H011_FORWARD_PREEXISTING_MARKDOWN_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_JSON, "H011_FORWARD_PREEXISTING_JSON_IDENTITY_INVALID");
   atomicPublish(
     OUT_MD,
     markdown,
