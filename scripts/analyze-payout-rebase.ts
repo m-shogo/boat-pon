@@ -13,16 +13,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -54,19 +56,22 @@ function runGuarded(script: string): number {
   return status;
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  const realPath = realpathSync(path);
+  if (realPath !== resolvedPath) throw new Error(code);
+  return realPath;
+}
+
+function verifyExistingOutput(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
 function verifyExistingOutputs(): void {
-  if (existsSync(OUT_MD)) {
-    assertCanonicalSingleLinkRegularFile(
-      OUT_MD,
-      "PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID",
-    );
-  }
-  if (existsSync(OUT_JSON)) {
-    assertCanonicalSingleLinkRegularFile(
-      OUT_JSON,
-      "PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID",
-    );
-  }
+  verifyExistingOutput(OUT_MD, "PAYOUT_REBASE_PREEXISTING_REPORT_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_JSON, "PAYOUT_REBASE_PREEXISTING_JSON_IDENTITY_INVALID");
 }
 
 function runIsolated(workspace: string, verifiedDbPath: string): number {
@@ -145,6 +150,8 @@ function atomicPublish(
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "PAYOUT_REBASE_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -154,9 +161,8 @@ function atomicPublish(
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
-    if (existsSync(path)) {
-      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
-    }
+    verifyExistingOutput(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "PAYOUT_REBASE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -187,6 +193,8 @@ try {
   if (status === 0) {
     const outputs = readIsolatedOutputs(workspace, verifiedDbPath);
     mkdirSync("reports", { recursive: true });
+    assertCanonicalDirectory("reports", "PAYOUT_REBASE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+    verifyExistingOutputs();
     atomicPublish(
       OUT_JSON,
       outputs.json,
