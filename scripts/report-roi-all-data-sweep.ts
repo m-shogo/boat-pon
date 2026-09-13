@@ -3,7 +3,8 @@
  * DB・app_settings・本番判定は変更しない。
  */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REPORT_DIR = "reports";
@@ -72,12 +73,33 @@ const lines = [
   "現時点で、選手などのデータを追加しても本番BUYを黒字化できると検証済みの条件はない。最有力の次段階は、風向を会場ごとの向かい風/追い風へ正規化し、4号艇相対能力との組合せを事前固定してT-5 paper-forwardで検証すること。ただし本番判定・自動購入へは接続しない。",
 ];
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingOutput(path: string, destinationErrorCode: string): void {
+  if (!existsSync(path)) return;
+  assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
+}
+
+function preflightPublicationDestinations(): void {
+  assertCanonicalDirectory(REPORT_DIR, "ROI_ALL_DATA_SWEEP_PUBLISH_PARENT_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_MD, "ROI_ALL_DATA_SWEEP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
+  verifyExistingOutput(OUT_JSON, "ROI_ALL_DATA_SWEEP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
+}
+
 function atomicPublish(
   path: string,
   contents: string,
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_ALL_DATA_SWEEP_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -87,9 +109,8 @@ function atomicPublish(
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
-    if (existsSync(path)) {
-      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
-    }
+    verifyExistingOutput(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "ROI_ALL_DATA_SWEEP_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -98,6 +119,7 @@ function atomicPublish(
 }
 
 mkdirSync(REPORT_DIR, { recursive: true });
+preflightPublicationDestinations();
 atomicPublish(
   OUT_MD,
   `${lines.join("\n")}\n`,
