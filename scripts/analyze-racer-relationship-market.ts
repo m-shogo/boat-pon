@@ -3,7 +3,8 @@
  * 師弟・私的関係は推測せず、過去日までの同走・直接対戦と登録番号近接proxyだけを使う。
  */
 import { randomUUID } from "node:crypto";
-import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { UnconventionalProgram } from "../src/domain/unconventionalRaceFeatures";
 import {
@@ -156,12 +157,17 @@ try {
       ...result.relationships.map(row => `| ${row.flag} | ${cell(row.inside.discovery)} | ${cell(row.inside.forward)} | ${deltaCell(row)} |`), "",
     ]),
     "## 解釈規則", "", `- 公式出典付き師弟registryは${officialRegistry.relationships.length}組だけの非網羅的な台帳。記事公開日以後だけをpoint-in-time利用する。`, "- 同支部は現在DBにないため推測しない。『事務所』に相当する公式構造も確認できていない。", "- 過去同走や直接対戦は『慣れ』のproxyであり、協調・忖度・不正の証拠ではない。", "- 個人名を異常ランキングに出さず、集団レベルの市場残差だけを扱う。", "- 企画番組・支部・師弟を追加しても、独立期間と価格時点同等性を通るまでproductionへ接続しない。"];
-  atomicPublish(JSON_REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "RACER_RELATIONSHIP_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(MARKDOWN_REPORT_PATH, `${lines.join("\n")}\n`, "RACER_RELATIONSHIP_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");
+  assertCanonicalDirectory("reports", "RACER_RELATIONSHIP_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingOutput(JSON_REPORT_PATH, "RACER_RELATIONSHIP_PREEXISTING_JSON_IDENTITY_INVALID");
+  verifyExistingOutput(MARKDOWN_REPORT_PATH, "RACER_RELATIONSHIP_PREEXISTING_MARKDOWN_IDENTITY_INVALID");
+  atomicPublish(JSON_REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "RACER_RELATIONSHIP_JSON_PUBLISH_TEMP_IDENTITY_INVALID", "RACER_RELATIONSHIP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
+  atomicPublish(MARKDOWN_REPORT_PATH, `${lines.join("\n")}\n`, "RACER_RELATIONSHIP_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID", "RACER_RELATIONSHIP_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID");
   console.log(`relationship market screen: exacta=${evaluations.length}`);
 } finally { db.close(); }
 
-function atomicPublish(path: string, contents: string, errorCode: string): void { const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`; let fd:number|null=null; try { fd=openSync(tempPath,"wx",0o600); writeFileSync(fd,contents,"utf8"); fsyncSync(fd); closeSync(fd); fd=null; const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,errorCode); renameSync(verifiedTempPath,path); } finally { if(fd!==null)closeSync(fd); rmSync(tempPath,{force:true}); } }
+function assertCanonicalDirectory(path: string, errorCode: string): string { const stat=lstatSync(path); if(!stat.isDirectory()||stat.isSymbolicLink())throw new Error(errorCode); const resolvedPath=resolve(path); if(realpathSync(path)!==resolvedPath)throw new Error(errorCode); return resolvedPath; }
+function verifyExistingOutput(path: string, identityErrorCode: string): void { if(!existsSync(path))return; assertCanonicalSingleLinkRegularFile(path,identityErrorCode); }
+function atomicPublish(path: string, contents: string, tempIdentityErrorCode: string, destinationIdentityErrorCode: string): void { const parentPath=dirname(path); assertCanonicalDirectory(parentPath,"RACER_RELATIONSHIP_PUBLISH_PARENT_IDENTITY_INVALID"); const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`; let fd:number|null=null; try { fd=openSync(tempPath,"wx",0o600); writeFileSync(fd,contents,"utf8"); fsyncSync(fd); closeSync(fd); fd=null; const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,tempIdentityErrorCode); verifyExistingOutput(path,destinationIdentityErrorCode); assertCanonicalDirectory(parentPath,"RACER_RELATIONSHIP_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID"); renameSync(verifiedTempPath,path); } finally { if(fd!==null)closeSync(fd); rmSync(tempPath,{force:true}); } }
 function assertSettlementCoverage(rows: CoverageRow[]): void { const byPeriod=Object.fromEntries(["discovery","forward"].map(period=>{const row=rows.find(candidate=>candidate.period===period);const total=Number(row?.total??0),settled=Number(row?.settled??0);return[period,{total,settled,missing:total-settled}];})); const invalid=["discovery","forward"].some(period=>{const {total,settled,missing}=byPeriod[period];return !Number.isInteger(total)||!Number.isInteger(settled)||total<=0||settled!==total||missing!==0;}); if(invalid)throw new Error(`RACER_RELATIONSHIP_EXACTA_SETTLEMENT_INTEGRITY_INVALID ${JSON.stringify(byPeriod)}`); }
 function assertPayoutCompleteness(rows: ExactaRow[]): void { const counts={discovery:{total:0,settled:0},forward:{total:0,settled:0}}; for(const row of rows){const period=row.date<="2024-12-31"?"discovery":"forward";counts[period].total+=1;if(row.winner!=null&&row.payout_yen!=null&&row.payout_yen>0)counts[period].settled+=1;} const invalid=counts.discovery.total<=0||counts.forward.total<=0||counts.discovery.settled!==counts.discovery.total||counts.forward.settled!==counts.forward.total; if(invalid)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(counts)}`); }
 function requiredPayout(row: EvalRow): number { if(row.payout_yen==null||row.payout_yen<=0)throw new Error(`RACER_RELATIONSHIP_EXACTA_PAYOUT_MISSING race=${row.race_id}`); return row.payout_yen; }
