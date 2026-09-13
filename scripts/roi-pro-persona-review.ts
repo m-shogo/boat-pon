@@ -15,6 +15,7 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 
 const ALL_FEATURE_JSON = "reports/roi-all-feature-search.json";
 const ALL_FEATURE_SOURCE = "scripts/search-roi-all-features-lite.ts";
+const ALL_FEATURE_SAFE_RUNNER = "scripts/run-roi-all-features-lite-safe.ts";
 const SETTLEMENT_GATE = "scripts/assert-roi-all-feature-settlement-integrity.ts";
 const OUT_MD = "reports/roi-pro-persona-review.md";
 const OUT_JSON = "reports/roi-pro-persona-review.json";
@@ -98,8 +99,8 @@ assertRealizedPayoutMetricBasis();
 assertAllFeatureSettlementIntegrity();
 
 if (!existsSync(ALL_FEATURE_JSON)) {
-  console.log("[roi-pro-persona-review] all-feature report not found. generating...");
-  execFileSync("pnpm", ["tsx", "scripts/search-roi-all-features-lite.ts"], { stdio: "inherit" });
+  console.log("[roi-pro-persona-review] all-feature report not found. generating through safe runner...");
+  execFileSync("pnpm", ["tsx", ALL_FEATURE_SAFE_RUNNER], { stdio: "inherit" });
 }
 
 const allFeature = readVerified<AllFeatureReport>(
