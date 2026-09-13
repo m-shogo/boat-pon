@@ -41,16 +41,44 @@ test("ROI skip-policy normal entrypoint verifies isolated outputs and publishes 
   const spawn = entrypointSource.indexOf("const analysis = spawnSync");
   const mdIdentity = entrypointSource.indexOf("ROI_SKIP_POLICY_MARKDOWN_OUTPUT_IDENTITY_INVALID");
   const jsonIdentity = entrypointSource.indexOf("ROI_SKIP_POLICY_JSON_OUTPUT_IDENTITY_INVALID");
+  const parentPreflight = entrypointSource.indexOf(
+    'assertCanonicalDirectory("reports", "ROI_SKIP_POLICY_PUBLISH_PARENT_IDENTITY_INVALID")',
+  );
+  const mdPreflight = entrypointSource.indexOf("ROI_SKIP_POLICY_MARKDOWN_PREEXISTING_DESTINATION_IDENTITY_INVALID");
+  const jsonPreflight = entrypointSource.indexOf("ROI_SKIP_POLICY_JSON_PREEXISTING_DESTINATION_IDENTITY_INVALID");
   const mdPublish = entrypointSource.indexOf("ROI_SKIP_POLICY_MARKDOWN_PUBLISH_TEMP_IDENTITY_INVALID");
   const jsonPublish = entrypointSource.indexOf("ROI_SKIP_POLICY_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
   assert.ok(spawn >= 0);
   assert.ok(mdIdentity > spawn);
   assert.ok(jsonIdentity > mdIdentity);
-  assert.ok(mdPublish > jsonIdentity);
+  assert.ok(parentPreflight > jsonIdentity);
+  assert.ok(mdPreflight > parentPreflight);
+  assert.ok(jsonPreflight > mdPreflight);
+  assert.ok(mdPublish > jsonPreflight);
   assert.ok(jsonPublish > mdPublish);
-  assert.match(entrypointSource, /openSync\(tempPath, "wx", 0o600\)/);
-  assert.match(entrypointSource, /fsyncSync\(fd\)/);
-  assert.match(entrypointSource, /renameSync\(verifiedTempPath, path\)/);
+
+  const parentIdentity = entrypointSource.indexOf(
+    'assertCanonicalDirectory(parentPath, "ROI_SKIP_POLICY_PUBLISH_PARENT_IDENTITY_INVALID")',
+  );
+  const create = entrypointSource.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = entrypointSource.indexOf("fsyncSync(fd)", create);
+  const tempIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
+  const destinationIdentity = entrypointSource.indexOf("assertExistingOutputIdentity(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entrypointSource.indexOf(
+    'assertCanonicalDirectory(parentPath, "ROI_SKIP_POLICY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID")',
+    destinationIdentity,
+  );
+  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+  assert.ok(
+    parentIdentity >= 0 &&
+      create > parentIdentity &&
+      fsync > create &&
+      tempIdentity > fsync &&
+      destinationIdentity > tempIdentity &&
+      parentHandoff > destinationIdentity &&
+      rename > parentHandoff,
+  );
+  assert.match(entrypointSource, /ROI_SKIP_POLICY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/);
   assert.match(entrypointSource, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
 });
 
