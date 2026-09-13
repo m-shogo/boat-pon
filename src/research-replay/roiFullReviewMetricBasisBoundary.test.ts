@@ -42,3 +42,16 @@ test("persona review cannot emit PAPER verdicts from quote-based or stale all-fe
   assert.ok(reportGate > sourceGate);
   assert.ok(verdict > reportGate);
 });
+
+test("persona review generates a missing all-feature report only through the isolated safe runner", () => {
+  assert.match(personaSource, /const ALL_FEATURE_SAFE_RUNNER = "scripts\/run-roi-all-features-lite-safe\.ts"/u);
+  assert.match(personaSource, /execFileSync\("pnpm", \["tsx", ALL_FEATURE_SAFE_RUNNER\], \{ stdio: "inherit" \}\)/u);
+  assert.doesNotMatch(personaSource, /execFileSync\("pnpm", \["tsx", "scripts\/search-roi-all-features-lite\.ts"\]/u);
+
+  const settlementGate = personaSource.indexOf("assertAllFeatureSettlementIntegrity();");
+  const safeGeneration = personaSource.indexOf('["tsx", ALL_FEATURE_SAFE_RUNNER]');
+  const reportRead = personaSource.indexOf("const allFeature = readVerified<AllFeatureReport>(");
+  assert.ok(settlementGate >= 0);
+  assert.ok(safeGeneration > settlementGate, "safe report generation must follow settlement integrity preflight");
+  assert.ok(reportRead > safeGeneration, "persona review must read the report only after safe generation can complete");
+});
