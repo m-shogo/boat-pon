@@ -13,16 +13,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -32,7 +34,17 @@ const EXCL_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
 const OUT_MD = "reports/root-methodology-audit.md";
 const OUT_JSON = "reports/root-methodology-audit.json";
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(path: string, contents: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROOT_METHODOLOGY_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -45,6 +57,7 @@ function atomicPublish(path: string, contents: string, tempErrorCode: string, de
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
     }
+    assertCanonicalDirectory(parentPath, "ROOT_METHODOLOGY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -139,6 +152,19 @@ try {
   const markdown = readFileSync(verifiedMarkdownPath, "utf8");
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ROOT_METHODOLOGY_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  if (existsSync(OUT_JSON)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_JSON,
+      "ROOT_METHODOLOGY_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+  }
+  if (existsSync(OUT_MD)) {
+    assertCanonicalSingleLinkRegularFile(
+      OUT_MD,
+      "ROOT_METHODOLOGY_MARKDOWN_PREPUBLISH_DESTINATION_IDENTITY_INVALID",
+    );
+  }
   atomicPublish(
     OUT_JSON,
     json,

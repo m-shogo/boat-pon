@@ -31,32 +31,47 @@ test("root methodology guarded entrypoint reverifies DB identity after cohort pr
   assert.doesNotMatch(source, /await import\("\.\/audit-root-methodology-internal"\)/u);
 });
 
-test("root methodology publishes only verified isolated outputs atomically", () => {
+test("root methodology validates the complete destination set before paired publication", () => {
   const source = readFileSync("scripts/audit-root-methodology.ts", "utf8");
-  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx", 0o600)');
-  const fsync = source.indexOf("fsyncSync(fd)");
-  const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
-  const destinationExistence = source.indexOf("if (existsSync(path))");
-  const destinationIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)");
-  const rename = source.indexOf("renameSync(verifiedTempPath, path)");
+  const markdownRead = source.indexOf('readFileSync(verifiedMarkdownPath, "utf8")');
+  const publishMkdir = source.indexOf('mkdirSync("reports", { recursive: true })', markdownRead);
+  const reportsIdentity = source.indexOf("ROOT_METHODOLOGY_REPORTS_DIRECTORY_IDENTITY_INVALID", publishMkdir);
+  const jsonPrepublish = source.indexOf("ROOT_METHODOLOGY_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID", reportsIdentity);
+  const markdownPrepublish = source.indexOf("ROOT_METHODOLOGY_MARKDOWN_PREPUBLISH_DESTINATION_IDENTITY_INVALID", jsonPrepublish);
+  const firstPublish = source.indexOf("atomicPublish(", markdownPrepublish);
 
   assert.match(source, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-root-methodology-"\)\)/u);
   assert.match(source, /ROOT_METHODOLOGY_JSON_OUTPUT_IDENTITY_INVALID/u);
   assert.match(source, /ROOT_METHODOLOGY_MARKDOWN_OUTPUT_IDENTITY_INVALID/u);
-  assert.ok(
-    exclusiveOpen >= 0
-      && fsync > exclusiveOpen
-      && tempIdentity > fsync
-      && destinationExistence > tempIdentity
-      && destinationIdentity > destinationExistence
-      && rename > destinationIdentity,
-  );
-  assert.match(source, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/u);
-  assert.match(source, /ROOT_METHODOLOGY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
-  assert.match(source, /ROOT_METHODOLOGY_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
-  assert.match(source, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
+  assert.ok(publishMkdir > markdownRead);
+  assert.ok(reportsIdentity > publishMkdir);
+  assert.ok(jsonPrepublish > reportsIdentity && markdownPrepublish > jsonPrepublish);
+  assert.ok(firstPublish > markdownPrepublish, "both canonical destinations must be preflighted before the first replacement");
   assert.match(source, /atomicPublish\(\s*OUT_JSON,\s*json,/u);
   assert.match(source, /atomicPublish\(\s*OUT_MD,\s*markdown,/u);
   assert.match(source, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_(?:JSON|MD)/u);
+});
+
+test("root methodology atomic publication reverifies parent and destination identities at handoff", () => {
+  const source = readFileSync("scripts/audit-root-methodology.ts", "utf8");
+  const atomic = source.indexOf("function atomicPublish");
+  const parentIdentity = source.indexOf("ROOT_METHODOLOGY_PUBLISH_PARENT_IDENTITY_INVALID", atomic);
+  const exclusiveOpen = source.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = source.indexOf("fsyncSync(fd)", exclusiveOpen);
+  const tempIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationExistence = source.indexOf("if (existsSync(path))", tempIdentity);
+  const destinationIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", destinationExistence);
+  const parentHandoff = source.indexOf("ROOT_METHODOLOGY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = source.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
+
+  assert.ok(parentIdentity > atomic);
+  assert.ok(exclusiveOpen > parentIdentity && fsync > exclusiveOpen);
+  assert.ok(tempIdentity > fsync);
+  assert.ok(destinationExistence > tempIdentity && destinationIdentity > destinationExistence);
+  assert.ok(parentHandoff > destinationIdentity);
+  assert.ok(rename > parentHandoff, "atomic rename must occur only after parent and destination identity revalidation");
+  assert.match(source, /ROOT_METHODOLOGY_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(source, /ROOT_METHODOLOGY_MARKDOWN_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(source, /writeFileSync\(fd, contents, "utf8"\);\s*fsyncSync\(fd\);/u);
 });
