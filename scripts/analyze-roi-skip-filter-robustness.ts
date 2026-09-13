@@ -9,16 +9,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -39,7 +41,21 @@ function run(script: string): number {
   return result.status ?? 1;
 }
 
-function atomicPublish(path: string, content: string, errorCode: string): void {
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function verifyExistingDestination(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
+function atomicPublish(path: string, content: string, tempErrorCode: string, destinationErrorCode: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_SKIP_FILTER_ROBUSTNESS_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -48,7 +64,9 @@ function atomicPublish(path: string, content: string, errorCode: string): void {
     fsyncSync(fd);
     closeSync(fd);
     fd = null;
-    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, errorCode);
+    const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
+    verifyExistingDestination(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "ROI_SKIP_FILTER_ROBUSTNESS_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -118,15 +136,20 @@ try {
     .join("verified read-only research DB");
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "ROI_SKIP_FILTER_ROBUSTNESS_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingDestination(OUT_MD, "ROI_SKIP_FILTER_ROBUSTNESS_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  verifyExistingDestination(OUT_JSON, "ROI_SKIP_FILTER_ROBUSTNESS_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
   atomicPublish(
     OUT_MD,
     markdown,
     "ROI_SKIP_FILTER_ROBUSTNESS_MD_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_SKIP_FILTER_ROBUSTNESS_MD_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
   atomicPublish(
     OUT_JSON,
     json,
     "ROI_SKIP_FILTER_ROBUSTNESS_JSON_PUBLISH_TEMP_IDENTITY_INVALID",
+    "ROI_SKIP_FILTER_ROBUSTNESS_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID",
   );
 } finally {
   rmSync(workspace, { recursive: true, force: true });
