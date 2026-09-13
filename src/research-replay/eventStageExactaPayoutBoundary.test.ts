@@ -37,22 +37,34 @@ test("event-stage market screen verifies stored event HTML identity before parsi
   assert.doesNotMatch(source,/load\(readFileSync\(path/);
 });
 
-test("event-stage market screen validates existing reports before atomic replacement", () => {
-  const jsonPreflight=source.indexOf("verifyExistingOutput(OUT_JSON");
-  const mdPreflight=source.indexOf("verifyExistingOutput(OUT_MD");
-  const jsonPublish=source.indexOf("atomicPublish(OUT_JSON");
-  const mdPublish=source.indexOf("atomicPublish(OUT_MD");
-  assert.ok(jsonPreflight>=0&&mdPreflight>jsonPreflight&&jsonPublish>mdPreflight&&mdPublish>jsonPublish);
-  assert.match(source,/EVENT_STAGE_MARKET_PREEXISTING_JSON_IDENTITY_INVALID/);
-  assert.match(source,/EVENT_STAGE_MARKET_PREEXISTING_MD_IDENTITY_INVALID/);
+test("event-stage market screen preflights both report destinations before first replacement", () => {
+  const publicationStart=source.indexOf('mkdirSync("reports",{recursive:true});');
+  assert.notEqual(publicationStart,-1);
+  const publication=source.slice(publicationStart);
+  const reportsIdentity=publication.indexOf("EVENT_STAGE_MARKET_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const jsonPreflight=publication.indexOf('verifyExistingOutput(OUT_JSON,"EVENT_STAGE_MARKET_PREEXISTING_JSON_IDENTITY_INVALID")');
+  const mdPreflight=publication.indexOf('verifyExistingOutput(OUT_MD,"EVENT_STAGE_MARKET_PREEXISTING_MD_IDENTITY_INVALID")');
+  const jsonPublish=publication.indexOf("atomicPublish(OUT_JSON");
+  const mdPublish=publication.indexOf("atomicPublish(OUT_MD");
+  assert.ok(reportsIdentity>=0&&jsonPreflight>reportsIdentity&&mdPreflight>jsonPreflight&&jsonPublish>mdPreflight&&mdPublish>jsonPublish);
 });
 
-test("event-stage market screen publication is exclusive fsynced identity-checked and atomic", () => {
-  const create=source.indexOf('openSync(tempPath,"wx",0o600)');
-  const fsync=source.indexOf("fsyncSync(fd)",create);
-  const identity=source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath,identityErrorCode)",fsync);
-  const rename=source.indexOf("renameSync(verifiedTempPath,path)",identity);
-  assert.ok(create>=0&&fsync>create&&identity>fsync&&rename>identity);
+test("event-stage market screen publication verifies destination and parent handoff before atomic rename", () => {
+  const helperStart=source.indexOf("function atomicPublish(");
+  const byPeriodStart=source.indexOf("function byPeriod",helperStart);
+  assert.notEqual(helperStart,-1);
+  assert.notEqual(byPeriodStart,-1);
+  const helper=source.slice(helperStart,byPeriodStart);
+  const parentIdentity=helper.indexOf("EVENT_STAGE_MARKET_PUBLISH_PARENT_IDENTITY_INVALID");
+  const create=helper.indexOf('openSync(tempPath,"wx",0o600)');
+  const fsync=helper.indexOf("fsyncSync(fd)",create);
+  const tempIdentity=helper.indexOf("assertCanonicalSingleLinkRegularFile(tempPath,tempIdentityErrorCode)",fsync);
+  const destinationIdentity=helper.indexOf("verifyExistingOutput(path,destinationIdentityErrorCode)",tempIdentity);
+  const parentHandoff=helper.indexOf("EVENT_STAGE_MARKET_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",destinationIdentity);
+  const rename=helper.indexOf("renameSync(verifiedTempPath,path)",parentHandoff);
+  assert.ok(parentIdentity>=0&&create>parentIdentity&&fsync>create&&tempIdentity>fsync&&destinationIdentity>tempIdentity&&parentHandoff>destinationIdentity&&rename>parentHandoff);
   assert.match(source,/EVENT_STAGE_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source,/EVENT_STAGE_MARKET_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source,/EVENT_STAGE_MARKET_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(source,/EVENT_STAGE_MARKET_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });

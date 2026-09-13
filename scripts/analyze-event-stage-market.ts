@@ -1,6 +1,7 @@
 /** 開催何日目・準優日・最終日・レース種別とexacta買い目の市場残差を横断するread-only screen。 */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { load } from "cheerio";
 import { eventDayIndex, parseEventStartDate } from "../src/domain/eventStage";
@@ -43,10 +44,11 @@ try{
   const report={generatedAt:new Date().toISOString(),safety:{readOnly:true,preRaceStage:true,productionConnected:false},coverage:{races:flagsByRace.size,eventStage:stageCoverage},family:{stages:stages.length,selections:selections.length,cells:cells.length,eligible:eligible.length},stable,robust,caveats:["開催初日は保存HTMLのリンクから復元","準優日・最終日は同日の公式race_typeから識別","50セル探索後の順位でfamily-wise補正前","historical closing oddsでT-5と非同等"]};
   const lines=["# 開催ステージ×exacta市場残差screen","",`開催日coverage: ${stageCoverage}/${flagsByRace.size} / 探索族: ${stages.length}ステージ×${selections.length}買い目=${cells.length}セル（両期n≥30: ${eligible.length}）`,"","## 両期で市場残差プラス","","| 順位 | ステージ | 買い目 | 2024 n / edge / ROI / max2 | 2025 n / edge / ROI / max2 |","|---:|---|---:|---:|---:|",...stable.map((c,i)=>`| ${i+1} | ${c.label} | ${c.selection} | ${cell(c.inside.discovery)} | ${cell(c.inside.forward)} |`),"","## 最大2的中除外まで両期100%以上","",robust.length?robust.map(c=>`- ${c.label} × ${c.selection}`).join("\n"):"該当なし。","","> 開催後半や優勝戦の物語ではなく、市場確率を超える残差が独立期間で残るかだけを見る。順位は仮説生成用。"];
   mkdirSync("reports",{recursive:true});
+  assertCanonicalDirectory("reports","EVENT_STAGE_MARKET_REPORTS_DIRECTORY_IDENTITY_INVALID");
   verifyExistingOutput(OUT_JSON,"EVENT_STAGE_MARKET_PREEXISTING_JSON_IDENTITY_INVALID");
   verifyExistingOutput(OUT_MD,"EVENT_STAGE_MARKET_PREEXISTING_MD_IDENTITY_INVALID");
-  atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"EVENT_STAGE_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID");
-  atomicPublish(OUT_MD,`${lines.join("\n")}\n`,"EVENT_STAGE_MARKET_MD_PUBLISH_TEMP_IDENTITY_INVALID");
+  atomicPublish(OUT_JSON,`${JSON.stringify(report,null,2)}\n`,"EVENT_STAGE_MARKET_JSON_PUBLISH_TEMP_IDENTITY_INVALID","EVENT_STAGE_MARKET_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID");
+  atomicPublish(OUT_MD,`${lines.join("\n")}\n`,"EVENT_STAGE_MARKET_MD_PUBLISH_TEMP_IDENTITY_INVALID","EVENT_STAGE_MARKET_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
   console.log(`event stage market: races=${flagsByRace.size} stage=${stageCoverage} eligible=${eligible.length} stable=${stable.length} robust=${robust.length}`);
 }finally{db.close();}
 
@@ -77,8 +79,9 @@ function assertSettlementCompleteness(){
   if(invalid)throw new Error(`EVENT_STAGE_MARKET_PAYOUT_COVERAGE_INCOMPLETE ${JSON.stringify(byPeriod)}`);
 }
 function readStartDate(raceId:string,date:string){const path=`data/raw/kyotei24/odds/${date}/${raceId}-odds3t.html`;if(!existsSync(path))return null;const verifiedPath=assertCanonicalSingleLinkRegularFile(path,"EVENT_STAGE_MARKET_EVENT_HTML_IDENTITY_INVALID");const $=load(readFileSync(verifiedPath,"utf8"));return parseEventStartDate($(".rname a").first().attr("href")??"");}
+function assertCanonicalDirectory(path:string,errorCode:string):string{const stat=lstatSync(path);if(!stat.isDirectory()||stat.isSymbolicLink())throw new Error(errorCode);const resolvedPath=resolve(path);if(realpathSync(path)!==resolvedPath)throw new Error(errorCode);return resolvedPath;}
 function verifyExistingOutput(path:string,identityErrorCode:string){if(!existsSync(path))return;assertCanonicalSingleLinkRegularFile(path,identityErrorCode);}
-function atomicPublish(path:string,content:string,identityErrorCode:string){const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;let fd:number|null=null;try{fd=openSync(tempPath,"wx",0o600);writeFileSync(fd,content,"utf8");fsyncSync(fd);closeSync(fd);fd=null;const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,identityErrorCode);renameSync(verifiedTempPath,path);}finally{if(fd!==null)closeSync(fd);rmSync(tempPath,{force:true});}}
+function atomicPublish(path:string,content:string,tempIdentityErrorCode:string,destinationIdentityErrorCode:string){const parentPath=dirname(path);assertCanonicalDirectory(parentPath,"EVENT_STAGE_MARKET_PUBLISH_PARENT_IDENTITY_INVALID");const tempPath=`${path}.tmp-${process.pid}-${randomUUID()}`;let fd:number|null=null;try{fd=openSync(tempPath,"wx",0o600);writeFileSync(fd,content,"utf8");fsyncSync(fd);closeSync(fd);fd=null;const verifiedTempPath=assertCanonicalSingleLinkRegularFile(tempPath,tempIdentityErrorCode);verifyExistingOutput(path,destinationIdentityErrorCode);assertCanonicalDirectory(parentPath,"EVENT_STAGE_MARKET_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");renameSync(verifiedTempPath,path);}finally{if(fd!==null)closeSync(fd);rmSync(tempPath,{force:true});}}
 function byPeriod(rows:EvalRow[]){return{discovery:metric(rows.filter(r=>r.period==="discovery")),forward:metric(rows.filter(r=>r.period==="forward"))};}
 function metric(rows:EvalRow[]):Metric{const payouts=rows.filter(r=>r.hit).map(requiredPayout).sort((a,b)=>b-a),total=payouts.reduce((a,b)=>a+b,0),expected=rows.reduce((s,r)=>s+r.implied,0);return{n:rows.length,hits:payouts.length,edgePp:rows.length?(payouts.length-expected)/rows.length*100:0,roi:rows.length?total/(rows.length*100):0,max2HitExclRoi:rows.length>2?(total-(payouts[0]??0)-(payouts[1]??0))/((rows.length-2)*100):0};}
 function requiredPayout(row:EvalRow){if(row.payout_yen===null||row.payout_yen<=0)throw new Error(`EVENT_STAGE_MARKET_HIT_PAYOUT_MISSING race=${row.race_id} selection=${row.combination}`);return row.payout_yen;}
