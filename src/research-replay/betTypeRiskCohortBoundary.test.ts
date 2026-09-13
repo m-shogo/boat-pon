@@ -28,7 +28,7 @@ test("bet type risk analysis sanitizes staged DB provenance before canonical pub
   assert.match(entrypoint, /OPAQUE_DB_SOURCE = "primary research database"/);
   assert.match(entrypoint, /BET_TYPE_RISK_MD_OUTPUT_MISSING/);
   assert.match(entrypoint, /BET_TYPE_RISK_JSON_OUTPUT_MISSING/);
-  assert.match(entrypoint, /BET_TYPE_RISK_MD_DB_PROVENANCE_NOT_FOUND/);
+  assert.match(entrypoint, /BET_TYPE_RISK_\$\{code\}_DB_PROVENANCE_NOT_FOUND/);
   assert.match(entrypoint, /const redacted = content\.split\(dbPath\)\.join\(OPAQUE_DB_SOURCE\)/);
   assert.match(entrypoint, /BET_TYPE_RISK_\$\{code\}_PRIVATE_DB_PATH_REMAINS/);
   const analysis = entrypoint.indexOf("const analysis = spawnSync");
