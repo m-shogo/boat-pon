@@ -46,6 +46,16 @@ function assertCanonicalDirectory(path: string, code: string): string {
   return resolvedPath;
 }
 
+function verifyExistingDestinations(): void {
+  for (const output of OUTPUTS) {
+    if (!existsSync(output.destination)) continue;
+    assertCanonicalSingleLinkRegularFile(
+      output.destination,
+      `ALL_BET_TYPE_SCREENING_${output.code}_PREPUBLISH_DESTINATION_IDENTITY_INVALID`,
+    );
+  }
+}
+
 function atomicPublish(path: string, content: string, code: string): void {
   const parentPath = dirname(path);
   assertCanonicalDirectory(
@@ -123,8 +133,11 @@ try {
     return { output, content };
   });
 
+  // Preflight the entire destination set before the first replacement. If a
+  // sibling destination is non-canonical, neither paired report may change.
   mkdirSync("reports", { recursive: true });
   assertCanonicalDirectory("reports", "ALL_BET_TYPE_SCREENING_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingDestinations();
   for (const { output, content } of preparedOutputs) {
     atomicPublish(output.destination, content, output.code);
   }
