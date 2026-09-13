@@ -4,16 +4,18 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -123,7 +125,17 @@ function assertPayoutCompleteness(): void {
   }
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(path: string, content: string, code: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, `PROMISING_BET_${code}_PUBLISH_PARENT_IDENTITY_INVALID`);
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -143,6 +155,7 @@ function atomicPublish(path: string, content: string, code: string): void {
         `PROMISING_BET_${code}_PUBLISH_DESTINATION_IDENTITY_INVALID`,
       );
     }
+    assertCanonicalDirectory(parentPath, `PROMISING_BET_${code}_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID`);
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -161,24 +174,45 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(
 const workspace = mkdtempSync(join(tmpdir(), "boat-pon-promising-bet-"));
 try {
   mkdirSync(join(workspace, "reports"), { recursive: true });
+  const childDbPath = assertCanonicalSingleLinkRegularFile(
+    verifiedDbPath,
+    "PROMISING_BET_DB_CHILD_HANDOFF_IDENTITY_INVALID",
+  );
   const result = spawnSync(process.execPath, ["--import", tsxLoader, internalPath], {
     stdio: "inherit",
     cwd: workspace,
-    env: { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath },
+    env: { ...process.env, BOAT_PON_DB_PATH: childDbPath },
   });
   if (result.error) throw result.error;
   if (result.status !== 0) {
     throw new Error(`PROMISING_BET_INTERNAL_ANALYZER_FAILED status=${result.status ?? "unknown"}`);
   }
 
-  mkdirSync("reports", { recursive: true });
-  for (const output of OUTPUTS) {
+  const stagedOutputs = OUTPUTS.map((output) => {
     const stagedPath = join(workspace, output.staged);
     const verifiedStagedPath = assertCanonicalSingleLinkRegularFile(
       stagedPath,
       `PROMISING_BET_${output.code}_STAGED_OUTPUT_IDENTITY_INVALID`,
     );
-    atomicPublish(output.destination, readFileSync(verifiedStagedPath, "utf8"), output.code);
+    return { output, verifiedStagedPath };
+  });
+  const preparedOutputs = stagedOutputs.map(({ output, verifiedStagedPath }) => {
+    const readPath = assertCanonicalSingleLinkRegularFile(
+      verifiedStagedPath,
+      `PROMISING_BET_${output.code}_STAGED_READ_IDENTITY_INVALID`,
+    );
+    const content = readFileSync(readPath, "utf8");
+    assertCanonicalSingleLinkRegularFile(
+      readPath,
+      `PROMISING_BET_${output.code}_STAGED_HANDOFF_IDENTITY_INVALID`,
+    );
+    return { output, content };
+  });
+
+  mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "PROMISING_BET_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  for (const { output, content } of preparedOutputs) {
+    atomicPublish(output.destination, content, output.code);
   }
 } finally {
   rmSync(workspace, { recursive: true, force: true });
