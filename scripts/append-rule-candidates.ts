@@ -3,12 +3,15 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import {
   parseRuleCandidateAppendOptions,
@@ -60,25 +63,33 @@ const today = new Intl.DateTimeFormat("sv-SE", {
 const appendId = buildAppendId(report, args);
 const marker = `<!-- boat-pon-rule-candidate:${appendId} -->`;
 const block = buildCandidateBlock(today, report, args, marker);
-const current = existsSync(args.output)
-  ? readFileSync(
-      assertCanonicalSingleLinkRegularFile(
-        args.output,
-        "rule-candidate append output",
-      ),
-      "utf-8",
-    )
-  : "";
+const appended = withOutputLock(args.output, () => {
+  const current = existsSync(args.output)
+    ? readFileSync(
+        assertCanonicalSingleLinkRegularFile(
+          args.output,
+          "rule-candidate append output",
+        ),
+        "utf-8",
+      )
+    : null;
 
-if (current.includes(marker)) {
+  if (current?.includes(marker)) return false;
+
+  verifyExistingOutput(args.output);
+  return atomicPublish(
+    args.output,
+    `${(current ?? "").trimEnd()}\n${block}\n`,
+    current,
+    marker,
+  );
+});
+
+if (appended) {
+  console.log(`Appended ${report.ruleSuggestions.length} rule suggestions to ${args.output}`);
+} else {
   console.log("Rule suggestions already appended; no change.");
-  process.exit(0);
 }
-
-verifyExistingOutput(args.output);
-atomicPublish(args.output, `${current.trimEnd()}\n${block}\n`);
-
-console.log(`Appended ${report.ruleSuggestions.length} rule suggestions to ${args.output}`);
 
 function buildAppendId(report: QualityReport, args: RuleCandidateAppendOptions): string {
   return createHash("sha256")
@@ -128,12 +139,47 @@ function buildCandidateBlock(
   ].join("\n");
 }
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
+function withOutputLock<T>(path: string, operation: () => T): T {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "RULE_CANDIDATE_APPEND_PARENT_IDENTITY_INVALID");
+  const lockPath = `${path}.lock`;
+  let lockFd: number | null = null;
+  try {
+    lockFd = openSync(lockPath, "wx", 0o600);
+    closeSync(lockFd);
+    lockFd = null;
+    assertCanonicalSingleLinkRegularFile(
+      lockPath,
+      "RULE_CANDIDATE_APPEND_LOCK_IDENTITY_INVALID",
+    );
+    return operation();
+  } finally {
+    if (lockFd !== null) closeSync(lockFd);
+    rmSync(lockPath, { force: true });
+  }
+}
+
 function verifyExistingOutput(path: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, "rule-candidate append output");
 }
 
-function atomicPublish(path: string, content: string): void {
+function atomicPublish(
+  path: string,
+  content: string,
+  expectedCurrent: string | null,
+  marker: string,
+): boolean {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "RULE_CANDIDATE_APPEND_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -146,8 +192,35 @@ function atomicPublish(path: string, content: string): void {
       tempPath,
       "rule-candidate append temporary output",
     );
-    verifyExistingOutput(path);
+
+    const destinationExists = existsSync(path);
+    if (expectedCurrent === null && destinationExists) {
+      const verifiedPath = assertCanonicalSingleLinkRegularFile(
+        path,
+        "rule-candidate append output",
+      );
+      const latest = readFileSync(verifiedPath, "utf-8");
+      if (latest.includes(marker)) return false;
+      throw new Error("RULE_CANDIDATE_APPEND_CONCURRENT_MODIFICATION");
+    }
+    if (expectedCurrent !== null && !destinationExists) {
+      throw new Error("RULE_CANDIDATE_APPEND_CONCURRENT_MODIFICATION");
+    }
+    if (expectedCurrent !== null) {
+      const verifiedPath = assertCanonicalSingleLinkRegularFile(
+        path,
+        "rule-candidate append output",
+      );
+      const latest = readFileSync(verifiedPath, "utf-8");
+      if (latest !== expectedCurrent) {
+        if (latest.includes(marker)) return false;
+        throw new Error("RULE_CANDIDATE_APPEND_CONCURRENT_MODIFICATION");
+      }
+    }
+
+    assertCanonicalDirectory(parentPath, "RULE_CANDIDATE_APPEND_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
+    return true;
   } finally {
     if (fd !== null) closeSync(fd);
     rmSync(tempPath, { force: true });
