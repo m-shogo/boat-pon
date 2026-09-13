@@ -27,17 +27,32 @@ test("alternative odds coverage runs cohort preflight and DB launch revalidation
   assert.doesNotMatch(entrypoint, /BOAT_PON_DB_PATH: handoffDbPath/u);
 });
 
-test("alternative odds coverage verifies isolated outputs and publishes them atomically", () => {
+test("alternative odds coverage preflights the complete paired destination set before publication", () => {
+  const reportsIdentity = entrypoint.indexOf('"ALT_ODDS_COVERAGE_REPORTS_DIRECTORY_IDENTITY_INVALID"');
+  const mdPreflight = entrypoint.indexOf('verifyExistingOutput(OUT_MD, "ALT_ODDS_COVERAGE_PREEXISTING_MD_IDENTITY_INVALID")');
+  const jsonPreflight = entrypoint.indexOf('verifyExistingOutput(OUT_JSON, "ALT_ODDS_COVERAGE_PREEXISTING_JSON_IDENTITY_INVALID")');
+  const firstPublish = entrypoint.indexOf("atomicPublish(\n    OUT_MD,");
+
+  assert.ok(reportsIdentity >= 0, "canonical reports directory identity must be checked");
+  assert.ok(mdPreflight > reportsIdentity, "Markdown destination preflight must follow reports identity");
+  assert.ok(jsonPreflight > mdPreflight, "JSON destination must also be preflighted before publication");
+  assert.ok(firstPublish > jsonPreflight, "neither paired output may publish until both destinations pass preflight");
+});
+
+test("alternative odds coverage verifies isolated outputs and atomically revalidates destination and parent handoff", () => {
   const internalRun = entrypoint.indexOf("const audit = spawnSync");
   const mdIdentity = entrypoint.indexOf("ALT_ODDS_COVERAGE_MD_OUTPUT_IDENTITY_INVALID", internalRun);
   const jsonIdentity = entrypoint.indexOf("ALT_ODDS_COVERAGE_JSON_OUTPUT_IDENTITY_INVALID", internalRun);
   const mdRead = entrypoint.indexOf('readFileSync(verifiedMdPath, "utf8")', mdIdentity);
   const jsonRead = entrypoint.indexOf('readFileSync(verifiedJsonPath, "utf8")', jsonIdentity);
-  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
+  const helper = entrypoint.indexOf("function atomicPublish(");
+  const parentIdentity = entrypoint.indexOf("ALT_ODDS_COVERAGE_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
   const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
-  const destinationIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", destinationIdentity);
+  const destinationIdentity = entrypoint.indexOf("verifyExistingOutput(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entrypoint.indexOf("ALT_ODDS_COVERAGE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
   const mdPublish = entrypoint.indexOf("ALT_ODDS_COVERAGE_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
   const mdDestination = entrypoint.indexOf("ALT_ODDS_COVERAGE_MD_PUBLISH_DESTINATION_IDENTITY_INVALID", mdPublish);
   const jsonPublish = entrypoint.indexOf("ALT_ODDS_COVERAGE_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
@@ -45,17 +60,12 @@ test("alternative odds coverage verifies isolated outputs and publishes them ato
 
   assert.ok(mdIdentity > internalRun && jsonIdentity > internalRun, "generated report identities must be checked after isolated aggregation");
   assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity, "generated reports must not be read before identity checks");
-  assert.ok(
-    tempCreate >= 0 &&
-      fsync > tempCreate &&
-      tempIdentity > fsync &&
-      destinationIdentity > tempIdentity &&
-      rename > destinationIdentity,
-    "publication must be exclusive, durable, temp-verified, destination-reverified, and atomic",
-  );
+  assert.ok(parentIdentity >= 0 && tempCreate > parentIdentity, "temp creation must follow canonical parent verification");
+  assert.ok(fsync > tempCreate && tempIdentity > fsync, "publication must remain exclusive, durable, and temp-identity verified");
+  assert.ok(destinationIdentity > tempIdentity, "destination must be reverified after temp identity");
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff, "rename must follow canonical parent handoff revalidation");
   assert.ok(mdPublish > mdRead && mdDestination > mdPublish, "markdown publication must reverify its destination");
   assert.ok(jsonPublish > jsonRead && jsonDestination > jsonPublish, "json publication must reverify its destination");
-  assert.match(entrypoint, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}/s);
   assert.match(entrypoint, /ALT_ODDS_COVERAGE_MD_OUTPUT_MISSING/u);
   assert.match(entrypoint, /ALT_ODDS_COVERAGE_JSON_OUTPUT_MISSING/u);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
