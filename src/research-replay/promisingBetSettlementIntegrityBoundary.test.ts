@@ -31,12 +31,16 @@ test("promising bet normal entrypoint validates settlement integrity before isol
   );
   assert.match(source, /assertPayoutCompleteness\(\)/);
   assert.match(source, /PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID/);
+  assert.match(source, /PROMISING_BET_DB_CHILD_HANDOFF_IDENTITY_INVALID/);
   assert.match(source, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-promising-bet-"\)\)/);
   assert.match(source, /cwd: workspace/);
-  assert.match(source, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.match(source, /BOAT_PON_DB_PATH: childDbPath/);
   assert.match(source, /code: "MD"/);
   assert.match(source, /code: "JSON"/);
   assert.match(source, /PROMISING_BET_\$\{output\.code\}_STAGED_OUTPUT_IDENTITY_INVALID/);
+  assert.match(source, /PROMISING_BET_\$\{output\.code\}_STAGED_READ_IDENTITY_INVALID/);
+  assert.match(source, /PROMISING_BET_\$\{output\.code\}_STAGED_HANDOFF_IDENTITY_INVALID/);
+  assert.match(source, /PROMISING_BET_REPORTS_DIRECTORY_IDENTITY_INVALID/);
   assert.match(source, /openSync\(tempPath, "wx", 0o600\)/);
   assert.match(source, /fsyncSync\(fd\)/);
   assert.match(source, /PROMISING_BET_\$\{code\}_PUBLISH_DESTINATION_IDENTITY_INVALID/);
@@ -49,7 +53,8 @@ test("promising bet normal entrypoint validates settlement integrity before isol
   assert.ok(source.indexOf("PROMISING_BET_PAYOUT_RETURN_STATE_INVALID") < launch);
   assert.ok(source.indexOf("PROMISING_BET_PARTIAL_RETURN_UNSUPPORTED") < launch);
   assert.ok(source.indexOf("assertPayoutCompleteness();") < source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID"));
-  assert.ok(source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID") < launch);
+  assert.ok(source.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID") < source.indexOf("PROMISING_BET_DB_CHILD_HANDOFF_IDENTITY_INVALID"));
+  assert.ok(source.indexOf("PROMISING_BET_DB_CHILD_HANDOFF_IDENTITY_INVALID") < launch);
 });
 
 test("promising bet raw compatibility module blocks direct CLI bypass and routes imports through canonical preflight", () => {
