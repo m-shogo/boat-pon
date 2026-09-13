@@ -47,6 +47,16 @@ function assertCanonicalDirectory(path: string, code: string): string {
   return resolvedPath;
 }
 
+function verifyExistingDestinations(): void {
+  for (const output of OUTPUTS) {
+    if (!existsSync(output.destination)) continue;
+    assertCanonicalSingleLinkRegularFile(
+      output.destination,
+      `ROI_ALL_FEATURE_${output.code}_PREPUBLISH_DESTINATION_IDENTITY_INVALID`,
+    );
+  }
+}
+
 function atomicPublish(path: string, content: string, code: string): void {
   const parentPath = dirname(path);
   assertCanonicalDirectory(parentPath, `ROI_ALL_FEATURE_${code}_PUBLISH_PARENT_IDENTITY_INVALID`);
@@ -125,8 +135,11 @@ try {
     return { output, content };
   });
 
+  // Validate the complete canonical destination set before the first rename so
+  // a bad sibling path cannot leave only part of the MD/JSON/CSV set updated.
   mkdirSync("reports", { recursive: true });
   assertCanonicalDirectory("reports", "ROI_ALL_FEATURE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  verifyExistingDestinations();
   for (const { output, content } of preparedOutputs) {
     atomicPublish(output.destination, content, output.code);
   }
