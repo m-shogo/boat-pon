@@ -13,20 +13,24 @@ test("ROI pro loop verifies generated inputs before parsing them", () => {
   assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(PERSONA_JSON/u);
 });
 
-test("ROI pro loop verifies archive sources and publishes archives atomically", () => {
+test("ROI pro loop verifies archive sources and destinations while publishing atomically", () => {
   assert.match(source, /ROI_PRO_LOOP_ALL_SOURCE_IDENTITY_INVALID/u);
   assert.match(source, /ROI_PRO_LOOP_PERSONA_SOURCE_IDENTITY_INVALID/u);
+  assert.match(source, /ROI_PRO_LOOP_ALL_ARCHIVE_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(source, /ROI_PRO_LOOP_PERSONA_ARCHIVE_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /const verifiedSourcePath = assertCanonicalSingleLinkRegularFile\(sourcePath, sourceErrorCode\)/u);
-  assert.match(source, /atomicPublish\(destinationPath, readFileSync\(verifiedSourcePath\), tempErrorCode\)/u);
+  assert.match(source, /atomicPublish\(destinationPath, readFileSync\(verifiedSourcePath\), tempErrorCode, destinationErrorCode\)/u);
   assert.doesNotMatch(source, /copyFileSync/u);
 });
 
-test("ROI pro loop publishes final JSON and Markdown through verified atomic temp files", () => {
+test("ROI pro loop revalidates final and archive destinations immediately before atomic rename", () => {
   assert.match(source, /ROI_PRO_LOOP_JSON_PUBLISH_TEMP_IDENTITY_INVALID/u);
   assert.match(source, /ROI_PRO_LOOP_MD_PUBLISH_TEMP_IDENTITY_INVALID/u);
+  assert.match(source, /ROI_PRO_LOOP_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(source, /ROI_PRO_LOOP_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /openSync\(tempPath, "wx", 0o600\)/u);
   assert.match(source, /fsyncSync\(fd\)/u);
-  assert.match(source, /renameSync\(verifiedTempPath, path\)/u);
+  assert.match(source, /if \(existsSync\(path\)\) \{\s*assertCanonicalSingleLinkRegularFile\(path, destinationErrorCode\);\s*\}\s*renameSync\(verifiedTempPath, path\)/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_JSON,/u);
   assert.doesNotMatch(source, /writeFileSync\(OUT_MD,/u);
 });
