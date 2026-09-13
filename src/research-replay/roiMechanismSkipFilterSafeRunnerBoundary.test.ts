@@ -46,29 +46,45 @@ test("ROI mechanism skip-filter keeps private DB provenance inside isolated stag
   const jsonIdentity = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_JSON_OUTPUT_IDENTITY_INVALID");
   const mdRedact = entrypointSource.indexOf('redactDbProvenance(readFileSync(verifiedMdPath, "utf-8"), launchDbPath)');
   const jsonRedact = entrypointSource.indexOf('redactDbProvenance(readFileSync(verifiedJsonPath, "utf-8"), launchDbPath)');
+  const reportsIdentity = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const prepublishMd = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_MD_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
+  const prepublishJson = entrypointSource.indexOf("ROI_MECHANISM_SKIP_FILTER_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID");
   const publishMd = entrypointSource.indexOf("atomicPublish(\n    OUT_MD");
 
   assert.ok(analysis >= 0 && mdIdentity > analysis && jsonIdentity > mdIdentity);
-  assert.ok(mdRedact > jsonIdentity && jsonRedact > mdRedact && publishMd > jsonRedact);
+  assert.ok(mdRedact > jsonIdentity && jsonRedact > mdRedact);
+  assert.ok(reportsIdentity > jsonRedact, "canonical reports parent must be verified after isolated output validation");
+  assert.ok(prepublishMd > reportsIdentity && prepublishJson > prepublishMd);
+  assert.ok(publishMd > prepublishJson, "both canonical destinations must be revalidated before the first replacement");
   assert.match(entrypointSource, /cwd: workspace/);
 });
 
-test("ROI mechanism skip-filter verifies staged outputs and atomically publishes fsynced temp files with destination revalidation", () => {
-  const exclusiveOpen = entrypointSource.indexOf('openSync(tempPath, "wx", 0o600)');
-  const fsync = entrypointSource.indexOf("fsyncSync(fd)");
-  const tempIdentity = entrypointSource.indexOf("const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)");
-  const destinationIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)");
-  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)");
+test("ROI mechanism skip-filter verifies staged outputs and atomically publishes fsynced temp files with parent and destination revalidation", () => {
+  const parentIdentity = entrypointSource.indexOf(
+    'assertCanonicalDirectory(parentPath, "ROI_MECHANISM_SKIP_FILTER_PUBLISH_PARENT_IDENTITY_INVALID")',
+  );
+  const exclusiveOpen = entrypointSource.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
+  const fsync = entrypointSource.indexOf("fsyncSync(fd)", exclusiveOpen);
+  const tempIdentity = entrypointSource.indexOf("const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = entrypointSource.indexOf("assertCanonicalSingleLinkRegularFile(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entrypointSource.indexOf(
+    'assertCanonicalDirectory(parentPath, "ROI_MECHANISM_SKIP_FILTER_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID")',
+    destinationIdentity,
+  );
+  const rename = entrypointSource.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
 
   assert.ok(
-    exclusiveOpen >= 0
+    parentIdentity >= 0
+      && exclusiveOpen > parentIdentity
       && fsync > exclusiveOpen
       && tempIdentity > fsync
       && destinationIdentity > tempIdentity
-      && rename > destinationIdentity,
+      && parentHandoff > destinationIdentity
+      && rename > parentHandoff,
   );
   assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
   assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /ROI_MECHANISM_SKIP_FILTER_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/);
   assert.match(entrypointSource, /if \(existsSync\(path\)\)/);
   assert.match(entrypointSource, /rmSync\(tempPath, \{ force: true \}\)/);
 });
