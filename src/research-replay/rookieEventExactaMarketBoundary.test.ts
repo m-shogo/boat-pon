@@ -31,22 +31,34 @@ test("rookie-event screen verifies stored event HTML identity before parsing", (
   assert.doesNotMatch(source,/load\(readFileSync\(path/);
 });
 
-test("rookie-event screen validates existing reports before atomic replacement", () => {
-  const jsonPreflight=source.indexOf("verifyExistingOutput(OUT_JSON");
-  const mdPreflight=source.indexOf("verifyExistingOutput(OUT_MD");
-  const jsonPublish=source.indexOf("atomicPublish(OUT_JSON");
-  const mdPublish=source.indexOf("atomicPublish(OUT_MD");
-  assert.ok(jsonPreflight>=0&&mdPreflight>jsonPreflight&&jsonPublish>mdPreflight&&mdPublish>jsonPublish);
-  assert.match(source,/ROOKIE_EVENT_PREEXISTING_JSON_IDENTITY_INVALID/);
-  assert.match(source,/ROOKIE_EVENT_PREEXISTING_MD_IDENTITY_INVALID/);
+test("rookie-event screen preflights both report destinations before first replacement", () => {
+  const publicationStart=source.indexOf('mkdirSync("reports",{recursive:true});');
+  assert.notEqual(publicationStart,-1);
+  const publication=source.slice(publicationStart);
+  const reportsIdentity=publication.indexOf("ROOKIE_EVENT_REPORTS_DIRECTORY_IDENTITY_INVALID");
+  const jsonPreflight=publication.indexOf('verifyExistingOutput(OUT_JSON,"ROOKIE_EVENT_PREEXISTING_JSON_IDENTITY_INVALID")');
+  const mdPreflight=publication.indexOf('verifyExistingOutput(OUT_MD,"ROOKIE_EVENT_PREEXISTING_MD_IDENTITY_INVALID")');
+  const jsonPublish=publication.indexOf("atomicPublish(OUT_JSON");
+  const mdPublish=publication.indexOf("atomicPublish(OUT_MD");
+  assert.ok(reportsIdentity>=0&&jsonPreflight>reportsIdentity&&mdPreflight>jsonPreflight&&jsonPublish>mdPreflight&&mdPublish>jsonPublish);
 });
 
-test("rookie-event screen publication is exclusive fsynced identity-checked and atomic", () => {
-  const create=source.indexOf('openSync(tempPath,"wx",0o600)');
-  const fsync=source.indexOf("fsyncSync(fd)",create);
-  const identity=source.indexOf("assertCanonicalSingleLinkRegularFile(tempPath,identityErrorCode)",fsync);
-  const rename=source.indexOf("renameSync(verifiedTempPath,path)",identity);
-  assert.ok(create>=0&&fsync>create&&identity>fsync&&rename>identity);
+test("rookie-event screen publication verifies destination and parent handoff before atomic rename", () => {
+  const helperStart=source.indexOf("function atomicPublish(");
+  const byPeriodStart=source.indexOf("function byPeriod",helperStart);
+  assert.notEqual(helperStart,-1);
+  assert.notEqual(byPeriodStart,-1);
+  const helper=source.slice(helperStart,byPeriodStart);
+  const parentIdentity=helper.indexOf("ROOKIE_EVENT_PUBLISH_PARENT_IDENTITY_INVALID");
+  const create=helper.indexOf('openSync(tempPath,"wx",0o600)');
+  const fsync=helper.indexOf("fsyncSync(fd)",create);
+  const tempIdentity=helper.indexOf("assertCanonicalSingleLinkRegularFile(tempPath,tempIdentityErrorCode)",fsync);
+  const destinationIdentity=helper.indexOf("verifyExistingOutput(path,destinationIdentityErrorCode)",tempIdentity);
+  const parentHandoff=helper.indexOf("ROOKIE_EVENT_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",destinationIdentity);
+  const rename=helper.indexOf("renameSync(verifiedTempPath,path)",parentHandoff);
+  assert.ok(parentIdentity>=0&&create>parentIdentity&&fsync>create&&tempIdentity>fsync&&destinationIdentity>tempIdentity&&parentHandoff>destinationIdentity&&rename>parentHandoff);
   assert.match(source,/ROOKIE_EVENT_JSON_PUBLISH_TEMP_IDENTITY_INVALID/);
   assert.match(source,/ROOKIE_EVENT_MD_PUBLISH_TEMP_IDENTITY_INVALID/);
+  assert.match(source,/ROOKIE_EVENT_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/);
+  assert.match(source,/ROOKIE_EVENT_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/);
 });
