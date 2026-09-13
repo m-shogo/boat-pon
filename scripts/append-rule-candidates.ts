@@ -3,12 +3,15 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   openSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 import {
   parseRuleCandidateAppendOptions,
@@ -60,23 +63,12 @@ const today = new Intl.DateTimeFormat("sv-SE", {
 const appendId = buildAppendId(report, args);
 const marker = `<!-- boat-pon-rule-candidate:${appendId} -->`;
 const block = buildCandidateBlock(today, report, args, marker);
-const current = existsSync(args.output)
-  ? readFileSync(
-      assertCanonicalSingleLinkRegularFile(
-        args.output,
-        "rule-candidate append output",
-      ),
-      "utf-8",
-    )
-  : "";
+const appended = appendCandidate(args.output, marker, block);
 
-if (current.includes(marker)) {
+if (!appended) {
   console.log("Rule suggestions already appended; no change.");
   process.exit(0);
 }
-
-verifyExistingOutput(args.output);
-atomicPublish(args.output, `${current.trimEnd()}\n${block}\n`);
 
 console.log(`Appended ${report.ruleSuggestions.length} rule suggestions to ${args.output}`);
 
@@ -128,12 +120,57 @@ function buildCandidateBlock(
   ].join("\n");
 }
 
+function assertCanonicalDirectory(path: string, code: string): void {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  if (realpathSync(path) !== resolve(path)) throw new Error(code);
+}
+
 function verifyExistingOutput(path: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, "rule-candidate append output");
 }
 
+function appendCandidate(path: string, marker: string, block: string): boolean {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "rule-candidate append parent");
+  const lockPath = `${path}.lock`;
+  let lockFd: number | null = null;
+
+  try {
+    lockFd = openSync(lockPath, "wx", 0o600);
+    writeFileSync(lockFd, `${process.pid}\n`, "utf-8");
+    fsyncSync(lockFd);
+    assertCanonicalSingleLinkRegularFile(lockPath, "rule-candidate append lock");
+    assertCanonicalDirectory(parentPath, "rule-candidate append parent handoff");
+
+    const current = existsSync(path)
+      ? readFileSync(
+          assertCanonicalSingleLinkRegularFile(
+            path,
+            "rule-candidate append output",
+          ),
+          "utf-8",
+        )
+      : "";
+
+    if (current.includes(marker)) return false;
+
+    verifyExistingOutput(path);
+    atomicPublish(path, `${current.trimEnd()}\n${block}\n`);
+    return true;
+  } finally {
+    if (lockFd !== null) closeSync(lockFd);
+    if (existsSync(lockPath)) {
+      assertCanonicalSingleLinkRegularFile(lockPath, "rule-candidate append lock release");
+      rmSync(lockPath, { force: true });
+    }
+  }
+}
+
 function atomicPublish(path: string, content: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "rule-candidate append publish parent");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -147,6 +184,7 @@ function atomicPublish(path: string, content: string): void {
       "rule-candidate append temporary output",
     );
     verifyExistingOutput(path);
+    assertCanonicalDirectory(parentPath, "rule-candidate append publish parent handoff");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
