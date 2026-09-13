@@ -34,6 +34,22 @@ test("direct payout rebase entrypoint independently retains preflight and verifi
   assert.match(entrypointSource, /BOAT_PON_DB_PATH: launchDbPath/);
 });
 
+test("direct payout rebase entrypoint preflights paired destinations and parent handoff before canonical publication", () => {
+  const outputs = entrypointSource.indexOf("const outputs = readIsolatedOutputs(workspace, verifiedDbPath)");
+  const reportsIdentity = entrypointSource.indexOf("PAYOUT_REBASE_REPORTS_DIRECTORY_IDENTITY_INVALID", outputs);
+  const pairPreflight = entrypointSource.indexOf("verifyExistingOutputs();", reportsIdentity);
+  const firstPublish = entrypointSource.indexOf("atomicPublish(\n      OUT_JSON", pairPreflight);
+
+  assert.ok(outputs >= 0);
+  assert.ok(reportsIdentity > outputs);
+  assert.ok(pairPreflight > reportsIdentity);
+  assert.ok(firstPublish > pairPreflight);
+  assert.match(entrypointSource, /PAYOUT_REBASE_PUBLISH_PARENT_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /PAYOUT_REBASE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID/);
+  assert.match(entrypointSource, /openSync\(tempPath, "wx", 0o600\)/);
+  assert.match(entrypointSource, /fsyncSync\(fd\)/);
+});
+
 test("legacy payout rebase implementation still depends on official payout values and remains research-only", () => {
   assert.match(internalSource, /race_payouts\.payout_yen/);
   assert.match(internalSource, /COALESCE/);
