@@ -11,7 +11,19 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -296,12 +308,27 @@ ${betTypeStats
 - BUY結合可能数はreturned=0のhistorical BUYと、positive/non-refundかつcombination確定済みのofficial payoutが存在するraceだけを数える。
 `;
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  const realPath = realpathSync(path);
+  if (realPath !== resolvedPath) throw new Error(code);
+  return realPath;
+}
+
+function verifyExistingOutput(path: string, code: string): void {
+  if (existsSync(path)) assertCanonicalSingleLinkRegularFile(path, code);
+}
+
 function atomicPublish(
   path: string,
   contents: string,
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "BET_TYPE_COVERAGE_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -311,9 +338,8 @@ function atomicPublish(
     closeSync(fd);
     fd = null;
     const verifiedTempPath = assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode);
-    if (existsSync(path)) {
-      assertCanonicalSingleLinkRegularFile(path, destinationErrorCode);
-    }
+    verifyExistingOutput(path, destinationErrorCode);
+    assertCanonicalDirectory(parentPath, "BET_TYPE_COVERAGE_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
@@ -322,6 +348,9 @@ function atomicPublish(
 }
 
 if (!existsSync("reports")) mkdirSync("reports", { recursive: true });
+assertCanonicalDirectory("reports", "BET_TYPE_COVERAGE_REPORTS_DIRECTORY_IDENTITY_INVALID");
+verifyExistingOutput(OUT_MD, "BET_TYPE_COVERAGE_PREEXISTING_MD_IDENTITY_INVALID");
+verifyExistingOutput(OUT_JSON, "BET_TYPE_COVERAGE_PREEXISTING_JSON_IDENTITY_INVALID");
 atomicPublish(
   OUT_MD,
   md,
