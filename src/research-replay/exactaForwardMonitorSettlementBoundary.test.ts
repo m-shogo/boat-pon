@@ -49,25 +49,46 @@ test("exacta forward monitor cannot bypass cohort and settlement preflight", () 
   assert.doesNotMatch(entrypoint, /report-exacta-forward-monitor-raw/u);
 });
 
-test("exacta forward monitor verifies isolated outputs and publishes them atomically", () => {
+test("exacta forward monitor preflights the complete paired destination set before publication", () => {
+  const reportsIdentity = entrypoint.indexOf('"EXACTA_FORWARD_MONITOR_REPORTS_DIRECTORY_IDENTITY_INVALID"');
+  const mdPreflight = entrypoint.indexOf('verifyExistingOutput(OUT_MD, "EXACTA_FORWARD_MONITOR_PREEXISTING_MD_IDENTITY_INVALID")');
+  const jsonPreflight = entrypoint.indexOf('verifyExistingOutput(OUT_JSON, "EXACTA_FORWARD_MONITOR_PREEXISTING_JSON_IDENTITY_INVALID")');
+  const firstPublish = entrypoint.indexOf("atomicPublish(\n    OUT_MD,");
+
+  assert.ok(reportsIdentity >= 0, "canonical reports directory identity must be checked");
+  assert.ok(mdPreflight > reportsIdentity, "Markdown destination preflight must follow reports identity");
+  assert.ok(jsonPreflight > mdPreflight, "JSON destination must also be preflighted before publication");
+  assert.ok(firstPublish > jsonPreflight, "neither paired output may publish until both destinations pass preflight");
+});
+
+test("exacta forward monitor verifies isolated outputs and atomically revalidates destination and parent handoff", () => {
   const monitor = entrypoint.indexOf("const monitor = spawnSync");
   const mdIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_MD_OUTPUT_IDENTITY_INVALID", monitor);
   const jsonIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_JSON_OUTPUT_IDENTITY_INVALID", monitor);
   const mdRead = entrypoint.indexOf('readFileSync(verifiedMdPath, "utf8")', mdIdentity);
   const jsonRead = entrypoint.indexOf('readFileSync(verifiedJsonPath, "utf8")', jsonIdentity);
   const redaction = entrypoint.indexOf('.split(launchDbPath)', mdRead);
-  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)');
+  const helper = entrypoint.indexOf("function atomicPublish(");
+  const parentIdentity = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_PUBLISH_PARENT_IDENTITY_INVALID", helper);
+  const tempCreate = entrypoint.indexOf('openSync(tempPath, "wx", 0o600)', parentIdentity);
   const fsync = entrypoint.indexOf("fsyncSync(fd)", tempCreate);
-  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, errorCode)", fsync);
-  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", tempIdentity);
+  const tempIdentity = entrypoint.indexOf("assertCanonicalSingleLinkRegularFile(tempPath, tempErrorCode)", fsync);
+  const destinationIdentity = entrypoint.indexOf("verifyExistingOutput(path, destinationErrorCode)", tempIdentity);
+  const parentHandoff = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID", destinationIdentity);
+  const rename = entrypoint.indexOf("renameSync(verifiedTempPath, path)", parentHandoff);
   const mdPublish = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_MD_PUBLISH_TEMP_IDENTITY_INVALID", mdRead);
   const jsonPublish = entrypoint.indexOf("EXACTA_FORWARD_MONITOR_JSON_PUBLISH_TEMP_IDENTITY_INVALID", jsonRead);
 
   assert.ok(mdIdentity > monitor && jsonIdentity > monitor, "generated report identities must be checked after isolated monitor completion");
   assert.ok(mdRead > mdIdentity && jsonRead > jsonIdentity, "generated reports must not be read before identity checks");
   assert.ok(redaction > mdRead, "DB provenance must be redacted before publication");
-  assert.ok(tempCreate >= 0 && fsync > tempCreate && tempIdentity > fsync && rename > tempIdentity, "publication must be exclusive, durable, identity-verified, and atomic");
+  assert.ok(parentIdentity >= 0 && tempCreate > parentIdentity, "temp creation must follow canonical parent verification");
+  assert.ok(fsync > tempCreate && tempIdentity > fsync, "publication must remain exclusive, durable, and temp-identity verified");
+  assert.ok(destinationIdentity > tempIdentity, "destination must be revalidated after temp identity");
+  assert.ok(parentHandoff > destinationIdentity && rename > parentHandoff, "rename must follow parent handoff revalidation");
   assert.ok(mdPublish > mdRead && jsonPublish > jsonRead, "both reports must use atomic publication");
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_MD_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
+  assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_JSON_PUBLISH_DESTINATION_IDENTITY_INVALID/u);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_MD_OUTPUT_MISSING/u);
   assert.match(entrypoint, /EXACTA_FORWARD_MONITOR_JSON_OUTPUT_MISSING/u);
   assert.match(entrypoint, /rmSync\(workspace, \{ recursive: true, force: true \}\)/u);
