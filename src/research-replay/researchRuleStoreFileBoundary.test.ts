@@ -23,6 +23,38 @@ test("research rule evaluation input is identity-verified and missing diagnostic
   assert.doesNotMatch(source, /evaluation file not found: \$\{evaluationFile\}/);
 });
 
+test("research rule store mutation lock encloses reload through durable publication", () => {
+  const lockHelper = source.indexOf("function withStoreWriteLock");
+  const lockCreate = source.indexOf('openSync(lockPath, "wx", 0o600)', lockHelper);
+  const lockIdentity = source.indexOf("RESEARCH_RULE_STORE_LOCK_IDENTITY_INVALID", lockCreate);
+  const lockParentHandoff = source.indexOf("RESEARCH_RULE_STORE_LOCK_PARENT_HANDOFF_IDENTITY_INVALID", lockIdentity);
+  const lockHandoffIdentity = source.indexOf("RESEARCH_RULE_STORE_LOCK_HANDOFF_IDENTITY_INVALID", lockParentHandoff);
+  const lockRemove = source.indexOf("unlinkSync(lockPath)", lockHandoffIdentity);
+
+  assert.ok(lockHelper >= 0, "write mutations must have a dedicated lock helper");
+  assert.ok(lockCreate > lockHelper, "mutation lock must be acquired exclusively");
+  assert.ok(lockIdentity > lockCreate, "lock identity must be verified after acquisition");
+  assert.ok(lockParentHandoff > lockIdentity, "lock parent must be revalidated before cleanup");
+  assert.ok(lockHandoffIdentity > lockParentHandoff, "owned lock path must be revalidated before cleanup");
+  assert.ok(lockRemove > lockHandoffIdentity, "lock must only be removed after handoff verification");
+
+  const addStart = source.indexOf("function runAdd");
+  const transitionStart = source.indexOf("function runTransition");
+  const addLock = source.indexOf("withStoreWriteLock(() => {", addStart);
+  const addReload = source.indexOf("const store = loadStore();", addLock);
+  const addSave = source.indexOf("saveStore(store);", addReload);
+  assert.ok(addLock > addStart && addLock < transitionStart, "real add must acquire the write lock");
+  assert.ok(addReload > addLock && addReload < transitionStart, "real add must reload the store inside the lock");
+  assert.ok(addSave > addReload && addSave < transitionStart, "real add must publish while the lock is held");
+
+  const transitionLock = source.indexOf("withStoreWriteLock(() => {", transitionStart);
+  const transitionReload = source.indexOf("const store = loadStore();", transitionLock);
+  const transitionSave = source.indexOf("saveStore(store);", transitionReload);
+  assert.ok(transitionLock > transitionStart, "real transition must acquire the write lock");
+  assert.ok(transitionReload > transitionLock, "real transition must reload the store inside the lock");
+  assert.ok(transitionSave > transitionReload, "real transition must publish while the lock is held");
+});
+
 test("research rule store publication uses exclusive fsynced temp plus atomic rename", () => {
   const parentIdentity = source.indexOf("RESEARCH_RULE_STORE_PARENT_IDENTITY_INVALID");
   const tempCreate = source.indexOf('openSync(tempPath, "wx", 0o600)');
