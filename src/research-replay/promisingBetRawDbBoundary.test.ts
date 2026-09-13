@@ -5,17 +5,21 @@ import test from "node:test";
 const entrypoint = readFileSync("scripts/analyze-promising-bet-type-strategies.ts", "utf8");
 const raw = readFileSync("scripts/analyze-promising-bet-type-strategies-raw.ts", "utf8");
 
-test("promising bet entrypoint completes settlement validation and DB handoff before internal analysis", () => {
+test("promising bet entrypoint completes settlement validation and verified DB handoff before isolated internal analysis", () => {
   const completeness = entrypoint.indexOf("assertPayoutCompleteness()");
-  const close = entrypoint.indexOf("db.close()");
+  const closeAfterCompleteness = entrypoint.indexOf("db.close();", completeness);
   const handoff = entrypoint.indexOf("PROMISING_BET_DB_HANDOFF_IDENTITY_INVALID");
-  const internal = entrypoint.indexOf('await import("./analyze-promising-bet-type-strategies-internal")');
+  const launch = entrypoint.indexOf("spawnSync(process.execPath");
 
   assert.ok(completeness >= 0);
-  assert.ok(close > completeness, "canonical preflight DB must close after settlement validation");
-  assert.ok(handoff > close, "DB identity must be revalidated after settlement validation closes the preflight DB");
-  assert.ok(internal > handoff, "internal analyzer must load only after the verified DB handoff");
-  assert.match(entrypoint, /process\.env\.BOAT_PON_DB_PATH = assertCanonicalSingleLinkRegularFile/);
+  assert.ok(closeAfterCompleteness > completeness, "canonical preflight DB must close after settlement validation");
+  assert.ok(handoff > closeAfterCompleteness, "DB identity must be revalidated after settlement validation closes the preflight DB");
+  assert.ok(launch > handoff, "isolated internal analyzer must launch only after the verified DB handoff");
+  assert.match(entrypoint, /const verifiedDbPath = assertCanonicalSingleLinkRegularFile/);
+  assert.match(entrypoint, /cwd: workspace/);
+  assert.match(entrypoint, /BOAT_PON_DB_PATH: verifiedDbPath/);
+  assert.doesNotMatch(entrypoint, /process\.env\.BOAT_PON_DB_PATH\s*=/);
+  assert.doesNotMatch(entrypoint, /await import\("\.\/analyze-promising-bet-type-strategies-internal"\)/);
   assert.doesNotMatch(entrypoint, /analyze-promising-bet-type-strategies-raw/);
 });
 
