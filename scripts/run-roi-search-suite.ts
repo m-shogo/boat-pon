@@ -1,6 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, resolve } from "node:path";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_SUMMARY = "reports/roi-search-suite-summary.md";
@@ -65,7 +77,17 @@ for (const file of files) {
 atomicPublish(OUT_SUMMARY, `${lines.join("\n")}\n`);
 console.log(`[run-roi-search-suite] wrote ${OUT_SUMMARY}`);
 
+function assertCanonicalDirectory(path: string, code: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(code);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(code);
+  return resolvedPath;
+}
+
 function atomicPublish(path: string, contents: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "ROI_SEARCH_SUITE_SUMMARY_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -84,6 +106,7 @@ function atomicPublish(path: string, contents: string): void {
         "ROI_SEARCH_SUITE_SUMMARY_PUBLISH_DESTINATION_IDENTITY_INVALID",
       );
     }
+    assertCanonicalDirectory(parentPath, "ROI_SEARCH_SUITE_SUMMARY_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
