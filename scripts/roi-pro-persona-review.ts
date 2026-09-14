@@ -7,13 +7,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const ALL_FEATURE_JSON = "reports/roi-all-feature-search.json";
@@ -268,14 +268,22 @@ function compare(a: Eval, b: Eval) {
 
 function readRequiredText(path: string, identityErrorCode: string): string {
   if (!existsSync(path)) throw new Error("ROI_PERSONA_REVIEW_REQUIRED_SOURCE_MISSING");
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
-  return readFileSync(verifiedPath, "utf8");
+  try {
+    return readGovernanceFileUtf8(path, process.cwd());
+  } catch {
+    throw new Error(identityErrorCode);
+  }
 }
 
 function readVerified<T>(path: string, identityErrorCode: string): T {
   if (!existsSync(path)) throw new Error("ROI_PERSONA_REVIEW_REQUIRED_INPUT_MISSING");
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  let contents: string;
+  try {
+    contents = readGovernanceFileUtf8(path, process.cwd());
+  } catch {
+    throw new Error(identityErrorCode);
+  }
+  return JSON.parse(contents) as T;
 }
 
 function assertCanonicalDirectory(path: string, code: string): string {

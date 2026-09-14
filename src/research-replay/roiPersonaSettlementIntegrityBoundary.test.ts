@@ -20,19 +20,19 @@ test("ROI persona review fails closed on ambiguous all-feature settlements befor
   assert.ok(readReport > settlementGate, "settlement gate must run before an existing report can drive persona verdicts");
 });
 
-test("ROI persona review verifies research inputs before reading", () => {
+test("ROI persona review binds research input reads to verified file descriptors", () => {
   assert.match(source, /ROI_PERSONA_REVIEW_ALL_FEATURE_SOURCE_IDENTITY_INVALID/);
   assert.match(source, /ROI_PERSONA_REVIEW_ALL_FEATURE_IDENTITY_INVALID/);
+  assert.match(source, /import \{ readGovernanceFileUtf8 \} from "\.\.\/src\/research\/governance\/safeFs";/);
 
   const requiredHelper = source.indexOf("function readRequiredText(");
-  const requiredIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, identityErrorCode)", requiredHelper);
-  const requiredRead = source.indexOf('readFileSync(verifiedPath, "utf8")', requiredIdentity);
-  assert.ok(requiredHelper >= 0 && requiredIdentity > requiredHelper && requiredRead > requiredIdentity);
+  const requiredRead = source.indexOf("readGovernanceFileUtf8(path, process.cwd())", requiredHelper);
+  assert.ok(requiredHelper >= 0 && requiredRead > requiredHelper);
 
   const reportHelper = source.indexOf("function readVerified<T>(");
-  const reportIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, identityErrorCode)", reportHelper);
-  const reportRead = source.indexOf('readFileSync(verifiedPath, "utf8")', reportIdentity);
-  assert.ok(reportHelper >= 0 && reportIdentity > reportHelper && reportRead > reportIdentity);
+  const reportRead = source.indexOf("readGovernanceFileUtf8(path, process.cwd())", reportHelper);
+  assert.ok(reportHelper >= 0 && reportRead > reportHelper);
+  assert.doesNotMatch(source, /readFileSync\(verifiedPath, "utf8"\)/);
 });
 
 test("ROI persona review validates existing outputs and publishes atomically", () => {
