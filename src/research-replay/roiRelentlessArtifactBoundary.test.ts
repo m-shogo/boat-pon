@@ -4,21 +4,23 @@ import test from "node:test";
 
 const source = readFileSync("scripts/run-roi-relentless.ts", "utf8");
 
-test("ROI relentless verifies generated inputs before parsing them", () => {
+test("ROI relentless binds generated input reads to verified descriptors", () => {
   assert.match(source, /ROI_RELENTLESS_INPUT_IDENTITY_INVALID/u);
-  assert.match(source, /const verifiedPath = assertCanonicalSingleLinkRegularFile\(path,/u);
-  assert.match(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(path,/u);
+  assert.match(source, /JSON\.parse\(readGovernanceFileUtf8\(path, "reports"\)\)/u);
+  assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
   assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(path, "utf8"\)\)/u);
 });
 
-test("ROI relentless verifies archive sources and parent identity while revalidating destinations", () => {
+test("ROI relentless binds archive source reads to verified descriptors while revalidating destinations", () => {
   assert.match(source, /ROI_RELENTLESS_ARCHIVE_DIRECTORY_IDENTITY_INVALID/u);
   assert.match(source, /ROI_RELENTLESS_PRO_LOOP_ARCHIVE_SOURCE_IDENTITY_INVALID/u);
   assert.match(source, /ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_SOURCE_IDENTITY_INVALID/u);
   assert.match(source, /ROI_RELENTLESS_PRO_LOOP_ARCHIVE_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /ROI_RELENTLESS_ALL_FEATURE_ARCHIVE_DESTINATION_IDENTITY_INVALID/u);
-  assert.match(source, /const verifiedSourcePath = assertCanonicalSingleLinkRegularFile\(sourcePath, sourceErrorCode\)/u);
-  assert.match(source, /atomicPublish\(destinationPath, readFileSync\(verifiedSourcePath\), tempErrorCode, destinationErrorCode\)/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(sourcePath, sourceErrorCode\)/u);
+  assert.match(source, /readGovernanceFileUtf8\(sourcePath, "reports"\)/u);
+  assert.doesNotMatch(source, /readFileSync\(verifiedSourcePath/u);
   assert.doesNotMatch(source, /copyFileSync/u);
 });
 

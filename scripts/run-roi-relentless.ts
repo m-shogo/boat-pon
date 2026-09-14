@@ -7,13 +7,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_DIR = "reports/roi-relentless";
@@ -213,8 +213,8 @@ function consensusTable(items: ReturnType<typeof mergeConsensus>) {
 
 function readOptional<T>(path: string): T | null {
   if (!existsSync(path)) return null;
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_RELENTLESS_INPUT_IDENTITY_INVALID");
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  assertCanonicalSingleLinkRegularFile(path, "ROI_RELENTLESS_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readGovernanceFileUtf8(path, "reports")) as T;
 }
 
 function assertCanonicalDirectory(path: string, code: string): string {
@@ -247,8 +247,13 @@ function archiveVerifiedSource(
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
-  const verifiedSourcePath = assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
-  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode, destinationErrorCode);
+  assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
+  atomicPublish(
+    destinationPath,
+    readGovernanceFileUtf8(sourcePath, "reports"),
+    tempErrorCode,
+    destinationErrorCode,
+  );
 }
 
 function atomicPublish(
