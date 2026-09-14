@@ -7,13 +7,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/roi-master-review.md";
@@ -166,8 +166,13 @@ function table(items: Candidate[]) {
 
 function read(path: string): AnyObj | null {
   if (!existsSync(path)) return null;
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_MASTER_REVIEW_INPUT_IDENTITY_INVALID");
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as AnyObj;
+  let text: string;
+  try {
+    text = readGovernanceFileUtf8(path, process.cwd());
+  } catch {
+    throw new Error("ROI_MASTER_REVIEW_INPUT_IDENTITY_INVALID");
+  }
+  return JSON.parse(text) as AnyObj;
 }
 
 function assertCanonicalDirectory(path: string, code: string): string {
