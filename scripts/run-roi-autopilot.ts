@@ -7,13 +7,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 /**
@@ -344,16 +344,22 @@ function hypothesisTable(items: Array<{ name: string; intent?: string; removed?:
   return `| name | removed n | removed ROI | remaining n | remaining ROI | improvement | warnings |\n|---|---:|---:|---:|---:|---:|---|\n${items.map((x) => `| ${md(x.name)} | ${x.removed?.n ?? 0} | ${pct(Number(x.removed?.roi ?? 0))} | ${x.remaining?.n ?? 0} | ${pct(Number(x.remaining?.roi ?? 0))} | ${pct(Number(x.improvement ?? 0))} | ${md((x.warnings ?? []).join(", ") || "-")} |`).join("\n")}`;
 }
 
+function readVerifiedText(path: string, identityErrorCode: string): string {
+  try {
+    return readGovernanceFileUtf8(path, process.cwd());
+  } catch {
+    throw new Error(identityErrorCode);
+  }
+}
+
 function readJson<T>(path: string, identityErrorCode: string): T {
   if (!existsSync(path)) throw new Error("ROI_AUTOPILOT_REQUIRED_INPUT_MISSING");
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  return JSON.parse(readVerifiedText(path, identityErrorCode)) as T;
 }
 
 function readOptionalJson<T>(path: string, identityErrorCode: string): T | null {
   if (!existsSync(path)) return null;
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  return JSON.parse(readVerifiedText(path, identityErrorCode)) as T;
 }
 
 function assertCanonicalDirectory(path: string, code: string): string {
