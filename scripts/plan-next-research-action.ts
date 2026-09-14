@@ -17,13 +17,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const GOV_JSON = "reports/research-governor.json";
@@ -33,10 +33,12 @@ const OUT_JSON = "reports/next-research-action.json";
 if (!existsSync(GOV_JSON)) {
   throw new Error("NEXT_RESEARCH_ACTION_GOVERNOR_MISSING");
 }
-const verifiedGovernorPath = assertCanonicalSingleLinkRegularFile(
-  GOV_JSON,
-  "NEXT_RESEARCH_ACTION_GOVERNOR_IDENTITY_INVALID",
-);
+let governorContents: string;
+try {
+  governorContents = readGovernanceFileUtf8(GOV_JSON, process.cwd());
+} catch {
+  throw new Error("NEXT_RESEARCH_ACTION_GOVERNOR_IDENTITY_INVALID");
+}
 
 type GovData = {
   generatedAt: string;
@@ -55,7 +57,7 @@ type GovData = {
   oneLiner: string;
 };
 
-const gov = JSON.parse(readFileSync(verifiedGovernorPath, "utf-8")) as GovData;
+const gov = JSON.parse(governorContents) as GovData;
 
 // ─── 次アクションの詳細手順生成 ──────────────────────────────────────────────
 

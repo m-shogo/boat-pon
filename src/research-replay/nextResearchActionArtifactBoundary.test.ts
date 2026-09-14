@@ -5,11 +5,12 @@ import test from "node:test";
 const source = readFileSync("scripts/plan-next-research-action.ts", "utf8");
 
 test("next research action verifies governor identity before parsing", () => {
-  const identity = source.indexOf("const verifiedGovernorPath = assertCanonicalSingleLinkRegularFile(");
-  const read = source.indexOf('readFileSync(verifiedGovernorPath, "utf-8")');
-  assert.ok(identity >= 0 && read > identity);
+  const safeRead = source.indexOf("readGovernanceFileUtf8(GOV_JSON, process.cwd())");
+  const parse = source.indexOf("JSON.parse(governorContents)");
+  assert.ok(safeRead >= 0 && parse > safeRead);
   assert.match(source, /NEXT_RESEARCH_ACTION_GOVERNOR_MISSING/);
   assert.match(source, /NEXT_RESEARCH_ACTION_GOVERNOR_IDENTITY_INVALID/);
+  assert.match(source, /import \{ readGovernanceFileUtf8 \} from "\.\.\/src\/research\/governance\/safeFs";/u);
   assert.doesNotMatch(source, /readFileSync\(GOV_JSON/);
 });
 
