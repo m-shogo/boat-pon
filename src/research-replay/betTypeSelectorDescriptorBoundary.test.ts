@@ -19,9 +19,17 @@ test("bet-type selector binds isolated text outputs to descriptors under the iso
   assert.doesNotMatch(source, /readFileSync\(verifiedJsonPath/u);
 });
 
-test("bet-type selector leaves staging and database handoff boundaries explicit", () => {
+test("bet-type selector binds report staging to descriptor snapshots and exclusive destination writes", () => {
   assert.match(source, /BET_TYPE_SELECTOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID/u);
-  assert.match(source, /copyFileSync\(sourcePath, stagedPath\)/u);
+  assert.match(source, /const content = readGovernanceFileUtf8\(path, "reports"\)/u);
+  assert.match(source, /openSync\(stagedPath, "wx", 0o600\)/u);
+  assert.match(source, /writeFileSync\(fd, content, "utf8"\)/u);
+  assert.match(source, /fsyncSync\(fd\)/u);
+  assert.match(source, /BET_TYPE_SELECTOR_STAGED_INPUT_REPORT_IDENTITY_INVALID/u);
+  assert.doesNotMatch(source, /copyFileSync\(/u);
+});
+
+test("bet-type selector keeps the database child handoff boundary explicit", () => {
   assert.match(source, /BET_TYPE_SELECTOR_DB_CHILD_LAUNCH_IDENTITY_INVALID/u);
   assert.match(source, /spawnSync\(/u);
 });
