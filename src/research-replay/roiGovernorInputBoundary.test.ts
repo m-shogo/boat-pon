@@ -20,7 +20,8 @@ test("ROI governor fails closed on missing, non-canonical, or invalid decision-c
   for (const path of requiredReports) assert.match(entry, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(entry, /ROI_GOVERNOR_INPUT_REPORT_INVALID/);
   assert.match(entry, /ROI_GOVERNOR_INPUT_REPORT_IDENTITY_INVALID/);
-  assert.match(entry, /assertCanonicalSingleLinkRegularFile\(path, identityError\)/u);
+  assert.match(entry, /readGovernanceFileUtf8\(path, process\.cwd\(\)\)/u);
+  assert.match(entry, /throw new Error\(identityError\)/u);
   assert.match(entry, /JSON\.parse\(contents\)/);
   assert.match(entry, /!isObject\(parsed\)/);
   assert.match(entry, /validateDecisionCriticalShape\(path, parsed\)/);
