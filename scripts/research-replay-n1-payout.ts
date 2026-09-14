@@ -5,7 +5,6 @@ import {
   lstatSync,
   mkdtempSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -22,6 +21,7 @@ import {
   verifyN1SettlementSchema,
 } from "../src/research-replay/settlement";
 import { initializeSidecarSchema, openSidecarDatabase } from "../src/research-replay/schema";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const root = resolve(process.cwd());
@@ -115,11 +115,13 @@ async function main(): Promise<void> {
   }
   if (command === "readiness") {
     const reportPath = join(root, "reports", "n1-all-bet-type-payout-implementation.json");
-    const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
-      reportPath,
-      "N1_PAYOUT_IMPLEMENTATION_REPORT_IDENTITY_INVALID",
-    );
-    const canonical = JSON.parse(readFileSync(verifiedReportPath, "utf8")) as Record<string, unknown>;
+    let reportContents: string;
+    try {
+      reportContents = readGovernanceFileUtf8(reportPath, root);
+    } catch {
+      throw new Error("N1_PAYOUT_IMPLEMENTATION_REPORT_IDENTITY_INVALID");
+    }
+    const canonical = JSON.parse(reportContents) as Record<string, unknown>;
     const report = {
       ...canonical,
       localVerification: {
