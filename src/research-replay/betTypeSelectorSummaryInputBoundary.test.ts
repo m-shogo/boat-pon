@@ -63,11 +63,24 @@ test("bet-type selector summary reverifies prerequisite reports and DB identity 
   assert.ok(outputPreflights[1] > internalRun, "publication preflight must remain after isolated analysis");
 });
 
-test("bet-type selector summary stages verified prerequisite reports into an isolated workspace", () => {
+test("bet-type selector summary stages verified prerequisite reports into an isolated workspace without reopening source pathnames", () => {
   assert.match(entry, /mkdtempSync\(join\(tmpdir\(\), "boat-pon-bet-type-selector-"\)\)/);
   assert.match(entry, /BET_TYPE_SELECTOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID/);
-  assert.match(entry, /copyFileSync\(sourcePath, stagedPath\)/);
-  assert.match(entry, /BET_TYPE_SELECTOR_STAGED_INPUT_REPORT_IDENTITY_INVALID/);
+  const handoffIdentity = entry.indexOf("BET_TYPE_SELECTOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID");
+  const descriptorRead = entry.indexOf('readGovernanceFileUtf8(path, "reports")', handoffIdentity);
+  const exclusiveCreate = entry.indexOf('openSync(stagedPath, "wx", 0o600)', descriptorRead);
+  const write = entry.indexOf('writeFileSync(fd, content, "utf8")', exclusiveCreate);
+  const fsync = entry.indexOf("fsyncSync(fd)", write);
+  const stagedIdentity = entry.indexOf("BET_TYPE_SELECTOR_STAGED_INPUT_REPORT_IDENTITY_INVALID", fsync);
+  assert.ok(
+    handoffIdentity >= 0 &&
+      descriptorRead > handoffIdentity &&
+      exclusiveCreate > descriptorRead &&
+      write > exclusiveCreate &&
+      fsync > write &&
+      stagedIdentity > fsync,
+  );
+  assert.doesNotMatch(entry, /copyFileSync\(/u);
   assert.match(entry, /cwd: workspace/);
   assert.match(entry, /pathToFileURL\(internalPath\)/);
   assert.match(entry, /rmSync\(workspace, \{ recursive: true, force: true \}\)/);
