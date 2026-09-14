@@ -7,13 +7,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_DIR = "reports/roi-pro-loop";
@@ -242,8 +242,8 @@ function candidateTable(items: Candidate[]) {
 }
 
 function readVerified<T>(path: string, errorCode: string): T {
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, errorCode);
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  assertCanonicalSingleLinkRegularFile(path, errorCode);
+  return JSON.parse(readGovernanceFileUtf8(path, "reports")) as T;
 }
 
 function assertCanonicalDirectory(path: string, code: string): string {
@@ -276,8 +276,13 @@ function archiveVerifiedSource(
   tempErrorCode: string,
   destinationErrorCode: string,
 ): void {
-  const verifiedSourcePath = assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
-  atomicPublish(destinationPath, readFileSync(verifiedSourcePath), tempErrorCode, destinationErrorCode);
+  assertCanonicalSingleLinkRegularFile(sourcePath, sourceErrorCode);
+  atomicPublish(
+    destinationPath,
+    readGovernanceFileUtf8(sourcePath, "reports"),
+    tempErrorCode,
+    destinationErrorCode,
+  );
 }
 
 function atomicPublish(

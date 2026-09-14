@@ -4,23 +4,25 @@ import test from "node:test";
 
 const source = readFileSync("scripts/run-roi-pro-loop.ts", "utf8");
 
-test("ROI pro loop verifies generated inputs before parsing them", () => {
+test("ROI pro loop binds generated input reads to verified descriptors", () => {
   assert.match(source, /ROI_PRO_LOOP_ALL_INPUT_IDENTITY_INVALID/u);
   assert.match(source, /ROI_PRO_LOOP_PERSONA_INPUT_IDENTITY_INVALID/u);
-  assert.match(source, /const verifiedPath = assertCanonicalSingleLinkRegularFile\(path, errorCode\)/u);
-  assert.match(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(path, errorCode\)/u);
+  assert.match(source, /JSON\.parse\(readGovernanceFileUtf8\(path, "reports"\)\)/u);
+  assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
   assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(ALL_JSON/u);
   assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(PERSONA_JSON/u);
 });
 
-test("ROI pro loop verifies archive sources and destinations while publishing atomically", () => {
+test("ROI pro loop binds archive source reads to verified descriptors while publishing atomically", () => {
   assert.match(source, /ROI_PRO_LOOP_ARCHIVE_DIRECTORY_IDENTITY_INVALID/u);
   assert.match(source, /ROI_PRO_LOOP_ALL_SOURCE_IDENTITY_INVALID/u);
   assert.match(source, /ROI_PRO_LOOP_PERSONA_SOURCE_IDENTITY_INVALID/u);
   assert.match(source, /ROI_PRO_LOOP_ALL_ARCHIVE_DESTINATION_IDENTITY_INVALID/u);
   assert.match(source, /ROI_PRO_LOOP_PERSONA_ARCHIVE_DESTINATION_IDENTITY_INVALID/u);
-  assert.match(source, /const verifiedSourcePath = assertCanonicalSingleLinkRegularFile\(sourcePath, sourceErrorCode\)/u);
-  assert.match(source, /atomicPublish\(destinationPath, readFileSync\(verifiedSourcePath\), tempErrorCode, destinationErrorCode\)/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(sourcePath, sourceErrorCode\)/u);
+  assert.match(source, /readGovernanceFileUtf8\(sourcePath, "reports"\)/u);
+  assert.doesNotMatch(source, /readFileSync\(verifiedSourcePath/u);
   assert.doesNotMatch(source, /copyFileSync/u);
 });
 
