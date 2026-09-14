@@ -7,12 +7,15 @@ import {
   closeSync,
   existsSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
@@ -136,6 +139,7 @@ try {
   ];
 
   mkdirSync("reports", { recursive: true });
+  assertCanonicalDirectory("reports", "CANONICAL_CALIBRATION_REPORTS_DIRECTORY_IDENTITY_INVALID");
   verifyExistingOutput(OUT_JSON, "CANONICAL_CALIBRATION_PREEXISTING_JSON_IDENTITY_INVALID");
   verifyExistingOutput(OUT_MD, "CANONICAL_CALIBRATION_PREEXISTING_MD_IDENTITY_INVALID");
   atomicPublish(
@@ -155,6 +159,14 @@ try {
   db.close();
 }
 
+function assertCanonicalDirectory(path: string, identityErrorCode: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(identityErrorCode);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(identityErrorCode);
+  return resolvedPath;
+}
+
 function verifyExistingOutput(path: string, identityErrorCode: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
@@ -166,6 +178,8 @@ function atomicPublish(
   tempIdentityErrorCode: string,
   destinationIdentityErrorCode: string,
 ): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "CANONICAL_CALIBRATION_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -178,6 +192,10 @@ function atomicPublish(
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
     }
+    assertCanonicalDirectory(
+      parentPath,
+      "CANONICAL_CALIBRATION_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID",
+    );
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
