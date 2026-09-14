@@ -17,7 +17,6 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -27,6 +26,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -140,16 +140,18 @@ try {
   const workspaceMarkdown = join(workspace, OUT_MD);
   if (!existsSync(workspaceJson)) throw new Error("ROOT_METHODOLOGY_JSON_OUTPUT_MISSING");
   if (!existsSync(workspaceMarkdown)) throw new Error("ROOT_METHODOLOGY_MARKDOWN_OUTPUT_MISSING");
-  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
-    workspaceJson,
-    "ROOT_METHODOLOGY_JSON_OUTPUT_IDENTITY_INVALID",
-  );
-  const verifiedMarkdownPath = assertCanonicalSingleLinkRegularFile(
-    workspaceMarkdown,
-    "ROOT_METHODOLOGY_MARKDOWN_OUTPUT_IDENTITY_INVALID",
-  );
-  const json = readFileSync(verifiedJsonPath, "utf8");
-  const markdown = readFileSync(verifiedMarkdownPath, "utf8");
+  let json: string;
+  let markdown: string;
+  try {
+    json = readGovernanceFileUtf8(workspaceJson, workspace);
+  } catch {
+    throw new Error("ROOT_METHODOLOGY_JSON_OUTPUT_IDENTITY_INVALID");
+  }
+  try {
+    markdown = readGovernanceFileUtf8(workspaceMarkdown, workspace);
+  } catch {
+    throw new Error("ROOT_METHODOLOGY_MARKDOWN_OUTPUT_IDENTITY_INVALID");
+  }
 
   mkdirSync("reports", { recursive: true });
   assertCanonicalDirectory("reports", "ROOT_METHODOLOGY_REPORTS_DIRECTORY_IDENTITY_INVALID");
