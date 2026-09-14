@@ -15,7 +15,6 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -110,6 +109,14 @@ function stageVerifiedInput(sourcePath: string, workspace: string, errorCode: st
   );
 }
 
+function readVerifiedWorkspaceOutput(path: string, workspace: string, errorCode: string): string {
+  try {
+    return readGovernanceFileUtf8(path, workspace);
+  } catch {
+    throw new Error(errorCode);
+  }
+}
+
 function atomicPublish(path: string, content: string, tempErrorCode: string, destinationErrorCode: string): void {
   const parentPath = dirname(path);
   assertCanonicalDirectory(parentPath, "RESEARCH_GOVERNOR_PUBLISH_PARENT_IDENTITY_INVALID");
@@ -194,18 +201,18 @@ try {
   const workspaceJson = join(workspace, OUT_JSON);
   if (!existsSync(workspaceMd)) throw new Error("RESEARCH_GOVERNOR_MD_OUTPUT_MISSING");
   if (!existsSync(workspaceJson)) throw new Error("RESEARCH_GOVERNOR_JSON_OUTPUT_MISSING");
-  const verifiedMdPath = assertCanonicalSingleLinkRegularFile(
+  const markdown = readVerifiedWorkspaceOutput(
     workspaceMd,
+    workspace,
     "RESEARCH_GOVERNOR_MD_OUTPUT_IDENTITY_INVALID",
-  );
-  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
-    workspaceJson,
-    "RESEARCH_GOVERNOR_JSON_OUTPUT_IDENTITY_INVALID",
-  );
-  const markdown = readFileSync(verifiedMdPath, "utf8")
+  )
     .split(launchDbPath)
     .join("verified read-only research DB");
-  const json = readFileSync(verifiedJsonPath, "utf8")
+  const json = readVerifiedWorkspaceOutput(
+    workspaceJson,
+    workspace,
+    "RESEARCH_GOVERNOR_JSON_OUTPUT_IDENTITY_INVALID",
+  )
     .split(launchDbPath)
     .join("verified read-only research DB");
 
