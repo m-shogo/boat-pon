@@ -77,6 +77,7 @@ function buildActionPlan(gov: GovData): {
   const dr = gov.dataReadiness;
 
   if (p === 1) {
+    // future-only timeseries confirmation ready
     return {
       title: "condB future-only odds_timeseries 確認",
       rationale: `timeseries x condB overlap が n=${dr.timeseries.condBOverlap} に達した。future-only での switch 評価が可能。`,
@@ -96,6 +97,7 @@ function buildActionPlan(gov: GovData): {
   }
 
   if (p === 2) {
+    // condB 残件取得
     const remaining = dr.condB.total - dr.condB.haoSaved;
     return {
       title: `condB historical closing odds 残件取得 (${remaining}件)`,
@@ -117,6 +119,7 @@ function buildActionPlan(gov: GovData): {
   }
 
   if (p === 3) {
+    // skip6R backfill
     const remaining = dr.skip6R.total - dr.skip6R.haoSaved;
     return {
       title: `skip6R historical alternative odds 小規模 backfill (残 ${remaining}/${dr.skip6R.total}件)`,
@@ -139,6 +142,7 @@ function buildActionPlan(gov: GovData): {
     };
   }
 
+  // default
   return {
     title: gov.nextAction.action,
     rationale: "governor の自動判断に基づく次アクション",
@@ -152,6 +156,8 @@ function buildActionPlan(gov: GovData): {
 }
 
 const plan = buildActionPlan(gov);
+
+// ─── MD 出力 ──────────────────────────────────────────────────────────────────
 
 const now = new Date().toISOString();
 const lines: string[] = [];
@@ -167,11 +173,13 @@ lines.push(``);
 lines.push(`---`);
 lines.push(``);
 
+// 1行結論
 lines.push(`## 1行結論`);
 lines.push(``);
 lines.push(`> **${gov.oneLiner}**`);
 lines.push(``);
 
+// 次のアクション
 lines.push(`## 次アクション: ${plan.title}`);
 lines.push(``);
 lines.push(`**根拠:** ${plan.rationale}`);
@@ -208,11 +216,13 @@ lines.push(`| write 対象 | ${plan.writeTarget ?? "なし"} |`);
 lines.push(`| 既存テーブルへの書き込み | **禁止** |`);
 lines.push(``);
 
+// 禁止事項
 lines.push(`## 今やってはいけないこと`);
 lines.push(``);
 for (const f of gov.forbidden) lines.push(`- ❌ ${f}`);
 lines.push(``);
 
+// データ準備状況
 lines.push(`## データ準備状況`);
 lines.push(``);
 const dr = gov.dataReadiness;
@@ -224,6 +234,7 @@ lines.push(`| skipVenue historical closing odds | ${dr.skipVenue.haoSaved}/${dr.
 lines.push(`| future-only timeseries condB overlap | ${dr.timeseries.condBOverlap} ${dr.timeseries.futureOnlySwitchReady ? "✅" : "❌ (<30)"} |`);
 lines.push(``);
 
+// 仮説状態サマリ
 lines.push(`## 仮説状態サマリ`);
 lines.push(``);
 lines.push(`| ID | 名前 | 状態 | 採用可否 |`);
