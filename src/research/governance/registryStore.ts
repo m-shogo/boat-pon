@@ -101,6 +101,15 @@ function assertRegistryContainerSafe(root: string, kind: RegistryKind): void {
   assertRegistryDirectorySafe(join(root, kind), "kind");
 }
 
+function assertRegistryPublicationParentSafe(path: string): void {
+  const parent = dirname(path);
+  assertRegistryAncestorsSafe(parent);
+  const stat = lstatRegistryPath(parent);
+  if (!stat || stat.isSymbolicLink() || !stat.isDirectory()) {
+    throw new Error(`registry publication parent invalid: ${parent}`);
+  }
+}
+
 function readRegistryRecordUtf8(path: string): string {
   let fd: number | null = null;
   try {
@@ -152,6 +161,7 @@ function readRegistryRecordUtf8(path: string): string {
 
 function atomicCreateUtf8(path: string, content: string): void {
   mkdirSync(dirname(path), { recursive: true });
+  assertRegistryPublicationParentSafe(path);
   const temp = `${path}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   let fd: number | null = null;
   try {
@@ -164,6 +174,7 @@ function atomicCreateUtf8(path: string, content: string): void {
       // Publishing with a hard link is atomic and never replaces an existing
       // destination. Unlike renameSync(), a concurrent writer that wins the
       // target path causes EEXIST instead of violating append-only semantics.
+      assertRegistryPublicationParentSafe(path);
       linkSync(temp, path);
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "EEXIST") {
