@@ -24,6 +24,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
@@ -95,11 +96,16 @@ function writeExclusive(path: string, content: string | Buffer, errorCode: strin
 }
 
 function stageVerifiedInput(sourcePath: string, workspace: string, errorCode: string): void {
-  const verifiedSource = assertCanonicalSingleLinkRegularFile(sourcePath, errorCode);
+  let sourceContents: string;
+  try {
+    sourceContents = readGovernanceFileUtf8(sourcePath, process.cwd());
+  } catch {
+    throw new Error(errorCode);
+  }
   const destination = join(workspace, sourcePath);
   writeExclusive(
     destination,
-    readFileSync(verifiedSource),
+    sourceContents,
     "RESEARCH_GOVERNOR_STAGED_INPUT_IDENTITY_INVALID",
   );
 }
