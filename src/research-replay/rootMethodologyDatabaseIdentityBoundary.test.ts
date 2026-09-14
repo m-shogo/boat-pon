@@ -31,9 +31,21 @@ test("root methodology guarded entrypoint reverifies DB identity after cohort pr
   assert.doesNotMatch(source, /await import\("\.\/audit-root-methodology-internal"\)/u);
 });
 
+test("root methodology reads isolated staged outputs through verified descriptors", () => {
+  const source = readFileSync("scripts/audit-root-methodology.ts", "utf8");
+  const jsonRead = source.indexOf("readGovernanceFileUtf8(workspaceJson, workspace)");
+  const markdownRead = source.indexOf("readGovernanceFileUtf8(workspaceMarkdown, workspace)");
+
+  assert.match(source, /import \{ readGovernanceFileUtf8 \} from "\.\.\/src\/research\/governance\/safeFs";/u);
+  assert.ok(jsonRead >= 0 && markdownRead > jsonRead);
+  assert.match(source, /ROOT_METHODOLOGY_JSON_OUTPUT_IDENTITY_INVALID/u);
+  assert.match(source, /ROOT_METHODOLOGY_MARKDOWN_OUTPUT_IDENTITY_INVALID/u);
+  assert.doesNotMatch(source, /readFileSync\(verified(?:Json|Markdown)Path/u);
+});
+
 test("root methodology validates the complete destination set before paired publication", () => {
   const source = readFileSync("scripts/audit-root-methodology.ts", "utf8");
-  const markdownRead = source.indexOf('readFileSync(verifiedMarkdownPath, "utf8")');
+  const markdownRead = source.indexOf("readGovernanceFileUtf8(workspaceMarkdown, workspace)");
   const publishMkdir = source.indexOf('mkdirSync("reports", { recursive: true })', markdownRead);
   const reportsIdentity = source.indexOf("ROOT_METHODOLOGY_REPORTS_DIRECTORY_IDENTITY_INVALID", publishMkdir);
   const jsonPrepublish = source.indexOf("ROOT_METHODOLOGY_JSON_PREPUBLISH_DESTINATION_IDENTITY_INVALID", reportsIdentity);
