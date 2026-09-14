@@ -7,13 +7,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const BET_JSON = "reports/bet-strategy-simulation.json";
@@ -260,14 +260,14 @@ function consensusTable(items: NonNullable<RelentlessReport["globalConsensus"]>)
 
 function readJson<T>(path: string): T {
   if (!existsSync(path)) throw new Error("ROI_BET_FULL_REVIEW_REQUIRED_INPUT_MISSING");
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_BET_FULL_REVIEW_REQUIRED_INPUT_IDENTITY_INVALID");
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  assertCanonicalSingleLinkRegularFile(path, "ROI_BET_FULL_REVIEW_REQUIRED_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readGovernanceFileUtf8(path, "reports")) as T;
 }
 
 function readOptional<T>(path: string): T | null {
   if (!existsSync(path)) return null;
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_BET_FULL_REVIEW_OPTIONAL_INPUT_IDENTITY_INVALID");
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  assertCanonicalSingleLinkRegularFile(path, "ROI_BET_FULL_REVIEW_OPTIONAL_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readGovernanceFileUtf8(path, "reports")) as T;
 }
 
 function assertCanonicalDirectory(path: string, code: string): string {
