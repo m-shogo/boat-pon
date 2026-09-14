@@ -27,12 +27,20 @@ test("ROI autopilot declares official payout metric basis", () => {
   assert.match(source, /metricBasis: "official_payout_yen"/);
 });
 
-test("ROI autopilot verifies upstream JSON identities before parsing", () => {
+test("ROI autopilot reads upstream JSON through descriptor-bound verification", () => {
   assert.match(source, /ROI_AUTOPILOT_MATRIX_IDENTITY_INVALID/);
   assert.match(source, /ROI_AUTOPILOT_HYPOTHESES_IDENTITY_INVALID/);
-  const identity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, identityErrorCode)");
-  const read = source.indexOf('readFileSync(verifiedPath, "utf8")', identity);
-  assert.ok(identity >= 0 && read > identity, "research JSON must only be parsed from a verified canonical file identity");
+  assert.match(source, /import \{ readGovernanceFileUtf8 \} from "\.\.\/src\/research\/governance\/safeFs";/u);
+  const helper = source.indexOf("function readVerifiedText(");
+  const descriptorRead = source.indexOf("readGovernanceFileUtf8(path, process.cwd())", helper);
+  const required = source.indexOf("function readJson<T>", descriptorRead);
+  const requiredRead = source.indexOf("readVerifiedText(path, identityErrorCode)", required);
+  const optional = source.indexOf("function readOptionalJson<T>", requiredRead);
+  const optionalRead = source.indexOf("readVerifiedText(path, identityErrorCode)", optional);
+  assert.ok(helper >= 0 && descriptorRead > helper);
+  assert.ok(required > descriptorRead && requiredRead > required);
+  assert.ok(optional > requiredRead && optionalRead > optional);
+  assert.doesNotMatch(source, /readFileSync\(verifiedPath/u);
   assert.doesNotMatch(source, /throw new Error\(`\$\{path\} does not exist`\)/);
 });
 
