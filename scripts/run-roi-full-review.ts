@@ -7,13 +7,13 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const OUT_MD = "reports/roi-full-review.md";
@@ -224,16 +224,22 @@ function table(items: EvalLike[]) {
   return `| judgement | label | removedN | removedROI | remainingN | remainingROI | improvement | train | validation | test | warnings |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|\n${items.slice(0, 30).map((x) => `| ${x.judgement ?? "-"} | ${md(x.label ?? "-")} | ${x.removed?.n ?? 0} | ${pct(Number(x.removed?.roi ?? 0))} | ${x.remaining?.n ?? 0} | ${pct(Number(x.remaining?.roi ?? 0))} | ${pct(Number(x.improvement ?? 0))} | ${pct(Number(x.trainRoi ?? 0))} | ${pct(Number(x.validationRoi ?? 0))} | ${pct(Number(x.testRoi ?? 0))} | ${md((x.warnings ?? []).join(", ") || "-")} |`).join("\n")}`;
 }
 
+function readVerifiedText(path: string, identityErrorCode: string): string {
+  try {
+    return readGovernanceFileUtf8(path, process.cwd());
+  } catch {
+    throw new Error(identityErrorCode);
+  }
+}
+
 function readRequiredText(path: string, identityErrorCode: string): string {
   if (!existsSync(path)) throw new Error("ROI_FULL_REVIEW_REQUIRED_SOURCE_MISSING");
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
-  return readFileSync(verifiedPath, "utf8");
+  return readVerifiedText(path, identityErrorCode);
 }
 
 function readOptional<T>(path: string, identityErrorCode: string): T | null {
   if (!existsSync(path)) return null;
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
-  return JSON.parse(readFileSync(verifiedPath, "utf8")) as T;
+  return JSON.parse(readVerifiedText(path, identityErrorCode)) as T;
 }
 
 function assertCanonicalDirectory(path: string, code: string): string {
