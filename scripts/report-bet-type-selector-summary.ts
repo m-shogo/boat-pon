@@ -9,7 +9,6 @@ import {
   mkdirSync,
   mkdtempSync,
   openSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -18,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REQUIRED_REPORTS = [
@@ -57,13 +57,13 @@ function assertCanonicalDirectory(path: string, code: string): string {
 function verifyRequiredReports(): void {
   for (const path of REQUIRED_REPORTS) {
     if (!existsSync(path)) fail(path, "missing");
-    const verifiedPath = assertCanonicalSingleLinkRegularFile(
+    assertCanonicalSingleLinkRegularFile(
       path,
       "BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID",
     );
     let parsed: unknown;
     try {
-      parsed = JSON.parse(readFileSync(verifiedPath, "utf8"));
+      parsed = JSON.parse(readGovernanceFileUtf8(path, "reports"));
     } catch {
       fail(path, "invalid_json");
     }
@@ -182,16 +182,16 @@ function readIsolatedOutputs(workspace: string, dbPath: string): { markdown: str
   if (!existsSync(workspaceJson)) {
     throw new Error("BET_TYPE_SELECTOR_JSON_REPORT_MISSING_AFTER_ANALYSIS");
   }
-  const verifiedReportPath = assertCanonicalSingleLinkRegularFile(
+  assertCanonicalSingleLinkRegularFile(
     workspaceMd,
     "BET_TYPE_SELECTOR_REPORT_IDENTITY_INVALID",
   );
-  const verifiedJsonPath = assertCanonicalSingleLinkRegularFile(
+  assertCanonicalSingleLinkRegularFile(
     workspaceJson,
     "BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID",
   );
-  const report = readFileSync(verifiedReportPath, "utf8");
-  const json = readFileSync(verifiedJsonPath, "utf8");
+  const report = readGovernanceFileUtf8(workspaceMd, workspace);
+  const json = readGovernanceFileUtf8(workspaceJson, workspace);
   const provenance = `DB: ${dbPath}`;
   if (!report.includes(provenance)) {
     throw new Error("BET_TYPE_SELECTOR_DB_PROVENANCE_NOT_FOUND");
@@ -202,11 +202,11 @@ function readIsolatedOutputs(workspace: string, dbPath: string): { markdown: str
     throw new Error("BET_TYPE_SELECTOR_JSON_REPORT_INVALID");
   }
   assertCanonicalSingleLinkRegularFile(
-    verifiedReportPath,
+    workspaceMd,
     "BET_TYPE_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID",
   );
   assertCanonicalSingleLinkRegularFile(
-    verifiedJsonPath,
+    workspaceJson,
     "BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID",
   );
   return {
