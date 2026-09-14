@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REQUIRED_REPORTS = [
@@ -144,8 +145,12 @@ function validateReport(path: string, identityError: string, required: boolean, 
     if (required) fail(path, "missing");
     return null;
   }
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, identityError);
-  const contents = readFileSync(verifiedPath, "utf8");
+  let contents: string;
+  try {
+    contents = readGovernanceFileUtf8(path, process.cwd());
+  } catch {
+    throw new Error(identityError);
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(contents);
