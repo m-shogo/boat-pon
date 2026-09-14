@@ -3,8 +3,9 @@
  * DB・app_settings・本番判定は変更しない。
  */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { readGovernanceFileUtf8 } from "../src/research/governance/safeFs";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const REPORT_DIR = "reports";
@@ -13,8 +14,8 @@ const OUT_JSON = `${REPORT_DIR}/roi-all-data-sweep.json`;
 const read = (name: string): any => {
   const path = `${REPORT_DIR}/${name}`;
   if (!existsSync(path)) return null;
-  const verifiedPath = assertCanonicalSingleLinkRegularFile(path, "ROI_ALL_DATA_SWEEP_INPUT_IDENTITY_INVALID");
-  return JSON.parse(readFileSync(verifiedPath, "utf8"));
+  assertCanonicalSingleLinkRegularFile(path, "ROI_ALL_DATA_SWEEP_INPUT_IDENTITY_INVALID");
+  return JSON.parse(readGovernanceFileUtf8(path, REPORT_DIR));
 };
 const docs = [
   ["選手能力/モーターのpoint-in-time screen", "unconventional-feature-screen.json"],

@@ -4,11 +4,12 @@ import test from "node:test";
 
 const source = readFileSync("scripts/report-roi-all-data-sweep.ts", "utf8");
 
-test("ROI all-data sweep verifies every existing upstream report before read", () => {
+test("ROI all-data sweep binds every existing upstream report read to a verified descriptor", () => {
   assert.match(source, /ROI_ALL_DATA_SWEEP_INPUT_IDENTITY_INVALID/u);
-  assert.match(source, /const verifiedPath = assertCanonicalSingleLinkRegularFile\(path,/u);
-  assert.match(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
-  assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(`\$\{REPORT_DIR\}\/\$\{name\}`/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(path,/u);
+  assert.match(source, /JSON\.parse\(readGovernanceFileUtf8\(path, REPORT_DIR\)\)/u);
+  assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
+  assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(path, "utf8"\)\)/u);
 });
 
 test("ROI all-data sweep preflights the complete destination set before the first publication", () => {
