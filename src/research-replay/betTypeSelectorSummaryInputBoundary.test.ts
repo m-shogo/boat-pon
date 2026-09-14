@@ -21,15 +21,23 @@ test("bet-type selector summary fails closed on missing, non-canonical, invalid,
   assert.match(entry, /BET_TYPE_SELECTOR_INPUT_REPORT_INVALID/);
   assert.match(entry, /BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID/);
   assert.match(entry, /assertCanonicalSingleLinkRegularFile\(\s*path,/u);
-  assert.match(entry, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/);
+  assert.match(entry, /JSON\.parse\(readGovernanceFileUtf8\(path, "reports"\)\)/);
   assert.match(entry, /parsed === null \|\| typeof parsed !== "object" \|\| Array\.isArray\(parsed\)/);
   assert.match(entry, /envelope\.safety\?\.pointInTimeSafe === false/);
   assert.match(entry, /point_in_time_unsafe/);
   const validation = entry.indexOf("function verifyRequiredReports()");
   const identity = entry.indexOf("BET_TYPE_SELECTOR_INPUT_REPORT_IDENTITY_INVALID");
+  const descriptorRead = entry.indexOf('readGovernanceFileUtf8(path, "reports")', identity);
   const safetyValidation = entry.indexOf("pointInTimeSafe === false");
   const internalRun = entry.lastIndexOf("runIsolated(workspace, verifiedDbPath)");
-  assert.ok(validation >= 0 && identity > validation && safetyValidation > identity && internalRun > safetyValidation);
+  assert.ok(
+    validation >= 0 &&
+      identity > validation &&
+      descriptorRead > identity &&
+      safetyValidation > descriptorRead &&
+      internalRun > safetyValidation,
+  );
+  assert.doesNotMatch(entry, /JSON\.parse\(readFileSync\(/u);
   assert.doesNotMatch(entry, /report-bet-type-selector-summary-raw\.ts/);
   assert.doesNotMatch(entry, /DatabaseSync/);
   assert.equal(pkg.scripts?.["report:bet-type-selector"], "tsx scripts/report-bet-type-selector-summary.ts");
@@ -98,12 +106,13 @@ test("bet-type selector summary rejects unsafe pre-existing Markdown and JSON ou
 test("bet-type selector summary verifies isolated Markdown and JSON outputs before publication", () => {
   const mdIdentity = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_IDENTITY_INVALID"');
   const jsonIdentity = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_IDENTITY_INVALID"');
-  const mdRead = entry.indexOf('readFileSync(verifiedReportPath, "utf8")');
-  const jsonRead = entry.indexOf('readFileSync(verifiedJsonPath, "utf8")');
+  const mdRead = entry.indexOf("readGovernanceFileUtf8(workspaceMd, workspace)", jsonIdentity);
+  const jsonRead = entry.indexOf("readGovernanceFileUtf8(workspaceJson, workspace)", mdRead);
   const mdHandoff = entry.indexOf('"BET_TYPE_SELECTOR_REPORT_HANDOFF_IDENTITY_INVALID"');
   const jsonHandoff = entry.indexOf('"BET_TYPE_SELECTOR_JSON_REPORT_HANDOFF_IDENTITY_INVALID"');
   assert.ok(mdIdentity >= 0 && jsonIdentity > mdIdentity && mdRead > jsonIdentity && jsonRead > mdRead);
   assert.ok(mdHandoff > jsonRead && jsonHandoff > mdHandoff);
+  assert.doesNotMatch(entry, /readFileSync\(verified(?:Report|Json)Path/u);
   assert.match(entry, /JSON\.parse\(json\)/);
 });
 
