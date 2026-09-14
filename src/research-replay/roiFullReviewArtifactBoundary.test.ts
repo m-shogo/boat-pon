@@ -4,20 +4,23 @@ import test from "node:test";
 
 const source = readFileSync("scripts/run-roi-full-review.ts", "utf8");
 
-test("ROI full review verifies source and upstream report identities before reading", () => {
+test("ROI full review reads source and upstream reports through descriptor-bound verification", () => {
   assert.match(source, /ROI_FULL_REVIEW_ALL_FEATURE_SOURCE_IDENTITY_INVALID/);
   assert.match(source, /ROI_FULL_REVIEW_ALL_FEATURE_IDENTITY_INVALID/);
   assert.match(source, /ROI_FULL_REVIEW_AUTOPILOT_IDENTITY_INVALID/);
   assert.match(source, /ROI_FULL_REVIEW_MATRIX_IDENTITY_INVALID/);
+  assert.match(source, /import \{ readGovernanceFileUtf8 \} from "\.\.\/src\/research\/governance\/safeFs";/u);
 
-  const sourceIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, identityErrorCode)");
-  const sourceRead = source.indexOf('readFileSync(verifiedPath, "utf8")', sourceIdentity);
-  assert.ok(sourceIdentity >= 0 && sourceRead > sourceIdentity);
-
-  const optionalHelper = source.indexOf("function readOptional<T>");
-  const optionalIdentity = source.indexOf("assertCanonicalSingleLinkRegularFile(path, identityErrorCode)", optionalHelper);
-  const optionalRead = source.indexOf('readFileSync(verifiedPath, "utf8")', optionalIdentity);
-  assert.ok(optionalHelper >= 0 && optionalIdentity > optionalHelper && optionalRead > optionalIdentity);
+  const verifiedHelper = source.indexOf("function readVerifiedText(");
+  const descriptorRead = source.indexOf("readGovernanceFileUtf8(path, process.cwd())", verifiedHelper);
+  const requiredHelper = source.indexOf("function readRequiredText(", descriptorRead);
+  const requiredRead = source.indexOf("readVerifiedText(path, identityErrorCode)", requiredHelper);
+  const optionalHelper = source.indexOf("function readOptional<T>", requiredRead);
+  const optionalRead = source.indexOf("readVerifiedText(path, identityErrorCode)", optionalHelper);
+  assert.ok(verifiedHelper >= 0 && descriptorRead > verifiedHelper);
+  assert.ok(requiredHelper > descriptorRead && requiredRead > requiredHelper);
+  assert.ok(optionalHelper > requiredRead && optionalRead > optionalHelper);
+  assert.doesNotMatch(source, /readFileSync\(verifiedPath/u);
 });
 
 test("ROI full review keeps official-payout gate before final decision", () => {
