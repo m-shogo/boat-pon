@@ -2,7 +2,6 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   closeSync,
-  copyFileSync,
   existsSync,
   fsyncSync,
   lstatSync,
@@ -132,16 +131,26 @@ function atomicPublish(
 function stageRequiredReports(workspace: string): void {
   mkdirSync(join(workspace, "reports"), { recursive: true });
   for (const path of REQUIRED_REPORTS) {
-    const sourcePath = assertCanonicalSingleLinkRegularFile(
+    assertCanonicalSingleLinkRegularFile(
       path,
       "BET_TYPE_SELECTOR_INPUT_REPORT_HANDOFF_IDENTITY_INVALID",
     );
+    const content = readGovernanceFileUtf8(path, "reports");
     const stagedPath = join(workspace, path);
-    copyFileSync(sourcePath, stagedPath);
-    assertCanonicalSingleLinkRegularFile(
-      stagedPath,
-      "BET_TYPE_SELECTOR_STAGED_INPUT_REPORT_IDENTITY_INVALID",
-    );
+    let fd: number | null = null;
+    try {
+      fd = openSync(stagedPath, "wx", 0o600);
+      writeFileSync(fd, content, "utf8");
+      fsyncSync(fd);
+      closeSync(fd);
+      fd = null;
+      assertCanonicalSingleLinkRegularFile(
+        stagedPath,
+        "BET_TYPE_SELECTOR_STAGED_INPUT_REPORT_IDENTITY_INVALID",
+      );
+    } finally {
+      if (fd !== null) closeSync(fd);
+    }
   }
 }
 
