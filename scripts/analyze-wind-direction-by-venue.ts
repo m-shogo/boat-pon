@@ -3,7 +3,8 @@
  * historical closing odds / 読み取り専用。T-5・本番BUY・自動購入には接続しない。
  */
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   HISTORICAL_EXACTA_COMPLETE_MARKET_HAVING,
@@ -138,6 +139,7 @@ md += `\n## 会場×風向セル（両期間n>=20）\n\n|会場|風向|2024 n / 
 for (const c of cells.slice(0, 30)) md += `|${c.venue}|${c.direction}|${c.discovery.n} / ${c.discovery.roi}% / ${c.discovery.top2ExclRoi}%|${c.forward.n} / ${c.forward.roi}% / ${c.forward.top2ExclRoi}%|\n`;
 md += `\n## 判定\n\n会場×風向×能力の組合せで、両期間・最大2件除外・十分な標本を同時に満たす本番候補は未確定。最有力の南西風セルも、T-5 exacta市場がないため、次はexacta T-5保存の品質監査→paper-forwardへ進める。\n`;
 mkdirSync("reports", { recursive: true });
+assertCanonicalDirectory("reports", "WIND_DIRECTION_REPORTS_DIRECTORY_IDENTITY_INVALID");
 verifyExistingOutput(OUT_MD, "WIND_DIRECTION_PREEXISTING_MD_IDENTITY_INVALID");
 verifyExistingOutput(OUT_JSON, "WIND_DIRECTION_PREEXISTING_JSON_IDENTITY_INVALID");
 atomicPublish(OUT_MD, md, "WIND_DIRECTION_MD_PUBLISH_TEMP_IDENTITY_INVALID", "WIND_DIRECTION_MD_PUBLISH_DESTINATION_IDENTITY_INVALID");
@@ -145,12 +147,22 @@ atomicPublish(OUT_JSON, `${JSON.stringify(report, null, 2)}\n`, "WIND_DIRECTION_
 console.log(`[wind-direction] rows=${rows.length} cells=${cells.length}`); for (const c of candidateResults) console.log(`${c.label}: discovery=${c.discovery.n}/${c.discovery.roi}% test=${c.forward.n}/${c.forward.roi}%`);
 db.close();
 
+function assertCanonicalDirectory(path: string, identityErrorCode: string): string {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(identityErrorCode);
+  const resolvedPath = resolve(path);
+  if (realpathSync(path) !== resolvedPath) throw new Error(identityErrorCode);
+  return resolvedPath;
+}
+
 function verifyExistingOutput(path: string, identityErrorCode: string): void {
   if (!existsSync(path)) return;
   assertCanonicalSingleLinkRegularFile(path, identityErrorCode);
 }
 
 function atomicPublish(path: string, content: string, identityErrorCode: string, destinationIdentityErrorCode: string): void {
+  const parentPath = dirname(path);
+  assertCanonicalDirectory(parentPath, "WIND_DIRECTION_PUBLISH_PARENT_IDENTITY_INVALID");
   const tempPath = `${path}.tmp-${process.pid}-${randomUUID()}`;
   let fd: number | null = null;
   try {
@@ -163,6 +175,7 @@ function atomicPublish(path: string, content: string, identityErrorCode: string,
     if (existsSync(path)) {
       assertCanonicalSingleLinkRegularFile(path, destinationIdentityErrorCode);
     }
+    assertCanonicalDirectory(parentPath, "WIND_DIRECTION_PUBLISH_PARENT_HANDOFF_IDENTITY_INVALID");
     renameSync(verifiedTempPath, path);
   } finally {
     if (fd !== null) closeSync(fd);
