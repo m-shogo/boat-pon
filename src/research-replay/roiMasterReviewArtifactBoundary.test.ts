@@ -4,10 +4,14 @@ import test from "node:test";
 
 const source = readFileSync("scripts/run-roi-master-review.ts", "utf8");
 
-test("ROI master review verifies every existing input before read", () => {
+test("ROI master review reads every existing input through descriptor-bound verification", () => {
   assert.match(source, /ROI_MASTER_REVIEW_INPUT_IDENTITY_INVALID/u);
-  assert.match(source, /const verifiedPath = assertCanonicalSingleLinkRegularFile\(path,/u);
-  assert.match(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
+  assert.match(source, /import \{ readGovernanceFileUtf8 \} from "\.\.\/src\/research\/governance\/safeFs";/u);
+  const helper = source.indexOf("function read(path: string)");
+  const descriptorRead = source.indexOf("readGovernanceFileUtf8(path, process.cwd())", helper);
+  const parse = source.indexOf("JSON.parse(text)", descriptorRead);
+  assert.ok(helper >= 0 && descriptorRead > helper && parse > descriptorRead);
+  assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
   assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(path, "utf8"\)\)/u);
 });
 
