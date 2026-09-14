@@ -4,12 +4,13 @@ import test from "node:test";
 
 const source = readFileSync("scripts/run-roi-bet-full-review.ts", "utf8");
 
-test("ROI bet full review verifies required and optional inputs before parsing", () => {
+test("ROI bet full review binds required and optional input reads to verified descriptors", () => {
   assert.match(source, /ROI_BET_FULL_REVIEW_REQUIRED_INPUT_MISSING/u);
   assert.match(source, /ROI_BET_FULL_REVIEW_REQUIRED_INPUT_IDENTITY_INVALID/u);
   assert.match(source, /ROI_BET_FULL_REVIEW_OPTIONAL_INPUT_IDENTITY_INVALID/u);
-  assert.match(source, /const verifiedPath = assertCanonicalSingleLinkRegularFile\(path,/u);
-  assert.match(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
+  assert.match(source, /assertCanonicalSingleLinkRegularFile\(path,/u);
+  assert.match(source, /JSON\.parse\(readGovernanceFileUtf8\(path, "reports"\)\)/u);
+  assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(verifiedPath, "utf8"\)\)/u);
   assert.doesNotMatch(source, /JSON\.parse\(readFileSync\(path, "utf8"\)\)/u);
 });
 
