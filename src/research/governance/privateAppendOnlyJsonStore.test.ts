@@ -54,6 +54,20 @@ test("private append-only store accepts a valid evidence replay without replacin
   });
 });
 
+test("private append-only store rejects a replay whose payload differs despite identical evidence", () => {
+  withRoot((root) => {
+    const directory = join(root, "private");
+    const path = appendFixture(directory, FILENAME);
+    const conflicting = `${JSON.stringify({ evidence: { contentDigest: DIGEST }, private: false })}\n`;
+
+    assert.throws(
+      () => appendFixture(directory, FILENAME, conflicting),
+      /existing payload differs/,
+    );
+    assert.equal(readFileSync(path, "utf8"), CONTENTS);
+  });
+});
+
 test("private append-only store rejects forged existing evidence even when the embedded digest matches", () => {
   withRoot((root) => {
     const directory = join(root, "private");
