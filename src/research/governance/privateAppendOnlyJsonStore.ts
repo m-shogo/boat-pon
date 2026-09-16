@@ -120,9 +120,11 @@ export function appendPrivateJsonStore(input: {
   } catch (error) {
     const code = error instanceof Error && "code" in error ? String((error as NodeJS.ErrnoException).code) : "";
     if (code !== "EEXIST") throw error;
+    let existingContents: string;
     let existing: Record<string, unknown>;
     try {
-      const parsed = JSON.parse(readExistingPrivateFile(path)) as unknown;
+      existingContents = readExistingPrivateFile(path);
+      const parsed = JSON.parse(existingContents) as unknown;
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("not object");
       existing = parsed as Record<string, unknown>;
     } catch (existingError) {
@@ -139,6 +141,9 @@ export function appendPrivateJsonStore(input: {
       : null;
     if (existingDigest !== input.expectedEvidenceDigest) {
       throw new Error("append-only private store conflict: existing evidence differs");
+    }
+    if (existingContents !== input.contents) {
+      throw new Error("append-only private store conflict: existing payload differs");
     }
   }
   return path;
