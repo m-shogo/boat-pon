@@ -5,7 +5,9 @@ import test from "node:test";
 const source = readFileSync("scripts/report-research-governor.ts", "utf8");
 
 test("research governor preflights the complete destination set before first canonical publication", () => {
-  const outputsReady = source.indexOf('const json = readFileSync(verifiedJsonPath, "utf8")');
+  const markdownReady = source.indexOf("const markdown = readVerifiedWorkspaceOutput(");
+  const jsonReady = source.indexOf("const json = readVerifiedWorkspaceOutput(", markdownReady);
+  const outputsReady = Math.max(markdownReady, jsonReady);
   const reportsIdentity = source.indexOf(
     'assertCanonicalDirectory("reports", "RESEARCH_GOVERNOR_REPORTS_DIRECTORY_IDENTITY_INVALID")',
     outputsReady,
@@ -13,7 +15,8 @@ test("research governor preflights the complete destination set before first can
   const destinationPreflight = source.indexOf("verifyExistingOutputPaths();", reportsIdentity);
   const firstPublish = source.indexOf("atomicPublish(", destinationPreflight);
 
-  assert.ok(outputsReady >= 0);
+  assert.ok(markdownReady >= 0);
+  assert.ok(jsonReady > markdownReady);
   assert.ok(reportsIdentity > outputsReady);
   assert.ok(destinationPreflight > reportsIdentity);
   assert.ok(firstPublish > destinationPreflight);
