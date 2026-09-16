@@ -81,7 +81,7 @@ function candidateEvidence(input: {
   contents: string;
   expectedEvidenceDigest: string;
   validateExistingEvidence: (value: unknown) => boolean;
-}): void {
+}): Record<string, unknown> {
   let payload: Record<string, unknown>;
   try {
     const parsed = JSON.parse(input.contents) as unknown;
@@ -100,6 +100,7 @@ function candidateEvidence(input: {
   if (digest !== input.expectedEvidenceDigest) {
     throw new Error("private append-only store candidate evidence differs");
   }
+  return payload;
 }
 
 export function appendPrivateJsonStore(input: {
@@ -108,6 +109,7 @@ export function appendPrivateJsonStore(input: {
   contents: string;
   expectedEvidenceDigest: string;
   validateExistingEvidence: (value: unknown) => boolean;
+  isIdempotentReplay?: (existing: Record<string, unknown>, candidate: Record<string, unknown>) => boolean;
 }): string {
   if (basename(input.filename) !== input.filename || !/^[0-9A-Za-z._-]+\.json$/u.test(input.filename)) {
     throw new Error("private append-only store filename is invalid");
@@ -115,7 +117,7 @@ export function appendPrivateJsonStore(input: {
   if (!/^[0-9a-f]{64}$/u.test(input.expectedEvidenceDigest)) {
     throw new Error("private append-only store evidence digest is invalid");
   }
-  candidateEvidence(input);
+  const candidate = candidateEvidence(input);
   const directory = assertPrivateDirectory(input.directory);
   const path = join(directory, input.filename);
   try {
@@ -145,7 +147,10 @@ export function appendPrivateJsonStore(input: {
     if (existingDigest !== input.expectedEvidenceDigest) {
       throw new Error("append-only private store conflict: existing evidence differs");
     }
-    if (existingContents !== input.contents) {
+    const idempotent = input.isIdempotentReplay
+      ? input.isIdempotentReplay(existing, candidate)
+      : existingContents === input.contents;
+    if (!idempotent) {
       throw new Error("append-only private store conflict: existing payload differs");
     }
   }
