@@ -63,6 +63,13 @@ function lstatIfPresent(path: string): Stats | null {
   }
 }
 
+function sameFilesystemIdentity(left: Stats, right: Stats | null): boolean {
+  return right !== null
+    && left.dev === right.dev
+    && left.ino === right.ino
+    && left.mode === right.mode;
+}
+
 function hasSafeParentPath(repoRoot: string, absolutePath: string): boolean {
   const root = resolve(repoRoot);
   let current = dirname(absolutePath);
@@ -267,6 +274,21 @@ export function inventoryResearchRetainedOutputs(input: {
         issues: [],
       });
     }
+
+    if (!sameFilesystemIdentity(runStat, lstatIfPresent(runPath))) {
+      entries.push(invalidEntry({
+        relativePath: runRelativePath,
+        runId: runDirent.name,
+        issues: ["RETAINED_INVENTORY_RUN_DIRECTORY_CHANGED_DURING_SCAN"],
+      }));
+    }
+  }
+
+  if (!sameFilesystemIdentity(rootStat, lstatIfPresent(rootPath))) {
+    entries.push(invalidEntry({
+      relativePath: RETAINED_ROOT,
+      issues: ["RETAINED_INVENTORY_ROOT_CHANGED_DURING_SCAN"],
+    }));
   }
 
   entries.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
