@@ -65,7 +65,10 @@ function readExistingPrivateFile(path: string): string {
       throw new Error("private append-only store existing target is not strict UTF-8");
     }
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ELOOP") {
+    const code = error instanceof Error && "code" in error
+      ? String((error as NodeJS.ErrnoException).code)
+      : "";
+    if (code === "ELOOP") {
       throw new Error("private append-only store existing target symlink is forbidden");
     }
     throw error;
