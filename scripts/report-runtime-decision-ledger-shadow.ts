@@ -185,6 +185,15 @@ function atomicWrite(path: string, contents: string): void {
   renameSync(temp, absolute);
 }
 
+function stablePrivateReplayPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const { generatedAt: _generatedAt, evidence, ...rest } = payload;
+  if (typeof evidence !== "object" || evidence === null || Array.isArray(evidence)) {
+    return { ...rest, evidence };
+  }
+  const { generatedAt: _evidenceGeneratedAt, ...stableEvidence } = evidence as Record<string, unknown>;
+  return { ...rest, evidence: stableEvidence };
+}
+
 function appendPrivateStore(
   directory: string,
   payload: Record<string, unknown>,
@@ -197,6 +206,8 @@ function appendPrivateStore(
     contents: `${JSON.stringify(payload, null, 2)}\n`,
     expectedEvidenceDigest: evidence.contentDigest,
     validateExistingEvidence: (value) => validateRuntimeDecisionLedgerShadowEvidence(value).valid,
+    isIdempotentReplay: (existing, candidate) =>
+      JSON.stringify(stablePrivateReplayPayload(existing)) === JSON.stringify(stablePrivateReplayPayload(candidate)),
   });
 }
 
