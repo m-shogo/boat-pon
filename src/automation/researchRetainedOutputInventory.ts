@@ -67,7 +67,11 @@ function sameFilesystemIdentity(left: Stats, right: Stats | null): boolean {
   return right !== null
     && left.dev === right.dev
     && left.ino === right.ino
-    && left.mode === right.mode;
+    && left.mode === right.mode
+    && left.nlink === right.nlink
+    && left.size === right.size
+    && left.mtimeMs === right.mtimeMs
+    && left.ctimeMs === right.ctimeMs;
 }
 
 function hasSafeParentPath(repoRoot: string, absolutePath: string): boolean {
