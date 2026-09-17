@@ -202,7 +202,15 @@ export function inventoryResearchRetainedOutputs(input: {
   for (const runDirent of readdirSync(rootPath, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const runRelativePath = `${RETAINED_ROOT}/${runDirent.name}`;
     const runPath = resolveInside(input.repoRoot, runRelativePath);
-    const runStat = lstatSync(runPath);
+    const runStat = lstatIfPresent(runPath);
+    if (!runStat) {
+      entries.push(invalidEntry({
+        relativePath: runRelativePath,
+        runId: RUN_ID_RE.test(runDirent.name) ? runDirent.name : null,
+        issues: ["RETAINED_INVENTORY_RUN_DIRECTORY_CHANGED_DURING_SCAN"],
+      }));
+      continue;
+    }
     if (!RUN_ID_RE.test(runDirent.name) || runDirent.isSymbolicLink() || !runStat.isDirectory()) {
       if (runStat.isFile() || runStat.isSymbolicLink()) {
         fileCount += 1;
@@ -220,8 +228,17 @@ export function inventoryResearchRetainedOutputs(input: {
     for (const fileDirent of readdirSync(runPath, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
       const relativePath = `${runRelativePath}/${fileDirent.name}`;
       const absolutePath = resolveInside(input.repoRoot, relativePath);
-      const stat = lstatSync(absolutePath);
+      const stat = lstatIfPresent(absolutePath);
       fileCount += 1;
+      if (!stat) {
+        entries.push(invalidEntry({
+          relativePath,
+          runId: runDirent.name,
+          expectedContentDigest: fileDirent.name.match(RETAINED_FILE_RE)?.[1] ?? null,
+          issues: ["RETAINED_INVENTORY_FILE_CHANGED_DURING_READ"],
+        }));
+        continue;
+      }
       if (stat.isFile()) totalBytes += stat.size;
 
       const match = fileDirent.name.match(RETAINED_FILE_RE);
