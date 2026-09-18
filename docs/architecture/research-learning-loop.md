@@ -20,7 +20,9 @@ Each record has a canonical digest and is validated by the normal research regis
 
 The normalized fingerprint is:
 
-`fingerprintKey + attemptSignature + authorityState(mainSha, environmentKey)`
+`fingerprintKey + attemptSignature + authorityState(environmentKey, materialStateKey)`
+
+`mainSha` is retained as evidence, but it is not the reset key. `materialStateKey` must identify the code/config/runtime state that could plausibly change the root cause.
 
 Use semantic fingerprint keys. Do not encode secrets, private raw paths, odds values, timestamps, random IDs, or race keys into the fingerprint.
 
@@ -41,7 +43,7 @@ Gate semantics:
 - two unchanged matching failures: `BLOCK_REPEAT` — a third identical attempt is prohibited;
 - latest matching `VERIFIED_SUCCESS + REUSE_VERIFIED_GUARDRAIL`: `REUSE_GUARDRAIL` first.
 
-An unrelated new main SHA is not enough to call the environment materially changed. The change must plausibly affect the fingerprint's root cause.
+An unrelated new main SHA never resets the gate. A retry is materially changed only when `environmentKey` or `materialStateKey` changes for a reason that plausibly affects the fingerprint's root cause.
 
 Protected N2 runs must never be consumed merely to discover whether an unchanged failure repeats.
 

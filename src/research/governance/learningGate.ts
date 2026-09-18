@@ -6,6 +6,7 @@ export type LearningAttempt = {
   authorityState: {
     mainSha: string | null;
     environmentKey: string;
+    materialStateKey: string;
   };
 };
 
@@ -15,8 +16,10 @@ export type LearningGateDecision =
   | { action: "BLOCK_REPEAT"; learningId: string; reason: string }
   | { action: "REUSE_GUARDRAIL"; learningId: string; reason: string; guardrail: string };
 
-function sameAuthority(a: LearningRecord["authorityState"], b: LearningAttempt["authorityState"]): boolean {
-  return a.mainSha === b.mainSha && a.environmentKey === b.environmentKey;
+function sameMaterialState(a: LearningRecord["authorityState"], b: LearningAttempt["authorityState"]): boolean {
+  // mainSha is retained as evidence, but unrelated commits must not reset the
+  // retry gate. Only the relevant environment/material-state identity does.
+  return a.environmentKey === b.environmentKey && a.materialStateKey === b.materialStateKey;
 }
 
 export function evaluateLearningGate(records: LearningRecord[], attempt: LearningAttempt): LearningGateDecision {
@@ -29,6 +32,7 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
   if (
     latest?.classification === "VERIFIED_SUCCESS"
     && latest.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL"
+    && sameMaterialState(latest.authorityState, attempt.authorityState)
   ) {
     return {
       action: "REUSE_GUARDRAIL",
@@ -41,7 +45,7 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
   const unchangedFailures = relevant.filter((record) =>
     record.classification === "NEW_FAILURE"
     && record.attemptSignature === attempt.attemptSignature
-    && sameAuthority(record.authorityState, attempt.authorityState)
+    && sameMaterialState(record.authorityState, attempt.authorityState)
   );
 
   if (unchangedFailures.length >= 2) {

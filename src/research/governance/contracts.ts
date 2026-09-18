@@ -343,8 +343,9 @@ export type LearningRecord = {
   rootCauseClass: string;
   attemptSignature: string;           // method/approach actually tried
   authorityState: {
-    mainSha: string | null;
+    mainSha: string | null;            // evidence only; unrelated main movement does not reset the gate
     environmentKey: string;
+    materialStateKey: string;          // relevant code/config/runtime state for retry eligibility
   };
   evidenceRefs: string[];             // repo-relative or stable public metadata refs only
   lesson: string;
@@ -381,6 +382,7 @@ export function validateLearning(x: unknown): Validation {
       errors.push("authorityState.mainSha must be 40-hex or null");
     }
     if (!isStr(authority.environmentKey)) errors.push("authorityState.environmentKey required");
+    if (!isStr(authority.materialStateKey)) errors.push("authorityState.materialStateKey required");
   }
   if (!isArr(l.evidenceRefs) || (l.evidenceRefs as unknown[]).length === 0) {
     errors.push("evidenceRefs required");

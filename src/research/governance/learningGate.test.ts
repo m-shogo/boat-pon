@@ -17,7 +17,11 @@ const base: LearningRecord = {
   symptom: "same attempt failed",
   rootCauseClass: "UNCHANGED_FAILURE",
   attemptSignature: "method-a",
-  authorityState: { mainSha: "0123456789abcdef0123456789abcdef01234567", environmentKey: "ci" },
+  authorityState: {
+    mainSha: "0123456789abcdef0123456789abcdef01234567",
+    environmentKey: "ci",
+    materialStateKey: "registry/append-v1",
+  },
   evidenceRefs: ["github-actions/run-1"],
   lesson: "do not repeat unchanged work",
   guardrail: "switch method before retry",
@@ -55,11 +59,24 @@ test("one unchanged failure switches method; two block the third identical attem
   assert.equal(evaluateLearningGate([base, second], attempt).action, "BLOCK_REPEAT");
 });
 
-test("material authority/environment change permits a new attempt with prior learning visible", () => {
+test("unrelated main movement does not bypass the unchanged-failure gate", () => {
   const decision = evaluateLearningGate([base], {
     fingerprintKey: base.fingerprintKey,
     attemptSignature: base.attemptSignature,
-    authorityState: { mainSha: "1111111111111111111111111111111111111111", environmentKey: "ci-v2" },
+    authorityState: { ...base.authorityState, mainSha: "1111111111111111111111111111111111111111" },
+  });
+  assert.equal(decision.action, "SWITCH_METHOD");
+});
+
+test("material state change permits a new attempt with prior learning visible", () => {
+  const decision = evaluateLearningGate([base], {
+    fingerprintKey: base.fingerprintKey,
+    attemptSignature: base.attemptSignature,
+    authorityState: {
+      mainSha: "1111111111111111111111111111111111111111",
+      environmentKey: "ci",
+      materialStateKey: "registry/append-v2",
+    },
   });
   assert.equal(decision.action, "PROCEED");
   assert.match(decision.reason, /prior learning exists/);

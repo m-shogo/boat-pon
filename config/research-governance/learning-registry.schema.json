@@ -35,10 +35,11 @@
     "authorityState": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mainSha", "environmentKey"],
+      "required": ["mainSha", "environmentKey", "materialStateKey"],
       "properties": {
         "mainSha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
-        "environmentKey": { "type": "string", "minLength": 1 }
+        "environmentKey": { "type": "string", "minLength": 1 },
+        "materialStateKey": { "type": "string", "minLength": 1 }
       }
     },
     "evidenceRefs": {

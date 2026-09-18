@@ -9,7 +9,8 @@
   "attemptSignature": "status-or-audit-selection-without-structured-learning-lookup",
   "authorityState": {
     "mainSha": "4848780ff31a70492418c7f2a3269e699da24e3b",
-    "environmentKey": "chatgpt-hourly-research"
+    "environmentKey": "chatgpt-hourly-research",
+    "materialStateKey": "hourly-research/learning-policy-v0"
   },
   "evidenceRefs": [
     "docs/architecture/research-knowledge-retention-contract.md",
@@ -20,7 +21,7 @@
   "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
   "createdAt": "2026-09-18T15:00:00Z",
   "productionConnection": false,
-  "_digest": "b7a885e2662c5c10b56390a3bb8e3b5241fab2694001a69d21c0bf6c5d531643",
+  "_digest": "c1ff86dec3b935d572802a4501ae3136f7cd626f3720c695327a12c8fc08fda1",
   "_digestVersion": "canonical-v2",
   "_recordedAt": "2026-09-18T15:00:00Z"
 }

@@ -9,7 +9,8 @@
   "attemptSignature": "setup-node-v4-managed-npm-cache-on-hourly-self-hosted-rollup",
   "authorityState": {
     "mainSha": "0afa8f22130bd10082b288bd5d964821334c2546",
-    "environmentKey": "self-hosted-macos/actions-setup-node-v4"
+    "environmentKey": "self-hosted-macos/actions-setup-node-v4",
+    "materialStateKey": "n2-rollup/setup-node-managed-npm-cache-v1"
   },
   "evidenceRefs": [
     "github-actions/run-35339791873",
@@ -21,7 +22,7 @@
   "repeatPolicy": "RETRY_AFTER_MATERIAL_CHANGE",
   "createdAt": "2026-09-18T15:00:00Z",
   "productionConnection": false,
-  "_digest": "8feab7da9e2d21a029d0a7ecc458e34573fd64db0818a7a975900d40514e1921",
+  "_digest": "15b4795b9b29f0f466b5d0069413435cff44e8fc326d2cdf87303d8be7ee0811",
   "_digestVersion": "canonical-v2",
   "_recordedAt": "2026-09-18T15:00:00Z"
 }
