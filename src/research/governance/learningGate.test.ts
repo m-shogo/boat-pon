@@ -26,7 +26,7 @@ const base: LearningRecord = {
   lesson: "do not repeat unchanged work",
   guardrail: "switch method before retry",
   repeatPolicy: "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
-  createdAt: "2026-09-18T00:00:00Z",
+  createdAt: "2026-09-18T00:00:00.000Z",
   productionConnection: false,
 };
 
@@ -52,7 +52,7 @@ test("learning registry is append-only, digest checked, and idempotent", () => {
 });
 
 test("one unchanged failure switches method; two block the third identical attempt", () => {
-  const second = { ...base, learningId: "LEARN-example-2", createdAt: "2026-09-18T01:00:00Z" };
+  const second = { ...base, learningId: "LEARN-example-2", createdAt: "2026-09-18T01:00:00.000Z" };
   const attempt = {
     fingerprintKey: base.fingerprintKey,
     attemptSignature: base.attemptSignature,
@@ -93,7 +93,7 @@ test("latest verified success is reused as a guardrail", () => {
     classification: "VERIFIED_SUCCESS",
     guardrail: "use method-b",
     repeatPolicy: "REUSE_VERIFIED_GUARDRAIL",
-    createdAt: "2026-09-18T02:00:00Z",
+    createdAt: "2026-09-18T02:00:00.000Z",
   };
   const decision = evaluateLearningGate([base, success], {
     fingerprintKey: base.fingerprintKey,
@@ -109,12 +109,12 @@ test("governance detects a forbidden third unchanged failure record", () => {
   const second: LearningRecord = {
     ...base,
     learningId: "LEARN-example-2",
-    createdAt: "2026-09-18T01:00:00Z",
+    createdAt: "2026-09-18T01:00:00.000Z",
   };
   const third: LearningRecord = {
     ...base,
     learningId: "LEARN-example-3",
-    createdAt: "2026-09-18T02:00:00Z",
+    createdAt: "2026-09-18T02:00:00.000Z",
   };
   assert.deepEqual(detectLearningRetryViolations([base, second]), []);
   const violations = detectLearningRetryViolations([base, second, third]);
