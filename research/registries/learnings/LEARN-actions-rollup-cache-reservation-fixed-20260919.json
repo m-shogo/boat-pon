@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-actions-rollup-cache-reservation-fixed-20260919",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "actions.rollup.cache-save-reservation-collision",
+  "subsystem": "github-actions-self-hosted",
+  "operation": "n2-private-market-feature-rollup-post-job-cache-save",
+  "symptom": "After removing setup-node managed npm caching from the rollup workflow, the next natural scheduled run completed its research command and post-job cleanup successfully without a cache reservation collision.",
+  "rootCauseClass": "POST_JOB_CACHE_RESERVATION_COLLISION",
+  "attemptSignature": "setup-node-v4-without-managed-npm-cache-on-hourly-self-hosted-rollup",
+  "authorityState": {
+    "mainSha": "126991d37963595c108f6735383ecfe910c08082",
+    "environmentKey": "self-hosted-macos/actions-setup-node-v4",
+    "materialStateKey": "n2-rollup/setup-node-managed-npm-cache-removed-v1"
+  },
+  "evidenceRefs": [
+    "github-actions/run-35369147454",
+    "github-actions/job-105678712937",
+    "pull/2268",
+    "LEARN-actions-rollup-cache-reservation-20260918"
+  ],
+  "lesson": "The cache reservation collision was post-job infrastructure, not a research-method failure. Removing managed npm caching from this small hourly rollup eliminates the conflicting cache-save path while preserving the research and safety checks.",
+  "guardrail": "For this self-hosted hourly rollup, keep setup-node managed npm caching disabled unless cache isolation is redesigned. Verify infrastructure fixes on the next natural schedule rather than consuming a protected N2 attempt for diagnostics.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-09-18T17:40:00.000Z",
+  "productionConnection": false,
+  "_digest": "dcbf24cc1507749c562475c1547b96cbc2ac16cd24ded571a16dbfdfa8372454",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-18T17:40:00.000Z"
+}
