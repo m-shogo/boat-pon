@@ -36,6 +36,10 @@ test("learning contract is fail-closed and privacy-safe", () => {
   assert.equal(validateLearning({ ...base, evidenceRefs: ["/Users/example/private.json"] }).valid, false);
   assert.equal(validateLearning({ ...base, evidenceRefs: ["data/private/raw.json"] }).valid, false);
   assert.equal(validateLearning({ ...base, authorityState: { ...base.authorityState, mainSha: "short" } }).valid, false);
+  assert.equal(validateLearning({ ...base, createdAt: "not-a-time" }).valid, false);
+  assert.equal(validateLearning({ ...base, createdAt: "2026-09-18T00:00:00Z" }).valid, false);
+  assert.equal(validateLearning({ ...base, classification: "VERIFIED_SUCCESS", repeatPolicy: "OBSERVE_ONLY" }).valid, false);
+  assert.equal(validateLearning({ ...base, classification: "TRANSIENT_UNCLASSIFIED", repeatPolicy: "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE" }).valid, false);
 });
 
 test("learning registry is append-only, digest checked, and idempotent", () => {
