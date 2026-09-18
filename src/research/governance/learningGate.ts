@@ -72,3 +72,28 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
       : "prior learning exists, but authority/environment or attempt materially differs",
   };
 }
+
+
+export function detectLearningRetryViolations(records: LearningRecord[]): string[] {
+  const failureCounts = new Map<string, { count: number; latestLearningId: string }>();
+  for (const record of records) {
+    if (record.classification !== "NEW_FAILURE") continue;
+    const key = [
+      record.fingerprintKey,
+      record.attemptSignature,
+      record.authorityState.environmentKey,
+      record.authorityState.materialStateKey,
+    ].join("|");
+    const current = failureCounts.get(key);
+    failureCounts.set(key, {
+      count: (current?.count ?? 0) + 1,
+      latestLearningId: record.learningId,
+    });
+  }
+
+  return [...failureCounts.entries()]
+    .filter(([, value]) => value.count > 2)
+    .map(([key, value]) =>
+      `learning retry gate violated: ${value.count} unchanged failures for ${key} (latest ${value.latestLearningId})`
+    );
+}

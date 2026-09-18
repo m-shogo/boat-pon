@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { isExecutorImplemented } from "../src/automation/taskExecutors";
 import { detectCleanRoomViolations, detectUnauthorizedAdoptions } from "../src/research/governance/contracts";
 import { checkLineage, listRecords, validateAllRegistries } from "../src/research/governance/registryStore";
+import { detectLearningRetryViolations } from "../src/research/governance/learningGate";
 import { checkProductionIsolation } from "../src/research/governance/executorSdk";
 import {
   assertGovernanceDirectorySafe,
@@ -27,10 +28,15 @@ if (existsSync(REG)) {
   const versions = listRecords<any>(REG, "strategy-versions");
   const discoveries = listRecords<any>(REG, "discoveries");
   const transfers = listRecords<any>(REG, "transfer-experiments");
+  const learnings = listRecords<any>(REG, "learnings");
   const cr = detectCleanRoomViolations(families, discoveries, versions);
   if (cr.length) for (const c of cr) problems.push(`clean-room violation: ${c.strategyId} adopted ${c.discoveryId} (${c.shareClass})`); else ok("clean-room enforcement");
   const ua = detectUnauthorizedAdoptions(discoveries, transfers);
   if (ua.length) for (const u of ua) problems.push(`unauthorized adoption: ${u.discoveryId} -> ${u.strategyId}`); else ok("transfer required before adoption");
+
+  const retryViolations = detectLearningRetryViolations(learnings);
+  if (retryViolations.length) for (const violation of retryViolations) problems.push(violation);
+  else ok("learning two-strike retry gate");
 
   const legacy = families.filter((f) => f.decisionSystem === "legacy_t5_formal");
   for (const family of legacy) {

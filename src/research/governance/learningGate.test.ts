@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { validateLearning, type LearningRecord } from "./contracts";
-import { evaluateLearningGate } from "./learningGate";
+import { detectLearningRetryViolations, evaluateLearningGate } from "./learningGate";
 import { appendRecordIdempotent, appendRecordStrict, listRecords, validateAllRegistries } from "./registryStore";
 
 const base: LearningRecord = {
@@ -98,4 +98,36 @@ test("latest verified success is reused as a guardrail", () => {
   });
   assert.equal(decision.action, "REUSE_GUARDRAIL");
   if (decision.action === "REUSE_GUARDRAIL") assert.equal(decision.guardrail, "use method-b");
+});
+
+
+test("governance detects a forbidden third unchanged failure record", () => {
+  const second: LearningRecord = {
+    ...base,
+    learningId: "LEARN-example-2",
+    createdAt: "2026-09-18T01:00:00Z",
+  };
+  const third: LearningRecord = {
+    ...base,
+    learningId: "LEARN-example-3",
+    createdAt: "2026-09-18T02:00:00Z",
+  };
+  assert.deepEqual(detectLearningRetryViolations([base, second]), []);
+  const violations = detectLearningRetryViolations([base, second, third]);
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /3 unchanged failures/);
+});
+
+test("material-state changes do not count as a forbidden unchanged third failure", () => {
+  const changedA: LearningRecord = {
+    ...base,
+    learningId: "LEARN-changed-a",
+    authorityState: { ...base.authorityState, materialStateKey: "registry/append-v2" },
+  };
+  const changedB: LearningRecord = {
+    ...base,
+    learningId: "LEARN-changed-b",
+    authorityState: { ...base.authorityState, materialStateKey: "registry/append-v3" },
+  };
+  assert.deepEqual(detectLearningRetryViolations([base, changedA, changedB]), []);
 });
