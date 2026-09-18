@@ -19,9 +19,9 @@
   "lesson": "Retention is not learning unless the next decision retrieves prior outcomes and changes behavior. Narrative notes alone are insufficient for repeat suppression.",
   "guardrail": "Normalize each meaningful attempt into a fingerprint, query append-only learning records before acting, reuse verified success patterns, switch after one unchanged failure, and block a third identical attempt after two unchanged failures.",
   "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
-  "createdAt": "2026-09-18T15:00:00Z",
+  "createdAt": "2026-09-18T15:00:00.000Z",
   "productionConnection": false,
-  "_digest": "c1ff86dec3b935d572802a4501ae3136f7cd626f3720c695327a12c8fc08fda1",
+  "_digest": "0e936bd69e8d45f81955a56570747d7f235cad09c3bab13288d0a49633c331ba",
   "_digestVersion": "canonical-v2",
-  "_recordedAt": "2026-09-18T15:00:00Z"
+  "_recordedAt": "2026-09-18T15:00:00.000Z"
 }
