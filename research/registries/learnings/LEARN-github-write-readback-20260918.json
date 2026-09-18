@@ -18,9 +18,9 @@
   "lesson": "Unknown write outcomes must be resolved by reading the branch head and target content before retrying. A tool error is not proof that the write did not occur.",
   "guardrail": "After any ambiguous GitHub write failure, read back branch HEAD and target diff first. Retry only if the intended mutation is absent; otherwise continue from the observed state.",
   "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
-  "createdAt": "2026-09-18T15:20:00.000Z",
+  "createdAt": "2026-09-18T15:15:00.000Z",
   "productionConnection": false,
-  "_digest": "bd85c8632905673f8a706f64ed373b1105d691f4b3ac2bfd84714d4d0767d708",
+  "_digest": "edbdfd1a18634b7f32ac12e0ee3dbf7c13e3cfa54317c56660569d935f7d3db3",
   "_digestVersion": "canonical-v2",
-  "_recordedAt": "2026-09-18T15:20:00.000Z"
+  "_recordedAt": "2026-09-18T15:15:00.000Z"
 }
