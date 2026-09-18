@@ -1,0 +1,26 @@
+{
+  "learningId": "LEARN-github-write-readback-20260918",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "github-write.unknown-outcome-readback",
+  "subsystem": "research-automation-git",
+  "operation": "recover-after-write-transport-error",
+  "symptom": "A repository write returned an unknown transport outcome; blindly repeating the write could create duplicate or stacked changes.",
+  "rootCauseClass": "UNKNOWN_WRITE_OUTCOME",
+  "attemptSignature": "readback-branch-head-and-target-before-retry",
+  "authorityState": {
+    "mainSha": "4848780ff31a70492418c7f2a3269e699da24e3b",
+    "environmentKey": "github-connector",
+    "materialStateKey": "contents-write/readback-v1"
+  },
+  "evidenceRefs": [
+    "pull/2269"
+  ],
+  "lesson": "Unknown write outcomes must be resolved by reading the branch head and target content before retrying. A tool error is not proof that the write did not occur.",
+  "guardrail": "After any ambiguous GitHub write failure, read back branch HEAD and target diff first. Retry only if the intended mutation is absent; otherwise continue from the observed state.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-09-18T15:20:00.000Z",
+  "productionConnection": false,
+  "_digest": "bd85c8632905673f8a706f64ed373b1105d691f4b3ac2bfd84714d4d0767d708",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-18T15:20:00.000Z"
+}
