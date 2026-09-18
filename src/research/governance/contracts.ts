@@ -53,64 +53,9 @@ export type Validation = { valid: boolean; errors: string[] };
 const err = (errors: string[]): Validation => ({ valid: errors.length === 0, errors });
 const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0;
 const isArr = (x: unknown): x is unknown[] => Array.isArray(x);
-const isId = (x: unknown, prefix: string): boolean => typeof x === "string" && new RegExp(`^${prefix}-[0-9A-Za-z._-]{1,80}// boat-pon 研究ガバナンス契約（純粋ロジック層・Git 正本）。
-//
-// 中核原則: 「発見は共有する。採用は競争させる。思想は保護する。」
-// - 探索は自由、検証は厳格。ROI だけで昇格しない。Discovery を自動採用しない。
-// - Current BUY（legacy_t5_formal）と Research（market_intelligence）を混ぜない。
-// - historical / validation / holdout / shadow_forward / future_only を混ぜない。
-//
-// 本モジュールは production / DB / sidecar / credential に一切触れない（純関数）。
-import { createHash } from "node:crypto";
-
-export const GOVERNANCE_CONTRACT_VERSION = "research-governance-v1";
-export const CONTRACT_DIGEST_VERSION = "canonical-v2";
-
-// ---- 共有分類（発見の共有スコープ）----
-export const SHARE_CLASSES = ["GLOBAL_FACT", "RESEARCH_METHOD", "REUSABLE_CANDIDATE", "STRATEGY_LOCAL"] as const;
-export type ShareClass = (typeof SHARE_CLASSES)[number];
-// clean-room で共有可能なのは方式非依存の事実・手法・安全知見のみ。
-export const CLEAN_ROOM_SHAREABLE: ReadonlySet<ShareClass> = new Set(["GLOBAL_FACT", "RESEARCH_METHOD"]);
-
-// ---- 証拠段階（評価系列を混ぜないための識別）----
-export const EVIDENCE_STAGES = ["exploration", "discovery", "validation", "holdout", "shadow_forward", "future_only"] as const;
-export type EvidenceStage = (typeof EVIDENCE_STAGES)[number];
-
-// ---- 評価系列（識別契約）----
-export const DECISION_SYSTEMS = ["legacy_t5_formal", "market_intelligence"] as const;
-export type DecisionSystem = (typeof DECISION_SYSTEMS)[number];
-export const EVALUATION_MODES = ["formal_forward", "shadow_forward"] as const;
-export type EvaluationMode = (typeof EVALUATION_MODES)[number];
-
-// ---- knowledge / clean-room policy ----
-export const KNOWLEDGE_POLICIES = ["OPEN_COMMONS", "CLEAN_ROOM"] as const;
-export type KnowledgePolicy = (typeof KNOWLEDGE_POLICIES)[number];
-
-// ---- promotion / status ----
-export const PROMOTION_STATES = ["candidate", "shadow", "challenger", "active_research", "rejected", "archived"] as const;
-export type PromotionState = (typeof PROMOTION_STATES)[number];
-
-// ---- durable learning fingerprints ----
-export const LEARNING_CLASSIFICATIONS = [
-  "NEW_FAILURE", "VERIFIED_SUCCESS", "REPEATED_FAILURE_AVOIDED", "TRANSIENT_UNCLASSIFIED",
-] as const;
-export type LearningClassification = (typeof LEARNING_CLASSIFICATIONS)[number];
-
-export const LEARNING_REPEAT_POLICIES = [
-  "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
-  "REUSE_VERIFIED_GUARDRAIL",
-  "RETRY_AFTER_MATERIAL_CHANGE",
-  "OBSERVE_ONLY",
-] as const;
-export type LearningRepeatPolicy = (typeof LEARNING_REPEAT_POLICIES)[number];
-
-export type Validation = { valid: boolean; errors: string[] };
-const err = (errors: string[]): Validation => ({ valid: errors.length === 0, errors });
-const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0;
-const isArr = (x: unknown): x is unknown[] => Array.isArray(x);
-).test(x);
+const isId = (x: unknown, prefix: string): boolean => typeof x === "string" && new RegExp(`^${prefix}-[0-9A-Za-z._-]{1,80}$`).test(x);
 const isCanonicalUtcInstant = (x: unknown): x is string => {
-  if (typeof x !== "string" || !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(x)) return false;
+  if (typeof x !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(x)) return false;
   const parsed = new Date(x);
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === x;
 };
