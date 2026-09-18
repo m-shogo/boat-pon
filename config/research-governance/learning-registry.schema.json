@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "learning-registry.schema.json",
+  "title": "Research Learning Fingerprint",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "learningId",
+    "classification",
+    "fingerprintKey",
+    "subsystem",
+    "operation",
+    "symptom",
+    "rootCauseClass",
+    "attemptSignature",
+    "authorityState",
+    "evidenceRefs",
+    "lesson",
+    "guardrail",
+    "repeatPolicy",
+    "createdAt",
+    "productionConnection"
+  ],
+  "properties": {
+    "learningId": { "type": "string", "pattern": "^LEARN-[0-9A-Za-z._-]{1,80}$" },
+    "classification": {
+      "enum": ["NEW_FAILURE", "VERIFIED_SUCCESS", "REPEATED_FAILURE_AVOIDED", "TRANSIENT_UNCLASSIFIED"]
+    },
+    "fingerprintKey": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:/-]{2,160}$" },
+    "subsystem": { "type": "string", "minLength": 1 },
+    "operation": { "type": "string", "minLength": 1 },
+    "symptom": { "type": "string", "minLength": 1 },
+    "rootCauseClass": { "type": "string", "minLength": 1 },
+    "attemptSignature": { "type": "string", "minLength": 1 },
+    "authorityState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mainSha", "environmentKey", "materialStateKey"],
+      "properties": {
+        "mainSha": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+        "environmentKey": { "type": "string", "minLength": 1 },
+        "materialStateKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "lesson": { "type": "string", "minLength": 1 },
+    "guardrail": { "type": "string", "minLength": 1 },
+    "repeatPolicy": {
+      "enum": [
+        "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+        "REUSE_VERIFIED_GUARDRAIL",
+        "RETRY_AFTER_MATERIAL_CHANGE",
+        "OBSERVE_ONLY"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "productionConnection": { "const": false }
+  }
+}

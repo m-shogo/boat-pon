@@ -10,12 +10,12 @@ import { dirname, join } from "node:path";
 import { TextDecoder } from "node:util";
 import {
   CONTRACT_DIGEST_VERSION, contractDigest, legacyContractDigest, validateDiscovery, validateExperiment, validatePromotion,
-  validateRejection, validateStrategyFamily, validateStrategyVersion, validateTransferExperiment, type Validation,
+  validateLearning, validateRejection, validateStrategyFamily, validateStrategyVersion, validateTransferExperiment, type Validation,
 } from "./contracts";
 
 export type RegistryKind =
   | "experiments" | "discoveries" | "strategy-families" | "strategy-versions"
-  | "transfer-experiments" | "promotions" | "rejections";
+  | "transfer-experiments" | "promotions" | "rejections" | "learnings";
 
 const REGISTRY: Record<RegistryKind, { idField: string; validate: (x: unknown) => Validation; subkey?: string }> = {
   experiments: { idField: "experimentId", validate: validateExperiment },
@@ -25,6 +25,7 @@ const REGISTRY: Record<RegistryKind, { idField: string; validate: (x: unknown) =
   "transfer-experiments": { idField: "transferId", validate: validateTransferExperiment },
   promotions: { idField: "promotionId", validate: validatePromotion },
   rejections: { idField: "rejectionId", validate: validateRejection },
+  learnings: { idField: "learningId", validate: validateLearning },
 };
 
 export const REGISTRY_ROOT_DEFAULT = "research/registries";

@@ -101,7 +101,8 @@ Registry classes:
 - Strategy Version;
 - Transfer Experiment (`XFER-*`);
 - Promotion (`PROMO-*`);
-- Rejection / negative result (`REJ-*`).
+- Rejection / negative result (`REJ-*`);
+- Learning Fingerprint (`LEARN-*`) — failure/success/repeat-avoidance metadata and reusable guardrails only. It has no strategy-adoption or production authority.
 
 Rules:
 
@@ -212,6 +213,8 @@ Missingness, freshness, source quality, sample count, confidence interval where 
 
 Daily Discovery must search existing Experiment, Discovery and Rejection records before creating a new proposal. Similarity or duplicate findings should extend or reference existing lineage rather than create disconnected knowledge.
 
+Scheduled engineering/research work must also retrieve Learning Fingerprints before retrying an equivalent method. The normalized identity is `fingerprintKey + attemptSignature + authorityState`. One unchanged prior failure requires a method change or explicit material-change justification. Two unchanged prior failures block a third identical attempt. A later verified success may publish a reusable guardrail for the same fingerprint. Unrelated movement of `main` is not, by itself, a material change.
+
 ### 5.6 Never train on the public projection
 
 Public traffic, clicks, SEO queries, ad metrics and public snapshot contents are excluded from training and BUY input unless a separate future research proposal explicitly defines legality, privacy, PIT, mechanism and holdout treatment.
@@ -249,6 +252,7 @@ Prohibited shortcuts:
 | Current BUY decision audit context | active | local `decision_history` and audit fields |
 | append-only research registries | active | `research/registries/` |
 | registry digest and dangling-lineage checks | active | CI `research:governance-check` |
+| append-only failure/success learning fingerprints | active | `research/registries/learnings/` + learning gate |
 | scheduled three-lane operating model | active | hourly / daily discovery / weekly governance |
 | Current BUY and new research separation | active | distinct `decisionSystem`; promotion disconnected |
 | formal Runtime Decision Ledger | designed / pending | implement by dependency order |
@@ -279,6 +283,8 @@ Boat Pon may be described as safely learning only when all are true:
 - evaluations are reproducible from frozen protocol and evidence;
 - historical, holdout and forward results cannot be mixed accidentally;
 - rejected hypotheses are retrieved before new experiments are created;
+- repeated engineering/research failures are fingerprinted, retrieved, and blocked from an unchanged third attempt;
+- non-obvious verified successes can be reused as explicit guardrails instead of rediscovered;
 - discoveries have complete source lineage;
 - model / strategy changes are versioned and rollbackable;
 - no scheduled task can change Current BUY or production without a separate approved gate;
