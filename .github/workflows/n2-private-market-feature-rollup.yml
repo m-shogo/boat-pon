@@ -26,7 +26,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: npm
+          # This hourly self-hosted workflow intentionally avoids setup-node's
+          # managed npm cache. Run #336 completed the research step successfully
+          # but the post-job cache save collided on the shared cache key and
+          # flipped the workflow conclusion to failure.
       - name: Install rollup dependencies
         run: npm ci
       - name: Refresh current private feature artifacts and day index
