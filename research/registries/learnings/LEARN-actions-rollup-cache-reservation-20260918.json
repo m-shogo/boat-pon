@@ -20,9 +20,9 @@
   "lesson": "Classify the research payload result separately from post-job infrastructure. A red workflow does not prove the research command failed when its validated summary completed successfully.",
   "guardrail": "Do not rerun protected N2 work only to diagnose this fingerprint. Remove the conflicting managed cache from the affected workflow and verify on the next natural schedule.",
   "repeatPolicy": "RETRY_AFTER_MATERIAL_CHANGE",
-  "createdAt": "2026-09-18T15:00:00Z",
+  "createdAt": "2026-09-18T15:00:00.000Z",
   "productionConnection": false,
-  "_digest": "15b4795b9b29f0f466b5d0069413435cff44e8fc326d2cdf87303d8be7ee0811",
+  "_digest": "cb0b2a1c333f23b4428e16edcb55370cc85899e67a75ff99ef16a523a07a1fb7",
   "_digestVersion": "canonical-v2",
-  "_recordedAt": "2026-09-18T15:00:00Z"
+  "_recordedAt": "2026-09-18T15:00:00.000Z"
 }
