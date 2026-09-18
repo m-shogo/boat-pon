@@ -1,0 +1,26 @@
+{
+  "learningId": "LEARN-hourly-retrieval-gate-gap-20260918",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.learning.retrieval-not-enforced",
+  "subsystem": "research-automation-governance",
+  "operation": "select-next-safe-work",
+  "symptom": "Durable lessons and rejection records existed, but equivalent audits could recur because there was no machine-readable fingerprint gate that had to be consulted before choosing the next attempt.",
+  "rootCauseClass": "DURABLE_MEMORY_WITHOUT_RETRIEVAL_GATE",
+  "attemptSignature": "status-or-audit-selection-without-structured-learning-lookup",
+  "authorityState": {
+    "mainSha": "4848780ff31a70492418c7f2a3269e699da24e3b",
+    "environmentKey": "chatgpt-hourly-research"
+  },
+  "evidenceRefs": [
+    "docs/architecture/research-knowledge-retention-contract.md",
+    "docs/lessons-learned.md"
+  ],
+  "lesson": "Retention is not learning unless the next decision retrieves prior outcomes and changes behavior. Narrative notes alone are insufficient for repeat suppression.",
+  "guardrail": "Normalize each meaningful attempt into a fingerprint, query append-only learning records before acting, reuse verified success patterns, switch after one unchanged failure, and block a third identical attempt after two unchanged failures.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-09-18T15:00:00Z",
+  "productionConnection": false,
+  "_digest": "b7a885e2662c5c10b56390a3bb8e3b5241fab2694001a69d21c0bf6c5d531643",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-18T15:00:00Z"
+}

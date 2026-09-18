@@ -12,6 +12,7 @@
 | `transfer-experiments/` | Discovery→他方式 の唯一の採用経路 | `XFER-*` | `transfer-experiment-registry.schema.json` |
 | `promotions/` | 昇格（人間承認必須・production 非接続） | `PROMO-*` | `promotion-registry.schema.json` |
 | `rejections/` | 棄却・negative result | `REJ-*` | `rejection-ledger.schema.json` |
+| `learnings/` | 失敗/成功 fingerprint・再試行 guardrail | `LEARN-*` | `learning-registry.schema.json` |
 
 - 追加は `appendRecord`（`src/research/governance/registryStore.ts`）経由。バリデーション失敗 / 重複 id は拒否。
 - CI が `validateAllRegistries`（schema + filename + digest 改変検出）と `checkLineage`（dangling 参照検出）を実行する。
@@ -23,3 +24,5 @@
 - clean-room Strategy Family は `GLOBAL_FACT` / `RESEARCH_METHOD` 以外を adopt しない。
 - Promotion の `active_research`/`challenger` は **人間承認 + transfer 証拠**が必須。`productionConnection` は常に `false`。
 - Current BUY（`legacy_t5_formal`）と Research（`market_intelligence`）は `decisionSystem` で構造分離。
+- Learning record は production authority を持たず `productionConnection=false` 固定。absolute/private path を evidence として保存しない。
+- 同一 fingerprint + attempt + authority/environment の失敗は learning gate で再試行を抑止する。成功 pattern は guardrail として再利用する。

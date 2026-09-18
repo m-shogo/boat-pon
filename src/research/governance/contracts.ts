@@ -35,6 +35,20 @@ export type KnowledgePolicy = (typeof KNOWLEDGE_POLICIES)[number];
 export const PROMOTION_STATES = ["candidate", "shadow", "challenger", "active_research", "rejected", "archived"] as const;
 export type PromotionState = (typeof PROMOTION_STATES)[number];
 
+// ---- durable learning fingerprints ----
+export const LEARNING_CLASSIFICATIONS = [
+  "NEW_FAILURE", "VERIFIED_SUCCESS", "REPEATED_FAILURE_AVOIDED", "TRANSIENT_UNCLASSIFIED",
+] as const;
+export type LearningClassification = (typeof LEARNING_CLASSIFICATIONS)[number];
+
+export const LEARNING_REPEAT_POLICIES = [
+  "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "REUSE_VERIFIED_GUARDRAIL",
+  "RETRY_AFTER_MATERIAL_CHANGE",
+  "OBSERVE_ONLY",
+] as const;
+export type LearningRepeatPolicy = (typeof LEARNING_REPEAT_POLICIES)[number];
+
 export type Validation = { valid: boolean; errors: string[] };
 const err = (errors: string[]): Validation => ({ valid: errors.length === 0, errors });
 const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0;
@@ -314,6 +328,66 @@ export function validateRejection(x: unknown): Validation {
   }
   if (!isStr(r.reason)) errors.push("reason required");
   if (!EVIDENCE_STAGES.includes(r.evidenceStage as EvidenceStage)) errors.push("invalid evidenceStage");
+  return err(errors);
+}
+
+
+// ---- Learning Fingerprint 契約（失敗・成功を次回判断へ接続）----
+export type LearningRecord = {
+  learningId: string;                 // LEARN-<id>
+  classification: LearningClassification;
+  fingerprintKey: string;             // normalized semantic identity
+  subsystem: string;
+  operation: string;
+  symptom: string;
+  rootCauseClass: string;
+  attemptSignature: string;           // method/approach actually tried
+  authorityState: {
+    mainSha: string | null;
+    environmentKey: string;
+  };
+  evidenceRefs: string[];             // repo-relative or stable public metadata refs only
+  lesson: string;
+  guardrail: string;
+  repeatPolicy: LearningRepeatPolicy;
+  createdAt: string;
+  productionConnection: false;
+};
+
+function isSafeLearningEvidenceRef(value: unknown): boolean {
+  if (!isStr(value)) return false;
+  if (value.startsWith("/") || value.startsWith("~") || /^[A-Za-z]:[\\/]/.test(value)) return false;
+  if (value.includes("\\") || value.includes("..") || value.includes("data/private/")) return false;
+  return true;
+}
+
+export function validateLearning(x: unknown): Validation {
+  if (typeof x !== "object" || x === null) return err(["learning must be object"]);
+  const l = x as Record<string, unknown>; const errors: string[] = [];
+  if (!isId(l.learningId, "LEARN")) errors.push("learningId must match LEARN-*");
+  if (!LEARNING_CLASSIFICATIONS.includes(l.classification as LearningClassification)) errors.push("invalid classification");
+  if (!isStr(l.fingerprintKey) || !/^[a-z0-9][a-z0-9._:/-]{2,160}$/.test(String(l.fingerprintKey))) {
+    errors.push("fingerprintKey must be normalized lowercase token");
+  }
+  for (const f of ["subsystem", "operation", "symptom", "rootCauseClass", "attemptSignature", "lesson", "guardrail", "createdAt"]) {
+    if (!isStr(l[f])) errors.push(`${f} required`);
+  }
+  if (!LEARNING_REPEAT_POLICIES.includes(l.repeatPolicy as LearningRepeatPolicy)) errors.push("invalid repeatPolicy");
+  const authority = l.authorityState as Record<string, unknown> | null;
+  if (!authority || typeof authority !== "object") {
+    errors.push("authorityState required");
+  } else {
+    if (authority.mainSha !== null && (typeof authority.mainSha !== "string" || !/^[0-9a-f]{40}$/.test(authority.mainSha))) {
+      errors.push("authorityState.mainSha must be 40-hex or null");
+    }
+    if (!isStr(authority.environmentKey)) errors.push("authorityState.environmentKey required");
+  }
+  if (!isArr(l.evidenceRefs) || (l.evidenceRefs as unknown[]).length === 0) {
+    errors.push("evidenceRefs required");
+  } else if ((l.evidenceRefs as unknown[]).some((ref) => !isSafeLearningEvidenceRef(ref))) {
+    errors.push("evidenceRefs must not contain absolute/private/traversal paths");
+  }
+  if (l.productionConnection !== false) errors.push("productionConnection must be false");
   return err(errors);
 }
 

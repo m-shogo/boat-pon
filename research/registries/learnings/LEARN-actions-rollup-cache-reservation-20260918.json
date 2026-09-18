@@ -1,0 +1,27 @@
+{
+  "learningId": "LEARN-actions-rollup-cache-reservation-20260918",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "actions.rollup.cache-save-reservation-collision",
+  "subsystem": "github-actions-self-hosted",
+  "operation": "n2-private-market-feature-rollup-post-job-cache-save",
+  "symptom": "The research command completed and emitted a valid summary, but the workflow concluded failure after the managed npm cache could not reserve its shared key.",
+  "rootCauseClass": "POST_JOB_CACHE_RESERVATION_COLLISION",
+  "attemptSignature": "setup-node-v4-managed-npm-cache-on-hourly-self-hosted-rollup",
+  "authorityState": {
+    "mainSha": "0afa8f22130bd10082b288bd5d964821334c2546",
+    "environmentKey": "self-hosted-macos/actions-setup-node-v4"
+  },
+  "evidenceRefs": [
+    "github-actions/run-35339791873",
+    "github-actions/job-105582835909",
+    "pull/2268"
+  ],
+  "lesson": "Classify the research payload result separately from post-job infrastructure. A red workflow does not prove the research command failed when its validated summary completed successfully.",
+  "guardrail": "Do not rerun protected N2 work only to diagnose this fingerprint. Remove the conflicting managed cache from the affected workflow and verify on the next natural schedule.",
+  "repeatPolicy": "RETRY_AFTER_MATERIAL_CHANGE",
+  "createdAt": "2026-09-18T15:00:00Z",
+  "productionConnection": false,
+  "_digest": "8feab7da9e2d21a029d0a7ecc458e34573fd64db0818a7a975900d40514e1921",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-18T15:00:00Z"
+}
