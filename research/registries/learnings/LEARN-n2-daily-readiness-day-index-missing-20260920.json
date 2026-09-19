@@ -1,0 +1,27 @@
+{
+  "learningId": "LEARN-n2-daily-readiness-day-index-missing-20260920",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "n2.daily-readiness.required-day-index-missing",
+  "subsystem": "n2-private-market-research",
+  "operation": "n2-private-market-daily-readiness-build",
+  "symptom": "The natural daily readiness run reached the research payload but exited before producing readiness evidence because the required current-scope feature day index was absent.",
+  "rootCauseClass": "REQUIRED_DAY_INDEX_ABSENT_AT_READINESS_TIME",
+  "attemptSignature": "daily-readiness-v1-read-verified-current-day-index-before-readiness-build",
+  "authorityState": {
+    "mainSha": "c8a1203bb2a03e9a4b2b6e08f3ff98f8106d5f8a",
+    "environmentKey": "self-hosted-macos/node24/n2-private-market",
+    "materialStateKey": "daily-readiness-v1/feature-day-index-required"
+  },
+  "evidenceRefs": [
+    "github-actions/run-35458071947",
+    "github-actions/job-105936799727"
+  ],
+  "lesson": "A Daily Readiness red run can be a fail-closed dependency absence rather than a cache or runner failure. Confirm the required derived day index exists before treating the readiness builder itself as defective.",
+  "guardrail": "Do not rerun protected Daily Readiness while the required current-scope day index is absent. Inspect the upstream natural feature-rollup result and only retry after the day-index dependency or its producing material state has changed.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-09-19T18:41:10.000Z",
+  "productionConnection": false,
+  "_digest": "bc8112383a7196802f5d770575b54d28122f081d48760b416cc367096dabbde9",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-19T18:41:10.000Z"
+}
