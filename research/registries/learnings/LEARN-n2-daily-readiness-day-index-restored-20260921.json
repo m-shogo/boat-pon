@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-n2-daily-readiness-day-index-restored-20260921",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "n2.daily-readiness.required-day-index-missing",
+  "subsystem": "n2-private-market-research",
+  "operation": "n2-private-market-daily-readiness-build",
+  "symptom": "After the upstream natural feature rollup refreshed the current-scope day index, the next natural Daily Readiness run completed the research payload, catalog update, workflow, and post-job cleanup successfully.",
+  "rootCauseClass": "REQUIRED_DAY_INDEX_ABSENT_AT_READINESS_TIME",
+  "attemptSignature": "daily-readiness-v1-read-verified-current-day-index-before-readiness-build",
+  "authorityState": {
+    "mainSha": "d211fdafdd53daeb8086037072b7bf316ad6b1b1",
+    "environmentKey": "self-hosted-macos/node24/n2-private-market",
+    "materialStateKey": "daily-readiness-v1/feature-day-index-present-after-natural-rollup"
+  },
+  "evidenceRefs": [
+    "github-actions/run-35526551712",
+    "github-actions/job-106119614835",
+    "LEARN-n2-daily-readiness-day-index-missing-20260920"
+  ],
+  "lesson": "The Daily Readiness failure was a fail-closed dependency absence, not a defect in the readiness builder. Once the upstream natural feature rollup restored the required current-scope day index, the unchanged readiness method succeeded naturally.",
+  "guardrail": "When Daily Readiness reports a missing required day index, do not consume a protected retry. Verify the upstream feature-rollup path and wait for a material day-index state change; after the dependency is restored, prefer the next natural Daily Readiness schedule for verification.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-09-20T18:41:47.000Z",
+  "productionConnection": false,
+  "_digest": "671dabbd9ea03bc707188aace1d56358c30065c9f30026454fbc14ad480d1c20",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-20T18:41:47.000Z"
+}
