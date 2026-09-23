@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-learning-gate-equal-timestamp-precedence-20260923",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-governance.learning-gate.equal-timestamp-precedence",
+  "subsystem": "research-automation-governance",
+  "operation": "evaluate-learning-gate",
+  "symptom": "A matching VERIFIED_SUCCESS and NEW_FAILURE with the same millisecond createdAt relied on input order, so the gate could reuse a stale success instead of failing closed on the failure.",
+  "rootCauseClass": "DECISIVE_LEARNING_TIMESTAMP_TIE_INPUT_ORDER",
+  "attemptSignature": "sort-decisive-learning-by-createdAt-only",
+  "authorityState": {
+    "mainSha": "48b4f98940a95f4c81909354ea8df546f337a731",
+    "environmentKey": "research-governance/learning-gate",
+    "materialStateKey": "learning-gate-v2/retry-epoch"
+  },
+  "evidenceRefs": [
+    "src/research/governance/learningGate.ts",
+    "src/research/governance/learningGate.failurePrecedence.test.ts",
+    "docs/architecture/research-learning-loop.md"
+  ],
+  "lesson": "Equal-timestamp decisive learning must have deterministic fail-closed precedence; a NEW_FAILURE at the same recorded instant as a reusable success must prevent stale guardrail reuse.",
+  "guardrail": "When createdAt ties for the same normalized identity, order NEW_FAILURE as newer than VERIFIED_SUCCESS for gate evaluation and after VERIFIED_SUCCESS for chronological retry-epoch counting.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-09-23T12:45:00.000Z",
+  "productionConnection": false,
+  "_digest": "3cd0251b826ed9641e8b5ae431a0695ed5042d7b0c9d88cde739128b20c78e43",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-23T12:45:00.000Z"
+}
