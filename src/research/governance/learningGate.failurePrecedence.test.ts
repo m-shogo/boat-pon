@@ -60,3 +60,12 @@ test("two failures after the latest verified success block the third identical a
   assert.equal(decision.action, "BLOCK_REPEAT");
   if (decision.action === "BLOCK_REPEAT") assert.equal(decision.learningId, secondFailure.learningId);
 });
+
+test("an equal-timestamp failure fails closed over a reusable success regardless of input order", () => {
+  const tiedSuccess: LearningRecord = { ...success, createdAt: failure.createdAt };
+  for (const records of [[tiedSuccess, failure], [failure, tiedSuccess]]) {
+    const decision = evaluateLearningGate(records, attempt);
+    assert.equal(decision.action, "SWITCH_METHOD");
+    if (decision.action === "SWITCH_METHOD") assert.equal(decision.learningId, failure.learningId);
+  }
+});
