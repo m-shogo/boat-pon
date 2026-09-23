@@ -22,11 +22,32 @@ function sameMaterialState(a: LearningRecord["authorityState"], b: LearningAttem
   return a.environmentKey === b.environmentKey && a.materialStateKey === b.materialStateKey;
 }
 
+function decisiveTieRank(record: LearningRecord): number {
+  // Equal millisecond timestamps do not establish causal order. Fail closed:
+  // a failure at the same instant as a reusable success must win when reading
+  // newest-first, and must be counted after that success in chronological scans.
+  if (record.classification === "NEW_FAILURE") return 1;
+  if (record.classification === "VERIFIED_SUCCESS" && record.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL") return 0;
+  return -1;
+}
+
+function compareNewestFirst(a: LearningRecord, b: LearningRecord): number {
+  const byTime = b.createdAt.localeCompare(a.createdAt);
+  if (byTime !== 0) return byTime;
+  return decisiveTieRank(b) - decisiveTieRank(a);
+}
+
+function compareOldestFirst(a: LearningRecord, b: LearningRecord): number {
+  const byTime = a.createdAt.localeCompare(b.createdAt);
+  if (byTime !== 0) return byTime;
+  return decisiveTieRank(a) - decisiveTieRank(b);
+}
+
 export function evaluateLearningGate(records: LearningRecord[], attempt: LearningAttempt): LearningGateDecision {
   const relevant = records
     .filter((record) => record.fingerprintKey === attempt.fingerprintKey)
     .slice()
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort(compareNewestFirst);
 
   const matchingAttempt = relevant.filter((record) =>
     record.attemptSignature === attempt.attemptSignature
@@ -100,7 +121,7 @@ export function detectLearningRetryViolations(records: LearningRecord[]): string
 
   const violations: string[] = [];
   for (const [key, group] of byAttempt) {
-    const ordered = group.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    const ordered = group.slice().sort(compareOldestFirst);
     let failureCount = 0;
     let latestFailureId: string | null = null;
     let violationReported = false;
