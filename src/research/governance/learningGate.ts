@@ -28,19 +28,18 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
     .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  const latestMatchingAttempt = relevant.find((record) =>
-    record.attemptSignature === attempt.attemptSignature
+  const latestVerifiedSuccess = relevant.find((record) =>
+    record.classification === "VERIFIED_SUCCESS"
+    && record.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL"
+    && record.attemptSignature === attempt.attemptSignature
     && sameMaterialState(record.authorityState, attempt.authorityState)
   );
-  if (
-    latestMatchingAttempt?.classification === "VERIFIED_SUCCESS"
-    && latestMatchingAttempt.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL"
-  ) {
+  if (latestVerifiedSuccess) {
     return {
       action: "REUSE_GUARDRAIL",
-      learningId: latestMatchingAttempt.learningId,
-      reason: "latest matching fingerprint and attempt has a verified reusable success pattern",
-      guardrail: latestMatchingAttempt.guardrail,
+      learningId: latestVerifiedSuccess.learningId,
+      reason: "matching fingerprint and attempt has a verified reusable success pattern",
+      guardrail: latestVerifiedSuccess.guardrail,
     };
   }
 

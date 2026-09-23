@@ -104,6 +104,31 @@ test("latest verified success is reused as a guardrail for the same attempt", ()
   if (decision.action === "REUSE_GUARDRAIL") assert.equal(decision.guardrail, "use method-a");
 });
 
+test("later observational learning does not hide a reusable verified success", () => {
+  const success: LearningRecord = {
+    ...base,
+    learningId: "LEARN-success-1",
+    classification: "VERIFIED_SUCCESS",
+    guardrail: "use method-a",
+    repeatPolicy: "REUSE_VERIFIED_GUARDRAIL",
+    createdAt: "2026-09-18T02:00:00.000Z",
+  };
+  const observation: LearningRecord = {
+    ...base,
+    learningId: "LEARN-observation-1",
+    classification: "TRANSIENT_UNCLASSIFIED",
+    repeatPolicy: "OBSERVE_ONLY",
+    createdAt: "2026-09-18T03:00:00.000Z",
+  };
+  const decision = evaluateLearningGate([success, observation], {
+    fingerprintKey: base.fingerprintKey,
+    attemptSignature: "method-a",
+    authorityState: base.authorityState,
+  });
+  assert.equal(decision.action, "REUSE_GUARDRAIL");
+  if (decision.action === "REUSE_GUARDRAIL") assert.equal(decision.learningId, "LEARN-success-1");
+});
+
 test("verified success is not reused across attempt signatures", () => {
   const success: LearningRecord = {
     ...base,
