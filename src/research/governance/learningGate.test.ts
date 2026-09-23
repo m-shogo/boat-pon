@@ -86,24 +86,40 @@ test("material state change permits a new attempt with prior learning visible", 
   assert.match(decision.reason, /prior learning exists/);
 });
 
-test("latest verified success is reused as a guardrail", () => {
+test("latest verified success is reused as a guardrail for the same attempt", () => {
   const success: LearningRecord = {
     ...base,
     learningId: "LEARN-success-1",
     classification: "VERIFIED_SUCCESS",
-    guardrail: "use method-b",
+    guardrail: "use method-a",
     repeatPolicy: "REUSE_VERIFIED_GUARDRAIL",
     createdAt: "2026-09-18T02:00:00.000Z",
   };
   const decision = evaluateLearningGate([base, success], {
     fingerprintKey: base.fingerprintKey,
-    attemptSignature: "method-b",
+    attemptSignature: "method-a",
     authorityState: base.authorityState,
   });
   assert.equal(decision.action, "REUSE_GUARDRAIL");
-  if (decision.action === "REUSE_GUARDRAIL") assert.equal(decision.guardrail, "use method-b");
+  if (decision.action === "REUSE_GUARDRAIL") assert.equal(decision.guardrail, "use method-a");
 });
 
+test("verified success is not reused across attempt signatures", () => {
+  const success: LearningRecord = {
+    ...base,
+    learningId: "LEARN-success-1",
+    classification: "VERIFIED_SUCCESS",
+    guardrail: "use method-a",
+    repeatPolicy: "REUSE_VERIFIED_GUARDRAIL",
+    createdAt: "2026-09-18T02:00:00.000Z",
+  };
+  const decision = evaluateLearningGate([success], {
+    fingerprintKey: base.fingerprintKey,
+    attemptSignature: "method-b",
+    authorityState: base.authorityState,
+  });
+  assert.equal(decision.action, "PROCEED");
+});
 
 test("governance detects a forbidden third unchanged failure record", () => {
   const second: LearningRecord = {
