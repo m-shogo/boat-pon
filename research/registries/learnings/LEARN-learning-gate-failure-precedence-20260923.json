@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-learning-gate-failure-precedence-20260923",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-governance.learning-gate.failure-precedence",
+  "subsystem": "research-automation-governance",
+  "operation": "evaluate-learning-gate",
+  "symptom": "An older VERIFIED_SUCCESS guardrail could be reused even after a newer NEW_FAILURE for the same normalized attempt.",
+  "rootCauseClass": "STALE_VERIFIED_SUCCESS_PRECEDES_NEW_FAILURE_GATE",
+  "attemptSignature": "verified-success-selected-before-later-failure",
+  "authorityState": {
+    "mainSha": "504f0547a059595ece35e93a8919e790103434ec",
+    "environmentKey": "research-governance/learning-gate",
+    "materialStateKey": "learning-gate-v2/verified-success-shadow-preservation"
+  },
+  "evidenceRefs": [
+    "src/research/governance/learningGate.ts",
+    "src/research/governance/learningGate.failurePrecedence.test.ts",
+    "docs/architecture/research-learning-loop.md"
+  ],
+  "lesson": "Observational records must not hide a reusable success, but a newer unchanged failure for the same normalized identity must supersede an older success guardrail.",
+  "guardrail": "Order decisive learning by time within the full normalized identity: reuse VERIFIED_SUCCESS only when it is newer than any unchanged failure; otherwise apply the one/two-failure switch/block gate since the latest verified success.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-09-23T07:40:25.000Z",
+  "productionConnection": false,
+  "_digest": "d45f434e29b6084dbe3bfe00898036a1ea44d4d8003af55312d1052628395b23",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-23T07:40:25.000Z"
+}

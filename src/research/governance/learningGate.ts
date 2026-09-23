@@ -28,32 +28,42 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
     .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  const latestVerifiedSuccess = relevant.find((record) =>
-    record.classification === "VERIFIED_SUCCESS"
-    && record.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL"
-    && record.attemptSignature === attempt.attemptSignature
+  const matchingAttempt = relevant.filter((record) =>
+    record.attemptSignature === attempt.attemptSignature
     && sameMaterialState(record.authorityState, attempt.authorityState)
   );
-  if (latestVerifiedSuccess) {
+
+  // Observational records do not suppress a known-good guardrail, but a later
+  // failure must take precedence over an older success. Only decisive records
+  // (failure/success) advance the retry gate for this normalized identity.
+  const latestDecisive = matchingAttempt.find((record) =>
+    record.classification === "NEW_FAILURE"
+    || (record.classification === "VERIFIED_SUCCESS" && record.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL")
+  );
+
+  if (latestDecisive?.classification === "VERIFIED_SUCCESS") {
     return {
       action: "REUSE_GUARDRAIL",
-      learningId: latestVerifiedSuccess.learningId,
-      reason: "matching fingerprint and attempt has a verified reusable success pattern",
-      guardrail: latestVerifiedSuccess.guardrail,
+      learningId: latestDecisive.learningId,
+      reason: "latest decisive learning for the matching fingerprint and attempt is a verified reusable success pattern",
+      guardrail: latestDecisive.guardrail,
     };
   }
 
-  const unchangedFailures = relevant.filter((record) =>
-    record.classification === "NEW_FAILURE"
-    && record.attemptSignature === attempt.attemptSignature
-    && sameMaterialState(record.authorityState, attempt.authorityState)
+  const latestVerifiedSuccessIndex = matchingAttempt.findIndex((record) =>
+    record.classification === "VERIFIED_SUCCESS"
+    && record.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL"
   );
+  const failureWindow = latestVerifiedSuccessIndex === -1
+    ? matchingAttempt
+    : matchingAttempt.slice(0, latestVerifiedSuccessIndex);
+  const unchangedFailures = failureWindow.filter((record) => record.classification === "NEW_FAILURE");
 
   if (unchangedFailures.length >= 2) {
     return {
       action: "BLOCK_REPEAT",
       learningId: unchangedFailures[0].learningId,
-      reason: "two unchanged failures already exist for this fingerprint and attempt",
+      reason: "two unchanged failures already exist for this fingerprint and attempt since the latest verified success",
     };
   }
 
@@ -61,7 +71,7 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
     return {
       action: "SWITCH_METHOD",
       learningId: unchangedFailures[0].learningId,
-      reason: "an unchanged failure already exists; repeating the same method is not learning",
+      reason: "an unchanged failure exists after the latest verified success; repeating the same method is not learning",
     };
   }
 
