@@ -85,25 +85,45 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
 }
 
 export function detectLearningRetryViolations(records: LearningRecord[]): string[] {
-  const failureCounts = new Map<string, { count: number; latestLearningId: string }>();
+  const byAttempt = new Map<string, LearningRecord[]>();
   for (const record of records) {
-    if (record.classification !== "NEW_FAILURE") continue;
     const key = [
       record.fingerprintKey,
       record.attemptSignature,
       record.authorityState.environmentKey,
       record.authorityState.materialStateKey,
     ].join("|");
-    const current = failureCounts.get(key);
-    failureCounts.set(key, {
-      count: (current?.count ?? 0) + 1,
-      latestLearningId: record.learningId,
-    });
+    const group = byAttempt.get(key) ?? [];
+    group.push(record);
+    byAttempt.set(key, group);
   }
 
-  return [...failureCounts.entries()]
-    .filter(([, value]) => value.count > 2)
-    .map(([key, value]) =>
-      `learning retry gate violated: ${value.count} unchanged failures for ${key} (latest ${value.latestLearningId})`
-    );
+  const violations: string[] = [];
+  for (const [key, group] of byAttempt) {
+    const ordered = group.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    let failureCount = 0;
+    let latestFailureId: string | null = null;
+    let violationReported = false;
+
+    for (const record of ordered) {
+      if (record.classification === "VERIFIED_SUCCESS" && record.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL") {
+        failureCount = 0;
+        latestFailureId = null;
+        violationReported = false;
+        continue;
+      }
+      if (record.classification !== "NEW_FAILURE") continue;
+
+      failureCount += 1;
+      latestFailureId = record.learningId;
+      if (failureCount > 2 && !violationReported) {
+        violations.push(
+          `learning retry gate violated: ${failureCount} unchanged failures for ${key} (latest ${latestFailureId})`
+        );
+        violationReported = true;
+      }
+    }
+  }
+
+  return violations;
 }
