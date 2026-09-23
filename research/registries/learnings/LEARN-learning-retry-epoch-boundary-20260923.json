@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-learning-retry-epoch-boundary-20260923",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-governance.learning-gate.retry-epoch-boundary",
+  "subsystem": "research-automation-governance",
+  "operation": "detect-learning-retry-violations",
+  "symptom": "Retry-violation detection counted NEW_FAILURE records across a later VERIFIED_SUCCESS, so two pre-success failures plus one post-success failure could be misclassified as a prohibited third unchanged attempt.",
+  "rootCauseClass": "RETRY_VIOLATION_COUNTER_IGNORED_VERIFIED_SUCCESS_EPOCH",
+  "attemptSignature": "count-unchanged-failures-without-success-epoch-reset",
+  "authorityState": {
+    "mainSha": "468c326030d8229e5675b24984d71be993a5a938",
+    "environmentKey": "research-governance/learning-gate",
+    "materialStateKey": "learning-gate-v2/failure-precedence"
+  },
+  "evidenceRefs": [
+    "src/research/governance/learningGate.ts",
+    "src/research/governance/learningGate.retryEpoch.test.ts",
+    "docs/architecture/research-learning-loop.md"
+  ],
+  "lesson": "Retry-violation auditing must use the same decisive-learning epochs as gate evaluation: a matching reusable VERIFIED_SUCCESS starts a new failure-count epoch, while observational records do not.",
+  "guardrail": "Group by the full normalized identity and count consecutive NEW_FAILURE records within each decisive epoch; reset the counter only at a matching VERIFIED_SUCCESS with REUSE_VERIFIED_GUARDRAIL.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-09-23T10:43:55.000Z",
+  "productionConnection": false,
+  "_digest": "2759f62224c6f756383a2e6247a4f6246a2639c0aaf3eecd09374f2cb7f78c5a",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-09-23T10:43:55.000Z"
+}
