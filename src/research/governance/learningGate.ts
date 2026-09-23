@@ -28,17 +28,19 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
     .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  const latest = relevant[0];
+  const latestMatchingAttempt = relevant.find((record) =>
+    record.attemptSignature === attempt.attemptSignature
+    && sameMaterialState(record.authorityState, attempt.authorityState)
+  );
   if (
-    latest?.classification === "VERIFIED_SUCCESS"
-    && latest.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL"
-    && sameMaterialState(latest.authorityState, attempt.authorityState)
+    latestMatchingAttempt?.classification === "VERIFIED_SUCCESS"
+    && latestMatchingAttempt.repeatPolicy === "REUSE_VERIFIED_GUARDRAIL"
   ) {
     return {
       action: "REUSE_GUARDRAIL",
-      learningId: latest.learningId,
-      reason: "latest matching fingerprint has a verified reusable success pattern",
-      guardrail: latest.guardrail,
+      learningId: latestMatchingAttempt.learningId,
+      reason: "latest matching fingerprint and attempt has a verified reusable success pattern",
+      guardrail: latestMatchingAttempt.guardrail,
     };
   }
 
@@ -72,7 +74,6 @@ export function evaluateLearningGate(records: LearningRecord[], attempt: Learnin
       : "prior learning exists, but authority/environment or attempt materially differs",
   };
 }
-
 
 export function detectLearningRetryViolations(records: LearningRecord[]): string[] {
   const failureCounts = new Map<string, { count: number; latestLearningId: string }>();
