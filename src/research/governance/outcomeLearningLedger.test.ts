@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION,
+  classifyOutcomeLedgerAppend,
   classifyOutcomeReconciliation,
   outcomeLearningLedgerDigest,
   validateOutcomeLearningLedgerRecord,
@@ -41,6 +42,21 @@ test("Outcome Learning Ledger digest is canonical across object key order", () =
   const reversed = Object.fromEntries(Object.entries(record).reverse()) as OutcomeLearningLedgerRecord;
   assert.equal(outcomeLearningLedgerDigest(record), outcomeLearningLedgerDigest(reversed));
   assert.match(outcomeLearningLedgerDigest(record), /^[0-9a-f]{64}$/);
+});
+
+test("Outcome Learning Ledger append classification is idempotent and fail-closed", () => {
+  const existing = validSettled();
+  const reordered = Object.fromEntries(Object.entries(existing).reverse()) as OutcomeLearningLedgerRecord;
+  assert.equal(classifyOutcomeLedgerAppend(undefined, existing), "APPEND");
+  assert.equal(classifyOutcomeLedgerAppend(existing, reordered), "IDEMPOTENT_NOOP");
+
+  const changedPayload = { ...existing, payoutYen: existing.payoutYen + 1 };
+  assert.equal(classifyOutcomeLedgerAppend(existing, changedPayload), "CONFLICT");
+
+  const differentIdentity = { ...existing, outcomeRecordId: "outcome:decision-1:settlement-2" };
+  assert.equal(classifyOutcomeLedgerAppend(existing, differentIdentity), "CONFLICT");
+
+  assert.equal(classifyOutcomeLedgerAppend(existing, { ...existing, payoutYen: -1 }), "REJECTED_INVALID");
 });
 
 test("Outcome Learning Ledger rejects unknown/public fields and invalid evidence digests", () => {
