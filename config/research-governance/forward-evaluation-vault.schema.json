@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "forward-evaluation-vault.0.1",
+  "title": "Forward Evaluation Vault record",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "recordId", "evidenceStage", "createdAt"],
+  "properties": {
+    "schemaVersion": {"const": "forward-evaluation-vault.0.1"},
+    "kind": {"enum": ["ENROLLMENT_PROTOCOL", "MEMBERSHIP", "ANALYSIS_SNAPSHOT", "EVALUATION_PROTOCOL", "RESULT"]},
+    "recordId": {"type": "string", "minLength": 1},
+    "evidenceStage": {"enum": ["HISTORICAL", "VALIDATION", "UNTOUCHED_HOLDOUT", "SHADOW_FORWARD", "FUTURE_ONLY"]},
+    "createdAt": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {"if":{"properties":{"kind":{"const":"ENROLLMENT_PROTOCOL"}}},"then":{"required":["enrollmentProtocolId","decisionSystem","eligibilityRules","startAt","endAt","ticketUniverse","protocolVersion"],"properties":{"enrollmentProtocolId":{"type":"string","minLength":1},"decisionSystem":{"type":"string","minLength":1},"eligibilityRules":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},"startAt":{"type":"string","format":"date-time"},"endAt":{"type":["string","null"],"format":"date-time"},"ticketUniverse":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},"protocolVersion":{"type":"string","minLength":1}}}},
+    {"if":{"properties":{"kind":{"const":"MEMBERSHIP"}}},"then":{"required":["cohortId","enrollmentProtocolId","enrollmentProtocolDigest","canonicalRaceId","decisionRecordId","decisionRecordDigest","enrolledAt","included","reason"],"properties":{"cohortId":{"type":"string","minLength":1},"enrollmentProtocolId":{"type":"string","minLength":1},"enrollmentProtocolDigest":{"$ref":"#/$defs/digest"},"canonicalRaceId":{"type":"string","minLength":1},"decisionRecordId":{"type":"string","minLength":1},"decisionRecordDigest":{"$ref":"#/$defs/digest"},"enrolledAt":{"type":"string","format":"date-time"},"included":{"type":"boolean"},"reason":{"type":"string","minLength":1}}}},
+    {"if":{"properties":{"kind":{"const":"ANALYSIS_SNAPSHOT"}}},"then":{"required":["analysisSnapshotId","cohortId","cutoffAt","membershipDigests"],"properties":{"analysisSnapshotId":{"type":"string","minLength":1},"cohortId":{"type":"string","minLength":1},"cutoffAt":{"type":"string","format":"date-time"},"membershipDigests":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/digest"}}}}},
+    {"if":{"properties":{"kind":{"const":"EVALUATION_PROTOCOL"}}},"then":{"required":["evaluationProtocolId","comparisonMode","oddsBasis","metricFamilies","unresolvedPolicy","benchmarkDecisionSystems","protocolVersion"],"properties":{"evaluationProtocolId":{"type":"string","minLength":1},"comparisonMode":{"enum":["SELECTED_RACE","COMMON_COHORT"]},"oddsBasis":{"enum":["BUY_TIME","CLOSING","NONE"]},"metricFamilies":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},"unresolvedPolicy":{"const":"EXCLUDE_AND_COUNT"},"benchmarkDecisionSystems":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},"protocolVersion":{"type":"string","minLength":1}}}},
+    {"if":{"properties":{"kind":{"const":"RESULT"}}},"then":{"required":["resultId","analysisSnapshotId","analysisSnapshotDigest","evaluationProtocolId","evaluationProtocolDigest","decisionSystem","comparisonMode","oddsBasis","metricFamily","includedCount","excludedCount","metrics","sourceManifestDigest","evaluatorVersion"],"properties":{"resultId":{"type":"string","minLength":1},"analysisSnapshotId":{"type":"string","minLength":1},"analysisSnapshotDigest":{"$ref":"#/$defs/digest"},"evaluationProtocolId":{"type":"string","minLength":1},"evaluationProtocolDigest":{"$ref":"#/$defs/digest"},"decisionSystem":{"type":"string","minLength":1},"comparisonMode":{"enum":["SELECTED_RACE","COMMON_COHORT"]},"oddsBasis":{"enum":["BUY_TIME","CLOSING","NONE"]},"metricFamily":{"type":"string","minLength":1},"includedCount":{"type":"integer","minimum":0,"maximum":9007199254740991},"excludedCount":{"type":"integer","minimum":0,"maximum":9007199254740991},"metrics":{"type":"object","minProperties":1,"additionalProperties":{"type":"number"}},"sourceManifestDigest":{"$ref":"#/$defs/digest"},"evaluatorVersion":{"type":"string","minLength":1}}}}
+  ],
+  "$defs": {"digest":{"type":"string","pattern":"^[0-9a-f]{64}$"}}
+}
