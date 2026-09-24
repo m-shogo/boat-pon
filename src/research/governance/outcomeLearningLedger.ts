@@ -37,6 +37,7 @@ export type OutcomeReconciliationState =
   | "CONFLICT"
   | "REJECTED_INVALID";
 
+export type OutcomeLedgerAppendDecision = "APPEND" | "IDEMPOTENT_NOOP" | "CONFLICT" | "REJECTED_INVALID";
 export type OutcomeLearningLedgerValidation = { valid: boolean; errors: string[] };
 
 const ALLOWED_FIELDS = new Set<keyof OutcomeLearningLedgerRecord>([
@@ -78,6 +79,20 @@ function canonicalize(value: unknown): unknown {
 
 export function outcomeLearningLedgerDigest(record: OutcomeLearningLedgerRecord): string {
   return createHash("sha256").update(JSON.stringify(canonicalize(record))).digest("hex");
+}
+
+export function classifyOutcomeLedgerAppend(
+  existing: OutcomeLearningLedgerRecord | undefined,
+  candidate: unknown,
+): OutcomeLedgerAppendDecision {
+  const validation = validateOutcomeLearningLedgerRecord(candidate);
+  if (!validation.valid) return "REJECTED_INVALID";
+  const next = candidate as OutcomeLearningLedgerRecord;
+  if (existing === undefined) return "APPEND";
+  if (existing.outcomeRecordId !== next.outcomeRecordId) return "CONFLICT";
+  return outcomeLearningLedgerDigest(existing) === outcomeLearningLedgerDigest(next)
+    ? "IDEMPOTENT_NOOP"
+    : "CONFLICT";
 }
 
 export function classifyOutcomeReconciliation(input: {
