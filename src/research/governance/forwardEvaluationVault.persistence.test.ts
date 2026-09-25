@@ -1,7 +1,8 @@
+import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, it } from "node:test";
 import { atomicWriteJson, verifyJsonReadback } from "./executorSdk.js";
 import {
   FORWARD_EVALUATION_VAULT_SCHEMA_VERSION,
@@ -40,12 +41,12 @@ describe("Forward Evaluation Vault persistence boundary", () => {
     const value = protocol();
 
     atomicWriteJson(path, value);
-    expect(verifyJsonReadback(path).ok).toBe(true);
+    assert.equal(verifyJsonReadback(path).ok, true);
 
     const persisted = JSON.parse(readFileSync(path, "utf8")) as EnrollmentProtocol;
-    expect(classifyForwardVaultAppend(persisted, value)).toBe("IDEMPOTENT_NOOP");
-    expect(forwardVaultDigest(persisted)).toBe(forwardVaultDigest(value));
-    expect(() => atomicWriteJson(path, value)).toThrow(/target already exists/u);
+    assert.equal(classifyForwardVaultAppend(persisted, value), "IDEMPOTENT_NOOP");
+    assert.equal(forwardVaultDigest(persisted), forwardVaultDigest(value));
+    assert.throws(() => atomicWriteJson(path, value), /target already exists/u);
   });
 
   it("fails closed when the same record identity has different content", () => {
@@ -57,11 +58,11 @@ describe("Forward Evaluation Vault persistence boundary", () => {
 
     const persisted = JSON.parse(readFileSync(path, "utf8")) as EnrollmentProtocol;
     const changed: EnrollmentProtocol = { ...original, protocolVersion: "v2" };
-    expect(classifyForwardVaultAppend(persisted, changed)).toBe("CONFLICT");
-    expect(() => atomicWriteJson(path, changed)).toThrow(/target already exists/u);
+    assert.equal(classifyForwardVaultAppend(persisted, changed), "CONFLICT");
+    assert.throws(() => atomicWriteJson(path, changed), /target already exists/u);
 
     const after = JSON.parse(readFileSync(path, "utf8")) as EnrollmentProtocol;
-    expect(forwardVaultDigest(after)).toBe(forwardVaultDigest(original));
-    expect(after.protocolVersion).toBe("v1");
+    assert.equal(forwardVaultDigest(after), forwardVaultDigest(original));
+    assert.equal(after.protocolVersion, "v1");
   });
 });
