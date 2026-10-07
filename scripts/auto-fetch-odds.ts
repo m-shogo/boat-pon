@@ -25,6 +25,8 @@ import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
 import { selectTopModelCandidatePerRace } from "../src/domain/candidateSelection";
 import { judgeCandidate } from "../src/domain/decision";
 import { shouldSendRealtimeBuyNotification } from "../src/domain/buyNotification";
+import { describeBuyProbability } from "../src/domain/accuracyScorecard";
+import { loadChampionCalibration, loadLatestCapturesForRace } from "./lib/marketCaptures";
 import { OWNER_PROPELLER_STABLE_START } from "../src/domain/raceRegime";
 
 const dryRun = process.argv.includes("--dry-run");
@@ -304,14 +306,14 @@ try {
 
     // 保存後の DB から実際の BUY を取得し、未通知なら即 LINE 通知
     const confirmedBuys = db.prepare(`
-      SELECT d.race_id, d.date, d.venue, d.race_no, d.selection, d.bet_type, d.current_odds, d.ev, d.recommended_stake_yen, p.close_at
+      SELECT d.race_id, d.date, d.venue, d.race_no, d.selection, d.bet_type, d.current_odds, d.ev, d.estimated_hit_rate, d.recommended_stake_yen, p.close_at
       FROM decision_history d
       LEFT JOIN official_programs p ON p.race_id=d.race_id
       WHERE d.date = ? AND d.decision = 'BUY' AND d.source = 'history-model' AND d.model_version = ?
     `).all(today, LIVE_MONITOR_MODEL_VERSION) as Array<{
       race_id: string; date: string; venue: string; race_no: number;
       selection: string; bet_type: string; current_odds: number | null;
-      ev: number | null; recommended_stake_yen: number; close_at: string | null;
+      ev: number | null; estimated_hit_rate: number | null; recommended_stake_yen: number; close_at: string | null;
     }>;
 
     const pendingBuys = confirmedBuys.filter((buy) => {
@@ -348,9 +350,28 @@ try {
             const voteUrl = teleBoatUrl(buy.date, buy.venue, buy.race_no);
             const oddsUrl = officialOddsUrl(buy.date, buy.venue, buy.race_no);
             const title = `🎯 BUY: ${buy.venue}${buy.race_no}R ${buy.selection}`;
+            // v3 の推定的中率は BUY 行で約3倍の過大評価だった（2026-10-07 の精度スコアカード）。
+            // 一番正確な市場補正の確率と期待回収率を並べる。計算できなければ行ごと省く（通知は止めない）。
+            let probabilityLine: string | null = null;
+            try {
+              const captures = loadLatestCapturesForRace(db, buy.race_id);
+              if (captures.latest) {
+                probabilityLine = describeBuyProbability({
+                  selection: buy.selection,
+                  v3HitRate: buy.estimated_hit_rate,
+                  quoteOdds: buy.current_odds,
+                  latestOdds: captures.latest,
+                  earlierOdds: captures.earlier,
+                  params: loadChampionCalibration(),
+                });
+              }
+            } catch (err) {
+              console.error("LINE realtime probability skipped:", err instanceof Error ? err.message : err);
+            }
             const body = [
               `券種: ${buy.bet_type}`,
-              `オッズ: ${odds} / EV: ${ev}`,
+              `オッズ: ${odds} / EV(v3): ${ev}`,
+              ...(probabilityLine ? [probabilityLine] : []),
               `stake: ${buy.recommended_stake_yen}円`,
               "",
               `投票: ${voteUrl}`,

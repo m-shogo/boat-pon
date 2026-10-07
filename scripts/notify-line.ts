@@ -7,6 +7,7 @@ import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients
 import { formatNoBuyReasonSummary, summarizeNoBuyReasons } from "../src/domain/lineDailySummary";
 import { formatLineDailyLatestHit, type LineDailyLatestHit } from "../src/domain/lineDailyLatestHit";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
+import { accuracySnapshotFromReport, formatLedgerAndAccuracyLines, summarizeBuyLedger } from "../src/domain/accuracyScorecard";
 
 type Mode = "daily" | "test" | "results" | "forward" | "errors";
 
@@ -312,12 +313,38 @@ LIMIT 1
   };
 }
 
+/**
+ * 当たり外れの累計（公式払戻）と、毎晩のスコアカード（scripts/publish-accuracy-scorecard.sh が置く JSON）にある精度の要点。
+ * スコアカードが無い・古い・壊れているときは、精度の行を出さない。
+ */
+function ledgerAndAccuracyLines(db: DatabaseSync): string[] {
+  const rows = db.prepare(`
+SELECT dh.date, dh.selection, rr.trifecta, rr.payout_yen, rr.returned
+FROM decision_history dh
+LEFT JOIN race_results rr ON rr.race_id = dh.race_id
+WHERE dh.decision = 'BUY' AND dh.run_kind = 'paper-live' AND dh.model_version = ?
+`).all(LIVE_MONITOR_MODEL_VERSION) as Array<{ date: string; selection: string; trifecta: string | null; payout_yen: number | null; returned: number | null }>;
+  const ledger = summarizeBuyLedger(rows.map((row) => {
+    const settled = row.trifecta != null && row.trifecta !== "" && !row.returned && row.payout_yen != null;
+    return { date: row.date, hit: settled ? row.trifecta === row.selection : null, payoutYen: row.payout_yen };
+  }));
+  let snapshot = null;
+  try {
+    const path = "data/reports/scorecard/latest.json";
+    if (existsSync(path)) snapshot = accuracySnapshotFromReport(JSON.parse(readFileSync(path, "utf8")));
+  } catch {
+    snapshot = null;
+  }
+  return formatLedgerAndAccuracyLines(ledger, snapshot, new Date());
+}
+
 function buildDailySummary(
   date: string,
   counts: DailyCounts,
   buyRows: BuyRow[],
   noBuyReasonRows: NoBuyReasonRow[],
   latestHit: LineDailyLatestHit | null,
+  ledgerLines: string[] = [],
 ) {
   const buyPreview = buyRows.slice(0, 5).map((row) => {
     const odds = formatOdds(row.current_odds);
@@ -329,6 +356,7 @@ function buildDailySummary(
     `odds=${oddsRate}`,
     `model=${LIVE_MONITOR_MODEL_VERSION} / paper-live`,
     formatLineDailyLatestHit(latestHit),
+    ...ledgerLines,
     buyPreview.length > 0 ? ["", "BUY候補:", ...buyPreview].join("\n") : "BUY候補なし。買わない日として観察継続。",
     "",
     formatNoBuyReasonSummary(summarizeNoBuyReasons(noBuyReasonRows.map((row) => row.decision_reasons))),
@@ -350,7 +378,7 @@ function buildDailyNotifications(db: DatabaseSync, date: string, dryRun: boolean
   const summary = upsertPendingNotification(db, {
     raceId: `line-daily-${date}`,
     title: summaryTitle,
-    body: buildDailySummary(date, counts, buyRows, noBuyReasonRows, latestHit),
+    body: buildDailySummary(date, counts, buyRows, noBuyReasonRows, latestHit, ledgerAndAccuracyLines(db)),
     officialUrl: "https://www.boatrace.jp/",
     dryRun,
   });
@@ -454,6 +482,10 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
   const rows = listBuyResults(db, from, to);
   const notifications: NotificationRow[] = [];
   for (const row of rows) {
+    // 締切後の速報（scripts/notify-buy-results-fast.ts）を送っていて、着順が確定と同じなら、確定通知は送らない。
+    const fast = db.prepare("SELECT body FROM notification_log WHERE race_id = ? AND channel = 'line' AND status = 'SENT'")
+      .get(`line-buy-result-fast-${row.race_id}`) as { body: string } | undefined;
+    if (fast && row.trifecta && fast.body.includes(`実着順: ${row.trifecta}\n`)) continue;
     const message = buildBuyResultNotification({
       venue: row.venue,
       raceNo: row.race_no,

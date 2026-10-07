@@ -45,8 +45,12 @@ ts() { TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S JST'; }
   # ---------- 3. ルール候補追記 ----------
   echo ""
   echo "--- [3/3] append:rule-candidates $(ts) ---"
+  # 追跡対象の docs/rule-candidates.md に追記すると、launchd が動かしている作業ツリーが毎週汚れる。
+  # git 管理外へ出す（当たり外れと精度は scripts/report-accuracy-scorecard.ts が引き継いだ）。
+  mkdir -p "$ROOT_DIR/data/reports"
   if npm run --silent append:rule-candidates -- \
       --input "$JSON_OUT" \
+      --output "$ROOT_DIR/data/reports/rule-candidates-weekly.md" \
       --status watch \
       --evidence report:monthly \
       --action 追加観察 \

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { binaryMetrics, calibratedMarketProbabilities, normalizedMarketProbabilities, summarizeBuyLedger } from "./accuracyScorecard";
+import {
+  accuracySnapshotFromReport, binaryMetrics, calibratedMarketProbabilities, describeBuyProbability, evaluateChallenger, fitMarketCalibration,
+  formatLedgerAndAccuracyLines, multiclassLogLoss, normalizedMarketProbabilities, summarizeBuyLedger, type MarketRace,
+} from "./accuracyScorecard";
 
 test("binaryMetrics は期待的中数・Brier・logloss を出す", () => {
   const result = binaryMetrics([{ p: 0.5, hit: 1 }, { p: 0.5, hit: 0 }]);
@@ -53,4 +56,55 @@ test("BUY 台帳は未精算を ROI の分母に入れない", () => {
   assert.equal(summary.misses, 1);
   assert.equal(summary.officialRoi, 20);
   assert.deepEqual(summary.byMonth.map((m) => [m.month, m.settled, m.officialRoi]), [["2026-09", 2, 20], ["2026-10", 0, null]]);
+});
+
+const favouriteWins = (date: string): MarketRace => ({ date, winner: "1-2-3", t5Odds: new Map([["1-2-3", 2], ["2-1-3", 4]]), earlierOdds: null });
+
+test("本命が勝ち続けるデータでは temperature<1 の方が logloss が小さい", () => {
+  const races = Array.from({ length: 20 }, (_, i) => favouriteWins(`2026-09-${String(i + 1).padStart(2, "0")}`));
+  const flat = multiclassLogLoss(races, { temperature: 1, lateMoneyBeta: 0 })!;
+  const sharp = multiclassLogLoss(races, { temperature: 0.8, lateMoneyBeta: 0 })!;
+  assert.ok(sharp < flat);
+  assert.equal(fitMarketCalibration(races).temperature, 0.8);
+});
+
+test("挑戦者は改善幅と週ごとの勝ち数の両方を満たしたときだけ入れ替わる", () => {
+  const week = Array.from({ length: 60 }, (_, i) => favouriteWins(`2026-09-${String((i % 28) + 1).padStart(2, "0")}`));
+  const blocks = [week, week, week, week];
+  const result = evaluateChallenger({ temperature: 1, lateMoneyBeta: 0 }, { temperature: 0.8, lateMoneyBeta: 0 }, blocks);
+  assert.equal(result.weeklyWins, 4);
+  assert.equal(result.promote, true);
+  const same = evaluateChallenger({ temperature: 1, lateMoneyBeta: 0 }, { temperature: 1, lateMoneyBeta: 0 }, blocks);
+  assert.equal(same.promote, false);
+  const tooSmall = evaluateChallenger({ temperature: 1, lateMoneyBeta: 0 }, { temperature: 0.8, lateMoneyBeta: 0 }, [week.slice(0, 10)]);
+  assert.equal(tooSmall.eligibleWeeks, 0);
+  assert.equal(tooSmall.promote, false);
+});
+
+test("スコアカード JSON から精度の要点を取り出し、古ければ LINE に載せない", () => {
+  const report = {
+    generatedAt: "2026-10-07T13:00:00.000Z",
+    accuracy: {
+      all: [{ key: "v3", metrics: { logLoss: 0.2353 } }, { key: "calibrated", metrics: { logLoss: 0.2187 } }],
+      buyOnly: [{ key: "v3", metrics: { actualToPredicted: 0.31 } }],
+    },
+  };
+  const snapshot = accuracySnapshotFromReport(report)!;
+  assert.equal(snapshot.v3BuyActualToPredicted, 0.31);
+  assert.equal(accuracySnapshotFromReport({ generatedAt: 1 }), null);
+  const ledger = summarizeBuyLedger([{ date: "2026-10-01", hit: false, payoutYen: null }, { date: "2026-10-02", hit: null, payoutYen: null }]);
+  const freshLines = formatLedgerAndAccuracyLines(ledger, snapshot, new Date("2026-10-08T12:00:00.000Z"));
+  assert.equal(freshLines.length, 2);
+  assert.match(freshLines[0], /結果待ち 1/);
+  assert.match(freshLines[1], /0\.31（1 が正確）/);
+  assert.equal(formatLedgerAndAccuracyLines(ledger, snapshot, new Date("2026-10-10T12:00:00.000Z")).length, 1);
+});
+
+test("BUY 通知の確率行は市場補正の確率と期待回収率を出す", () => {
+  const line = describeBuyProbability({
+    selection: "1-2-3", v3HitRate: 0.06, quoteOdds: 60,
+    latestOdds: new Map([["1-2-3", 50], ["2-1-3", 1.1]]), earlierOdds: null, params: { temperature: 1, lateMoneyBeta: 0 },
+  })!;
+  assert.match(line, /^的中確率: v3 6\.0% → 市場補正 2\.2% \/ 期待回収 1\.29$/);
+  assert.equal(describeBuyProbability({ selection: "9-9-9", v3HitRate: null, quoteOdds: null, latestOdds: new Map([["1-2-3", 2]]), earlierOdds: null }), null);
 });
