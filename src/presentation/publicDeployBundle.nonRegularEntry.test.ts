@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { realpathSync } from "node:fs";
 import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
@@ -7,7 +8,9 @@ import test from "node:test";
 import { assemblePublicDashboardDeploy, verifyPublicDashboardDeploy } from "./publicDeployBundle";
 
 test("deploy verifier rejects a non-regular required entry", async () => {
-  const root = await mkdtemp(join(tmpdir(), "boat-pon-public-nonregular-entry-"));
+  // macOS の Unix ソケットのパスは 104 文字まで。長い TMPDIR の下だと listen が EINVAL になるので、短い実パスを使う。
+  const base = process.platform === "darwin" ? realpathSync("/tmp") : tmpdir();
+  const root = await mkdtemp(join(base, "bp-nonregular-"));
   const dist = join(root, "dist");
   const output = join(root, "output");
   let server: Server | null = null;
