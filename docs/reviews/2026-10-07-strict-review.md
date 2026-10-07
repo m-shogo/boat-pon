@@ -226,3 +226,64 @@ capture のリリースは、この repo の git worktree として3つ残って
 cp docs/launchd/com.boatpon.scorecard-publish.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boatpon.scorecard-publish.plist
 ```
 
+
+## 2026-10-08 追記2: フラットな見直し・課題一覧・成長ループ
+
+目標を「当たり外れを正しく・すぐに伝える」と「確率の精度を上げ続ける」に置き直した。そのうえで、仕組み全体をゼロから見直した。
+
+### 課題一覧
+
+| # | 課題 | 根拠（実測） | 対応 | 状態 |
+|---|---|---|---|---|
+| 1 | 全券種の払戻・各艇成績・気象（`race_payouts` / `race_entries` / `race_conditions`）が 2026-06-01 で止まっていた | 最終日付 2026-06-01。精算済み BUY 175件のどれにも払戻行が無い。書き込み関数は手動の再パースからしか呼ばれていなかった | 毎日の結果取り込みで、同じ K ファイルから保存するようにした（一時 DB で、10/6 の 156 レース・1,560 払戻を確認。3連単は本番と 156/156 一致） | 済。7/1〜10/6 の埋め戻しはユーザー作業（下のコマンド） |
+| 2 | 結果の通知が翌日以降の 21:30 にしか届かない | 結果は公式アーカイブの公開後にしか取り込めない | BUY レースだけ、締切 8分後から公式の結果ページを見て速報する `scripts/notify-buy-results-fast.ts`。確定と同じなら翌日の通知は送らない | 済。launchd の登録はユーザー作業 |
+| 3 | 1日でも結果の取得に失敗すると、その日の結果通知が全部止まる | `daily-results.sh` が `set -e` で、取り込みの終了コード 1 で終わっていた（10/6 に発生） | 取り込みが一部失敗しても、通知まで進むようにした | 済 |
+| 4 | 公式サイトへの取得にタイムアウトが無い | auto-odds の直近 2,000 回のうち 30 回が 30 分超、最大 2.7 時間 | オッズ 20秒・直前情報 20秒・結果アーカイブ 60秒のタイムアウト | 済 |
+| 5 | BUY 通知の的中確率が実態の数倍 | BUY 行で v3 の期待的中 9.8 に対して実績 3（約3倍。直近60日では約7倍） | BUY 通知に「v3 → 市場補正の確率・期待回収率」の1行を追加（過去の BUY で 1件あたり 1〜3ms） | 済 |
+| 6 | 当たり外れの累計と精度が日次の LINE に無い | — | 日次まとめに「当たり外れ累計（公式払戻）」と「精度（実績/予測・logloss）」を追加 | 済 |
+| 7 | 精度を測る物差しが無かった | 既存の BUY 較正レポートは v3 と実績の比較だけで、市場と比べていない | 精度スコアカード（v3 / T-5 市場 / 市場補正を、同じレースで比較） | 済 |
+| 8 | 改善が自動で回らない | — | 成長ループ: 毎晩スコアカードを履歴とイベントに蓄積し、週1回、市場補正を学び直した挑戦者を事前登録の条件で評価して、勝てば自動で入れ替える。初回（学習 6,293 / 評価 3,037 レース）は挑戦者が王者と同じ T=0.9・β=0.25 で据え置き＝パラメータは安定 | 済。launchd の登録はユーザー作業 |
+| 9 | Mac 上で `npm test` が毎回 316 件落ちる | macOS の TMPDIR が `/private/var` へのシンボリックリンクで、実パスの一致チェックに引っかかる。あと1件はソケットのパス長制限 | テストの前処理で TMPDIR を実パスにそろえ、ソケットのテストは短いパスを使うようにした | 済（4,096/4,096 通過） |
+| 10 | 週次レビューが追跡ファイルを毎週汚し、精算件数も常に 0 | `docs/rule-candidates.md` に追記。`report-quality.ts` は空のままの `decision_history.result` で精算を判定していた | 出力先を git 管理外（`data/reports/`）に変えた。精算の集計はスコアカードが引き継いだ | 出力先は済。ジョブの停止はユーザー作業 |
+| 11 | ChatGPT の毎時タスクが 9/25 から無音 | GitHub への最終書き込みは 9/25 22:05 | 改訂版プロンプト（日次・スコアカードを根拠に） | ユーザー作業（ChatGPT 側の確認と差し替え） |
+| 12 | 収集がノートPCの開閉に左右される | 直近7日の T-5 カバー率 46.8%。10/7 は 16:41 に蓋を閉じて停止 | 8〜21時は AC 電源につないで蓋を開けておく。根本対策は常時稼働の機械へ移すこと | 提案（ユーザー判断） |
+| 13 | launchd がこの開発用チェックアウトをそのまま実行している | ブランチの切り替えや pull が、そのまま本番の更新になる | 本番用の worktree（例: `~/Library/Application Support/BoatPon/runtime`）を main に固定し、plist の WorkingDirectory をそこへ向ける | 提案（ユーザー判断） |
+| 14 | パッケージ管理が二重 | ローカルの `node_modules` は pnpm で入っている（`.pnpm`）。CI は `npm ci`（package-lock.json）。`pnpm-lock.yaml` は 2026-06-02 から更新されていない | npm にそろえる（`pnpm-lock.yaml` と `pnpm-workspace.yaml` を外し、`npm ci` で入れ直す） | 提案（lockfile の削除は確認が必要） |
+| 15 | 正確な確率で判定すると BUY はほぼ出ない | 市場補正の期待回収率は、BUY 行で平均 0.70 | BUY の判定は v3 のまま（本番の判定ロジックは変えない）。通知に正確な確率を並べて、実態を見えるようにした | 方針の確認（BUY を「娯楽用のシグナル」と割り切るか） |
+| 16 | 日次の進捗レポートの期待値が古い | 「auto-odds は15分ごと」と表示して警告を出し続けている（実際は5分ごと） | 監視はスコアカードの注意に寄せる | 提案 |
+
+### 成長ループ（自動化した部分）
+
+```
+毎晩 22:15  scripts/publish-accuracy-scorecard.sh
+  ├─ run-accuracy-growth.ts   週1回だけ動く。挑戦者を学習（評価より前の8週）→ 直近4週で王者と比べる
+  │                            → 事前登録の条件（logloss 0.002 以上の改善、4週中3週以上で勝ち）を満たせば入れ替え
+  ├─ report-accuracy-scorecard.ts --state-dir data/reports/scorecard
+  │                            → history.jsonl に1行、前回は無かった注意を events.jsonl に記録
+  ├─ 公開版を automation/scorecard へ（集計値だけ。境界チェックつき）→ ChatGPT が毎日読んで報告・週1で目的監査
+  └─ data/reports/scorecard/latest.json → 翌日の LINE 日次まとめが精度の行に使う
+締切 8分後〜  scripts/notify-buy-results-fast.ts（10分ごと） → BUY の当たり外れを速報
+21:30        daily-results（K ファイル取り込み＋全券種の払戻）→ 確定通知（速報と同じなら送らない）
+```
+
+入れ替わった王者は、スコアカードと BUY 通知に出す「市場補正の確率」にだけ使う。BUY の判定・app_settings・DB は変えない。
+
+### ユーザーが実行するコマンド
+
+払戻・各艇成績・気象の埋め戻し（7/1〜10/6。DB に書き込む。最初に `--dry-run` で件数を確かめる）:
+
+```bash
+npx tsx scripts/reparse-official-results.ts --dry-run --from 260602 --to 261006
+```
+
+```bash
+npx tsx scripts/reparse-official-results.ts --from 260602 --to 261006
+```
+
+6/2〜6/30 は手元に K ファイルが無い（6月は 6/1 分だけ）。埋めるには、先に公式アーカイブから29ファイルを取り直す（外部アクセス、1.5秒間隔）: `BOAT_PON_DL_ONLY=1 npx tsx scripts/fetch-official-results.ts 2026-06-02 2026-06-30`。
+
+速報ジョブとスコアカードの登録:
+
+```bash
+cp docs/launchd/com.boatpon.buy-results-fast.plist docs/launchd/com.boatpon.scorecard-publish.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boatpon.buy-results-fast.plist && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boatpon.scorecard-publish.plist
+```

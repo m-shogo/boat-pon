@@ -23,8 +23,9 @@
 
 ### 続けるもの
 
-- auto-odds・auto-exhibition・番組と結果の取り込み・LINE 通知（BUY 即時・日次まとめ・結果）
-- 精度スコアカード: `scripts/publish-accuracy-scorecard.sh` が毎晩 22:15 に公開版を `automation/scorecard` へ置く（launchd への登録はユーザーが行う）
+- auto-odds・auto-exhibition・番組と結果の取り込み（全券種の払戻・各艇成績・気象も毎日保存）・LINE 通知（BUY 即時・日次まとめ・確定結果）
+- BUY の結果の速報: `scripts/notify-buy-results-fast.ts`（10分ごと。締切 8分後から公式の結果ページを見る。launchd への登録はユーザーが行う）
+- 成長ループ: `scripts/publish-accuracy-scorecard.sh` が毎晩 22:15 に、週次の改善処理（`run-accuracy-growth.ts`）→ スコアカード（`data/reports/scorecard/` に履歴とイベントを蓄積）→ 公開版を `automation/scorecard` へ、の順に実行する（launchd への登録はユーザーが行う）。改善処理が入れ替えるのは市場補正のパラメータだけで、BUY の判定は変えない
 - ChatGPT の定期タスク: 1日1回、スコアカードを読んで報告し、週1回は目的監査をする（プロンプトは [`docs/chatgpt-scheduled-task-bridge.md`](docs/chatgpt-scheduled-task-bridge.md) の改訂版）
 
 ### 止めるもの・やらないこと
@@ -39,6 +40,7 @@
 ## ROI 評価基準
 
 - **主評価**: 公式払戻（`race_results.payout_yen` / `race_payouts.payout_yen`、refund semantics 込み）
+- `race_payouts` は 2026-06-02〜10-06 が空（毎日の取り込みに入っていなかった。2026-10-08 に修正）。埋め戻すまでは、3連単は `race_results.payout_yen` を使う
 - `current_odds`（判定時の表示オッズ）は確定払戻より楽観的。全体で約15pt、BUY の的中時は払戻が表示の 49〜69% だった。ROI の根拠にしない。
 - T-5 オッズも、確定払戻は平均して表示の 95% になる。T-5 で計算した EV は 5〜8% 楽観的。
 
