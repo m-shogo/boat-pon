@@ -1,5 +1,7 @@
 # 研究自動化オペレーティングモデル（3 レーン）
 
+> **アーカイブ中（2026-10-08〜）**: この文書は、研究を進めていた時期の運用ルールや計画。edge なしが確定したので、現在は [`CLAUDE.md`](../CLAUDE.md) の「現在フェーズ: アーカイブ」と [厳格レビュー](reviews/2026-10-07-strict-review.md) が優先する。この文書を根拠に研究や自動化を再開しない。
+
 更新: 2026-08-05 / authority: ADR 群の下位、`docs/boat-pon-research-dispatch.md` の上位。
 
 ChatGPT Scheduled Task は 3 つのレーンで boat-pon 研究を進める。いずれも

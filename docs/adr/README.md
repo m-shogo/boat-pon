@@ -1,5 +1,7 @@
 # Architecture Decision Records (research platform)
 
+> **アーカイブ中（2026-10-08〜）**: この文書は、研究を進めていた時期の運用ルールや計画。edge なしが確定したので、現在は [`CLAUDE.md`](../../CLAUDE.md) の「現在フェーズ: アーカイブ」と [厳格レビュー](../reviews/2026-10-07-strict-review.md) が優先する。この文書を根拠に研究や自動化を再開しない。
+
 権威順（authority order）— 文書が競合したら上位を優先する:
 
 1. 絶対安全条件（production 非接続 / BUY・app_settings 不変 / 自動購入なし / 無承認 write なし） … 最優先・不可侵

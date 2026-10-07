@@ -1,5 +1,7 @@
 # ChatGPT Scheduled Task bridge（boat-pon / intent 方式）
 
+> **アーカイブ中（2026-10-08〜）**: この文書は、研究を進めていた時期の運用ルールや計画。edge なしが確定したので、現在は [`CLAUDE.md`](../CLAUDE.md) の「現在フェーズ: アーカイブ」と [厳格レビュー](reviews/2026-10-07-strict-review.md) が優先する。この文書を根拠に研究や自動化を再開しない。
+
 更新: 2026-08-04
 
 ChatGPT の Scheduled Task が **1 時間ごとに 1 回だけ** GitHub 経由で boat-pon の次の 1 task を依頼するための橋渡し。

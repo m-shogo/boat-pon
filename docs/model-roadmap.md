@@ -1,5 +1,7 @@
 # 期待値モデル改善ロードマップ
 
+> **アーカイブ中（2026-10-08〜）**: この文書は、研究を進めていた時期の運用ルールや計画。edge なしが確定したので、現在は [`CLAUDE.md`](../CLAUDE.md) の「現在フェーズ: アーカイブ」と [厳格レビュー](reviews/2026-10-07-strict-review.md) が優先する。この文書を根拠に研究や自動化を再開しない。
+
 N0後の研究基盤、実装順序、現行formalと新研究shadowの分離は[`research-platform-master-plan.md`](research-platform-master-plan.md)を最上位正本とする。本書の既存モデル履歴は保持するが、新方式の次工程はStage F0のtemp/sidecar vertical sliceとF0-R rolloutであり、N5以前に市場知能モデルを学習しない。
 
 ## 変わった角度のfeature screen（2026-07-18）
