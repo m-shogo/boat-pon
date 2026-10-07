@@ -24,7 +24,9 @@ run_tsx() {
 
 echo "${LOG_PREFIX} fetch:official-results ${FROM}..${TO}"
 export BOAT_PON_SKIP_EXISTING=1
-run_tsx scripts/fetch-official-results.ts "$FROM" "$TO"
+# 公式アーカイブの公開が遅れた日があると取り込みは終了コード 1 になる。
+# set -e のまま止めると、取り込めた日の BUY 結果通知まで送られなくなるので、ここでは止めない。
+run_tsx scripts/fetch-official-results.ts "$FROM" "$TO" || echo "${LOG_PREFIX} fetch:official-results partial failure (exit=$?); continuing to notify"
 
 # 結果取得後、直近14日で未通知のpaper-live BUY事後結果を送る。
 # notification_logの専用キーで重複送信を防ぐ。

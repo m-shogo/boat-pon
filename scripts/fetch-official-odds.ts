@@ -1,7 +1,7 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const venueCodes: Record<string, string> = {
+export const venueCodes: Record<string, string> = {
   桐生: "01", 戸田: "02", 江戸川: "03", 平和島: "04", 多摩川: "05",
   浜名湖: "06", 蒲郡: "07", 常滑: "08", 津: "09", 三国: "10",
   びわこ: "11", 住之江: "12", 尼崎: "13", 鳴門: "14", 丸亀: "15",
@@ -38,8 +38,10 @@ export async function fetchOfficialOdds(args: FetchOfficialOddsArgs): Promise<Fe
     return { cached: true, html: await readFile(outPath, "utf8"), url, path: outPath };
   }
 
+  // 応答しない接続で auto-odds の1回の実行が何十分も止まり、T-5 の窓を逃していた（2,000回中30回が30分超）。
   const res = await fetch(url, {
     headers: { "user-agent": "BoatPon/0.1 personal low-frequency cache fetch" },
+    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`official odds fetch failed: ${res.status} ${res.statusText}`);
   const html = await res.text();

@@ -4,7 +4,8 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { parseOfficialResultsText } from "../src/domain/officialResultParser";
-import { insertResult, openDb } from "../server/db";
+import { insertResult, openDb, saveResultDetail } from "../server/db";
+import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import type { RaceResult } from "../src/domain/types";
 
 const execFile = promisify(execFileCb);
@@ -14,6 +15,8 @@ const TMP_DIR = path.join("data", "tmp");
 const SLEEP_MS = 1500;
 const FETCH_RETRY_COUNT = 2;
 const FETCH_RETRY_DELAY_MS = 3000;
+// 公式サーバーが応答しないときに launchd のジョブが何十分も止まらないようにする。
+const FETCH_TIMEOUT_MS = 60_000;
 const MAX_RANGE_DAYS = 10000;
 const DL_ONLY = process.env.BOAT_PON_DL_ONLY === "1";
 const SKIP_EXISTING = process.env.BOAT_PON_SKIP_EXISTING === "1";
@@ -43,6 +46,8 @@ async function main() {
   let skippedDays = 0;
   let alreadyHaveDays = 0;
   let failedDays = 0;
+  let detailFailedDays = 0;
+  let totalPayouts = 0;
 
   // SKIP_EXISTING: SQLiteに既に取り込み済みの日付を事前に取得（高速チェック用）
   const existingDates = new Set<string>();
@@ -89,6 +94,24 @@ async function main() {
         const results = parseOfficialResultsText(text, { date, fetchedAt });
         for (const row of results) insertResult(db, row);
         totalRaces += results.length;
+        // 全券種の払戻・各艇成績・気象も、同じ K ファイルから保存する。
+        // 以前は再パース（scripts/reparse-official-results.ts）でしか入らず、2026-06-01 で止まっていた。
+        // ここが失敗しても、上で入れた3連単の結果は残す。
+        try {
+          const detail = parseOfficialResultDetail(text, { date, fetchedAt });
+          db.exec("BEGIN");
+          try {
+            saveResultDetail(db, detail);
+            db.exec("COMMIT");
+          } catch (err) {
+            db.exec("ROLLBACK");
+            throw err;
+          }
+          totalPayouts += detail.payouts.length;
+        } catch (err) {
+          detailFailedDays += 1;
+          console.warn(`detail save failed ${date}: ${err instanceof Error ? err.message : err}`);
+        }
         console.log(`${date}: ${results.length} races (${cached ? "cache" : "fetched"})`);
       } catch (err) {
         failedDays += 1;
@@ -99,7 +122,7 @@ async function main() {
     db.close();
   }
 
-  console.log(`--- done: ${dates.length} days / ${totalRaces} races / cached=${skippedDays} / already=${alreadyHaveDays} / failed=${failedDays}`);
+  console.log(`--- done: ${dates.length} days / ${totalRaces} races / payouts=${totalPayouts} / cached=${skippedDays} / already=${alreadyHaveDays} / failed=${failedDays} / detailFailed=${detailFailedDays}`);
   if (failedDays > 0) process.exitCode = 1;
 }
 
@@ -120,6 +143,7 @@ async function downloadFileWithRetry(url: string, dest: string) {
 async function downloadFile(url: string, dest: string) {
   const res = await fetch(url, {
     headers: { "user-agent": "BoatPon/0.1 personal low-frequency cache fetch" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} ${url}`);
   const buf = Buffer.from(await res.arrayBuffer());

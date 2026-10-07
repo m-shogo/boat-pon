@@ -66,6 +66,7 @@ function numberArg(name: string, fallback: number): number {
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: { "user-agent": "BoatPon/0.1 personal low-frequency fetch" },
+    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
   return res.text();
