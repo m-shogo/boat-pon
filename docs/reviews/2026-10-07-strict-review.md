@@ -187,5 +187,7 @@ gh api -X PATCH repos/m-shogo/boat-pon -F delete_branch_on_merge=true
 gh pr close 2286 --comment "研究工場の停止に伴い close（docs/reviews/2026-10-07-strict-review.md）"
 ```
 
+capture のリリースは、この repo の git worktree として3つ残っている（`~/Library/Application Support/BoatPon/trifecta-private-capture/releases/` の `6e297602`・`8d99eab5`・`967ad45d`）。launchd を止めたあと、不要なら `git worktree list` で確認してから `git worktree remove <path>` で外す（任意）。
+
 戻す必要が出たら、`git fetch backups/git-archive-20261008/all-branches-before-cleanup.bundle 'refs/remotes/origin/<branch>:refs/heads/<branch>'` で個別に復元できる。stash は同じフォルダのパッチを `git apply` すれば戻せる。
 
