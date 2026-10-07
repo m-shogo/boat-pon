@@ -73,10 +73,7 @@ DB は読み取り専用（`immutable=1`）で参照し、書き込み・app_set
    - バッテリー駆動で蓋を閉じると Clamshell Sleep に入る（`caffeinate -s` は AC 電源のときしか効かない）。
    - `fetch` にタイムアウトが無く、直近2,000回の実行のうち 30回が30分を超えた（最大 2.7時間）。その間 launchd は次の実行を起動しないので、T-5 の窓を丸ごと逃す。
    - launchd はこの作業コピーを直接実行しているので、`git pull` がそのまま本番のコード更新になる。
-6. **public リポジトリに self-hosted runner を置いている。** 今のワークフローは `ref: main` を checkout しているので、fork からのコード実行は防がれている。ただ構造としては脆い。
-   - `owner-buy-learning-refresh` は `head_repository` を確認しておらず、fork の `main` ブランチからの PR でも Mac 上のジョブが起動しうる。
-   - `owner-dashboard-deploy` は fork の head_sha を checkout し、検証より先に `npm ci` を実行する（ubuntu-latest 上、トークンは read-only）。
-   - GitHub の公式ガイダンスでは、public リポジトリでの self-hosted runner は非推奨。
+6. **public リポジトリに self-hosted runner を置いている。** 今のワークフローは `ref: main` を checkout しているので、fork からのコード実行は防がれている。ただ構造としては脆い（具体的な指摘はオーナーに直接伝え、ここには書かない）。GitHub の公式ガイダンスでも、public リポジトリでの self-hosted runner は非推奨。
 7. **指示文とメモが古くなっている。**
    - `CLAUDE.md` の「現在フェーズ（2025-06 時点）」は年が誤っていて、中身も6月の状態のまま。コマンドは `pnpm` と書かれているが、CI は `npm ci`（`pnpm-lock.yaml` の最終更新は 2026-06-02）。
    - エージェント用 memory に「payout_yen はダミー、current_odds で ROI を出す」という廃止済みの指示が残っていた（今回修正済み）。
@@ -138,7 +135,8 @@ DB は読み取り専用（`immutable=1`）で参照し、書き込み・app_set
 | 削除前のバックアップ（全ブランチの bundle と stash パッチ → `backups/git-archive-20261008/`） | 済（`git bundle verify` と clone 後の fsck で確認） |
 | launchd ジョブの停止 | **未（ユーザー作業）** — 自動実行の安全判定で拒否されたため。下の「停止の手順」を参照 |
 | self-hosted runner の停止・登録解除 | **未（ユーザー作業）** — 同上 |
-| GitHub の残りの作業（ワークフロー無効化・ブランチ削除・設定変更・PR #2286 の close） | 下の「GitHub 側の実施結果」に記録 |
+| GitHub Actions のワークフロー無効化（CI 以外） | **未（ユーザー作業）** — 自動実行の安全判定で拒否されたため |
+| リモートブランチ削除・`delete_branch_on_merge`・PR #2286 の close | このあと実施（結果は PR 本文に記録） |
 
 ### 停止の手順（ユーザーが実行する）
 
@@ -151,3 +149,9 @@ for L in com.boatpon.auto-odds com.boatpon.auto-exhibition com.boatpon.daily-pro
 収集ジョブが動いていない時間帯（21:05〜翌8:00 JST）に実行する。再開するときは、ジョブごとに `launchctl enable gui/$(id -u)/<label>` を実行してから `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist` を実行する。
 
 runner の登録解除は GitHub の Settings → Actions → Runners から行う（`boat-pon-mac-local`）。
+
+GitHub Actions の CI 以外のワークフローを無効化する（再開は `.../enable`）:
+
+```bash
+gh api --paginate 'repos/m-shogo/boat-pon/actions/workflows?per_page=100' --jq '.workflows[] | select(.path != ".github/workflows/ci.yml" and .state == "active") | .id' | while read id; do gh api -X PUT "repos/m-shogo/boat-pon/actions/workflows/$id/disable"; done
+```

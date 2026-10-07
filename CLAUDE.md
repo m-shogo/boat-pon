@@ -28,7 +28,7 @@
 ### 停止状態と再開手順
 
 - launchd（`~/Library/LaunchAgents/com.boatpon.*`、`com.shogo.boat-pon.weekly-review`）の plist は残してある。停止・再開はユーザーが行う（手順はレビュー文書の「停止の手順」を参照）。
-- GitHub Actions は CI 以外を無効化している。再開するときは `gh api -X PUT repos/m-shogo/boat-pon/actions/workflows/<file>/enable` を使う。
+- GitHub Actions は CI 以外を無効化する（ユーザー作業。手順はレビュー文書の「停止の手順」）。再開するときは `gh api -X PUT repos/m-shogo/boat-pon/actions/workflows/<file>/enable` を使う。
 - 削除したブランチや stash は `backups/git-archive-20261008/` に bundle とパッチで退避してある。
 
 ## ROI 評価基準
