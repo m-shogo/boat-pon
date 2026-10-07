@@ -146,12 +146,16 @@ Claude の作業メモ（エージェント用 memory）には、2026-06-05 の�
 |---|---|
 | 判定の記録（この文書・利益監査への追記・lessons-learned） | 済 |
 | `CLAUDE.md` と README をアーカイブ状態に更新 | 済 |
+| エージェント向けの古い運用文書12件にアーカイブ注記 | 済 |
+| 2026-06-05 に memory にだけあった結論を repo に転記 | 済 |
 | 誤って追跡されていた直下の `boat.sqlite`（0バイト）を追跡から外す | 済 |
-| 削除前のバックアップ（全ブランチの bundle と stash パッチ → `backups/git-archive-20261008/`） | 済（`git bundle verify` と clone 後の fsck で確認） |
-| launchd ジョブの停止 | **未（ユーザー作業）** — 自動実行の安全判定で拒否されたため。下の「停止の手順」を参照 |
+| 削除前のバックアップ（全ブランチの bundle と stash パッチ → `backups/git-archive-20261008/`） | 済（`git bundle verify` と clone 後の fsck で確認。削除対象 2,438本が全て含まれることも確認） |
+| launchd ジョブの停止 | **未（ユーザー作業）** — 自動実行の安全判定で拒否された |
 | self-hosted runner の停止・登録解除 | **未（ユーザー作業）** — 同上 |
-| GitHub Actions のワークフロー無効化（CI 以外） | **未（ユーザー作業）** — 自動実行の安全判定で拒否されたため |
-| リモートブランチ削除・`delete_branch_on_merge`・PR #2286 の close | このあと実施（結果は PR 本文に記録） |
+| GitHub Actions のワークフロー無効化（CI 以外） | **未（ユーザー作業）** — 同上。さらに `gh` のトークンが無効 |
+| stash 2件の破棄・ローカルブランチ2本の削除 | **未（ユーザー作業）** — 安全判定で拒否された（どちらもバックアップ済み） |
+| リモートブランチ 2,438本の削除 | **未（ユーザー作業）** — 対象リストは `backups/git-archive-20261008/remote-branches-to-delete.txt` |
+| `delete_branch_on_merge` の有効化・PR #2286 の close・この変更の PR 作成 | **未（ユーザー作業）** — 2026-10-08 未明に GitHub が障害中（Git Operations / PR / Actions）で、`gh` のトークンも無効 |
 
 ### 停止の手順（ユーザーが実行する）
 
@@ -170,3 +174,18 @@ GitHub Actions の CI 以外のワークフローを無効化する（再開は 
 ```bash
 gh api --paginate 'repos/m-shogo/boat-pon/actions/workflows?per_page=100' --jq '.workflows[] | select(.path != ".github/workflows/ci.yml" and .state == "active") | .id' | while read id; do gh api -X PUT "repos/m-shogo/boat-pon/actions/workflows/$id/disable"; done
 ```
+
+### Git の後片付け（ユーザーが実行する）
+
+```bash
+gh auth login -h github.com
+git stash clear
+git branch -D wip-live-validation-preset-20260527 automation/boat-pon-research
+xargs -n 100 git push origin --delete < backups/git-archive-20261008/remote-branches-to-delete.txt
+git fetch --prune origin
+gh api -X PATCH repos/m-shogo/boat-pon -F delete_branch_on_merge=true
+gh pr close 2286 --comment "研究工場の停止に伴い close（docs/reviews/2026-10-07-strict-review.md）"
+```
+
+戻す必要が出たら、`git fetch backups/git-archive-20261008/all-branches-before-cleanup.bundle 'refs/remotes/origin/<branch>:refs/heads/<branch>'` で個別に復元できる。stash は同じフォルダのパッチを `git apply` すれば戻せる。
+
