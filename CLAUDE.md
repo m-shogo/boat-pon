@@ -10,26 +10,31 @@
 - ROIは検証指標であり購入推奨ではない
 - data/ と backups/ を削除しない
 
-## 現在フェーズ: アーカイブ（2026-10-08〜）
+## 現在フェーズ: 撤退後の最小運用（2026-10-08〜）
 
 **利益の edge は無いと確定し、撤退条件を満たした。** 根拠・数字・再現手順は [`docs/reviews/2026-10-07-strict-review.md`](docs/reviews/2026-10-07-strict-review.md) と [`docs/profit-feasibility-audit.md`](docs/profit-feasibility-audit.md) の「2026-10-07 最終判定」を参照。
 
-- 事前登録の T-5 市場残差: forward 9,417 レースで全月とも市場に負けた。late money も REJECT。
-- paper-live BUY: 175件を精算して実払戻 ROI 63.4%。
+- 事前登録の T-5 市場残差: forward 9,417 レースで、全月とも市場に負けた。late money も REJECT。
+- paper-live BUY: 175件を精算して、実払戻 ROI 63.4%。
 
-### このフェーズでやらないこと
+ユーザーの判断（2026-10-08）で、通知と収集は続ける。目標は2つだけ:
+1. **当たり外れを正しく伝える**（公式払戻で精算する）。
+2. **確率の精度を上げる**（物差しは市場補正の確率。`npm run report:accuracy-scorecard`）。
 
-- 新しい ROI 探索・条件の細分化・候補の格上げ監視（旧「候補監視 3点セット」は終了。wind24 などの候補はこの判定で意味を失った）
+### 続けるもの
+
+- auto-odds・auto-exhibition・番組と結果の取り込み・LINE 通知（BUY 即時・日次まとめ・結果）
+- 精度スコアカード: `scripts/publish-accuracy-scorecard.sh` が毎晩 22:15 に公開版を `automation/scorecard` へ置く（launchd への登録はユーザーが行う）
+- ChatGPT の定期タスク: 1日1回、スコアカードを読んで報告し、週1回は目的監査をする（プロンプトは [`docs/chatgpt-scheduled-task-bridge.md`](docs/chatgpt-scheduled-task-bridge.md) の改訂版）
+
+### 止めるもの・やらないこと
+
+- 研究工場（研究基盤の補強ループ・intent dispatch・N2 の定期ワークフロー・self-hosted runner・private capture）
+- 新しい ROI 探索・条件の細分化・候補の格上げ監視（旧「候補監視 3点セット」は終了した）
 - 研究基盤（governance・publication・ledger・executor など）の補強や増築
-- 研究工場の再開（ChatGPT dispatch、N2 の定期ワークフロー、self-hosted runner）
+- 精度改善の変更は「スコアカードのどの数字が・どれだけ動くか」を先に書けるものだけにする
 
-再開してよいのは、ユーザーが明示した場合だけ。その場合も、**T-5 の市場にまだ入っていない情報源**を具体的に挙げてから、事前登録・時間を区切った1本の検証として行う。
-
-### 停止状態と再開手順
-
-- launchd（`~/Library/LaunchAgents/com.boatpon.*`、`com.shogo.boat-pon.weekly-review`）の plist は残してある。停止・再開はユーザーが行う（手順はレビュー文書の「停止の手順」を参照）。
-- GitHub Actions は CI 以外を無効化する（ユーザー作業。手順はレビュー文書の「停止の手順」）。再開するときは `gh api -X PUT repos/m-shogo/boat-pon/actions/workflows/<file>/enable` を使う。
-- 削除したブランチや stash は `backups/git-archive-20261008/` に bundle とパッチで退避してある。
+停止の手順と、削除前のバックアップ（`backups/git-archive-20261008/`）は、レビュー文書の末尾にある。
 
 ## ROI 評価基準
 

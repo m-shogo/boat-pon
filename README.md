@@ -1,6 +1,6 @@
 # Boat Pon
 
-> **状態: アーカイブ（2026-10-08〜）。** 事前登録した検証で、利益の edge は無いと確定した（forward 9,417 レースで市場に負け、paper-live BUY の実払戻 ROI は 63.4%）。詳細は [`docs/reviews/2026-10-07-strict-review.md`](docs/reviews/2026-10-07-strict-review.md)。以下の記述は当時の設計・運用の記録として残している。
+> **状態: 撤退後の最小運用（2026-10-08〜）。** 事前登録した検証で、利益の edge は無いと確定した（forward 9,417 レースで市場に負け、paper-live BUY の実払戻 ROI は 63.4%）。通知と収集は続け、目標は「当たり外れを正しく伝えること」と「確率の精度」に絞る（`npm run report:accuracy-scorecard`）。詳細は [`docs/reviews/2026-10-07-strict-review.md`](docs/reviews/2026-10-07-strict-review.md)。以下の記述は当時の設計・運用の記録として残している。
 
 Boat Pon は、競艇の期待値通知アプリ「Boat EV Notifier」の個人用実装です。
 

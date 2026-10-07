@@ -140,7 +140,7 @@ Claude の作業メモ（エージェント用 memory）には、2026-06-05 の�
 - 選手特徴量などを使う「複雑なモデル × T-5 市場」は今回検証していない。ただ、そうした特徴量を使う v3 モデルは、外部検証（current_odds ROI 0.939、実払戻ならさらに低い）と paper-live（63.4%）の両方で不合格になっている。
 - paper-live の n=175 だけでは決定的とは言えない。それでも、ほかの2つの検証と同じ方向を向いている。
 
-## 実施状況（2026-10-08、方針 A = 撤退・アーカイブで実行）
+## 実施状況（2026-10-08。最初は方針 A で着手し、同日のうちに B へ切り替えた）
 
 | 項目 | 状態 |
 |---|---|
@@ -159,10 +159,10 @@ Claude の作業メモ（エージェント用 memory）には、2026-06-05 の�
 
 ### 停止の手順（ユーザーが実行する）
 
-plist は消さない。`disable` は再ログイン後も有効で、`enable` + `bootstrap` で元に戻せる。
+方針 B では、止めるのは研究工場の部分だけ（認可切れの private capture・意味を失った wind24 監視の週次通知・バグのある週次レビュー・self-hosted runner）。収集と通知は止めない。plist は消さない。`disable` は再ログイン後も有効で、`enable` + `bootstrap` で元に戻せる。方針 A（全部止める）にする場合は、このリストに収集・通知のジョブも加える。
 
 ```bash
-for L in com.boatpon.auto-odds com.boatpon.auto-exhibition com.boatpon.daily-programs com.boatpon.daily-results com.boatpon.daily-notify com.boatpon.daily-progress com.boatpon.weekly-racer-stats com.boatpon.weekly-forward-notify com.boatpon.trifecta-private-capture com.shogo.boat-pon.weekly-review com.boatpon.caffeinate actions.runner.m-shogo-boat-pon.boat-pon-mac-local; do launchctl disable gui/$(id -u)/$L; launchctl bootout gui/$(id -u)/$L; done
+for L in com.boatpon.trifecta-private-capture com.boatpon.weekly-forward-notify com.shogo.boat-pon.weekly-review actions.runner.m-shogo-boat-pon.boat-pon-mac-local; do launchctl disable gui/$(id -u)/$L; launchctl bootout gui/$(id -u)/$L; done
 ```
 
 収集ジョブが動いていない時間帯（21:05〜翌8:00 JST）に実行する。再開するときは、ジョブごとに `launchctl enable gui/$(id -u)/<label>` を実行してから `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist` を実行する。
@@ -190,4 +190,39 @@ gh pr close 2286 --comment "研究工場の停止に伴い close（docs/reviews/
 capture のリリースは、この repo の git worktree として3つ残っている（`~/Library/Application Support/BoatPon/trifecta-private-capture/releases/` の `6e297602`・`8d99eab5`・`967ad45d`）。launchd を止めたあと、不要なら `git worktree list` で確認してから `git worktree remove <path>` で外す（任意）。
 
 戻す必要が出たら、`git fetch backups/git-archive-20261008/all-branches-before-cleanup.bundle 'refs/remotes/origin/<branch>:refs/heads/<branch>'` で個別に復元できる。stash は同じフォルダのパッチを `git apply` すれば戻せる。
+
+## 2026-10-08 追記: 方針を B に切り替え、定期タスクを作り直した
+
+ユーザーから「定期で動いているもの（ChatGPT の毎時タスク）の方向を見直して、当たり外れと精度を上げて」と指示があった。そこで、通知と収集は続ける **B（撤退後の最小運用）** に切り替えた。止めるのは研究工場の部分だけにする。
+
+### 定期タスクの診断
+
+- **ChatGPT の毎時タスク**: 9/25 22:05（JST）を最後に、GitHub へ1件も書き込んでいない（PR #2286 は green のまま放置）。ChatGPT 側で止まっているか、失敗している。構造的な問題として、ChatGPT からは DB が見えず、コードしか触れなかった。そのため当たり外れの集計も判定も一度も回せず、基盤の補強が積み上がった。毎時という頻度も、1日1回しか確定しない結果に合っていない。
+- **Claude 側の予約タスク（sharp-money-backtest、9/1 に1回）**: 最初のコマンドの権限確認で中断され、何もしないまま「成功」扱いになっていた。6月に「最後の未踏」とした検証は、ここで回るはずだった。
+- **結果通知のタイミング**: 結果は翌日以降の 21:30 にまとめて届く（公式アーカイブの公開待ち）。ユーザーの希望（結果が出たらすぐ）とずれている。
+- **収集**: 10/7 は 16:41 に蓋を閉じてバッテリーでスリープし、夕方の T-5 がゼロになった。直近7日のカバー率は 46.8%。
+
+### 精度スコアカード（新設、`npm run report:accuracy-scorecard`）
+
+同じ精算済みレースで、v3 の推定的中率と市場補正の確率（T-5 市場 × temperature 0.9 × late money）を比べる。2026-06-01〜10-07、9,620 レース:
+
+| 確率 | 全判定 logloss | 全判定 実績/予測 | BUY のみ 期待的中 → 実績 |
+|---|---:|---:|---:|
+| v3 推定的中率 | 0.2353 | 1.05 | 9.8 → 3（約3倍の過大評価） |
+| T-5 市場 | 0.2202 | 1.26 | 1.9 → 3 |
+| 市場補正 | **0.2187** | 1.11 | 1.8 → 3 |
+
+- v3 は全体では較正が取れているように見える（実績/予測 1.05）。しかし BUY に選ばれた行では約3倍の過大評価になる。BUY は「v3 が市場と食い違う行」なので、v3 の外れやすいところだけを集めている。v3 の予測 EV は 3.83 で、市場補正では 0.70。
+- 精度の物差しは市場補正。「精度を上げる」とは、BUY での v3 の実績/予測を 1 に近づけ、logloss を市場補正以下にすること。それができなければ、表示する確率を市場補正に切り替えるのが最も正確になる。
+
+### 新しい定期の形
+
+- Mac: `scripts/publish-accuracy-scorecard.sh` が毎晩 22:15 に、公開版のスコアカード（集計値だけ）を `automation/scorecard` に置く。テンプレートは `docs/launchd/com.boatpon.scorecard-publish.plist`。登録と初回の実行はユーザーが行う（public リポジトリに新しいブランチを作るため）。
+- ChatGPT: 毎日1回、スコアカードだけを根拠に当たり外れと精度を報告し、週1回は目的監査をする。プロンプトは `docs/chatgpt-scheduled-task-bridge.md` の改訂版。
+
+登録のコマンド（ユーザーが実行する）:
+
+```bash
+cp docs/launchd/com.boatpon.scorecard-publish.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boatpon.scorecard-publish.plist
+```
 

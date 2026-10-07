@@ -72,6 +72,7 @@
     "report:clv": "tsx scripts/report-clv.ts",
     "report:feature-breakdown": "tsx scripts/report-feature-breakdown.ts",
     "report:calibration": "tsx scripts/report-calibration.ts",
+    "report:accuracy-scorecard": "tsx scripts/report-accuracy-scorecard.ts",
     "report:venue-monthly": "tsx scripts/report-venue-monthly.ts",
     "report:decision-outcomes": "tsx scripts/report-decision-outcomes.ts",
     "report:missed-hits": "tsx scripts/report-missed-hits.ts",
