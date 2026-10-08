@@ -250,7 +250,9 @@ cp docs/launchd/com.boatpon.scorecard-publish.plist ~/Library/LaunchAgents/ && l
 | 13 | launchd がこの開発用チェックアウトをそのまま実行している | ブランチの切り替えや pull が、そのまま本番の更新になる | 本番用の worktree（例: `~/Library/Application Support/BoatPon/runtime`）を main に固定し、plist の WorkingDirectory をそこへ向ける | 提案（ユーザー判断） |
 | 14 | パッケージ管理が二重 | ローカルの `node_modules` は pnpm で入っている（`.pnpm`）。CI は `npm ci`（package-lock.json）。`pnpm-lock.yaml` は 2026-06-02 から更新されていない | npm にそろえる（`pnpm-lock.yaml` と `pnpm-workspace.yaml` を外し、`npm ci` で入れ直す） | 提案（lockfile の削除は確認が必要） |
 | 15 | 正確な確率で判定すると BUY はほぼ出ない | 市場補正の期待回収率は、BUY 行で平均 0.70 | BUY の判定は v3 のまま（本番の判定ロジックは変えない）。通知に正確な確率を並べて、実態を見えるようにした | 方針の確認（BUY を「娯楽用のシグナル」と割り切るか） |
-| 16 | 日次の進捗レポートの期待値が古い | 「auto-odds は15分ごと」と表示して警告を出し続けている（実際は5分ごと） | 監視はスコアカードの注意に寄せる | 提案 |
+| 16 | 日次の進捗レポートの期待値が古い | 「auto-odds は15分ごと」と表示し、毎日「unexpected hour range」「daily-programs unexpected time 01:00」の警告を出し続けていた | readiness を現行の設定（5分おき + `--scheduled`、番組表は 08:00 前の複数回）に合わせ、次回時刻が翌日に繰り越すバグも直した | 済 |
+| 17 | 「主評価」のテーブルが止まっても誰も気づかない | `race_payouts` が4か月止まっていた | スコアカードの注意に、データの鮮度（結果・払戻・番組表の最終日）とジョブの生存確認（ログの最終更新）を追加。初回の実行で、払戻の停止をその場で検知した | 済 |
+| 18 | この作業コピーが launchd の本番実行場所なのに、エージェントがブランチを切り替えていた | 2026-10-08 は修正ブランチのまま本番が動いている | CLAUDE.md に「ここではブランチを切り替えない。開発は別 worktree で」と明記した。PR のマージ後に `git switch main && git pull` で戻す | ルールは済。main に戻すのはマージ後（ユーザー作業） |
 
 ### 成長ループ（自動化した部分）
 

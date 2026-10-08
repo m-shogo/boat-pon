@@ -37,6 +37,12 @@
 
 停止の手順と、削除前のバックアップ（`backups/git-archive-20261008/`）は、レビュー文書の末尾にある。
 
+## 作業コピーの扱い（重要）
+
+- `/Users/m-shogo/Developer/personal/boat-pon` は launchd の本番実行場所（auto-odds などがこのチェックアウトをそのまま実行する）。**ここではブランチを切り替えない・pull しない**。切り替えや pull は、そのまま本番の更新になる。
+- 開発は `git worktree add ../boat-pon-<作業名> -b <ブランチ>` で別のディレクトリに作り、PR でマージする。本番への反映は、マージ後にここで `git pull --ff-only`（main のまま）。
+- 2026-10-08 時点では、このチェックアウトが修正ブランチ `docs/strict-review-20261008` のまま動いている。PR のマージ後に `git switch main && git pull --ff-only` で戻す。
+
 ## ROI 評価基準
 
 - **主評価**: 公式払戻（`race_results.payout_yen` / `race_payouts.payout_yen`、refund semantics 込み）
