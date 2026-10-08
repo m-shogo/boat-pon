@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   accuracySnapshotFromReport, binaryMetrics, calibratedMarketProbabilities, describeBuyProbability, evaluateChallenger, evaluateDataFreshness, evaluateJobLiveness, fitMarketCalibration,
-  formatLedgerAndAccuracyLines, multiclassLogLoss, normalizedMarketProbabilities, summarizeBuyLedger, type MarketRace,
+  classifyBuyTiming, formatLedgerAndAccuracyLines, multiclassLogLoss, normalizedMarketProbabilities, parseDbTimestamp, summarizeBuyLedger, type MarketRace,
 } from "./accuracyScorecard";
 
 test("binaryMetrics は期待的中数・Brier・logloss を出す", () => {
@@ -129,4 +129,22 @@ test("ジョブの生存確認: 想定間隔を超えたものと、必須なの
   assert.deepEqual(result.rows.map((r) => r.status), ["稼働", "停止の疑い", "未登録", "ログなし"]);
   assert.equal(result.alerts.length, 2);
   assert.match(result.alerts[0], /daily-results が 50\.0 時間/);
+});
+
+test("BUY の通知タイミング: 締切前の通知・締切後の直前情報・情報なし・通知なしを分ける", () => {
+  const base = { date: "2026-10-06", closeAt: "13:46" };
+  assert.equal(classifyBuyTiming({ ...base, sentAt: "2026-10-06 04:40:00", infoAt: "2026-10-06T04:20:00.000Z" }), "notified");
+  assert.equal(classifyBuyTiming({ ...base, sentAt: "2026-10-07 12:33:29", infoAt: "2026-10-06T05:02:03.774Z" }), "info-after-close");
+  assert.equal(classifyBuyTiming({ ...base, sentAt: null, infoAt: null }), "no-info");
+  assert.equal(classifyBuyTiming({ ...base, sentAt: null, infoAt: "2026-10-06T04:20:00.000Z" }), "not-notified");
+  assert.equal(parseDbTimestamp("2026-10-06 04:40:00"), Date.parse("2026-10-06T04:40:00Z"));
+  assert.equal(parseDbTimestamp("bad"), null);
+});
+
+test("日次まとめは、締切前に通知できた BUY の成績を別の行で出す", () => {
+  const all = summarizeBuyLedger([{ date: "2026-10-01", hit: true, payoutYen: 4000 }, { date: "2026-10-02", hit: false, payoutYen: null }]);
+  const notified = summarizeBuyLedger([{ date: "2026-10-02", hit: false, payoutYen: null }]);
+  const lines = formatLedgerAndAccuracyLines(all, null, new Date(), notified);
+  assert.equal(lines.length, 2);
+  assert.match(lines[1], /うち締切前に通知できた BUY: 1 件・的中 0 .*残り 1 件は締切後に BUY 判定/);
 });

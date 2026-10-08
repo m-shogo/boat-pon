@@ -11,6 +11,7 @@
  *   --dry-run と --date を一緒に使うと、過去日の動作確認として締切後の時間帯の条件を外す。
  */
 import { DatabaseSync } from "node:sqlite";
+import { classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { buildBuyResultNotification } from "../src/domain/buyResultNotification";
 import { loadEnvFiles } from "../src/domain/envFile";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
@@ -93,7 +94,12 @@ ORDER BY p.close_at
       currentOdds: buy.current_odds,
     });
     const title = message.title.replace("BUY事後結果", "BUY結果（速報）");
-    const body = [message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, "公式の確定値は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
+    // 締切前にリアルタイム通知できなかった BUY（締切後の再評価で BUY になったもの）は、その旨を先頭に書く。
+    const timing = db.prepare(`SELECT
+      (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
+      (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = ?) AS info_at`).get(buy.race_id, buy.race_id) as { sent_at: string | null; info_at: string | null };
+    const notifiedBeforeClose = classifyBuyTiming({ date: buy.date, closeAt: buy.close_at, sentAt: timing.sent_at, infoAt: timing.info_at }) === "notified";
+    const body = [notifiedBeforeClose ? null : "※このBUYは締切前に通知できなかった（締切後の判定）。", message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, "公式の確定値は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
     const oddsUrl = officialOddsUrl(buy.date, buy.venue, buy.race_no);
 
     if (DRY_RUN) {

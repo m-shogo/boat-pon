@@ -193,10 +193,16 @@ export function accuracySnapshotFromReport(report: unknown): AccuracySnapshot | 
 
 const pctText = (value: number | null) => (value == null ? "-" : `${(value * 100).toFixed(1)}%`);
 
-/** 日次まとめに足す「当たり外れ」と「精度」の行。精度は 48時間以内のスコアカードだけを使う。 */
-export function formatLedgerAndAccuracyLines(ledger: BuyLedgerSummary, accuracy: AccuracySnapshot | null, now: Date): string[] {
+/**
+ * 日次まとめに足す「当たり外れ」と「精度」の行。精度は 48時間以内のスコアカードだけを使う。
+ * notifiedLedger（締切前に通知できた BUY だけの台帳）を渡すと、行動できた分の成績を別の行で出す。
+ */
+export function formatLedgerAndAccuracyLines(ledger: BuyLedgerSummary, accuracy: AccuracySnapshot | null, now: Date, notifiedLedger?: BuyLedgerSummary): string[] {
   const pending = ledger.buys - ledger.settled;
   const lines = [`当たり外れ累計: BUY ${ledger.buys} / 的中 ${ledger.hits} / 外れ ${ledger.misses}${pending ? ` / 結果待ち ${pending}` : ""} / ROI ${pctText(ledger.officialRoi)}（公式払戻）`];
+  if (notifiedLedger) {
+    lines.push(`うち締切前に通知できた BUY: ${notifiedLedger.buys} 件・的中 ${notifiedLedger.hits} / ROI ${pctText(notifiedLedger.officialRoi)}（残り ${ledger.buys - notifiedLedger.buys} 件は締切後に BUY 判定）`);
+  }
   const fresh = accuracy && now.getTime() - Date.parse(accuracy.generatedAt) <= 48 * 3600_000;
   if (fresh && accuracy) {
     const ratio = accuracy.v3BuyActualToPredicted;
@@ -256,4 +262,35 @@ export function evaluateJobLiveness(jobs: JobLivenessInput[]) {
     .filter((row) => row.status === "停止の疑い" || row.status === "ログなし")
     .map((row) => (row.ageMinutes == null ? `ジョブ ${row.job} のログが無い` : `ジョブ ${row.job} が ${(row.ageMinutes / 60).toFixed(1)} 時間動いていない（想定は ${(row.maxAgeMinutes / 60).toFixed(1)} 時間以内）`));
   return { rows, alerts };
+}
+
+// ─── BUY を「実際に知らせられたか」で分ける ───
+// 2026-10-08 の調査: BUY 178件のうち締切前に通知できたのは 32件（0的中）。
+// 直前情報が締切後に届くと、締切後の再評価で BUY のラベルだけが付く（94件）。行動できた記録と区別して数える。
+
+export type BuyTimingKind = "notified" | "info-after-close" | "no-info" | "not-notified";
+
+export const BUY_TIMING_LABEL: Record<BuyTimingKind, string> = {
+  "notified": "締切前に通知できた",
+  "info-after-close": "直前情報が締切後に届いた（締切後に BUY 判定）",
+  "no-info": "直前情報なし",
+  "not-notified": "締切前に情報はあったが通知なし",
+};
+
+/** SQLite の CURRENT_TIMESTAMP（UTC・"YYYY-MM-DD HH:MM:SS"）と ISO 文字列の両方を読む。 */
+export function parseDbTimestamp(value: string | null): number | null {
+  if (!value) return null;
+  const iso = /[zZ]$|[+-]\d\d:\d\d$/.test(value) ? value : `${value.replace(" ", "T")}Z`;
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+export function classifyBuyTiming(args: { date: string; closeAt: string | null; sentAt: string | null; infoAt: string | null }): BuyTimingKind {
+  if (!args.closeAt) return "not-notified";
+  const close = Date.parse(`${args.date}T${args.closeAt}:00+09:00`);
+  const sent = parseDbTimestamp(args.sentAt);
+  if (sent != null && sent < close) return "notified";
+  const info = parseDbTimestamp(args.infoAt);
+  if (info == null) return "no-info";
+  return info >= close ? "info-after-close" : "not-notified";
 }

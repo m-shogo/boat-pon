@@ -7,7 +7,7 @@ import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients
 import { formatNoBuyReasonSummary, summarizeNoBuyReasons } from "../src/domain/lineDailySummary";
 import { formatLineDailyLatestHit, type LineDailyLatestHit } from "../src/domain/lineDailyLatestHit";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
-import { accuracySnapshotFromReport, formatLedgerAndAccuracyLines, summarizeBuyLedger } from "../src/domain/accuracyScorecard";
+import { accuracySnapshotFromReport, classifyBuyTiming, formatLedgerAndAccuracyLines, summarizeBuyLedger } from "../src/domain/accuracyScorecard";
 
 type Mode = "daily" | "test" | "results" | "forward" | "errors";
 
@@ -37,6 +37,7 @@ type BuyRow = {
   run_kind: string;
   decision_reasons: string | null;
   created_at: string;
+  close_at: string | null;
 };
 
 type DailyCounts = {
@@ -235,29 +236,31 @@ WHERE date = ?
 function listBuyRows(db: DatabaseSync, date: string): BuyRow[] {
   return db.prepare(`
 SELECT
-  race_id,
-  date,
-  venue,
-  race_no,
-  bet_type,
-  selection,
-  estimated_hit_rate,
-  raw_estimated_hit_rate,
-  required_odds,
-  current_odds,
-  ev,
-  recommended_stake_yen,
-  sample_size,
-  model_version,
-  run_kind,
-  decision_reasons,
-  created_at
-FROM decision_history
-WHERE date = ?
-  AND decision = 'BUY'
-  AND model_version = ?
-  AND run_kind = 'paper-live'
-ORDER BY venue ASC, race_no ASC, race_id ASC
+  dh.race_id,
+  dh.date,
+  dh.venue,
+  dh.race_no,
+  dh.bet_type,
+  dh.selection,
+  dh.estimated_hit_rate,
+  dh.raw_estimated_hit_rate,
+  dh.required_odds,
+  dh.current_odds,
+  dh.ev,
+  dh.recommended_stake_yen,
+  dh.sample_size,
+  dh.model_version,
+  dh.run_kind,
+  dh.decision_reasons,
+  dh.created_at,
+  p.close_at
+FROM decision_history dh
+LEFT JOIN official_programs p ON p.race_id = dh.race_id
+WHERE dh.date = ?
+  AND dh.decision = 'BUY'
+  AND dh.model_version = ?
+  AND dh.run_kind = 'paper-live'
+ORDER BY dh.venue ASC, dh.race_no ASC, dh.race_id ASC
 `).all(date, LIVE_MONITOR_MODEL_VERSION) as BuyRow[];
 }
 
@@ -319,15 +322,23 @@ LIMIT 1
  */
 function ledgerAndAccuracyLines(db: DatabaseSync): string[] {
   const rows = db.prepare(`
-SELECT dh.date, dh.selection, rr.trifecta, rr.payout_yen, rr.returned
+SELECT dh.date, dh.selection, rr.trifecta, rr.payout_yen, rr.returned, p.close_at,
+  (SELECT n.sent_at FROM notification_log n WHERE n.race_id = dh.race_id AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
+  (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = dh.race_id) AS info_at
 FROM decision_history dh
 LEFT JOIN race_results rr ON rr.race_id = dh.race_id
+LEFT JOIN official_programs p ON p.race_id = dh.race_id
 WHERE dh.decision = 'BUY' AND dh.run_kind = 'paper-live' AND dh.model_version = ?
-`).all(LIVE_MONITOR_MODEL_VERSION) as Array<{ date: string; selection: string; trifecta: string | null; payout_yen: number | null; returned: number | null }>;
-  const ledger = summarizeBuyLedger(rows.map((row) => {
+`).all(LIVE_MONITOR_MODEL_VERSION) as Array<{ date: string; selection: string; trifecta: string | null; payout_yen: number | null; returned: number | null; close_at: string | null; sent_at: string | null; info_at: string | null }>;
+  const outcome = (row: (typeof rows)[number]) => {
     const settled = row.trifecta != null && row.trifecta !== "" && !row.returned && row.payout_yen != null;
     return { date: row.date, hit: settled ? row.trifecta === row.selection : null, payoutYen: row.payout_yen };
-  }));
+  };
+  const ledger = summarizeBuyLedger(rows.map(outcome));
+  // 締切前にリアルタイム通知できた BUY だけの成績（それ以外は締切後に BUY のラベルが付いただけで、行動できない）。
+  const notifiedLedger = summarizeBuyLedger(rows
+    .filter((row) => classifyBuyTiming({ date: row.date, closeAt: row.close_at, sentAt: row.sent_at, infoAt: row.info_at }) === "notified")
+    .map(outcome));
   let snapshot = null;
   try {
     const path = "data/reports/scorecard/latest.json";
@@ -335,7 +346,7 @@ WHERE dh.decision = 'BUY' AND dh.run_kind = 'paper-live' AND dh.model_version = 
   } catch {
     snapshot = null;
   }
-  return formatLedgerAndAccuracyLines(ledger, snapshot, new Date());
+  return formatLedgerAndAccuracyLines(ledger, snapshot, new Date(), notifiedLedger);
 }
 
 function buildDailySummary(
@@ -386,10 +397,15 @@ function buildDailyNotifications(db: DatabaseSync, date: string, dryRun: boolean
 
   for (const row of buyRows) {
     const officialUrl = officialOddsUrl(row.date, row.venue, row.race_no);
+    // ここに来るのはリアルタイム通知されなかった BUY。締切を過ぎていれば、締切後に付いた BUY のラベルだと明記する
+    // （直前情報が締切後に届くと、締切後の再評価で BUY になる。2026-10-08 の調査で BUY の 82% がこれだった）。
+    const closed = row.close_at != null && Date.now() >= Date.parse(`${row.date}T${row.close_at}:00+09:00`);
     const notification = upsertPendingNotification(db, {
       raceId: row.race_id,
-      title: `🎯 BUY候補: ${row.venue} ${row.race_no}R`,
-      body: formatBuyBody(row),
+      title: closed ? `🕘 締切後に BUY 判定（通知は間に合わず）: ${row.venue} ${row.race_no}R` : `🎯 BUY候補: ${row.venue} ${row.race_no}R`,
+      body: closed
+        ? ["このレースは締切済み。締切前のリアルタイム通知の条件を満たさず、締切後の再評価で BUY になった（記録用・行動できない）。", "", formatBuyBody(row)].join("\n")
+        : formatBuyBody(row),
       officialUrl,
       dryRun,
     });
@@ -496,10 +512,16 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
       returned: row.returned !== 0,
       currentOdds: row.current_odds,
     });
+    // 締切前にリアルタイム通知できなかった BUY は、行動できなかったことを結果にも書いておく。
+    const timing = db.prepare(`SELECT p.close_at,
+      (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
+      (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = ?) AS info_at
+      FROM official_programs p WHERE p.race_id = ?`).get(row.race_id, row.race_id, row.race_id) as { close_at: string | null; sent_at: string | null; info_at: string | null } | undefined;
+    const notifiedBeforeClose = timing != null && classifyBuyTiming({ date: row.date, closeAt: timing.close_at, sentAt: timing.sent_at, infoAt: timing.info_at }) === "notified";
     const notification = upsertPendingNotification(db, {
       raceId: `line-buy-result-${row.race_id}-${row.bet_type}-${row.selection}`,
       title: message.title,
-      body: message.body,
+      body: notifiedBeforeClose ? message.body : `※このBUYは締切前に通知できなかった（締切後の判定）。\n${message.body}`,
       officialUrl: officialOddsUrl(row.date, row.venue, row.race_no),
       dryRun,
     });

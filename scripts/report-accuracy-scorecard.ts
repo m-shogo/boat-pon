@@ -15,8 +15,8 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
-  binaryMetrics, calibratedMarketProbabilities, evaluateDataFreshness, evaluateJobLiveness, normalizedMarketProbabilities, summarizeBuyLedger,
-  type BinaryMetrics, type BinaryPrediction,
+  BUY_TIMING_LABEL, binaryMetrics, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, normalizedMarketProbabilities, summarizeBuyLedger,
+  type BinaryMetrics, type BinaryPrediction, type BuyTimingKind,
 } from "../src/domain/accuracyScorecard";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
 
@@ -46,6 +46,13 @@ const decisions = db.prepare(`SELECT d.race_id, d.date, d.venue, d.race_no, d.se
     r.trifecta, r.payout_yen payout, r.returned
   FROM decision_history d LEFT JOIN race_results r ON r.race_id = d.race_id
   WHERE d.run_kind = 'paper-live' AND d.date >= ? AND d.date <= ?`).all(FROM, TO) as Decision[];
+// BUY ごとの通知タイミング（締切前のリアルタイム通知があったか、直前情報はいつ届いたか）。
+const buyTimingRows = db.prepare(`SELECT d.race_id, d.date, p.close_at,
+    (SELECT n.sent_at FROM notification_log n WHERE n.race_id = d.race_id AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
+    (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = d.race_id) AS info_at
+  FROM decision_history d LEFT JOIN official_programs p ON p.race_id = d.race_id
+  WHERE d.run_kind = 'paper-live' AND d.decision = 'BUY' AND d.date >= ? AND d.date <= ?`).all(FROM, TO) as Array<{ race_id: string; date: string; close_at: string | null; sent_at: string | null; info_at: string | null }>;
+const timingByRace = new Map(buyTimingRows.map((r) => [r.race_id, classifyBuyTiming({ date: r.date, closeAt: r.close_at, sentAt: r.sent_at, infoAt: r.info_at })]));
 const { t5, t10, t20 } = loadCompleteCaptures(db, [ACCURACY_FROM, healthFrom].sort()[0], TO);
 const lastCapture = (db.prepare(`SELECT MAX(captured_at) at FROM odds_timeseries_snapshots WHERE id > (SELECT MAX(id) - 200000 FROM odds_timeseries_snapshots)`).get() as { at: string | null }).at;
 const maxDates = db.prepare(`SELECT
@@ -59,6 +66,12 @@ db.close();
 const buys = decisions.filter((d) => d.decision === "BUY").sort((a, b) => a.race_id.localeCompare(b.race_id));
 const isSettled = (d: Decision) => d.trifecta != null && d.trifecta !== "" && !d.returned && d.payout != null;
 const ledger = summarizeBuyLedger(buys.map((d) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout })));
+const timingKinds: BuyTimingKind[] = ["notified", "info-after-close", "not-notified", "no-info"];
+const ledgerByTiming = timingKinds.map((kind) => ({
+  kind, label: BUY_TIMING_LABEL[kind],
+  ...summarizeBuyLedger(buys.filter((d) => (timingByRace.get(d.race_id) ?? "not-notified") === kind).map((d) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout }))),
+}));
+const notifiedShare = buys.length ? ledgerByTiming[0].buys / buys.length : null;
 const recentBuys = buys.slice(-10).reverse().map((d) => ({
   date: d.date, venue: d.venue, raceNo: d.race_no, selection: d.selection, quoteOdds: d.cur,
   result: isSettled(d) ? (d.trifecta === d.selection ? "的中" : "外れ") : "結果待ち", resultSelection: d.trifecta, payoutYen: isSettled(d) ? (d.trifecta === d.selection ? d.payout : 0) : null,
@@ -137,6 +150,7 @@ const v3All = accuracyAll[0].metrics, calAll = accuracyAll[2].metrics;
 if (v3All.logLoss != null && calAll.logLoss != null && v3All.logLoss > calAll.logLoss) alerts.push(`v3 の確率は市場補正より不正確（logloss ${num(v3All.logLoss, 5)} > ${num(calAll.logLoss, 5)}）`);
 const v3Buy = accuracyBuy[0].metrics;
 if (v3Buy.actualToPredicted != null && v3Buy.n >= 30 && v3Buy.actualToPredicted < 0.5) alerts.push(`BUY での v3 の的中予測が過大（実績/予測 = ${num(v3Buy.actualToPredicted, 2)}）`);
+if (notifiedShare != null && buys.length >= 20 && notifiedShare < 0.5) alerts.push(`締切前に通知できた BUY は ${pct(notifiedShare)}（${ledgerByTiming[0].buys}/${buys.length}）。残りは締切後に BUY のラベルが付いただけで、行動できない`);
 const pendingOld = buys.filter((d) => !isSettled(d) && d.date <= addDays(todayJst(), -3)).length;
 if (pendingOld > 0) alerts.push(`3日以上前の BUY のうち ${pendingOld} 件の結果が未取り込み（結果の取り込みが止まっていないか確認）`);
 if (STATE_DIR && (!lastGrowth || now.getTime() - Date.parse(lastGrowth.evaluatedAt) > 9 * 24 * 3600_000)) alerts.push("週次の改善処理（run-accuracy-growth）が9日以上動いていない");
@@ -146,6 +160,7 @@ const report = {
   window: { from: FROM, to: TO, accuracyFrom: ACCURACY_FROM },
   safety: { readOnly: true, public: PUBLIC },
   ledger,
+  ledgerByTiming,
   recentBuys: PUBLIC ? undefined : recentBuys,
   accuracy: { comparedRaces: scored.length, calibration: champion, all: accuracyAll, buyOnly: accuracyBuy, buyEv },
   health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows },
@@ -165,7 +180,8 @@ if (STATE_DIR) {
   appendFileSync(`${STATE_DIR}/history.jsonl`, `${JSON.stringify({
     generatedAt: report.generatedAt, to: TO, ledger: { buys: ledger.buys, settled: ledger.settled, hits: ledger.hits, officialRoi: ledger.officialRoi },
     accuracy: { comparedRaces: scored.length, v3LogLoss: v3All.logLoss, calibratedLogLoss: calAll.logLoss, v3BuyActualToPredicted: v3Buy.actualToPredicted },
-    coverage7d, calibration: { temperature: champion.temperature, lateMoneyBeta: champion.lateMoneyBeta }, alerts,
+    coverage7d, notifiedShare, notifiedLedger: { buys: ledgerByTiming[0].buys, hits: ledgerByTiming[0].hits, officialRoi: ledgerByTiming[0].officialRoi },
+    calibration: { temperature: champion.temperature, lateMoneyBeta: champion.lateMoneyBeta }, alerts,
   })}\n`);
   for (const alert of newAlerts) appendFileSync(`${STATE_DIR}/events.jsonl`, `${JSON.stringify({ at: report.generatedAt, type: "new-alert", text: alert })}\n`);
 }
@@ -194,6 +210,12 @@ function renderMarkdown() {
     "| 月 | BUY | 精算 | 的中 | ROI |",
     "|---|---:|---:|---:|---:|",
     ...ledger.byMonth.map((m) => `| ${m.month} | ${m.buys} | ${m.settled} | ${m.hits} | ${pct(m.officialRoi)} |`),
+    "",
+    "### 通知のタイミング別（行動できたのは「締切前に通知できた」だけ）",
+    "",
+    "| 区分 | BUY | 精算 | 的中 | ROI |",
+    "|---|---:|---:|---:|---:|",
+    ...ledgerByTiming.map((t) => `| ${t.label} | ${t.buys} | ${t.settled} | ${t.hits} | ${pct(t.officialRoi)} |`),
   ];
   if (!PUBLIC) {
     lines.push("", "### 直近10件", "", "| 日付 | 会場 | R | 買い目 | 判定時オッズ | 結果 | 確定 | 払戻 |", "|---|---|---:|---|---:|---|---|---:|",
