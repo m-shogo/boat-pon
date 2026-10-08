@@ -105,7 +105,7 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
     missingResultDates,
     missingProgramDates,
     nextChecks: [
-      nextDailyCheck("daily-programs", 8, 0),
+      nextProgramsCheck(),
       nextAutoOddsCheck(),
       nextIntervalCheck("auto-exhibition", 30),
       nextDailyCheck("daily-progress", 21, 5),
@@ -116,7 +116,7 @@ WHERE date = ? AND model_version = ? AND decision = 'SKIP'
     launchAgents: [
       inspectAutoOddsPlist(),
       inspectIntervalPlist("auto-exhibition", AUTO_EXHIBITION_PLIST, 1800),
-      inspectSingleTimePlist("daily-programs", DAILY_PROGRAMS_PLIST, 8, 0),
+      inspectProgramsPlist(),
       inspectSingleTimePlist("daily-progress", DAILY_PROGRESS_PLIST, 21, 5),
       inspectSingleTimePlist("daily-notify", DAILY_NOTIFY_PLIST, 21, 30),
       inspectSingleTimePlist("daily-results", DAILY_RESULTS_PLIST, 21, 30),
@@ -177,20 +177,22 @@ function nextDailyCheck(name: string, hour: number, minute: number) {
   };
 }
 
+// auto-odds は 5 分おきに起動し、--scheduled のときは 08:00〜21:05 JST だけ動く（src/domain/liveOddsFetch.ts の isScheduledCollectionHour）。
 function nextAutoOddsCheck() {
   const current = nowJstParts();
-  const minuteSlot = Math.ceil(current.minute / 15) * 15;
+  // ちょうど境目の分だと過ぎた時刻を選んで翌日に繰り越すので、常に次の枠へ進める。
+  const minuteSlot = (Math.floor(current.minute / 5) + 1) * 5;
   const candidateHour = minuteSlot === 60 ? current.hour + 1 : current.hour;
   const candidateMinute = minuteSlot === 60 ? 0 : minuteSlot;
-  const inWindow = candidateHour >= 9 && candidateHour <= 21;
-  const target = inWindow ? nextJstDate(candidateHour, candidateMinute) : nextJstDate(9, 0);
-  const suffix = inWindow ? ", then every 15 minutes through 21:45" : "";
+  const inWindow = candidateHour >= 8 && (candidateHour < 21 || (candidateHour === 21 && candidateMinute <= 5));
+  const target = inWindow ? nextJstDate(candidateHour, candidateMinute) : nextJstDate(8, 0);
+  const suffix = inWindow ? ", then every 5 minutes through 21:05" : "";
   return { name: "auto-odds", message: `next ${target} JST${suffix}` };
 }
 
 function nextIntervalCheck(name: string, intervalMinutes: number) {
   const current = nowJstParts();
-  const slot = Math.ceil(current.minute / intervalMinutes) * intervalMinutes;
+  const slot = (Math.floor(current.minute / intervalMinutes) + 1) * intervalMinutes;
   const hour = slot === 60 ? current.hour + 1 : current.hour;
   const minute = slot === 60 ? 0 : slot;
   const target = hour >= 24 ? nextJstDate(0, minute) : nextJstDate(hour, minute);
@@ -200,6 +202,17 @@ function nextIntervalCheck(name: string, intervalMinutes: number) {
 function inspectAutoOddsPlist() {
   const text = readText(AUTO_ODDS_PLIST);
   if (text == null) return { name: "auto-odds", ok: false, message: "plist missing" };
+  // 現行の形: StartInterval 300 秒 + --scheduled（時間帯の判定はスクリプト側）。
+  const interval = Number(text.match(/<key>StartInterval<\/key>\s*<integer>(\d+)<\/integer>/)?.[1]);
+  if (Number.isFinite(interval) && text.includes("<string>--scheduled</string>")) {
+    const ok = interval === 300;
+    return {
+      name: "auto-odds",
+      ok,
+      message: ok ? "every 5 minutes, 08:00-21:05 JST (--scheduled)" : `unexpected StartInterval ${interval}`,
+    };
+  }
+  // 旧い形: StartCalendarInterval で時刻を並べる（JST の 9〜21 時が正しい）。
   const hours = [...text.matchAll(/<key>Hour<\/key><integer>(\d+)<\/integer>/g)].map((match) => Number(match[1]));
   const min = Math.min(...hours);
   const max = Math.max(...hours);
@@ -224,6 +237,33 @@ function inspectIntervalPlist(name: string, path: string, expectedSeconds: numbe
     ok,
     message: ok ? `every ${Math.round(seconds / 60)} minutes` : `unexpected StartInterval ${Number.isFinite(seconds) ? seconds : "-"}`,
   };
+}
+
+// daily-programs はレース開始前に何度か再試行する（例: 01:00 / 04:30 / 06:00 / 07:00 / 07:30）。
+// 全部 08:00 より前で、少なくとも1回あれば正常とみなす。
+function plistTimes(path: string) {
+  const text = readText(path);
+  if (text == null) return null;
+  return [...text.matchAll(/<key>Hour<\/key>\s*<integer>(\d+)<\/integer>\s*<key>Minute<\/key>\s*<integer>(\d+)<\/integer>/g)]
+    .map((match) => ({ hour: Number(match[1]), minute: Number(match[2]) }))
+    .sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
+}
+
+function inspectProgramsPlist() {
+  const times = plistTimes(DAILY_PROGRAMS_PLIST);
+  if (times == null) return { name: "daily-programs", ok: false, message: "plist missing" };
+  const label = times.map((t) => `${pad(t.hour)}:${pad(t.minute)}`).join(", ");
+  const ok = times.length > 0 && times.every((t) => t.hour < 8);
+  return { name: "daily-programs", ok, message: ok ? `${label} JST（すべて 08:00 より前）` : `unexpected times ${label || "-"}` };
+}
+
+function nextProgramsCheck() {
+  const times = plistTimes(DAILY_PROGRAMS_PLIST) ?? [];
+  if (times.length === 0) return nextDailyCheck("daily-programs", 8, 0);
+  const current = nowJstParts();
+  const nowMinutes = current.hour * 60 + current.minute;
+  const next = times.find((t) => t.hour * 60 + t.minute > nowMinutes) ?? times[0];
+  return nextDailyCheck("daily-programs", next.hour, next.minute);
 }
 
 function inspectSingleTimePlist(name: string, path: string, expectedHour: number, expectedMinute: number) {
