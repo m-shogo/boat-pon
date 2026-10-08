@@ -12,10 +12,10 @@
  * --state-dir を付けると、履歴（history.jsonl）に1行足し、前回は無かった注意をイベント（events.jsonl）に記録する。
  * DB は読み取り専用で開く。BOAT_PON_DB_URI で接続先を変えられる。DB にもリポジトリの追跡ファイルにも書かない。
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
-  binaryMetrics, calibratedMarketProbabilities, normalizedMarketProbabilities, summarizeBuyLedger,
+  binaryMetrics, calibratedMarketProbabilities, evaluateDataFreshness, evaluateJobLiveness, normalizedMarketProbabilities, summarizeBuyLedger,
   type BinaryMetrics, type BinaryPrediction,
 } from "../src/domain/accuracyScorecard";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
@@ -48,6 +48,10 @@ const decisions = db.prepare(`SELECT d.race_id, d.date, d.venue, d.race_no, d.se
   WHERE d.run_kind = 'paper-live' AND d.date >= ? AND d.date <= ?`).all(FROM, TO) as Decision[];
 const { t5, t10, t20 } = loadCompleteCaptures(db, [ACCURACY_FROM, healthFrom].sort()[0], TO);
 const lastCapture = (db.prepare(`SELECT MAX(captured_at) at FROM odds_timeseries_snapshots WHERE id > (SELECT MAX(id) - 200000 FROM odds_timeseries_snapshots)`).get() as { at: string | null }).at;
+const maxDates = db.prepare(`SELECT
+    (SELECT MAX(date) FROM race_results) AS results,
+    (SELECT MAX(date) FROM race_payouts WHERE bet_type = 'trifecta') AS payouts,
+    (SELECT MAX(date) FROM official_programs) AS programs`).get() as { results: string | null; payouts: string | null; programs: string | null };
 const programsByDate = new Map((db.prepare(`SELECT date, COUNT(*) n FROM official_programs WHERE date >= ? AND date <= ? GROUP BY date`).all(healthFrom, TO) as Array<{ date: string; n: number }>).map((r) => [r.date, r.n]));
 db.close();
 
@@ -111,9 +115,21 @@ const readJsonl = <T,>(path: string): T[] => (existsSync(path) ? readFileSync(pa
 const growthLedger = STATE_DIR ? readJsonl<GrowthEntry>(`${STATE_DIR}/growth-ledger.jsonl`) : [];
 const lastGrowth = growthLedger.at(-1) ?? null;
 
+// ─── 監視: データの鮮度とジョブの生存確認（「成功」の表示ではなく中身で見る） ───
+const freshnessAlerts = evaluateDataFreshness({ today: todayJst(), resultsMaxDate: maxDates.results, payoutsMaxDate: maxDates.payouts, programsMaxDate: maxDates.programs });
+const logAge = (path: string) => (existsSync(path) ? (Date.now() - statSync(path).mtimeMs) / 60_000 : null);
+const liveness = evaluateJobLiveness([
+  { job: "auto-odds", ageMinutes: logAge("data/logs/auto-odds.log"), maxAgeMinutes: 30 },
+  { job: "auto-exhibition", ageMinutes: logAge("data/logs/auto-exhibition.log"), maxAgeMinutes: 90 },
+  { job: "daily-programs", ageMinutes: logAge("data/logs/daily-programs.log"), maxAgeMinutes: 26 * 60 },
+  { job: "daily-results", ageMinutes: logAge("data/logs/daily-results.log"), maxAgeMinutes: 26 * 60 },
+  { job: "daily-notify", ageMinutes: logAge("data/logs/daily-notify.log"), maxAgeMinutes: 26 * 60 },
+  { job: "buy-results-fast", ageMinutes: logAge("data/logs/buy-results-fast.log"), maxAgeMinutes: 60, optional: true },
+]);
+
 // ─── 注意 ───
 const now = new Date();
-const alerts: string[] = [];
+const alerts: string[] = [...freshnessAlerts, ...liveness.alerts];
 if (coverage7d != null && coverage7d < 0.7) alerts.push(`T-5 完全市場の7日カバー率が ${pct(coverage7d)}（目安 70% 未満）`);
 if (lastCapture && now.getTime() - Date.parse(lastCapture) > 24 * 3600_000) alerts.push(`最後のオッズ取得から24時間以上経過（${lastCapture}）`);
 if (captureExpiresAt && Date.parse(captureExpiresAt) < now.getTime()) alerts.push(`private capture の認可が期限切れ（${captureExpiresAt}）`);
@@ -132,7 +148,7 @@ const report = {
   ledger,
   recentBuys: PUBLIC ? undefined : recentBuys,
   accuracy: { comparedRaces: scored.length, calibration: champion, all: accuracyAll, buyOnly: accuracyBuy, buyEv },
-  health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt },
+  health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows },
   growth: { champion, lastEvaluation: lastGrowth, evaluations: growthLedger.length, promotions: growthLedger.filter((g) => g.promote).length },
   alerts,
 };
@@ -213,6 +229,14 @@ function renderMarkdown() {
     "| 日付 | 番組 | T-5 完全 | カバー率 |",
     "|---|---:|---:|---:|",
     ...coverage.map((c) => `| ${c.date} | ${c.programs} | ${c.t5Complete} | ${pct(c.pct)} |`),
+    "",
+    `- データの最終日: 結果 ${maxDates.results ?? "-"} / 全券種の払戻 ${maxDates.payouts ?? "-"} / 番組表 ${maxDates.programs ?? "-"}`,
+    "",
+    "## 定期ジョブの稼働（ログの最終更新）",
+    "",
+    "| ジョブ | 最終更新 | 想定間隔 | 状態 |",
+    "|---|---:|---:|---|",
+    ...liveness.rows.map((r) => `| ${r.job} | ${r.ageMinutes == null ? "-" : `${(r.ageMinutes / 60).toFixed(1)} 時間前`} | ${(r.maxAgeMinutes / 60).toFixed(1)} 時間以内 | ${r.status} |`),
   );
   if (events.length) lines.push("", "## 最近のイベント", "", ...events.map((e) => `- ${e.at.slice(0, 10)} ${e.type}: ${e.text}`));
   return `${lines.join("\n")}\n`;

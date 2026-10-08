@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  accuracySnapshotFromReport, binaryMetrics, calibratedMarketProbabilities, describeBuyProbability, evaluateChallenger, fitMarketCalibration,
+  accuracySnapshotFromReport, binaryMetrics, calibratedMarketProbabilities, describeBuyProbability, evaluateChallenger, evaluateDataFreshness, evaluateJobLiveness, fitMarketCalibration,
   formatLedgerAndAccuracyLines, multiclassLogLoss, normalizedMarketProbabilities, summarizeBuyLedger, type MarketRace,
 } from "./accuracyScorecard";
 
@@ -107,4 +107,26 @@ test("BUY 通知の確率行は市場補正の確率と期待回収率を出す"
   })!;
   assert.match(line, /^的中確率: v3 6\.0% → 市場補正 2\.2% \/ 期待回収 1\.29$/);
   assert.equal(describeBuyProbability({ selection: "9-9-9", v3HitRate: null, quoteOdds: null, latestOdds: new Map([["1-2-3", 2]]), earlierOdds: null }), null);
+});
+
+test("データの鮮度: 払戻だけ止まっている状態と、今日の番組表が無い状態を見つける", () => {
+  const ok = evaluateDataFreshness({ today: "2026-10-08", resultsMaxDate: "2026-10-07", payoutsMaxDate: "2026-10-07", programsMaxDate: "2026-10-08" });
+  assert.deepEqual(ok, []);
+  const stale = evaluateDataFreshness({ today: "2026-10-08", resultsMaxDate: "2026-10-06", payoutsMaxDate: "2026-06-01", programsMaxDate: "2026-10-07" });
+  assert.equal(stale.length, 2);
+  assert.match(stale[0], /race_payouts.*2026-06-01/);
+  assert.match(stale[1], /今日の分が無い/);
+  assert.match(evaluateDataFreshness({ today: "2026-10-08", resultsMaxDate: "2026-10-01", payoutsMaxDate: "2026-10-01", programsMaxDate: "2026-10-08" })[0], /3日を超えて/);
+});
+
+test("ジョブの生存確認: 想定間隔を超えたものと、必須なのにログが無いものだけを警告する", () => {
+  const result = evaluateJobLiveness([
+    { job: "auto-odds", ageMinutes: 4, maxAgeMinutes: 30 },
+    { job: "daily-results", ageMinutes: 60 * 50, maxAgeMinutes: 60 * 26 },
+    { job: "buy-results-fast", ageMinutes: null, maxAgeMinutes: 60, optional: true },
+    { job: "daily-notify", ageMinutes: null, maxAgeMinutes: 60 * 26 },
+  ]);
+  assert.deepEqual(result.rows.map((r) => r.status), ["稼働", "停止の疑い", "未登録", "ログなし"]);
+  assert.equal(result.alerts.length, 2);
+  assert.match(result.alerts[0], /daily-results が 50\.0 時間/);
 });

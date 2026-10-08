@@ -222,3 +222,38 @@ export function describeBuyProbability(args: {
   const v3 = args.v3HitRate != null ? `v3 ${(args.v3HitRate * 100).toFixed(1)}% → ` : "";
   return `的中確率: ${v3}市場補正 ${(p * 100).toFixed(1)}%${expected}`;
 }
+
+// ─── 監視: 「成功」の表示ではなく中身で止まりを見つける ───
+
+export type DataFreshnessInput = { today: string; resultsMaxDate: string | null; payoutsMaxDate: string | null; programsMaxDate: string | null };
+
+const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00+09:00`) - Date.parse(`${from}T00:00:00+09:00`)) / 86_400_000);
+
+/**
+ * 結果は公式アーカイブの公開待ちで 1〜2 日遅れるのが普通なので、3日を超えたら警告する。
+ * 全券種の払戻は結果と同じ K ファイルから入るので、結果より 2 日以上遅れたら止まっている。
+ * 番組表は当日の朝に入るので、今日の分が無ければ警告する。
+ */
+export function evaluateDataFreshness(input: DataFreshnessInput): string[] {
+  const alerts: string[] = [];
+  if (!input.resultsMaxDate || daysBetween(input.resultsMaxDate, input.today) > 3) alerts.push(`レース結果の最終日が ${input.resultsMaxDate ?? "なし"}（3日を超えて遅れている）`);
+  if (input.resultsMaxDate && (!input.payoutsMaxDate || daysBetween(input.payoutsMaxDate, input.resultsMaxDate) >= 2)) {
+    alerts.push(`全券種の払戻（race_payouts）の最終日が ${input.payoutsMaxDate ?? "なし"}（結果は ${input.resultsMaxDate} まであるのに止まっている）`);
+  }
+  if (!input.programsMaxDate || input.programsMaxDate < input.today) alerts.push(`番組表の最終日が ${input.programsMaxDate ?? "なし"}（今日の分が無い）`);
+  return alerts;
+}
+
+export type JobLivenessInput = { job: string; ageMinutes: number | null; maxAgeMinutes: number; optional?: boolean };
+
+/** ログの最終更新からの経過時間で、ジョブが動いているかを判定する。optional はログが無ければ未登録とみなして警告しない。 */
+export function evaluateJobLiveness(jobs: JobLivenessInput[]) {
+  const rows = jobs.map((job) => {
+    const status = job.ageMinutes == null ? (job.optional ? "未登録" : "ログなし") : job.ageMinutes > job.maxAgeMinutes ? "停止の疑い" : "稼働";
+    return { ...job, status };
+  });
+  const alerts = rows
+    .filter((row) => row.status === "停止の疑い" || row.status === "ログなし")
+    .map((row) => (row.ageMinutes == null ? `ジョブ ${row.job} のログが無い` : `ジョブ ${row.job} が ${(row.ageMinutes / 60).toFixed(1)} 時間動いていない（想定は ${(row.maxAgeMinutes / 60).toFixed(1)} 時間以内）`));
+  return { rows, alerts };
+}
