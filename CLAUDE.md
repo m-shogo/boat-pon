@@ -15,7 +15,7 @@
 **利益の edge は無いと確定し、撤退条件を満たした。** 根拠・数字・再現手順は [`docs/reviews/2026-10-07-strict-review.md`](docs/reviews/2026-10-07-strict-review.md) と [`docs/profit-feasibility-audit.md`](docs/profit-feasibility-audit.md) の「2026-10-07 最終判定」を参照。
 
 - 事前登録の T-5 市場残差: forward 9,417 レースで、全月とも市場に負けた。late money も REJECT。
-- paper-live BUY: 175件を精算して、実払戻 ROI 63.4%。
+- paper-live BUY: 175件を精算して、実払戻 ROI 63.4%。ただし締切前に通知できたのは 32件（0的中）で、残りは締切後に付いた BUY のラベル（2026-10-08 の調査。レビュー文書の追記3）。
 
 ユーザーの判断（2026-10-08）で、通知と収集は続ける。目標は2つだけ:
 1. **当たり外れを正しく伝える**（公式払戻で精算する）。
