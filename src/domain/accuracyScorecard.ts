@@ -227,12 +227,13 @@ export type AccuracySnapshot = {
   v3LogLoss: number | null;
   calibratedLogLoss: number | null;
   v3BuyActualToPredicted: number | null;
+  alerts: string[];
 };
 
 /** スコアカード JSON から LINE に載せる精度の要点だけを取り出す。形が合わなければ null。 */
 export function accuracySnapshotFromReport(report: unknown): AccuracySnapshot | null {
   if (!report || typeof report !== "object") return null;
-  const r = report as { generatedAt?: unknown; accuracy?: { all?: Array<{ key?: string; metrics?: BinaryMetrics }>; buyOnly?: Array<{ key?: string; metrics?: BinaryMetrics }> } };
+  const r = report as { generatedAt?: unknown; alerts?: unknown; accuracy?: { all?: Array<{ key?: string; metrics?: BinaryMetrics }>; buyOnly?: Array<{ key?: string; metrics?: BinaryMetrics }> } };
   if (typeof r.generatedAt !== "string" || !Array.isArray(r.accuracy?.all) || !Array.isArray(r.accuracy?.buyOnly)) return null;
   const pick = (rows: Array<{ key?: string; metrics?: BinaryMetrics }>, key: string) => rows.find((row) => row.key === key)?.metrics ?? null;
   return {
@@ -240,6 +241,7 @@ export function accuracySnapshotFromReport(report: unknown): AccuracySnapshot | 
     v3LogLoss: pick(r.accuracy.all, "v3")?.logLoss ?? null,
     calibratedLogLoss: pick(r.accuracy.all, "calibrated")?.logLoss ?? null,
     v3BuyActualToPredicted: pick(r.accuracy.buyOnly, "v3")?.actualToPredicted ?? null,
+    alerts: Array.isArray(r.alerts) ? r.alerts.filter((a): a is string => typeof a === "string") : [],
   };
 }
 
@@ -261,6 +263,8 @@ export function formatLedgerAndAccuracyLines(ledger: BuyLedgerSummary, accuracy:
     const ratioText = ratio == null ? "-" : `${ratio.toFixed(2)}（1 が正確）`;
     const ll = (value: number | null) => (value == null ? "-" : value.toFixed(3));
     lines.push(`精度: BUY の的中 実績/予測 = ${ratioText} / logloss v3 ${ll(accuracy.v3LogLoss)}・市場補正 ${ll(accuracy.calibratedLogLoss)}（小さいほど正確）`);
+    // 「成功と出ているのに中身が止まっている」をスマホで翌日に気づけるよう、スコアカードの注意も載せる。
+    if (accuracy.alerts.length > 0) lines.push(`⚠️ 注意 ${accuracy.alerts.length} 件: ${accuracy.alerts[0]}${accuracy.alerts.length > 1 ? "（ほかは公開版スコアカード）" : ""}`);
   }
   return lines;
 }

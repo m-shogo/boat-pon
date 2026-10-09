@@ -91,6 +91,7 @@ test("スコアカード JSON から精度の要点を取り出し、古けれ�
   };
   const snapshot = accuracySnapshotFromReport(report)!;
   assert.equal(snapshot.v3BuyActualToPredicted, 0.31);
+  assert.deepEqual(snapshot.alerts, []);
   assert.equal(accuracySnapshotFromReport({ generatedAt: 1 }), null);
   const ledger = summarizeBuyLedger([{ date: "2026-10-01", hit: false, payoutYen: null }, { date: "2026-10-02", hit: null, payoutYen: null }]);
   const freshLines = formatLedgerAndAccuracyLines(ledger, snapshot, new Date("2026-10-08T12:00:00.000Z"));
@@ -164,4 +165,14 @@ test("オッズ帯の重み: 大穴が市場の想定より当たらないデー
   assert.equal(candidates.length, 2);
   assert.equal(best.family, "with-odds-bands");
   assert.match(describeCalibration(withBands), /オッズ帯補正\[/);
+});
+
+test("日次まとめは、スコアカードの注意を1行で載せる", () => {
+  const snapshot = accuracySnapshotFromReport({
+    generatedAt: "2026-10-09T13:00:00.000Z",
+    alerts: ["ジョブ auto-odds が 3.0 時間動いていない", "T-5 カバー率が低い"],
+    accuracy: { all: [], buyOnly: [] },
+  })!;
+  const lines = formatLedgerAndAccuracyLines(summarizeBuyLedger([]), snapshot, new Date("2026-10-09T14:00:00.000Z"));
+  assert.match(lines.at(-1)!, /^⚠️ 注意 2 件: ジョブ auto-odds が 3\.0 時間動いていない（ほかは公開版スコアカード）$/);
 });
