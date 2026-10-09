@@ -37,6 +37,13 @@
 
 停止の手順と、削除前のバックアップ（`backups/git-archive-20261008/`）は、レビュー文書の末尾にある。
 
+## ライブ判定の記録ルール（2026-10-09〜、ユーザー承認）
+
+- 行動の締め切り（締切の `minMinutesBeforeClose` 分前、現在 5 分前）を過ぎたレースは、auto-odds が判定し直さない。`decision_history` はその時点の判定で固定する。1日の BUY 上限には固定済みの BUY を先に数える（`src/domain/livePersistence.ts` の `isPastActionDeadline`）。
+- 締切 5〜25 分前で直前情報が無いレースは、auto-odds がその場で取りに行く（`scripts/lib/beforeInfo.ts`）。
+- 判定ロジック（`src/domain/decision.ts` の `judgeCandidate`）は変えていない。変更禁止のまま。
+- 2026-10-09 より前の記録は書き換えていない。過去の BUY は、スコアカードが通知時刻で「締切前に通知できた／締切後のラベル」に分けて数える。
+
 ## 作業コピーの扱い（重要）
 
 - `/Users/m-shogo/Developer/personal/boat-pon` は launchd の本番実行場所（auto-odds などがこのチェックアウトをそのまま実行する）。**ここではブランチを切り替えない・pull しない**。切り替えや pull は、そのまま本番の更新になる。
