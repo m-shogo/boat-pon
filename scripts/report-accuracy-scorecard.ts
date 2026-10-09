@@ -34,6 +34,9 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(FROM) || !/^\d{4}-\d{2}-\d{2}$/.test(TO) || FROM
 if (FORMAT !== "md" && FORMAT !== "json") throw new Error(`invalid --format: ${FORMAT}`);
 if (!Number.isInteger(ACCURACY_DAYS) || ACCURACY_DAYS < 0) throw new Error(`invalid --accuracy-days: ${ACCURACY_DAYS}`);
 const AUTH_PATH = "data/private/trifecta-capture/authorization.json";
+// auto-odds が行動の締め切りで判定を固定するようになったのは 2026-10-09 の昼から。丸1日を新しい判定で回した
+// 2026-10-10 からを「行動できた記録」として数える（それより前の BUY には、締切後に付いたラベルが混ざる）。
+const LIVE_RECORD_FIX_DATE = "2026-10-10";
 const champion = loadChampionCalibration(STATE_DIR);
 
 const db = new DatabaseSync(process.env.BOAT_PON_DB_URI ?? "data/boat.sqlite", { readOnly: true });
@@ -72,6 +75,9 @@ const ledgerByTiming = timingKinds.map((kind) => ({
   ...summarizeBuyLedger(buys.filter((d) => (timingByRace.get(d.race_id) ?? "not-notified") === kind).map((d) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout }))),
 }));
 const notifiedShare = buys.length ? ledgerByTiming[0].buys / buys.length : null;
+const buysSinceFix = buys.filter((d) => d.date >= LIVE_RECORD_FIX_DATE);
+const ledgerSinceFix = summarizeBuyLedger(buysSinceFix.map((d) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout })));
+const notifiedSinceFix = buysSinceFix.filter((d) => timingByRace.get(d.race_id) === "notified").length;
 const recentBuys = buys.slice(-10).reverse().map((d) => ({
   date: d.date, venue: d.venue, raceNo: d.race_no, selection: d.selection, quoteOdds: d.cur,
   result: isSettled(d) ? (d.trifecta === d.selection ? "的中" : "外れ") : "結果待ち", resultSelection: d.trifecta, payoutYen: isSettled(d) ? (d.trifecta === d.selection ? d.payout : 0) : null,
@@ -151,6 +157,8 @@ if (v3All.logLoss != null && calAll.logLoss != null && v3All.logLoss > calAll.lo
 const v3Buy = accuracyBuy[0].metrics;
 if (v3Buy.actualToPredicted != null && v3Buy.n >= 30 && v3Buy.actualToPredicted < 0.5) alerts.push(`BUY での v3 の的中予測が過大（実績/予測 = ${num(v3Buy.actualToPredicted, 2)}）`);
 if (notifiedShare != null && buys.length >= 20 && notifiedShare < 0.5) alerts.push(`締切前に通知できた BUY は ${pct(notifiedShare)}（${ledgerByTiming[0].buys}/${buys.length}）。残りは締切後に BUY のラベルが付いただけで、行動できない`);
+const unnotifiedSinceFix = buysSinceFix.filter((d) => d.date < todayJst() && timingByRace.get(d.race_id) !== "notified").length;
+if (unnotifiedSinceFix > 0) alerts.push(`記録を直した ${LIVE_RECORD_FIX_DATE} 以降も、締切前に通知できなかった BUY が ${unnotifiedSinceFix} 件ある（通知か判定の固定に問題がないか確認）`);
 const pendingOld = buys.filter((d) => !isSettled(d) && d.date <= addDays(todayJst(), -3)).length;
 if (pendingOld > 0) alerts.push(`3日以上前の BUY のうち ${pendingOld} 件の結果が未取り込み（結果の取り込みが止まっていないか確認）`);
 if (STATE_DIR && (!lastGrowth || now.getTime() - Date.parse(lastGrowth.evaluatedAt) > 9 * 24 * 3600_000)) alerts.push("週次の改善処理（run-accuracy-growth）が9日以上動いていない");
@@ -161,6 +169,7 @@ const report = {
   safety: { readOnly: true, public: PUBLIC },
   ledger,
   ledgerByTiming,
+  ledgerSinceFix: { from: LIVE_RECORD_FIX_DATE, ...ledgerSinceFix, notifiedBeforeClose: notifiedSinceFix },
   recentBuys: PUBLIC ? undefined : recentBuys,
   accuracy: { comparedRaces: scored.length, calibration: champion, all: accuracyAll, buyOnly: accuracyBuy, buyEv },
   health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows },
@@ -210,6 +219,10 @@ function renderMarkdown() {
     "| 月 | BUY | 精算 | 的中 | ROI |",
     "|---|---:|---:|---:|---:|",
     ...ledger.byMonth.map((m) => `| ${m.month} | ${m.buys} | ${m.settled} | ${m.hits} | ${pct(m.officialRoi)} |`),
+    "",
+    `### ${LIVE_RECORD_FIX_DATE} 以降（判定を締め切りで固定した後の、行動できた記録）`,
+    "",
+    `- BUY ${ledgerSinceFix.buys} / 精算 ${ledgerSinceFix.settled} / 的中 ${ledgerSinceFix.hits} / ROI ${pct(ledgerSinceFix.officialRoi)} / 締切前に通知 ${notifiedSinceFix}`,
     "",
     "### 通知のタイミング別（行動できたのは「締切前に通知できた」だけ）",
     "",
