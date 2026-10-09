@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "./livePersistence";
+import { isPastActionDeadline, isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "./livePersistence";
 
 const rule = { minMinutesBeforeClose: 5 };
 const liveFrom = "2026-01-01";
@@ -33,4 +33,15 @@ test("oddsCheckpointLabelは締切までの分数を時系列スナップショ�
   assert.equal(oddsCheckpointLabel(20), "T-20");
   assert.equal(oddsCheckpointLabel(30), "T-30");
   assert.equal(oddsCheckpointLabel(45), "ad-hoc");
+});
+
+test("行動の締め切り（締切の5分前）を過ぎたら、ライブでは判定し直さない", () => {
+  const candidate = { date: "2026-10-06", closeAt: "13:46" };
+  const rule = { minMinutesBeforeClose: 5 };
+  assert.equal(isPastActionDeadline(candidate, rule, new Date("2026-10-06T13:40:00+09:00")), false);
+  assert.equal(isPastActionDeadline(candidate, rule, new Date("2026-10-06T13:41:00+09:00")), false);
+  assert.equal(isPastActionDeadline(candidate, rule, new Date("2026-10-06T13:41:30+09:00")), true);
+  assert.equal(isPastActionDeadline(candidate, rule, new Date("2026-10-06T14:02:00+09:00")), true);
+  // 締切後に日付を繰り越さない（翌日扱いにしない）
+  assert.equal(isPastActionDeadline(candidate, rule, new Date("2026-10-06T23:59:00+09:00")), true);
 });

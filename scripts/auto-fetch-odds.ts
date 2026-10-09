@@ -12,9 +12,9 @@
  */
 
 import { buildCandidateRows } from "../server/candidates";
-import { getManualOdds, getSettings, insertDecisionHistory, listAllOddsBySelection, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, listResultsForModelRange, loadRaceWeatherMap, openDb, recordOddsSnapshot, recordOddsTimeseriesSnapshot, setOdds } from "../server/db";
+import { getManualOdds, getSettings, hasBeforeInfoData, insertDecisionHistory, listAllOddsBySelection, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, listResultsForModelRange, loadRaceWeatherMap, openDb, recordOddsSnapshot, recordOddsTimeseriesSnapshot, setOdds } from "../server/db";
 import { LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
-import { isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
+import { isPastActionDeadline, isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
 import { isCompleteTrifectaCheckpoint, isScheduledCollectionHour, prioritizeRaceRows, runWithConcurrency } from "../src/domain/liveOddsFetch";
 import { countUnavailableTrifectaSelections, isTrifectaSelectionUnavailable, parseAllTrifectaOdds, parseTrifectaOdds } from "../src/domain/oddsParser";
@@ -27,6 +27,7 @@ import { judgeCandidate } from "../src/domain/decision";
 import { shouldSendRealtimeBuyNotification } from "../src/domain/buyNotification";
 import { describeBuyProbability } from "../src/domain/accuracyScorecard";
 import { loadChampionCalibration, loadLatestCapturesForRace } from "./lib/marketCaptures";
+import { fetchAndSaveBeforeInfo } from "./lib/beforeInfo";
 import { OWNER_PROPELLER_STABLE_START } from "../src/domain/raceRegime";
 
 const dryRun = process.argv.includes("--dry-run");
@@ -263,6 +264,30 @@ try {
   });
 
   if (!dryRun) {
+    // 直前情報が無いと BUY にならない（requireBeforeInfoForBuy）。30分おきの auto-exhibition を待つと、
+    // 締切後に届くことが多かった（2026-10-08: BUY の 94件）。行動の締め切り前（締切 5〜25 分前）で
+    // 直前情報がまだ無いレースだけ、ここで取りに行く（締切が近い順に1回最大 6 件。応答が10秒かかることもあるので、5分の間隔に収める）。
+    const beforeInfoTargets = listProgramInputs(db, today)
+      .map((program) => ({ program, minutes: minutesUntilRaceClose(program.date, program.closeAt, new Date()) }))
+      .filter(({ program, minutes }) => minutes >= settings.minMinutesBeforeClose && minutes <= 25 && !hasBeforeInfoData(db, program.raceId))
+      .sort((a, b) => a.minutes - b.minutes)
+      .slice(0, 6);
+    const beforeInfoCounts = { saved: 0, empty: 0, failed: 0 };
+    for (const { program } of beforeInfoTargets) {
+      try {
+        const result = await fetchAndSaveBeforeInfo(db, program);
+        if (result.status === "saved") beforeInfoCounts.saved += 1;
+        else beforeInfoCounts.empty += 1;
+      } catch (err) {
+        beforeInfoCounts.failed += 1;
+        console.error(`beforeinfo-inline error: ${program.raceId}`, err instanceof Error ? err.message : err);
+      }
+      await sleep(1000);
+    }
+    if (beforeInfoTargets.length > 0) {
+      console.log(`beforeinfo-inline: targets=${beforeInfoTargets.length} saved=${beforeInfoCounts.saved} empty=${beforeInfoCounts.empty} failed=${beforeInfoCounts.failed}`);
+    }
+
     const decisionPhaseStartedAt = Date.now();
     // オッズ取得後に再計算して decision_history を保存
     const freshOdds = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
@@ -290,9 +315,32 @@ try {
       const odds = freshAllOdds.get(`${candidate.raceId}/${selection}`);
       if (odds != null) setOdds(db, candidate.raceId, odds, "official", selection);
     }
+    // 行動の締め切り（締切の minMinutesBeforeClose 分前）を過ぎたレースは判定し直さず、記録をその時点で固定する。
+    // 以前は締切後も判定し直していたため、締切後に BUY のラベルが付き（decision.ts の minutesUntil は締切後に
+    // 翌日へ繰り越す）、その「幻の BUY」が1日の BUY 上限を食って、締切前のレースが BUY になれなかった。
+    // 1日の上限には、固定済みの BUY を先に数える。
+    const frozenBuyStakes = new Map((db.prepare(`
+      SELECT race_id, recommended_stake_yen FROM decision_history
+      WHERE date = ? AND decision = 'BUY' AND run_kind = 'paper-live' AND model_version = ?
+    `).all(today, LIVE_MONITOR_MODEL_VERSION) as Array<{ race_id: string; recommended_stake_yen: number | null }>)
+      .map((row) => [row.race_id, row.recommended_stake_yen ?? settings.stakePerBetYen]));
+    const isFrozen = (candidate: (typeof selectedCandidates)[number]) =>
+      persistHistory && candidate.date === today && isPastActionDeadline(candidate, settings, now);
     let buyCountToday = 0;
     let reservedBudgetYen = 0;
+    let frozenCount = 0;
     for (const candidate of selectedCandidates) {
+      if (!isFrozen(candidate)) continue;
+      frozenCount += 1;
+      const stake = frozenBuyStakes.get(candidate.raceId);
+      if (stake != null) {
+        buyCountToday += 1;
+        reservedBudgetYen += stake;
+      }
+    }
+    const frozenBuyCount = buyCountToday;
+    for (const candidate of selectedCandidates) {
+      if (isFrozen(candidate)) continue;
       const decision = judgeCandidate(candidate, settings, { now, buyCountToday, reservedBudgetYen });
       if (decision.status === "BUY") {
         buyCountToday += 1;
@@ -399,7 +447,7 @@ try {
         console.error("LINE realtime notify error:", err instanceof Error ? err.message : err);
       }
     }
-    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt}`);
+    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt} frozen=${frozenCount} frozenBuys=${frozenBuyCount} buysToday=${buyCountToday}`);
   }
 
   console.log(`auto-fetch-odds done: fetched=${fetched} skipped=${skipped} checkpointCompleteSkipped=${checkpointCompleteSkipped} failed=${failed} saved=${saved} dryRun=${dryRun} elapsedMs=${Date.now() - runStartedAt}`);

@@ -17,6 +17,19 @@ export function isWithinOddsFetchWindow(
   return minutes >= rule.minMinutesBeforeClose && minutes <= fetchWindowMinutes;
 }
 
+/**
+ * 行動の締め切り（締切の minMinutesBeforeClose 分前）を過ぎたか。過ぎたレースはライブでは判定し直さず、記録をその時点で固定する。
+ * 2026-10-08 の調査: 締切後も判定し直していたため、BUY 178件のうち 146件が締切後に付いたラベルだった
+ * （締切後は decision.ts の minutesUntil が翌日へ繰り越し、「締切が近すぎる」が効かない）。
+ */
+export function isPastActionDeadline(
+  candidate: Pick<BetCandidate, "date" | "closeAt">,
+  rule: Pick<BudgetRule, "minMinutesBeforeClose">,
+  now = new Date(),
+): boolean {
+  return minutesUntilRaceClose(candidate.date, candidate.closeAt, now) < rule.minMinutesBeforeClose;
+}
+
 export function shouldPersistDecisionHistory(
   candidate: Pick<BetCandidate, "date" | "closeAt" | "currentOdds">,
   rule: Pick<BudgetRule, "minMinutesBeforeClose">,
