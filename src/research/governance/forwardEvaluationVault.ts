@@ -38,7 +38,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   const e:string[]=[]; if(!obj(v)) return {valid:false,errors:["record must be an object"]};
   if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)e.push("invalid schemaVersion");
   if(!str(v.recordId))e.push("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))e.push("invalid evidenceStage"); if(!instant(v.createdAt))e.push("createdAt must be timezone-bound ISO timestamp");
-  if(typeof v.kind!=="string"||!(v.kind in FIELDS)) return {valid:false,errors:[...e,"invalid kind"]};
+  if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return {valid:false,errors:[...e,"invalid kind"]};
   for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))e.push(`unknown field is not allowed: ${k}`);
   const req=(...ks:string[])=>ks.forEach(k=>{if(!str(v[k]))e.push(`${k} must be non-empty`)}); const dg=(...ks:string[])=>ks.forEach(k=>{if(typeof v[k]!=="string"||!SHA.test(v[k] as string))e.push(`${k} must be SHA-256`)});
   switch(v.kind){
@@ -53,4 +53,4 @@ export function validateForwardVaultRecord(v:unknown):Validation {
 
 export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; if(!existing)return "APPEND"; if(existing.recordId!==next.recordId)return "CONFLICT"; return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; }
 export function canPoolStages(stages:EvidenceStage[]):boolean { return new Set(stages).size<=1; }
-export function resultMatchesProtocol(result:EvaluationResult,protocol:EvaluationProtocol):boolean { return result.evidenceStage===protocol.evidenceStage&&result.evaluationProtocolId===protocol.evaluationProtocolId&&result.evaluationProtocolDigest===forwardVaultDigest(protocol)&&result.comparisonMode===protocol.comparisonMode&&result.oddsBasis===protocol.oddsBasis; }
+export function resultMatchesProtocol(result:EvaluationResult,protocol:EvaluationProtocol):boolean { return result.evidenceStage===protocol.evidenceStage&&result.evaluationProtocolId===protocol.evaluationProtocolId&&result.evaluationProtocolDigest===forwardVaultDigest(protocol)&&result.comparisonMode===protocol.comparisonMode&&result.oddsBasis===protocol.oddsBasis&&protocol.metricFamilies.includes(result.metricFamily); }
