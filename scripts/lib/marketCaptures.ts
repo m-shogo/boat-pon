@@ -82,9 +82,16 @@ export function loadChampionCalibration(stateDir = DEFAULT_SCORECARD_STATE_DIR):
   const path = `${stateDir}/champion.json`;
   if (!existsSync(path)) return { ...MARKET_CALIBRATION, source: "default-2026-10-07" };
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as { temperature?: unknown; lateMoneyBeta?: unknown; promotedAt?: unknown };
-    if (typeof parsed.temperature === "number" && parsed.temperature > 0 && typeof parsed.lateMoneyBeta === "number" && Number.isFinite(parsed.lateMoneyBeta)) {
-      return { temperature: parsed.temperature, lateMoneyBeta: parsed.lateMoneyBeta, source: `promoted ${String(parsed.promotedAt ?? "-")}` };
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as { temperature?: unknown; lateMoneyBeta?: unknown; oddsBandWeights?: unknown; promotedAt?: unknown };
+    const bands = parsed.oddsBandWeights;
+    const validBands = Array.isArray(bands) && bands.length === 6 && bands.every((w) => typeof w === "number" && Number.isFinite(w) && w > 0);
+    if (typeof parsed.temperature === "number" && parsed.temperature > 0 && typeof parsed.lateMoneyBeta === "number" && Number.isFinite(parsed.lateMoneyBeta) && (bands == null || validBands)) {
+      return {
+        temperature: parsed.temperature,
+        lateMoneyBeta: parsed.lateMoneyBeta,
+        ...(validBands ? { oddsBandWeights: bands as number[] } : {}),
+        source: `promoted ${String(parsed.promotedAt ?? "-")}`,
+      };
     }
   } catch {
     // 壊れたファイルは無視して初期値に戻す

@@ -49,10 +49,19 @@ export function normalizedMarketProbabilities(odds: Map<string, number>): Map<st
  * T-5 市場確率に temperature と late money（直前の確率変化）を掛けて正規化する。
  * 直前のスナップショットが無いときは late money 項を使わない。
  */
+/** オッズ帯（1〜10 / 10〜20 / 20〜50 / 50〜100 / 100〜300 / 300〜）。本命・大穴の偏りを帯ごとの重みで直すときに使う。 */
+export const ODDS_BAND_EDGES = [1, 10, 20, 50, 100, 300] as const;
+
+export function oddsBandIndex(odds: number): number {
+  let index = 0;
+  for (let i = 0; i < ODDS_BAND_EDGES.length; i += 1) if (odds >= ODDS_BAND_EDGES[i]) index = i;
+  return index;
+}
+
 export function calibratedMarketProbabilities(
   t5Odds: Map<string, number>,
   earlierOdds: Map<string, number> | null,
-  options: { temperature: number; lateMoneyBeta: number } = MARKET_CALIBRATION,
+  options: { temperature: number; lateMoneyBeta: number; oddsBandWeights?: readonly number[] } = MARKET_CALIBRATION,
 ): Map<string, number> | null {
   const p5 = normalizedMarketProbabilities(t5Odds);
   if (!p5) return null;
@@ -62,7 +71,8 @@ export function calibratedMarketProbabilities(
   for (const [selection, p] of p5) {
     const earlier = prev?.get(selection);
     const momentum = earlier != null && earlier > 0 ? Math.log(p) - Math.log(earlier) : 0;
-    const weight = Math.pow(p, 1 / options.temperature) * Math.exp(options.lateMoneyBeta * momentum);
+    const bandWeight = options.oddsBandWeights ? options.oddsBandWeights[oddsBandIndex(t5Odds.get(selection)!)] ?? 1 : 1;
+    const weight = Math.pow(p, 1 / options.temperature) * Math.exp(options.lateMoneyBeta * momentum) * bandWeight;
     weights.set(selection, weight);
     total += weight;
   }
@@ -114,7 +124,7 @@ export function summarizeBuyLedger(rows: BuyOutcome[]): BuyLedgerSummary {
 
 // ─── 改善の自動化: 市場補正パラメータの挑戦者評価 ───
 
-export type MarketCalibration = { temperature: number; lateMoneyBeta: number };
+export type MarketCalibration = { temperature: number; lateMoneyBeta: number; oddsBandWeights?: readonly number[] };
 export type MarketRace = { date: string; winner: string; t5Odds: Map<string, number>; earlierOdds: Map<string, number> | null };
 
 /** 1レースごとに「勝った買い目に付けた確率」の -log を平均する（120通り全体の多クラス logloss）。 */
@@ -143,6 +153,48 @@ export function fitMarketCalibration(races: MarketRace[], grid = CALIBRATION_GRI
     }
   }
   return best;
+}
+
+/**
+ * オッズ帯ごとの重み（実際の的中数 ÷ 補正後の期待的中数）。帯ごとの件数が少ないときに暴れないよう、prior 分の事前値 1 で縮める。
+ */
+export function fitOddsBandWeights(races: MarketRace[], base: MarketCalibration, prior = 30): number[] {
+  const expected = new Array(ODDS_BAND_EDGES.length).fill(0);
+  const actual = new Array(ODDS_BAND_EDGES.length).fill(0);
+  for (const race of races) {
+    const p = calibratedMarketProbabilities(race.t5Odds, race.earlierOdds, { temperature: base.temperature, lateMoneyBeta: base.lateMoneyBeta });
+    if (!p) continue;
+    for (const [selection, q] of p) {
+      const band = oddsBandIndex(race.t5Odds.get(selection)!);
+      expected[band] += q;
+      if (selection === race.winner) actual[band] += 1;
+    }
+  }
+  return expected.map((e, band) => Number(((actual[band] + prior) / (e + prior)).toFixed(4)));
+}
+
+export type ChallengerCandidate = { family: "temperature-late-money" | "with-odds-bands"; params: MarketCalibration; trainLogLoss: number | null };
+
+/**
+ * 挑戦者の候補を作る。(1) temperature・late money の格子探索、(2) それにオッズ帯の重みを足したもの。
+ * 学習期間の logloss が小さい方を挑戦者にする（学習期間では (2) が有利なので、本当に効くかは評価期間の入れ替え条件で決める）。
+ */
+export function fitChallengers(races: MarketRace[]): { best: ChallengerCandidate; candidates: ChallengerCandidate[] } {
+  const grid = fitMarketCalibration(races);
+  const base: MarketCalibration = { temperature: grid.temperature, lateMoneyBeta: grid.lateMoneyBeta };
+  const withBands: MarketCalibration = { ...base, oddsBandWeights: fitOddsBandWeights(races, base) };
+  const candidates: ChallengerCandidate[] = [
+    { family: "temperature-late-money", params: base, trainLogLoss: grid.logLoss },
+    { family: "with-odds-bands", params: withBands, trainLogLoss: multiclassLogLoss(races, withBands) },
+  ];
+  const best = [...candidates].sort((a, b) => (a.trainLogLoss ?? Infinity) - (b.trainLogLoss ?? Infinity))[0];
+  return { best, candidates };
+}
+
+/** パラメータの表示用の短い説明。 */
+export function describeCalibration(params: MarketCalibration): string {
+  const bands = params.oddsBandWeights ? ` + オッズ帯補正[${params.oddsBandWeights.map((w) => w.toFixed(2)).join(",")}]` : "";
+  return `T=${params.temperature}・β=${params.lateMoneyBeta}${bands}`;
 }
 
 /**

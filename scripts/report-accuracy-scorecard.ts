@@ -15,7 +15,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
-  BUY_TIMING_LABEL, binaryMetrics, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, normalizedMarketProbabilities, summarizeBuyLedger,
+  BUY_TIMING_LABEL, binaryMetrics, describeCalibration, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, normalizedMarketProbabilities, summarizeBuyLedger,
   type BinaryMetrics, type BinaryPrediction, type BuyTimingKind,
 } from "../src/domain/accuracyScorecard";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
@@ -92,7 +92,7 @@ for (const d of decisions) {
 const predictors = [
   { key: "v3", label: "v3 推定的中率" },
   { key: "market", label: "T-5 市場" },
-  { key: "calibrated", label: `市場補正（T=${champion.temperature}・late money β=${champion.lateMoneyBeta}）` },
+  { key: "calibrated", label: `市場補正（${describeCalibration(champion)}）` },
 ] as const;
 const accuracyFor = (rows: Scored[]) => predictors.map((p) => ({ ...p, metrics: binaryMetrics(rows.map((r): BinaryPrediction => ({ p: r[p.key], hit: r.hit }))) }));
 const accuracyAll = accuracyFor(scored);
@@ -123,7 +123,7 @@ if (existsSync(AUTH_PATH)) {
 }
 
 // ─── 成長（週次の改善処理の結果） ───
-type GrowthEntry = { evaluatedAt: string; champion: { temperature: number; lateMoneyBeta: number }; challenger: { temperature: number; lateMoneyBeta: number }; improvement: number | null; weeklyWins: number; eligibleWeeks: number; promote: boolean; races: number };
+type GrowthEntry = { evaluatedAt: string; champion: { temperature: number; lateMoneyBeta: number; oddsBandWeights?: number[] | null }; challenger: { temperature: number; lateMoneyBeta: number; oddsBandWeights?: number[] | null }; challengerFamily?: string; improvement: number | null; weeklyWins: number; eligibleWeeks: number; promote: boolean; races: number };
 const readJsonl = <T,>(path: string): T[] => (existsSync(path) ? readFileSync(path, "utf8").split("\n").filter(Boolean).flatMap((line) => { try { return [JSON.parse(line) as T]; } catch { return []; } }) : []);
 const growthLedger = STATE_DIR ? readJsonl<GrowthEntry>(`${STATE_DIR}/growth-ledger.jsonl`) : [];
 const lastGrowth = growthLedger.at(-1) ?? null;
@@ -181,7 +181,7 @@ if (STATE_DIR) {
     generatedAt: report.generatedAt, to: TO, ledger: { buys: ledger.buys, settled: ledger.settled, hits: ledger.hits, officialRoi: ledger.officialRoi },
     accuracy: { comparedRaces: scored.length, v3LogLoss: v3All.logLoss, calibratedLogLoss: calAll.logLoss, v3BuyActualToPredicted: v3Buy.actualToPredicted },
     coverage7d, notifiedShare, notifiedLedger: { buys: ledgerByTiming[0].buys, hits: ledgerByTiming[0].hits, officialRoi: ledgerByTiming[0].officialRoi },
-    calibration: { temperature: champion.temperature, lateMoneyBeta: champion.lateMoneyBeta }, alerts,
+    calibration: describeCalibration(champion), alerts,
   })}\n`);
   for (const alert of newAlerts) appendFileSync(`${STATE_DIR}/events.jsonl`, `${JSON.stringify({ at: report.generatedAt, type: "new-alert", text: alert })}\n`);
 }
@@ -239,9 +239,9 @@ function renderMarkdown() {
     "",
     "## 成長（市場補正パラメータの自動改善）",
     "",
-    `- 現在の王者: temperature ${champion.temperature} / late money β ${champion.lateMoneyBeta}（${champion.source}）`,
+    `- 現在の王者: ${describeCalibration(champion)}（${champion.source}）`,
     lastGrowth
-      ? `- 直近の評価（${lastGrowth.evaluatedAt}）: 挑戦者 T=${lastGrowth.challenger.temperature}・β=${lastGrowth.challenger.lateMoneyBeta} / 改善 ${num(lastGrowth.improvement, 4)} / 週の勝ち ${lastGrowth.weeklyWins}/${lastGrowth.eligibleWeeks} / ${lastGrowth.promote ? "入れ替え" : "据え置き"} / 評価 ${growthLedger.length} 回・入れ替え ${report.growth.promotions} 回`
+      ? `- 直近の評価（${lastGrowth.evaluatedAt}）: 挑戦者 ${describeCalibration({ ...lastGrowth.challenger, oddsBandWeights: lastGrowth.challenger.oddsBandWeights ?? undefined })} / 改善 ${num(lastGrowth.improvement, 4)} / 週の勝ち ${lastGrowth.weeklyWins}/${lastGrowth.eligibleWeeks} / ${lastGrowth.promote ? "入れ替え" : "据え置き"} / 評価 ${growthLedger.length} 回・入れ替え ${report.growth.promotions} 回`
       : "- 評価の記録なし（`npx tsx scripts/run-accuracy-growth.ts` が週1回動く）",
     "",
     "## 収集の健全性（直近7日）",

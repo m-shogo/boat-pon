@@ -1,6 +1,6 @@
 /**
  * 週次の改善処理（read-only の DB 読み取り + data/reports/scorecard への記録だけ）。
- * 市場補正のパラメータ（temperature・late money β）を、評価期間より前の 8 週で学習し直した「挑戦者」と、
+ * 市場補正のパラメータ（temperature・late money β、必要ならオッズ帯の重み）を、評価期間より前の 8 週で学習し直した「挑戦者」と、
  * 現在の「王者」を、学習に使っていない直近 4 週で比べる。事前登録した条件（src/domain/accuracyScorecard.ts の
  * PROMOTION_RULE）を満たしたときだけ王者を入れ替える。入れ替えで変わるのは、スコアカードと BUY 通知に出す
  * 「市場補正の確率」だけで、BUY の判定・app_settings・DB は変えない。
@@ -10,7 +10,7 @@
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { PROMOTION_RULE, evaluateChallenger, fitMarketCalibration, type MarketRace } from "../src/domain/accuracyScorecard";
+import { PROMOTION_RULE, describeCalibration, evaluateChallenger, fitChallengers, type MarketCalibration, type MarketRace } from "../src/domain/accuracyScorecard";
 import { DEFAULT_SCORECARD_STATE_DIR, addDays, loadChampionCalibration, loadMarketRaces, todayJst } from "./lib/marketCaptures";
 
 const args = process.argv.slice(2);
@@ -47,32 +47,35 @@ const weeklyBlocks: MarketRace[][] = [0, 1, 2, 3].map((w) => {
   return evalRaces.filter((r) => r.date >= from && r.date <= to);
 });
 const champion = loadChampionCalibration(STATE_DIR);
-const fitted = fitMarketCalibration(fitRaces);
-const challenger = { temperature: fitted.temperature, lateMoneyBeta: fitted.lateMoneyBeta };
+const { best, candidates } = fitChallengers(fitRaces);
+const challenger: MarketCalibration = best.params;
+const fitted = { logLoss: best.trainLogLoss };
 const result = evaluateChallenger(champion, challenger, weeklyBlocks);
 const evaluatedAt = new Date().toISOString();
 const entry = {
   evaluatedAt,
   fitWindow: { from: fitFrom, to: fitTo, races: fitRaces.length, logLoss: fitted.logLoss },
   evalWindow: { from: evalFrom, to: TO, weeklyRaces: weeklyBlocks.map((b) => b.length) },
-  champion: { temperature: champion.temperature, lateMoneyBeta: champion.lateMoneyBeta, source: champion.source },
+  champion: { temperature: champion.temperature, lateMoneyBeta: champion.lateMoneyBeta, oddsBandWeights: champion.oddsBandWeights ?? null, source: champion.source },
   challenger,
+  challengerFamily: best.family,
+  candidates: candidates.map((c) => ({ family: c.family, trainLogLoss: c.trainLogLoss, params: c.params })),
   rule: PROMOTION_RULE,
   ...result,
 };
 appendFileSync(ledgerPath, `${JSON.stringify(entry)}\n`);
 
-const sameAsChampion = challenger.temperature === champion.temperature && challenger.lateMoneyBeta === champion.lateMoneyBeta;
+const sameAsChampion = describeCalibration(challenger) === describeCalibration(champion);
 if (result.promote && !sameAsChampion) {
   const tmp = `${STATE_DIR}/champion.json.tmp`;
   writeFileSync(tmp, `${JSON.stringify({ ...challenger, promotedAt: evaluatedAt, evidence: { improvement: result.improvement, weeklyWins: result.weeklyWins, evalWindow: entry.evalWindow } }, null, 2)}\n`);
   renameSync(tmp, `${STATE_DIR}/champion.json`);
-  appendFileSync(`${STATE_DIR}/events.jsonl`, `${JSON.stringify({ at: evaluatedAt, type: "champion-promoted", text: `市場補正を T=${champion.temperature}・β=${champion.lateMoneyBeta} から T=${challenger.temperature}・β=${challenger.lateMoneyBeta} へ（logloss 改善 ${result.improvement?.toFixed(4)}、週の勝ち ${result.weeklyWins}/${result.eligibleWeeks}）` })}\n`);
+  appendFileSync(`${STATE_DIR}/events.jsonl`, `${JSON.stringify({ at: evaluatedAt, type: "champion-promoted", text: `市場補正を ${describeCalibration(champion)} から ${describeCalibration(challenger)} へ（logloss 改善 ${result.improvement?.toFixed(4)}、週の勝ち ${result.weeklyWins}/${result.eligibleWeeks}）` })}\n`);
 }
 const fmt = (v: number | null, d = 5) => (v == null ? "-" : v.toFixed(d));
 console.log([
   `[accuracy-growth] ${evaluatedAt}`,
-  `学習 ${fitFrom}〜${fitTo}: ${fitRaces.length} レース → 挑戦者 T=${challenger.temperature}・β=${challenger.lateMoneyBeta}（学習 logloss ${fmt(fitted.logLoss)}）`,
+  `学習 ${fitFrom}〜${fitTo}: ${fitRaces.length} レース → 挑戦者 ${describeCalibration(challenger)}（${best.family}、学習 logloss ${fmt(fitted.logLoss)}）`,
   `評価 ${evalFrom}〜${TO}: ${result.races} レース / 週ごと ${weeklyBlocks.map((b) => b.length).join(",")}`,
   `王者 ${fmt(result.championLogLoss)} vs 挑戦者 ${fmt(result.challengerLogLoss)} / 改善 ${fmt(result.improvement, 4)} / 週の勝ち ${result.weeklyWins}/${result.eligibleWeeks}`,
   `判定: ${result.promote && !sameAsChampion ? "入れ替え" : "据え置き"}`,

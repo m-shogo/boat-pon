@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   accuracySnapshotFromReport, binaryMetrics, calibratedMarketProbabilities, describeBuyProbability, evaluateChallenger, evaluateDataFreshness, evaluateJobLiveness, fitMarketCalibration,
-  classifyBuyTiming, formatLedgerAndAccuracyLines, multiclassLogLoss, normalizedMarketProbabilities, parseDbTimestamp, summarizeBuyLedger, type MarketRace,
+  classifyBuyTiming, describeCalibration, fitChallengers, fitOddsBandWeights, formatLedgerAndAccuracyLines, multiclassLogLoss, oddsBandIndex, normalizedMarketProbabilities, parseDbTimestamp, summarizeBuyLedger, type MarketRace,
 } from "./accuracyScorecard";
 
 test("binaryMetrics は期待的中数・Brier・logloss を出す", () => {
@@ -147,4 +147,21 @@ test("日次まとめは、締切前に通知できた BUY の成績を別の行
   const lines = formatLedgerAndAccuracyLines(all, null, new Date(), notified);
   assert.equal(lines.length, 2);
   assert.match(lines[1], /うち締切前に通知できた BUY: 1 件・的中 0 .*残り 1 件は締切後に BUY 判定/);
+});
+
+test("オッズ帯の重み: 大穴が市場の想定より当たらないデータでは、大穴の帯を下げる", () => {
+  const odds = new Map([["1-2-3", 3], ["1-3-2", 500]]);
+  const races = Array.from({ length: 200 }, (_, i) => ({ date: "2026-09-01", winner: "1-2-3", t5Odds: odds, earlierOdds: null }));
+  const weights = fitOddsBandWeights(races, { temperature: 1, lateMoneyBeta: 0 }, 1);
+  assert.equal(weights.length, 6);
+  assert.ok(weights[0] > 1, "本命の帯（1〜10倍）は上がる");
+  assert.ok(weights[5] < 1, "大穴の帯（300倍〜）は下がる");
+  assert.equal(oddsBandIndex(9.9), 0);
+  assert.equal(oddsBandIndex(300), 5);
+  const withBands = { temperature: 1, lateMoneyBeta: 0, oddsBandWeights: weights };
+  assert.ok(multiclassLogLoss(races, withBands)! < multiclassLogLoss(races, { temperature: 1, lateMoneyBeta: 0 })!);
+  const { best, candidates } = fitChallengers(races);
+  assert.equal(candidates.length, 2);
+  assert.equal(best.family, "with-odds-bands");
+  assert.match(describeCalibration(withBands), /オッズ帯補正\[/);
 });
