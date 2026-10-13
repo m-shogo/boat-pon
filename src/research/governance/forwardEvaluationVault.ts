@@ -26,12 +26,26 @@ const FIELDS: Record<VaultKind,string[]> = {
   EVALUATION_PROTOCOL:[...BASE,"evaluationProtocolId","comparisonMode","oddsBasis","metricFamilies","unresolvedPolicy","benchmarkDecisionSystems","protocolVersion"],
   RESULT:[...BASE,"resultId","analysisSnapshotId","analysisSnapshotDigest","evaluationProtocolId","evaluationProtocolDigest","decisionSystem","comparisonMode","oddsBasis","metricFamily","includedCount","excludedCount","metrics","sourceManifestDigest","evaluatorVersion"],
 };
-const obj=(v:unknown):v is Record<string,unknown>=>v!==null&&typeof v==="object"&&!Array.isArray(v);
+// Reject exotic prototypes and toJSON hooks: JSON.stringify must agree with canonical hashing.
+const obj=(v:unknown):v is Record<string,unknown>=>{
+  if(v===null||typeof v!=="object"||Array.isArray(v))return false;
+  try {
+    const proto=Object.getPrototypeOf(v);
+    return (proto===Object.prototype||proto===null)&&!("toJSON" in v);
+  } catch { return false; }
+};
 const str=(v:unknown)=>typeof v==="string"&&v.trim().length>0;
 const instant=(v:unknown)=>str(v)&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(v as string)&&Number.isFinite(Date.parse(v as string));
 const strings=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(str)&&new Set(v).size===v.length;
 const digests=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(x=>typeof x==="string"&&SHA.test(x))&&new Set(v).size===v.length;
-const canonical=(v:unknown):unknown=>Array.isArray(v)?v.map(canonical):obj(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
+const canonical=(v:unknown):unknown=>{
+  if(Array.isArray(v))return v.map(canonical);
+  if(v!==null&&typeof v==="object"){
+    if(!obj(v))throw new TypeError("non-JSON object in Forward Evaluation Vault");
+    return Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]));
+  }
+  return v;
+};
 export const forwardVaultDigest=(r:ForwardVaultRecord)=>createHash("sha256").update(JSON.stringify(canonical(r))).digest("hex");
 
 export function validateForwardVaultRecord(v:unknown):Validation {
