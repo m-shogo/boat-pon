@@ -85,7 +85,8 @@ export type SdkOutcome = {
 };
 
 export function checkWriteScope(writtenPaths: string[], allowlist: string[]): { ok: boolean; violations: string[] } {
-  const violations = writtenPaths.filter((p) => p.includes("..") || p.startsWith("/") || !allowlist.some((a) => p === a || p.startsWith(a)));
+  // A directory allowlist must end at a path-component boundary, not a sibling prefix.
+  const violations = writtenPaths.filter((p) => p.includes("..") || p.startsWith("/") || !allowlist.some((a) => p === a || p.startsWith(a.endsWith("/") ? a : `${a}/`)));
   return { ok: violations.length === 0, violations };
 }
 
