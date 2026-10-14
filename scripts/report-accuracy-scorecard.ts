@@ -148,22 +148,28 @@ const liveness = evaluateJobLiveness([
   { job: "buy-results-fast", ageMinutes: logAge("data/logs/buy-results-fast.log"), maxAgeMinutes: 60, optional: true },
 ]);
 
-// ─── 注意 ───
+// ─── 注意（対応が要るものだけ）と、既知の状態 ───
+// 2026-10-14: 毎日同じ既知の事実（v3 の不正確さ・止めた private capture の期限切れなど）が日次の LINE の先頭に出続け、
+// 本当の異常が埋もれるので分けた。注意は「いま何かが止まっている・壊れている」ものだけにする。
 const now = new Date();
 const alerts: string[] = [...freshnessAlerts, ...liveness.alerts];
-if (coverage7d != null && coverage7d < 0.7) alerts.push(`T-5 完全市場の7日カバー率が ${pct(coverage7d)}（目安 70% 未満）`);
+if (coverage7d != null && coverage7d < 0.7) alerts.push(`T-5 完全市場の7日カバー率が ${pct(coverage7d)}（目安 70% 未満。PC のスリープや取得の失敗）`);
 if (lastCapture && now.getTime() - Date.parse(lastCapture) > 24 * 3600_000) alerts.push(`最後のオッズ取得から24時間以上経過（${lastCapture}）`);
-if (captureExpiresAt && Date.parse(captureExpiresAt) < now.getTime()) alerts.push(`private capture の認可が期限切れ（${captureExpiresAt}）`);
 const v3All = accuracyAll[0].metrics, calAll = accuracyAll[2].metrics;
-if (v3All.logLoss != null && calAll.logLoss != null && v3All.logLoss > calAll.logLoss) alerts.push(`v3 の確率は市場補正より不正確（logloss ${num(v3All.logLoss, 5)} > ${num(calAll.logLoss, 5)}）`);
 const v3Buy = accuracyBuy[0].metrics;
-if (v3Buy.actualToPredicted != null && v3Buy.n >= 30 && v3Buy.actualToPredicted < 0.5) alerts.push(`BUY での v3 の的中予測が過大（実績/予測 = ${num(v3Buy.actualToPredicted, 2)}）`);
-if (notifiedShare != null && buys.length >= 20 && notifiedShare < 0.5) alerts.push(`締切前に通知できた BUY は ${pct(notifiedShare)}（${ledgerByTiming[0].buys}/${buys.length}）。残りは締切後に BUY のラベルが付いただけで、行動できない`);
-const unnotifiedSinceFix = buysSinceFix.filter((d) => d.date < todayJst() && timingByRace.get(d.race_id) !== "notified").length;
-if (unnotifiedSinceFix > 0) alerts.push(`記録を直した ${LIVE_RECORD_FIX_DATE} 以降も、締切前に通知できなかった BUY が ${unnotifiedSinceFix} 件ある（通知か判定の固定に問題がないか確認）`);
+// 通知のタイミングの修正（T-10 でも通知・判定の時刻）は 2026-10-14 の夜に入った。それ以降の直近7日で、締切前に通知できなかった BUY を数える。
+const unnotifiedFrom = [addDays(todayJst(), -7), "2026-10-15"].sort()[1];
+const unnotifiedRecent = buysSinceFix.filter((d) => d.date >= unnotifiedFrom && d.date < todayJst() && timingByRace.get(d.race_id) !== "notified").length;
+if (unnotifiedRecent > 0) alerts.push(`${unnotifiedFrom} 以降に、締切前に通知できなかった BUY が ${unnotifiedRecent} 件ある（auto-odds.log の「LINE realtime not-sent」で理由を確認）`);
 const pendingOld = buys.filter((d) => !isSettled(d) && d.date <= addDays(todayJst(), -3)).length;
 if (pendingOld > 0) alerts.push(`3日以上前の BUY のうち ${pendingOld} 件の結果が未取り込み（結果の取り込みが止まっていないか確認）`);
 if (STATE_DIR && (!lastGrowth || now.getTime() - Date.parse(lastGrowth.evaluatedAt) > 9 * 24 * 3600_000)) alerts.push("週次の改善処理（run-accuracy-growth）が9日以上動いていない");
+
+const knownFacts: string[] = [];
+if (v3All.logLoss != null && calAll.logLoss != null && v3All.logLoss > calAll.logLoss) knownFacts.push(`v3 の確率は市場補正より不正確（logloss ${num(v3All.logLoss, 5)} > ${num(calAll.logLoss, 5)}。知識ベース K6）`);
+if (v3Buy.actualToPredicted != null && v3Buy.n >= 30 && v3Buy.actualToPredicted < 0.5) knownFacts.push(`BUY での v3 の的中予測が過大（実績/予測 = ${num(v3Buy.actualToPredicted, 2)}）`);
+if (notifiedShare != null && buys.length >= 20 && notifiedShare < 0.5) knownFacts.push(`通算で締切前に通知できた BUY は ${pct(notifiedShare)}（${ledgerByTiming[0].buys}/${buys.length}）。${LIVE_RECORD_FIX_DATE} より前は、締切後に BUY のラベルが付いたものが多い（知識ベース K5）`);
+if (captureExpiresAt && Date.parse(captureExpiresAt) < now.getTime()) knownFacts.push(`private capture の認可が期限切れ（${captureExpiresAt}。研究工場は停止の方針）`);
 
 const report = {
   generatedAt: now.toISOString(),
@@ -177,6 +183,7 @@ const report = {
   health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows },
   growth: { champion, lastEvaluation: lastGrowth, evaluations: growthLedger.length, promotions: growthLedger.filter((g) => g.promote).length },
   alerts,
+  knownFacts,
 };
 
 // ─── 蓄積: 履歴に1行、前回は無かった注意をイベントに ───
@@ -213,6 +220,10 @@ function renderMarkdown() {
     "## 注意",
     "",
     alerts.length ? alerts.map((a) => `- ⚠️ ${newAlerts.includes(a) ? "【新規】" : ""}${a}`).join("\n") : "- なし",
+    "",
+    "## 既知の状態（変わらない事実。対応は不要）",
+    "",
+    knownFacts.length ? knownFacts.map((f) => `- ${f}`).join("\n") : "- なし",
     "",
     "## 当たり外れ（paper-live BUY・公式払戻で精算）",
     "",
