@@ -56,7 +56,7 @@
 | auto-exhibition | 30分ごと | 直前情報の一括取得 |
 | daily-programs | 01:00〜07:30 に数回 | 番組表の取り込み |
 | daily-results | 21:30 | 結果と全券種の払戻の取り込み、確定結果の通知（速報と同じなら省く） |
-| daily-notify | 21:30 | 成長ループ（週1の改善処理 → スコアカードを `data/reports/scorecard/` に記録）→ 日次まとめ |
+| daily-notify | 21:30 | `daily-line-summary.sh`: 成長ループ（週1の改善処理 → スコアカードを `data/reports/scorecard/` に記録）→ 今日の BUY の当たり外れ（速報が未送信の分を公式の結果ページで）→ 日次まとめ |
 | weekly-forward-notify | 月曜 09:00 | 週次の成長まとめ（`report-growth.ts --no-months` → 先週との比較を LINE で1通）。名前は旧名のまま |
 | 速報（未登録） | 10分ごと | `scripts/notify-buy-results-fast.ts`。登録はユーザー作業 |
 | 公開版スコアカード（未登録） | 22:15 | `scripts/publish-accuracy-scorecard.sh`。ChatGPT のタスクが読む。登録はユーザー作業 |

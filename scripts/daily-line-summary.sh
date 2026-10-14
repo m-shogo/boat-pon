@@ -22,5 +22,8 @@ mkdir -p data/reports/scorecard
 run_tsx scripts/run-accuracy-growth.ts --state-dir data/reports/scorecard || echo "${LOG_PREFIX} accuracy growth skipped or failed"
 run_tsx scripts/report-accuracy-scorecard.ts --state-dir data/reports/scorecard --output data/reports/scorecard/latest.md --json-output data/reports/scorecard/latest.json || echo "${LOG_PREFIX} accuracy scorecard skipped or failed"
 
+# 今日の BUY の当たり外れ（公式の結果ページ。1日最大5件）。10分ごとの速報が未登録でも、結果を当日中に届けて日次まとめに載せる。
+run_tsx scripts/notify-buy-results-fast.ts --catch-up || echo "${LOG_PREFIX} buy results catch-up skipped or failed"
+
 run_tsx scripts/notify-line.ts daily --date "$TODAY" || echo "${LOG_PREFIX} line daily skipped or failed"
 echo "${LOG_PREFIX} line daily attempted: ${TODAY}"

@@ -7,8 +7,10 @@
  * 正式な精算は翌日の K ファイル取り込み（race_results）で行う。速報と同じ結果なら、翌日の確定通知は送らない（notify-line.ts results）。
  * 書き込むのは notification_log だけ。--dry-run では取得と判定を表示するだけで、送信も書き込みもしない。
  *
- * 使い方: npx tsx scripts/notify-buy-results-fast.ts [--date YYYY-MM-DD] [--dry-run]
+ * 使い方: npx tsx scripts/notify-buy-results-fast.ts [--date YYYY-MM-DD] [--dry-run] [--catch-up]
  *   --dry-run と --date を一緒に使うと、過去日の動作確認として締切後の時間帯の条件を外す。
+ *   --catch-up: 締切から 120 分を超えたレースも対象にする。21:30 の日次まとめ（daily-line-summary.sh）の前に呼び、
+ *               10分ごとの速報が登録されていなくても、その日の BUY の当たり外れを当日中に届ける。
  */
 import { DatabaseSync } from "node:sqlite";
 import { classifyBuyTiming } from "../src/domain/accuracyScorecard";
@@ -29,6 +31,7 @@ const FETCH_TIMEOUT_MS = 20_000;
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
+const CATCH_UP = args.includes("--catch-up");
 const dateArgIndex = args.indexOf("--date");
 const todayJst = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(new Date());
 const DATE = dateArgIndex >= 0 ? args[dateArgIndex + 1] : todayJst;
@@ -60,7 +63,7 @@ ORDER BY p.close_at
     const minutesAfterClose = -minutesUntilRaceClose(buy.date, buy.close_at, new Date());
     // 過去日付の dry-run（動作確認）のときだけ、締切後の時間帯の条件を外す。
     const ignoreWindow = DRY_RUN && dateArgIndex >= 0;
-    if (!ignoreWindow && (minutesAfterClose < MIN_MINUTES_AFTER_CLOSE || minutesAfterClose > MAX_MINUTES_AFTER_CLOSE)) continue;
+    if (!ignoreWindow && (minutesAfterClose < MIN_MINUTES_AFTER_CLOSE || (!CATCH_UP && minutesAfterClose > MAX_MINUTES_AFTER_CLOSE))) continue;
     const jcd = venueCodes[buy.venue];
     if (!jcd) continue;
     if (fetches >= MAX_FETCHES_PER_RUN) break;
@@ -132,7 +135,7 @@ ON CONFLICT(race_id, channel) DO UPDATE SET status='SENT', title=?, body=?, offi
     sent += 1;
     console.log(`fast-result sent: ${buy.race_id} ${hit ? "hit" : "miss"}`);
   }
-  console.log(`notify-buy-results-fast done: date=${DATE} buys=${buys.length} fetches=${fetches} sent=${sent} pending=${pending} dryRun=${DRY_RUN}`);
+  console.log(`notify-buy-results-fast done: date=${DATE} buys=${buys.length} fetches=${fetches} sent=${sent} pending=${pending} dryRun=${DRY_RUN} catchUp=${CATCH_UP}`);
 } finally {
   db.close();
 }
