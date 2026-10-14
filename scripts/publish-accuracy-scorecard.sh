@@ -53,7 +53,8 @@ if [ "$DRY_RUN" = "1" ]; then
 else
   mkdir -p "$STATE_DIR"
   run_tsx scripts/run-accuracy-growth.ts --state-dir "$STATE_DIR" || echo "${LOG_PREFIX} accuracy growth failed (exit=$?); continuing"
-  run_tsx scripts/report-accuracy-scorecard.ts --public --state-dir "$STATE_DIR" --output "$WT/scorecard/latest.md" --json-output "$WT/scorecard/latest.json"
+  # 履歴とイベントへの記録は、毎晩の日次まとめ（daily-line-summary.sh）の前の1回だけにする。ここでは読むだけ。
+  run_tsx scripts/report-accuracy-scorecard.ts --public --state-dir "$STATE_DIR" --no-record --output "$WT/scorecard/latest.md" --json-output "$WT/scorecard/latest.json"
 fi
 
 # 公開境界: レース ID・買い目・オッズは出さない（--public の取りこぼしがあれば公開しない）。
@@ -62,7 +63,6 @@ if grep -qE '[0-9]{8}-[^ |]+-[0-9]{2}|"(raceId|selection|quoteOdds|currentOdds|r
   exit 1
 fi
 cp "$WT/scorecard/latest.md" "$WT/scorecard/$TODAY.md"
-[ "$DRY_RUN" = "1" ] || cp "$WT/scorecard/latest.json" "$STATE_DIR/latest.json"
 if [ "$DRY_RUN" = "1" ]; then
   echo "${LOG_PREFIX} dry-run ok: $(ls "$WT/scorecard" | tr '\n' ' ')"
   exit 0

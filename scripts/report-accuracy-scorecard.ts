@@ -10,6 +10,7 @@
  * 当たり外れの台帳は --from からの全期間。確率の精度はオッズ時系列の走査が重いので直近 --accuracy-days 日（既定 60、0 で全期間）に絞る。
  * --public はレース ID・買い目・オッズを出さない（公開境界: scripts/verify-product-boundaries.mjs と同じ方針）。
  * --state-dir を付けると、履歴（history.jsonl）に1行足し、前回は無かった注意をイベント（events.jsonl）に記録する。
+ * --no-record を足すと、状態は読むが履歴とイベントには書かない（記録は毎晩の日次まとめの前の1回だけにする）。
  * DB は読み取り専用で開く。BOAT_PON_DB_URI で接続先を変えられる。DB にもリポジトリの追跡ファイルにも書かない。
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -30,6 +31,7 @@ const ACCURACY_DAYS = Number(arg("--accuracy-days") ?? "60");
 const OUTPUT = arg("--output");
 const JSON_OUTPUT = arg("--json-output");
 const STATE_DIR = arg("--state-dir");
+const NO_RECORD = args.includes("--no-record");
 if (!/^\d{4}-\d{2}-\d{2}$/.test(FROM) || !/^\d{4}-\d{2}-\d{2}$/.test(TO) || FROM > TO) throw new Error(`invalid window: ${FROM}..${TO}`);
 if (FORMAT !== "md" && FORMAT !== "json") throw new Error(`invalid --format: ${FORMAT}`);
 if (!Number.isInteger(ACCURACY_DAYS) || ACCURACY_DAYS < 0) throw new Error(`invalid --accuracy-days: ${ACCURACY_DAYS}`);
@@ -179,7 +181,7 @@ const report = {
 
 // ─── 蓄積: 履歴に1行、前回は無かった注意をイベントに ───
 let newAlerts: string[] = [];
-if (STATE_DIR) {
+if (STATE_DIR && !NO_RECORD) {
   mkdirSync(STATE_DIR, { recursive: true });
   type HistoryEntry = { generatedAt: string; alerts: string[] };
   const previous = readJsonl<HistoryEntry>(`${STATE_DIR}/history.jsonl`).at(-1);
