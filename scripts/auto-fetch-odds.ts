@@ -12,7 +12,7 @@
  */
 
 import { buildCandidateRows } from "../server/candidates";
-import { getManualOdds, getSettings, hasBeforeInfoData, insertDecisionHistory, listAllOddsBySelection, listEarlyOddsSnapshots, listOddsSnapshots, listProgramInputs, listResultsForModelRange, loadRaceWeatherMap, openDb, recordOddsSnapshot, recordOddsTimeseriesSnapshot, setOdds } from "../server/db";
+import { getManualOdds, getSettings, hasBeforeInfoData, insertDecisionHistory, listAllOddsBySelection, listEarlyOddsSnapshots, listLatestOddsSnapshotsForDate, listProgramInputs, listResultsForModelRange, loadRaceWeatherMap, openDb, recordOddsSnapshot, recordOddsTimeseriesSnapshot, setOdds } from "../server/db";
 import { LIVE_MONITOR_FROM, LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { isPastActionDeadline, isWithinOddsFetchWindow, minutesUntilRaceClose, oddsCheckpointLabel, shouldPersistDecisionHistory } from "../src/domain/livePersistence";
 import { mergeOddsMaps } from "../src/domain/oddsSnapshot";
@@ -264,6 +264,8 @@ try {
     }
   });
 
+  // 区間ごとの所要時間（判定までの遅れが通知の間に合わなさに直結するので、どこで時間を使っているかを残す）
+  const fetchPhaseEndedAt = Date.now();
   if (!dryRun) {
     // 直前情報が無いと BUY にならない（requireBeforeInfoForBuy）。30分おきの auto-exhibition を待つと、
     // 締切後に届くことが多かった（2026-10-08: BUY の 94件）。行動の締め切り前（締切 5〜25 分前）で
@@ -294,8 +296,9 @@ try {
     // 締切後なのに「締め切り前」と判定してしまう（2026-10-13 浜名湖3R は締切の 18 分後に BUY の行が作られた）。
     const decisionNow = new Date(decisionPhaseStartedAt);
     // オッズ取得後に再計算して decision_history を保存
-    const freshOdds = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
-    const freshAllOdds = listAllOddsBySelection(db);
+    // オッズは当日のレースだけ読む（判定は当日のレースしか見ない。全期間を読むと約40秒かかっていた）。
+    const freshOdds = mergeOddsMaps(getManualOdds(db), listLatestOddsSnapshotsForDate(db, today));
+    const freshAllOdds = listAllOddsBySelection(db, today);
     const programInputs = listProgramInputs(db, today);
     // 現代liveモデルでfilter後に捨てる旧制度40万件をDBから読まない。同値範囲だけをロードする。
     const modelResults = listResultsForModelRange(db, OWNER_PROPELLER_STABLE_START, today);
@@ -305,10 +308,11 @@ try {
       freshOdds,
       programInputs,
       modelResults,
-      listEarlyOddsSnapshots(db),
+      listEarlyOddsSnapshots(db, today),
       freshAllOdds,
       loadRaceWeatherMap(db),
     );
+    const candidatesBuiltAt = Date.now();
     const persistHistory = today >= LIVE_MONITOR_FROM;
     const selectedCandidates = selectTopModelCandidatePerRace(
       freshRows.filter(row => row.candidate.source !== "sample").map(row => row.candidate),
@@ -360,6 +364,7 @@ try {
       }
     }
 
+    const judgedAt = Date.now();
     // 保存後の DB から実際の BUY を取得し、未通知なら即 LINE 通知
     const confirmedBuys = db.prepare(`
       SELECT d.race_id, d.date, d.venue, d.race_no, d.selection, d.bet_type, d.current_odds, d.ev, d.estimated_hit_rate, d.recommended_stake_yen, p.close_at
@@ -457,7 +462,7 @@ try {
         console.error("LINE realtime notify error:", err instanceof Error ? err.message : err);
       }
     }
-    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt} frozen=${frozenCount} frozenBuys=${frozenBuyCount} buysToday=${buyCountToday}`);
+    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt} frozen=${frozenCount} frozenBuys=${frozenBuyCount} buysToday=${buyCountToday} phaseMs=fetch:${fetchPhaseEndedAt - runStartedAt},beforeinfo:${decisionPhaseStartedAt - fetchPhaseEndedAt},build:${candidatesBuiltAt - decisionPhaseStartedAt},judge:${judgedAt - candidatesBuiltAt},notify:${Date.now() - judgedAt}`);
   }
 
   console.log(`auto-fetch-odds done: fetched=${fetched} skipped=${skipped} checkpointCompleteSkipped=${checkpointCompleteSkipped} failed=${failed} saved=${saved} dryRun=${dryRun} elapsedMs=${Date.now() - runStartedAt}`);

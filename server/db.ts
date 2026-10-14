@@ -561,23 +561,58 @@ export function hasEarlyOddsSnapshot(db: DatabaseSync, raceId: string, selection
   return row != null;
 }
 
-export function listAllOddsBySelection(db: DatabaseSync): Map<string, number> {
-  // 各(race_id, selection)の最新オッズを取得（source問わず最新行）
-  const rows = db.prepare(`
+/**
+ * 1日分のレース（race_id が "YYYYMMDD-" で始まる）の範囲。インデックス（race_id が先頭）で引ける。
+ * auto-odds の判定は当日のレースしか見ないのに、全期間（2026-10 時点で約230万行）を毎回読んでいて、
+ * 判定の前の読み込みだけで約40秒かかっていた（2026-10-14 の実測）。
+ */
+function raceIdRangeForDate(date: string): [string, string] {
+  const prefix = date.replaceAll("-", "");
+  return [`${prefix}-`, `${prefix}.`];
+}
+
+export function listAllOddsBySelection(db: DatabaseSync, date?: string): Map<string, number> {
+  // 各(race_id, selection)の最新オッズを取得（source問わず最新行）。date を渡すとその日のレースだけ。
+  const rows = (date
+    ? db.prepare(`
+SELECT race_id, selection, odds
+FROM odds_snapshots
+WHERE id IN (
+  SELECT MAX(id) FROM odds_snapshots WHERE race_id >= ? AND race_id < ? GROUP BY race_id, selection
+)
+`).all(...raceIdRangeForDate(date))
+    : db.prepare(`
 SELECT race_id, selection, odds
 FROM odds_snapshots
 WHERE id IN (
   SELECT MAX(id) FROM odds_snapshots GROUP BY race_id, selection
 )
-`).all() as Array<{ race_id: string; selection: string; odds: number }>;
+`).all()) as Array<{ race_id: string; selection: string; odds: number }>;
   return new Map(rows.map((row) => [`${row.race_id}/${row.selection}`, Number(row.odds)]));
 }
 
-export function listEarlyOddsSnapshots(db: DatabaseSync): Map<string, number> {
-  const rows = db.prepare(
-    "SELECT race_id, selection, odds FROM odds_snapshots WHERE source = 'official-early'",
-  ).all() as Array<{ race_id: string; selection: string; odds: number }>;
+export function listEarlyOddsSnapshots(db: DatabaseSync, date?: string): Map<string, number> {
+  const rows = (date
+    ? db.prepare(
+      "SELECT race_id, selection, odds FROM odds_snapshots WHERE race_id >= ? AND race_id < ? AND source = 'official-early'",
+    ).all(...raceIdRangeForDate(date))
+    : db.prepare(
+      "SELECT race_id, selection, odds FROM odds_snapshots WHERE source = 'official-early'",
+    ).all()) as Array<{ race_id: string; selection: string; odds: number }>;
   return new Map(rows.map((row) => [`${row.race_id}/${row.selection}`, Number(row.odds)]));
+}
+
+/** listOddsSnapshots(db)（全期間の各買い目の最新行）の、1日分だけの版。 */
+export function listLatestOddsSnapshotsForDate(db: DatabaseSync, date: string): OddsSnapshot[] {
+  const rows = db.prepare(`
+SELECT race_id, selection, odds, popularity, source, captured_at, is_final_like
+FROM odds_snapshots
+WHERE id IN (
+  SELECT MAX(id) FROM odds_snapshots WHERE race_id >= ? AND race_id < ? GROUP BY race_id, selection
+)
+ORDER BY captured_at DESC, id DESC
+`).all(...raceIdRangeForDate(date));
+  return (rows as Array<Record<string, unknown>>).map(oddsSnapshotFromRow);
 }
 
 export function listOddsSnapshots(db: DatabaseSync, raceId?: string): OddsSnapshot[] {
@@ -597,7 +632,11 @@ WHERE id IN (
 )
 ORDER BY captured_at DESC, id DESC
 `).all();
-  return (rows as Array<Record<string, unknown>>).map((row) => ({
+  return (rows as Array<Record<string, unknown>>).map(oddsSnapshotFromRow);
+}
+
+function oddsSnapshotFromRow(row: Record<string, unknown>): OddsSnapshot {
+  return {
     raceId: String(row.race_id),
     selection: String(row.selection),
     odds: Number(row.odds),
@@ -605,7 +644,7 @@ ORDER BY captured_at DESC, id DESC
     source: String(row.source) as OddsSnapshot["source"],
     capturedAt: String(row.captured_at),
     isFinalLike: Boolean(row.is_final_like),
-  }));
+  };
 }
 
 export function countOddsSnapshots(db: DatabaseSync): number {
