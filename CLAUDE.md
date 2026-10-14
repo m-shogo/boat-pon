@@ -1,65 +1,80 @@
 # boat-pon — AI エージェント向け運用ガイド
 
-## 絶対禁止事項
+2026-10-14 にユーザーの指示（マスター権限）で全面改訂した。古い版は git の履歴にある。
 
-- DBへのINSERT/UPDATE/DELETE/DROPは禁止
-- app_settings変更禁止
-- 本番 decision ロジック変更禁止
-- 自動投票・ログイン保存・投票サイト操作禁止
-- BUYは検証候補であり購入指示ではない
-- ROIは検証指標であり購入推奨ではない
-- data/ と backups/ を削除しない
+最初に [`docs/knowledge-base.md`](docs/knowledge-base.md)（確定した結論・撤回した結論・罠・教訓）を読む。
 
-## 現在フェーズ: 撤退後の最小運用（2026-10-08〜）
+## 1. 絶対に守ること（例外なし）
 
-**利益の edge は無いと確定し、撤退条件を満たした。** 根拠・数字・再現手順は [`docs/reviews/2026-10-07-strict-review.md`](docs/reviews/2026-10-07-strict-review.md) と [`docs/profit-feasibility-audit.md`](docs/profit-feasibility-audit.md) の「2026-10-07 最終判定」を参照。
+- 自動投票・自動購入・ログイン情報の保存・投票サイトの操作をしない（実装もしない）。
+- BUY は検証のための候補で、購入指示ではない。ROI は検証の指標で、購入の推奨ではない。
+- `data/` と `backups/` を消さない。DB の行やテーブルを DELETE・DROP しない。
+- 秘密情報（`.env`、LINE のトークン、`data/private/` の認証ファイル）を表示・コミットしない。
 
-- 事前登録の T-5 市場残差: forward 9,417 レースで、全月とも市場に負けた。late money も REJECT。
-- paper-live BUY: 175件を精算して、実払戻 ROI 63.4%。ただし締切前に通知できたのは 32件（0的中）で、残りは締切後に付いた BUY のラベル（2026-10-08 の調査。レビュー文書の追記3）。
+## 2. ユーザーの承認が要ること
 
-ユーザーの判断（2026-10-08）で、通知と収集は続ける。目標は2つだけ:
-1. **当たり外れを正しく伝える**（公式払戻で精算する）。
-2. **確率の精度を上げる**（物差しは市場補正の確率。`npm run report:accuracy-scorecard`）。
+- `app_settings`（BUY の条件・賭け金・1日の上限）の変更。提案は「変更するキー・変更前と後・根拠（件数と公式払戻の ROI）・戻し方」で出して止まる。
+- 判定ロジック（`src/domain/decision.ts` の `judgeCandidate`）の変更。事前登録した forward の検証と一緒に提案する。
+- launchd の登録・停止・再開（自動実行では安全判定で拒否される。コマンドを用意して渡す）。
+- 公式サイトへの新しい種類の取得、PR のマージ、main への直接の push。
+- 判定の記録（`decision_history`）と通知の記録（`notification_log`）を手で書き換えること。
 
-### 続けるもの
+## 3. 自分の判断でやってよいこと
 
-- auto-odds・auto-exhibition・番組と結果の取り込み（全券種の払戻・各艇成績・気象も毎日保存）・LINE 通知（BUY 即時・日次まとめ・確定結果）
-- BUY の結果の速報: `scripts/notify-buy-results-fast.ts`（10分ごと。締切 8分後から公式の結果ページを見る。launchd への登録はユーザーが行う）
-- 成長ループ: `scripts/publish-accuracy-scorecard.sh` が毎晩 22:15 に、週次の改善処理（`run-accuracy-growth.ts`）→ スコアカード（`data/reports/scorecard/` に履歴とイベントを蓄積）→ 公開版を `automation/scorecard` へ、の順に実行する（launchd への登録はユーザーが行う）。改善処理が入れ替えるのは市場補正のパラメータだけで、BUY の判定は変えない
-- ChatGPT の定期タスク: 1日1回、スコアカードを読んで報告し、週1回は目的監査をする（プロンプトは [`docs/chatgpt-scheduled-task-bridge.md`](docs/chatgpt-scheduled-task-bridge.md) の改訂版）
+- 読み取り専用の分析・監査・スコアカード・成長レポート・テスト。
+- 公式アーカイブ（K ファイル）の再パースで、`race_results` / `race_payouts` / `race_entries` / `race_conditions` を作り直すこと。元ファイルから決まる値の upsert に限る。夜間（21:05〜07:30）に実行し、件数をログに残す。
+- 公式アーカイブ（K・B ファイル）の、欠けた日の取り直し。夜間に、1.5秒以上の間隔で、1回 200 ファイルまで。
+- コードの修正・コミット・作業ブランチへの push。ライブ経路への反映は「6. 作業コピーと反映」に従う。
 
-### 止めるもの・やらないこと
+## 4. いまの方針: 撤退後の最小運用（2026-10-08〜）
 
-- 研究工場（研究基盤の補強ループ・intent dispatch・N2 の定期ワークフロー・self-hosted runner・private capture）
-- 新しい ROI 探索・条件の細分化・候補の格上げ監視（旧「候補監視 3点セット」は終了した）
-- 研究基盤（governance・publication・ledger・executor など）の補強や増築
-- 精度改善の変更は「スコアカードのどの数字が・どれだけ動くか」を先に書けるものだけにする
+- **利益の edge は無い（確定）。** 事前登録した T-5 市場残差の検証は、forward 9,417 レースで全月とも市場に負けた。late money も REJECT。締切前に通知できた paper-live の BUY は、2026-10-09 までの 32件で 0 的中。根拠は [`docs/reviews/2026-10-07-strict-review.md`](docs/reviews/2026-10-07-strict-review.md) と [`docs/knowledge-base.md`](docs/knowledge-base.md)。
+- 目標は2つだけ: **当たり外れを正しく・すぐに伝える**、**確率の精度を上げ続ける**（物差しは市場補正の確率）。
+- やらないこと: 新しい ROI 探索・条件の細分化、研究基盤（governance・publication・ledger・executor など）の増築、研究工場の再開。
+- 精度の改善は「スコアカードのどの数字が・どれだけ動くか」を先に書けるものだけにする。
 
-停止の手順と、削除前のバックアップ（`backups/git-archive-20261008/`）は、レビュー文書の末尾にある。
+## 5. 記録と検証のルール（2026-10 の失敗から）
 
-## ライブ判定の記録ルール（2026-10-09〜、ユーザー承認）
+- **成績は行動できた時点で数える。** 判定は行動の締め切り（締切 5 分前）で固定する。BUY を通知したら、そこで固定する。締切後に判定を上書きしない（2026-10-08 の調査では、BUY の 82% が締切後に付いたラベルだった）。
+- **「成功」の表示を信じない。** 件数・更新時刻・中身で確かめる（スコアカードの「注意」、`npm run audit:data-integrity`）。止まっていたのに成功扱いだった例: 認可切れの収集（32日）、無音の ChatGPT タスク（12日）、権限確認で止まった予約タスク、常に「精算 0件」の週次レビュー。
+- **結論は repo に書く。** 判断に効く結論は [`docs/knowledge-base.md`](docs/knowledge-base.md) に根拠つきで書く。エージェントの memory だけに置かない（2026-06-05 の「利益化不可能」は memory にしか無く、4か月作業が続いた）。
+- **数字は実測してから書く。** ROI は公式払戻で出す。`current_odds`（判定時の表示）は確定払戻より楽観的で、T-5 オッズでも確定は平均して表示の 95%。
+- **目的監査をする。** 20 PR か週1回の早い方で、「直近の作業は次の判定を前に進めたか」を確かめる。補強ばかりなら止める。
 
-- 行動の締め切り（締切の `minMinutesBeforeClose` 分前、現在 5 分前）を過ぎたレースは、auto-odds が判定し直さない。`decision_history` はその時点の判定で固定する。1日の BUY 上限には固定済みの BUY を先に数える（`src/domain/livePersistence.ts` の `isPastActionDeadline`）。
-- 締切 5〜25 分前で直前情報が無いレースは、auto-odds がその場で取りに行く（`scripts/lib/beforeInfo.ts`）。
-- リアルタイムの BUY 通知は、T-10 か T-5 で BUY になり、締切 5 分以上前なら送る。送ったらそのレースの判定はそこで固定する（通知した内容がそのまま記録になる）。判定には判定の段階の現在時刻を使う（2026-10-14〜）。
-- 判定ロジック（`src/domain/decision.ts` の `judgeCandidate`）は変えていない。変更禁止のまま。
-- 2026-10-09 より前の記録は書き換えていない。過去の BUY は、スコアカードが通知時刻で「締切前に通知できた／締切後のラベル」に分けて数える。
+## 6. 作業コピーと反映
 
-## 作業コピーの扱い（重要）
+- `/Users/m-shogo/Developer/personal/boat-pon` は launchd の本番実行場所。**ここでブランチを切り替えたり、作業したりしない。**
+- 開発は `git worktree add ../boat-pon-<作業名> -b <ブランチ>` で別のディレクトリに作る。データを読むスクリプトは、本番の作業コピーをカレントにして worktree 側のスクリプトを実行する。
+- 本番への反映は、テストを通してから本番の作業コピーで `git merge --ff-only <ブランチ>` をして push する。auto-odds・通知などライブ経路の変更は、レースの無い 21:05〜07:30 にだけ反映する。実行中のジョブがあれば終わるまで待つ。
+- 2026-10-14 時点では、本番の作業コピーは修正ブランチ `docs/strict-review-20261008` で動いている。PR がマージされたら `git switch main && git pull --ff-only` で main に戻す。
 
-- `/Users/m-shogo/Developer/personal/boat-pon` は launchd の本番実行場所（auto-odds などがこのチェックアウトをそのまま実行する）。**ここではブランチを切り替えない・pull しない**。切り替えや pull は、そのまま本番の更新になる。
-- 開発は `git worktree add ../boat-pon-<作業名> -b <ブランチ>` で別のディレクトリに作り、PR でマージする。本番への反映は、マージ後にここで `git pull --ff-only`（main のまま）。
-- 2026-10-08 時点では、このチェックアウトが修正ブランチ `docs/strict-review-20261008` のまま動いている。PR のマージ後に `git switch main && git pull --ff-only` で戻す。
+## 7. 動いているもの（2026-10-14 時点）
 
-## ROI 評価基準
+| ジョブ | いつ | すること |
+|---|---|---|
+| auto-odds | 08:00〜21:05、5分ごと | オッズの取得、直前情報のその場取得（締切 5〜25 分前で無いもの）、判定（締め切りと通知で固定）、BUY 通知（T-10/T-5 で BUY、締切 5 分以上前） |
+| auto-exhibition | 30分ごと | 直前情報の一括取得 |
+| daily-programs | 01:00〜07:30 に数回 | 番組表の取り込み |
+| daily-results | 21:30 | 結果と全券種の払戻の取り込み、確定結果の通知（速報と同じなら省く） |
+| daily-notify | 21:30 | 成長ループ（週1の改善処理 → スコアカードを `data/reports/scorecard/` に記録）→ 日次まとめ |
+| weekly-forward-notify | 月曜 09:00 | 週次の成長まとめ（`report-growth.ts --no-months` → 先週との比較を LINE で1通）。名前は旧名のまま |
+| 速報（未登録） | 10分ごと | `scripts/notify-buy-results-fast.ts`。登録はユーザー作業 |
+| 公開版スコアカード（未登録） | 22:15 | `scripts/publish-accuracy-scorecard.sh`。ChatGPT のタスクが読む。登録はユーザー作業 |
 
-- **主評価**: 公式払戻（`race_results.payout_yen` / `race_payouts.payout_yen`、refund semantics 込み）
-- `race_payouts` は 2026-06-02〜10-06 が空（毎日の取り込みに入っていなかった。2026-10-08 に修正）。埋め戻すまでは、3連単は `race_results.payout_yen` を使う
-- `current_odds`（判定時の表示オッズ）は確定払戻より楽観的。全体で約15pt、BUY の的中時は払戻が表示の 49〜69% だった。ROI の根拠にしない。
-- T-5 オッズも、確定払戻は平均して表示の 95% になる。T-5 で計算した EV は 5〜8% 楽観的。
+止めるもの（ユーザー作業）: 研究工場（intent dispatch・N2 の定期ワークフロー・self-hosted runner・認可切れの private capture）、週次レビュー（`com.shogo.boat-pon.weekly-review`）。手順はレビュー文書の末尾。
 
-## 検証コマンド
+## 8. データの注意（監査 2026-10-14、[`docs/reviews/2026-10-14-data-audit.md`](docs/reviews/2026-10-14-data-audit.md)）
 
-- パッケージ管理は CI と同じ npm（`npm ci`）。`pnpm-lock.yaml` は 2026-06-02 以降更新されていない。
-- `npm run verify`（typecheck + test + build）
-- 判定の再現: `npx tsx scripts/review-20261007-t5-residual-extended.ts` / `npx tsx scripts/review-20261007-late-money.ts`（read-only、stdout のみ）
+- 番組表は 2025-11-21〜2026-05-19 の約半年が無い。この期間の判定は再現できない。
+- 過去の `race_payouts` は、拡連複が1レース1行だけ（本来3行）で、単勝・複勝が無い。2026-06-02〜10-06 は空。再パースするまで、拡連複の結論は使わない。3連単は `race_results.payout_yen` を使う。
+- 2004〜2005年の「返還」は 3連単を売っていなかった場を含む。分析は 2010年以降を使う。
+- 判定の記録は、2026-10-10 以降が「行動できた記録」。それより前の BUY には、締切後に付いたラベルが混ざる（スコアカードが通知の時刻で分ける）。
+
+## 9. コマンド
+
+- パッケージ管理は CI と同じ npm（`npm ci`）。`npm run verify`（typecheck + test + build）。`npm test` は macOS でも全件通る。
+- `npm run report:accuracy-scorecard` … 当たり外れ・精度・収集・ジョブの稼働・成長
+- `npm run audit:data-integrity` … 過去データの監査
+- `npm run report:growth` … 1週間前・1か月前・半年前との比較（全期間で約12分。`--no-months` は直近60日だけ）
+- `npx tsx scripts/notify-line.ts daily --date YYYY-MM-DD --preview` … LINE の文面の確認（送らない・DB に書かない）。週次は `weekly --preview`
+- 判定の再現: `npx tsx scripts/review-20261007-t5-residual-extended.ts` / `npx tsx scripts/review-20261007-late-money.ts`
