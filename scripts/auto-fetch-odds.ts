@@ -24,7 +24,7 @@ import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients
 import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
 import { selectTopModelCandidatePerRace } from "../src/domain/candidateSelection";
 import { judgeCandidate } from "../src/domain/decision";
-import { shouldSendRealtimeBuyNotification } from "../src/domain/buyNotification";
+import { realtimeBuyNotSentReason, shouldSendRealtimeBuyNotification } from "../src/domain/buyNotification";
 import { calibratedSelectionProbability } from "../src/domain/accuracyScorecard";
 import { formatBuyAlert } from "../src/domain/lineMessages";
 import { loadChampionCalibration, loadLatestCapturesForRace } from "./lib/marketCaptures";
@@ -290,6 +290,9 @@ try {
     }
 
     const decisionPhaseStartedAt = Date.now();
+    // 判定にはこの時点の時刻を使う。実行開始時の時刻を使うと、取得に時間がかかった回（スリープをまたいだ回など）で
+    // 締切後なのに「締め切り前」と判定してしまう（2026-10-13 浜名湖3R は締切の 18 分後に BUY の行が作られた）。
+    const decisionNow = new Date(decisionPhaseStartedAt);
     // オッズ取得後に再計算して decision_history を保存
     const freshOdds = mergeOddsMaps(getManualOdds(db), listOddsSnapshots(db));
     const freshAllOdds = listAllOddsBySelection(db);
@@ -298,7 +301,7 @@ try {
     const modelResults = listResultsForModelRange(db, OWNER_PROPELLER_STABLE_START, today);
     const freshRows = buildCandidateRows(
       settings,
-      now,
+      decisionNow,
       freshOdds,
       programInputs,
       modelResults,
@@ -325,8 +328,12 @@ try {
       WHERE date = ? AND decision = 'BUY' AND run_kind = 'paper-live' AND model_version = ?
     `).all(today, LIVE_MONITOR_MODEL_VERSION) as Array<{ race_id: string; recommended_stake_yen: number | null }>)
       .map((row) => [row.race_id, row.recommended_stake_yen ?? settings.stakePerBetYen]));
+    // リアルタイム通知を送ったレースも、そこで固定する（通知した内容がそのまま記録になる）。
+    const notifiedRaceIds = new Set((db.prepare(`
+      SELECT race_id FROM notification_log WHERE channel = 'line' AND status = 'SENT' AND race_id LIKE ?
+    `).all(`${today.replaceAll("-", "")}-%`) as Array<{ race_id: string }>).map((row) => row.race_id));
     const isFrozen = (candidate: (typeof selectedCandidates)[number]) =>
-      persistHistory && candidate.date === today && isPastActionDeadline(candidate, settings, now);
+      persistHistory && candidate.date === today && (isPastActionDeadline(candidate, settings, decisionNow) || notifiedRaceIds.has(candidate.raceId));
     let buyCountToday = 0;
     let reservedBudgetYen = 0;
     let frozenCount = 0;
@@ -342,12 +349,12 @@ try {
     const frozenBuyCount = buyCountToday;
     for (const candidate of selectedCandidates) {
       if (isFrozen(candidate)) continue;
-      const decision = judgeCandidate(candidate, settings, { now, buyCountToday, reservedBudgetYen });
+      const decision = judgeCandidate(candidate, settings, { now: decisionNow, buyCountToday, reservedBudgetYen });
       if (decision.status === "BUY") {
         buyCountToday += 1;
         reservedBudgetYen += decision.recommendedAmount;
       }
-      if (persistHistory && shouldPersistDecisionHistory(candidate, settings, LIVE_MONITOR_FROM, now)) {
+      if (persistHistory && shouldPersistDecisionHistory(candidate, settings, LIVE_MONITOR_FROM, decisionNow)) {
         insertDecisionHistory(db, candidate, decision, { replaceRace: true });
         saved += 1;
       }
@@ -376,11 +383,17 @@ try {
         ORDER BY captured_at DESC
         LIMIT 1
       `).get(buy.race_id, buy.selection) as { checkpoint_label: string | null } | undefined;
-      return shouldSendRealtimeBuyNotification({
+      const gate = {
         notificationStatus: notif?.status ?? null,
         latestCheckpointLabel: latestCheckpoint?.checkpoint_label ?? null,
         actualMinutesBeforeClose: buy.close_at == null ? null : minutesUntilRaceClose(buy.date, buy.close_at, new Date()),
-      });
+      };
+      // 送らなかった BUY は、締切前のものだけ理由をログに出す（以前は黙って落ちていて、5日間気づかなかった）。
+      const reason = realtimeBuyNotSentReason(gate);
+      if (reason && reason !== "already-sent" && gate.actualMinutesBeforeClose != null && gate.actualMinutesBeforeClose >= 0) {
+        console.log(`LINE realtime not-sent: ${buy.race_id} ${reason}`);
+      }
+      return shouldSendRealtimeBuyNotification(gate);
     });
 
     if (pendingBuys.length > 0) {

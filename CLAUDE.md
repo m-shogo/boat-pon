@@ -41,6 +41,7 @@
 
 - 行動の締め切り（締切の `minMinutesBeforeClose` 分前、現在 5 分前）を過ぎたレースは、auto-odds が判定し直さない。`decision_history` はその時点の判定で固定する。1日の BUY 上限には固定済みの BUY を先に数える（`src/domain/livePersistence.ts` の `isPastActionDeadline`）。
 - 締切 5〜25 分前で直前情報が無いレースは、auto-odds がその場で取りに行く（`scripts/lib/beforeInfo.ts`）。
+- リアルタイムの BUY 通知は、T-10 か T-5 で BUY になり、締切 5 分以上前なら送る。送ったらそのレースの判定はそこで固定する（通知した内容がそのまま記録になる）。判定には判定の段階の現在時刻を使う（2026-10-14〜）。
 - 判定ロジック（`src/domain/decision.ts` の `judgeCandidate`）は変えていない。変更禁止のまま。
 - 2026-10-09 より前の記録は書き換えていない。過去の BUY は、スコアカードが通知時刻で「締切前に通知できた／締切後のラベル」に分けて数える。
 
