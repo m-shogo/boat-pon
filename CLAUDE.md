@@ -75,6 +75,6 @@
 - パッケージ管理は CI と同じ npm（`npm ci`）。`npm run verify`（typecheck + test + build）。`npm test` は macOS でも全件通る。
 - `npm run report:accuracy-scorecard` … 当たり外れ・精度・収集・ジョブの稼働・成長
 - `npm run audit:data-integrity` … 過去データの監査
-- `npm run report:growth` … 1週間前・1か月前・半年前との比較（全期間で約12分。`--no-months` は直近60日だけ）
+- `npm run report:growth` … 1週間前・1か月前・半年前との比較（半年分で約5分。`--no-months` は直近60日だけで数秒〜数十秒）
 - `npx tsx scripts/notify-line.ts daily --date YYYY-MM-DD --preview` … LINE の文面の確認（送らない・DB に書かない）。週次は `weekly --preview`
 - 判定の再現: `npx tsx scripts/review-20261007-t5-residual-extended.ts` / `npx tsx scripts/review-20261007-late-money.ts`

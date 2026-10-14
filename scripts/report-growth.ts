@@ -6,7 +6,7 @@
  *   1. 当たり外れ（paper-live BUY を公式払戻で精算）と、締切前に通知できた割合
  *   2. 判定の記録の量（判定の行 ÷ 番組）
  *   3. T-5 完全市場の収集カバー率
- *   4. 確率の精度（同じレースで v3 と市場補正の logloss。小さいほど正確）
+ *   4. 確率の精度（同じレースで v3 と市場補正の logloss の差。2026-07-01 から）
  *   5. 知識の量（lessons-learned の項目・レビュー文書の数を月別に）
  *   6. 作業の性質（コミットの種類を月別に）
  *
@@ -63,7 +63,9 @@ const decisions = db.prepare(`WITH d AS (
   FROM d LEFT JOIN official_programs p ON p.race_id = d.race_id LEFT JOIN race_results rr ON rr.race_id = d.race_id
   WHERE d.row_num = 1`).all(LIVE_MONITOR_MODEL_VERSION, FROM, TO) as Dec[];
 const programsByDate = new Map((db.prepare(`SELECT date, COUNT(*) n FROM official_programs WHERE date BETWEEN ? AND ? GROUP BY date`).all(FROM, TO) as Array<{ date: string; n: number }>).map((r) => [r.date, r.n]));
-const accuracyFrom = [FROM, "2026-06-01"].sort()[1];
+// 確率の精度と T-5 カバー率は 2026-07-01 から数える。6月は T-5 の収集が 5% で比べられず、
+// しかも 6〜7月の時系列オッズは量が多く、6月分を読むだけで約7分かかる（2026-10-14 の実測。8月の同じ長さは約3秒）。
+const accuracyFrom = [FROM, "2026-07-01"].sort()[1];
 const { t5, t10, t20 } = loadCompleteCaptures(db, accuracyFrom, TO);
 db.close();
 const champion = loadChampionCalibration(STATE_DIR);
@@ -197,7 +199,7 @@ const md = [
   ...months.map((m) => { const w = workByMonth.get(m) ?? {}; return `| ${m} | ${knowledgeByMonth.get(m) ?? 0} | ${registryLearningsByMonth.get(m) ?? 0} | ${w["研究基盤"] ?? 0} | ${w["通知・収集・精度"] ?? 0} | ${w["記録"] ?? 0} | ${w["その他"] ?? 0} |`; }),
   "",
   `- レビュー・監査の文書: ${reviewDocs.length} 件（docs/reviews/）`,
-  "- 確率の精度は 2026-06-01 以降（T-5 のオッズがそろう期間）の同じレースで、v3 と市場補正の logloss の差を見る（小さいほど v3 が市場に近い。比較レースが 200 未満の期間は「-」）。BUY の実績/予測は 1 に近いほど正確（BUY が 10件未満の期間は「-」）。",
+  "- 確率の精度と T-5 カバー率は 2026-07-01 以降（T-5 のオッズがそろう期間）の同じレースで、v3 と市場補正の logloss の差を見る（小さいほど v3 が市場に近い。比較レースが 200 未満の期間は「-」）。BUY の実績/予測は 1 に近いほど正確（BUY が 10件未満の期間は「-」）。",
   "",
 ].join("\n");
 const report = { generatedAt: new Date().toISOString(), to: TO, rows: rows.map((r) => ({ ...r, logLossGap: gap(r) })), verdicts, knowledgeByMonth: Object.fromEntries(knowledgeByMonth), registryLearningsByMonth: Object.fromEntries(registryLearningsByMonth), workByMonth: Object.fromEntries(workByMonth), reviewDocs: reviewDocs.length, knowledgeAdded };
