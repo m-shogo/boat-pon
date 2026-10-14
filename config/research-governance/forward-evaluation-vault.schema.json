@@ -3,6 +3,7 @@
   "$id": "forward-evaluation-vault.0.1",
   "title": "Forward Evaluation Vault record",
   "type": "object",
+  "unevaluatedProperties": false,
   "required": ["schemaVersion", "kind", "recordId", "evidenceStage", "createdAt"],
   "properties": {
     "schemaVersion": {"const": "forward-evaluation-vault.0.1"},
