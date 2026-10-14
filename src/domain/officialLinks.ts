@@ -33,6 +33,14 @@ export function officialVenueCode(venue: string): string | null {
   return venueCodes[normalized] ?? null;
 }
 
+/** レース結果のページ（着順・全券種の払戻）。結果の通知のリンクに使う。 */
+export function officialResultUrl(date: string, venue: string, raceNo: number): string {
+  const jcd = officialVenueCode(venue);
+  const hd = date.replaceAll("-", "");
+  if (!jcd) return "https://www.boatrace.jp/";
+  return `https://www.boatrace.jp/owpc/pc/race/raceresult?rno=${raceNo}&jcd=${jcd}&hd=${hd}`;
+}
+
 export function officialOddsUrl(date: string, venue: string, raceNo: number): string {
   const jcd = officialVenueCode(venue);
   const hd = date.replaceAll("-", "");

@@ -1,0 +1,103 @@
+/**
+ * LINE に送る文面（BUY の通知・日次まとめ）。1行目（見出し）だけで要点がわかるようにする。
+ * 絵文字は種類ごとに固定する: BUY 🔔 / 的中 ✅ / はずれ ❌ / 返還 ↩️ / 結果待ち ⏳ / 日次まとめ 📊（🎯 は使わない）。
+ * 専門用語（EV・logloss・モデル名）は LINE に出さず、スコアカードに寄せる。
+ */
+import type { BuyLedgerSummary } from "./accuracyScorecard";
+import { formatTally } from "./buyResultNotification";
+
+const PAPER_NOTE = "※paper検証（実際の購入なし）";
+const yen = (value: number) => `${Math.round(value).toLocaleString("ja-JP")}円`;
+const pct1 = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+export type BuyAlertInput = {
+  venue: string;
+  raceNo: number;
+  selection: string;
+  closeAt: string | null;
+  quoteOdds: number | null;
+  /** 市場補正の確率（いちばん正確な見積もり）。計算できなければ null。 */
+  calibratedProbability: number | null;
+  /** v3 の推定的中率（BUY 行では実態の数倍になりやすい）。 */
+  v3Probability: number | null;
+  voteUrl: string;
+};
+
+export function formatBuyAlert(input: BuyAlertInput): { title: string; body: string } {
+  const title = `🔔 BUY ${input.venue}${input.raceNo}R ${input.selection}${input.closeAt ? `（締切 ${input.closeAt}）` : ""}`;
+  const lines: string[] = [];
+  if (input.quoteOdds != null) lines.push(`オッズ ${input.quoteOdds.toFixed(1)}倍 → 当たれば 100円が ${yen(input.quoteOdds * 100)}`);
+  if (input.calibratedProbability != null) {
+    lines.push(`当たる確率: 約${pct1(input.calibratedProbability)}${input.v3Probability != null ? `（v3 の予想は ${pct1(input.v3Probability)}）` : ""}`);
+    if (input.quoteOdds != null) {
+      const back = Math.round(input.calibratedProbability * input.quoteOdds * 100);
+      lines.push(`期待回収: ${back}%（続けると 100円あたり約${back}円が戻る計算）`);
+    }
+  } else if (input.v3Probability != null) {
+    lines.push(`当たる確率: v3 の予想で ${pct1(input.v3Probability)}（市場補正は計算できず）`);
+  }
+  lines.push("", `投票: ${input.voteUrl}`, PAPER_NOTE);
+  return { title, body: lines.join("\n") };
+}
+
+export type DailyBuy = {
+  venue: string;
+  raceNo: number;
+  selection: string;
+  /** 締切前にリアルタイム通知できたか。 */
+  notified: boolean;
+  result: "hit" | "miss" | "returned" | "pending";
+  payoutYen: number | null;
+};
+
+export type DailySummaryInput = {
+  date: string;
+  todayBuys: DailyBuy[];
+  /** いちばん最近の「結果がそろった日」の成績（ふつうは昨日）。 */
+  lastSettledDay: { date: string; ledger: BuyLedgerSummary } | null;
+  month: BuyLedgerSummary;
+  total: BuyLedgerSummary;
+  /** 判定を締め切りで固定した後の記録（行動できた記録）。 */
+  sinceFix?: { from: string; ledger: BuyLedgerSummary; notified: number };
+  alerts: string[];
+  counts: { buy: number; watch: number; skip: number; oddsPresent: number; total: number };
+};
+
+const md = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+
+const resultMark = (buy: DailyBuy) => {
+  if (buy.result === "hit") return `✅ 的中 ${buy.payoutYen == null ? "" : yen(buy.payoutYen)}`.trim();
+  if (buy.result === "miss") return "❌ はずれ";
+  if (buy.result === "returned") return "↩️ 返還";
+  return "⏳ 結果待ち";
+};
+
+export function formatDailySummary(input: DailySummaryInput): { title: string; body: string } {
+  const settledToday = input.todayBuys.filter((b) => b.result !== "pending");
+  const hits = settledToday.filter((b) => b.result === "hit").length;
+  const misses = settledToday.filter((b) => b.result === "miss").length;
+  const titleResult = settledToday.length ? ` → ✅${hits} ❌${misses}` : "";
+  const title = `📊 ${md(input.date)} のまとめ: BUY ${input.todayBuys.length}件${titleResult}`;
+
+  const lines: string[] = [];
+  if (input.todayBuys.length === 0) {
+    lines.push(`今日の BUY: なし（見送り ${input.counts.skip} レース）`);
+  } else {
+    lines.push("今日の BUY:");
+    for (const buy of input.todayBuys) {
+      lines.push(`・${buy.venue}${buy.raceNo}R ${buy.selection}（${buy.notified ? "🔔 通知済み" : "通知なし"}）→ ${resultMark(buy)}`);
+    }
+    if (input.todayBuys.some((b) => b.result === "pending")) lines.push("（結果待ちは、明日の夜の取り込みで確定）");
+  }
+  if (input.lastSettledDay && input.lastSettledDay.date !== input.date && input.lastSettledDay.ledger.settled > 0) {
+    lines.push(`${md(input.lastSettledDay.date)} の結果: ${formatTally(input.lastSettledDay.ledger)}`);
+  }
+  lines.push("", `今月: ${formatTally(input.month)}`, `通算: ${formatTally(input.total)}`);
+  if (input.sinceFix) {
+    lines.push(`${md(input.sinceFix.from)} 以降（締切前に判定を固定した記録）: ${formatTally(input.sinceFix.ledger)}・締切前に通知 ${input.sinceFix.notified}/${input.sinceFix.ledger.buys}`);
+  }
+  if (input.alerts.length) lines.push("", `⚠️ 注意 ${input.alerts.length} 件: ${input.alerts[0]}${input.alerts.length > 1 ? "（ほかはスコアカード）" : ""}`);
+  const c = input.counts;
+  lines.push("", `判定の内訳: BUY ${c.buy} / 様子見 ${c.watch} / 見送り ${c.skip} ・ オッズ取得 ${c.oddsPresent}/${c.total}`, PAPER_NOTE);
+  return { title, body: lines.join("\n") };
+}

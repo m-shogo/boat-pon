@@ -25,7 +25,8 @@ import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
 import { selectTopModelCandidatePerRace } from "../src/domain/candidateSelection";
 import { judgeCandidate } from "../src/domain/decision";
 import { shouldSendRealtimeBuyNotification } from "../src/domain/buyNotification";
-import { describeBuyProbability } from "../src/domain/accuracyScorecard";
+import { calibratedSelectionProbability } from "../src/domain/accuracyScorecard";
+import { formatBuyAlert } from "../src/domain/lineMessages";
 import { loadChampionCalibration, loadLatestCapturesForRace } from "./lib/marketCaptures";
 import { fetchAndSaveBeforeInfo } from "./lib/beforeInfo";
 import { OWNER_PROPELLER_STABLE_START } from "../src/domain/raceRegime";
@@ -393,21 +394,16 @@ try {
               console.log(`LINE realtime skipped-late: ${buy.race_id} minutes=${actualMinutesBeforeClose?.toFixed(1) ?? "-"}`);
               continue;
             }
-            const odds = buy.current_odds != null ? `${buy.current_odds.toFixed(1)}倍` : "未取得";
-            const ev = buy.ev != null ? buy.ev.toFixed(2) : "-";
             const voteUrl = teleBoatUrl(buy.date, buy.venue, buy.race_no);
             const oddsUrl = officialOddsUrl(buy.date, buy.venue, buy.race_no);
-            const title = `🎯 BUY: ${buy.venue}${buy.race_no}R ${buy.selection}`;
             // v3 の推定的中率は BUY 行で約3倍の過大評価だった（2026-10-07 の精度スコアカード）。
-            // 一番正確な市場補正の確率と期待回収率を並べる。計算できなければ行ごと省く（通知は止めない）。
-            let probabilityLine: string | null = null;
+            // いちばん正確な市場補正の確率を主に出す。計算できなければ v3 の予想だけを出す（通知は止めない）。
+            let calibratedProbability: number | null = null;
             try {
               const captures = loadLatestCapturesForRace(db, buy.race_id);
               if (captures.latest) {
-                probabilityLine = describeBuyProbability({
+                calibratedProbability = calibratedSelectionProbability({
                   selection: buy.selection,
-                  v3HitRate: buy.estimated_hit_rate,
-                  quoteOdds: buy.current_odds,
                   latestOdds: captures.latest,
                   earlierOdds: captures.earlier,
                   params: loadChampionCalibration(),
@@ -416,15 +412,16 @@ try {
             } catch (err) {
               console.error("LINE realtime probability skipped:", err instanceof Error ? err.message : err);
             }
-            const body = [
-              `券種: ${buy.bet_type}`,
-              `オッズ: ${odds} / EV(v3): ${ev}`,
-              ...(probabilityLine ? [probabilityLine] : []),
-              `stake: ${buy.recommended_stake_yen}円`,
-              "",
-              `投票: ${voteUrl}`,
-              "【paper観察モード】",
-            ].join("\n");
+            const { title, body } = formatBuyAlert({
+              venue: buy.venue,
+              raceNo: buy.race_no,
+              selection: buy.selection,
+              closeAt: buy.close_at,
+              quoteOdds: buy.current_odds,
+              calibratedProbability,
+              v3Probability: buy.estimated_hit_rate,
+              voteUrl,
+            });
             const text = buildLineText(title, body, oddsUrl);
 
             await sendLinePushTextToRecipients({

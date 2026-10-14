@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { summarizeBuyLedger } from "./accuracyScorecard";
+import { formatBuyAlert, formatDailySummary } from "./lineMessages";
+
+test("BUY の通知は 🔔 で始まり、オッズ・当たる確率・期待回収を平易に出す", () => {
+  const { title, body } = formatBuyAlert({
+    venue: "常滑", raceNo: 8, selection: "1-2-3", closeAt: "13:46", quoteOdds: 66.1,
+    calibratedProbability: 0.011, v3Probability: 0.058, voteUrl: "https://example.invalid/vote",
+  });
+  assert.equal(title, "🔔 BUY 常滑8R 1-2-3（締切 13:46）");
+  assert.match(body, /^オッズ 66\.1倍 → 当たれば 100円が 6,610円/);
+  assert.match(body, /当たる確率: 約1\.1%（v3 の予想は 5\.8%）/);
+  assert.match(body, /期待回収: 73%（続けると 100円あたり約73円が戻る計算）/);
+  assert.match(body, /※paper検証（実際の購入なし）$/);
+  assert.doesNotMatch(`${title}\n${body}`, /🎯|EV|logloss/);
+});
+
+test("市場補正が計算できないときは v3 の予想だけを出す", () => {
+  const { body } = formatBuyAlert({
+    venue: "福岡", raceNo: 5, selection: "1-2-3", closeAt: null, quoteOdds: null,
+    calibratedProbability: null, v3Probability: 0.06, voteUrl: "https://example.invalid/vote",
+  });
+  assert.match(body, /^当たる確率: v3 の予想で 6\.0%（市場補正は計算できず）/);
+});
+
+const ledger = (rows: Array<[string, boolean | null, number | null]>) => summarizeBuyLedger(rows.map(([date, hit, payoutYen]) => ({ date, hit, payoutYen })));
+
+test("日次まとめは、今日の BUY の結果・昨日の結果・今月と通算を順に出す", () => {
+  const { title, body } = formatDailySummary({
+    date: "2026-10-14",
+    todayBuys: [
+      { venue: "常滑", raceNo: 8, selection: "1-2-3", notified: true, result: "hit", payoutYen: 4_270 },
+      { venue: "津", raceNo: 4, selection: "1-2-3", notified: true, result: "pending", payoutYen: null },
+    ],
+    lastSettledDay: { date: "2026-10-13", ledger: ledger([["2026-10-13", false, null], ["2026-10-13", false, null]]) },
+    month: ledger([["2026-10-13", false, null], ["2026-10-13", false, null]]),
+    total: ledger([["2026-08-01", true, 4_270], ["2026-10-13", false, null]]),
+    sinceFix: { from: "2026-10-10", ledger: ledger([["2026-10-13", false, null]]), notified: 1 },
+    alerts: ["ジョブ auto-odds が 3.0 時間動いていない"],
+    counts: { buy: 2, watch: 5, skip: 140, oddsPresent: 120, total: 156 },
+  });
+  assert.equal(title, "📊 10/14 のまとめ: BUY 2件 → ✅1 ❌0");
+  assert.match(body, /・常滑8R 1-2-3（🔔 通知済み）→ ✅ 的中 4,270円/);
+  assert.match(body, /・津4R 1-2-3（🔔 通知済み）→ ⏳ 結果待ち/);
+  assert.match(body, /10\/13 の結果: 0勝 2敗（-200円）/);
+  assert.match(body, /今月: 0勝 2敗（-200円）\n通算: 1勝 1敗（\+4,070円）/);
+  assert.match(body, /10\/10 以降（締切前に判定を固定した記録）: 0勝 1敗（-100円）・締切前に通知 1\/1/);
+  assert.match(body, /⚠️ 注意 1 件: ジョブ auto-odds が 3\.0 時間動いていない/);
+  assert.doesNotMatch(`${title}\n${body}`, /🎯|model=|EV/);
+});
+
+test("BUY が無い日は見送りの件数だけを出す", () => {
+  const { title, body } = formatDailySummary({
+    date: "2026-10-14", todayBuys: [], lastSettledDay: null,
+    month: ledger([]), total: ledger([]), alerts: [],
+    counts: { buy: 0, watch: 3, skip: 150, oddsPresent: 100, total: 156 },
+  });
+  assert.equal(title, "📊 10/14 のまとめ: BUY 0件");
+  assert.match(body, /^今日の BUY: なし（見送り 150 レース）/);
+});

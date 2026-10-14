@@ -269,6 +269,16 @@ export function formatLedgerAndAccuracyLines(ledger: BuyLedgerSummary, accuracy:
   return lines;
 }
 
+/** その買い目の市場補正の確率。オッズがそろっていなければ null。 */
+export function calibratedSelectionProbability(args: {
+  selection: string;
+  latestOdds: Map<string, number>;
+  earlierOdds: Map<string, number> | null;
+  params?: MarketCalibration;
+}): number | null {
+  return calibratedMarketProbabilities(args.latestOdds, args.earlierOdds, args.params ?? MARKET_CALIBRATION)?.get(args.selection) ?? null;
+}
+
 /** BUY 通知に足す1行。v3 の推定と、市場補正の確率・期待回収率（判定時オッズ基準）を並べる。 */
 export function describeBuyProbability(args: {
   selection: string;

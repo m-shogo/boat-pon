@@ -17,9 +17,10 @@ import { loadEnvFiles } from "../src/domain/envFile";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { minutesUntilRaceClose } from "../src/domain/livePersistence";
-import { officialOddsUrl } from "../src/domain/officialLinks";
+import { officialResultUrl } from "../src/domain/officialLinks";
 import { parseRaceResultTrifecta } from "../src/domain/officialRaceResultPage";
 import { venueCodes } from "./fetch-official-odds";
+import { loadBuyLedgers } from "./lib/buyLedger";
 
 const MIN_MINUTES_AFTER_CLOSE = 8;
 const MAX_MINUTES_AFTER_CLOSE = 120;
@@ -92,15 +93,20 @@ ORDER BY p.close_at
       winningPayoutYen: deadHeat ? null : parsed.payoutYen,
       returned: false,
       currentOdds: buy.current_odds,
+      // 速報の時点では確定結果（race_results）が無いので、このレースの結果を足して今月・通算を出す。
+      tally: (() => {
+        const ledgers = loadBuyLedgers(db, buy.date, new Map([[buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null }]]));
+        return { month: ledgers.month, total: ledgers.total };
+      })(),
     });
-    const title = message.title.replace("BUY事後結果", "BUY結果（速報）");
+    const title = `${message.title}（速報）`;
     // 締切前にリアルタイム通知できなかった BUY（締切後の再評価で BUY になったもの）は、その旨を先頭に書く。
     const timing = db.prepare(`SELECT
       (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
       (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = ?) AS info_at`).get(buy.race_id, buy.race_id) as { sent_at: string | null; info_at: string | null };
     const notifiedBeforeClose = classifyBuyTiming({ date: buy.date, closeAt: buy.close_at, sentAt: timing.sent_at, infoAt: timing.info_at }) === "notified";
-    const body = [notifiedBeforeClose ? null : "※このBUYは締切前に通知できなかった（締切後の判定）。", message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, "公式の確定値は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
-    const oddsUrl = officialOddsUrl(buy.date, buy.venue, buy.race_no);
+    const body = [message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, notifiedBeforeClose ? null : "（この BUY は締切前に通知できなかった。締切後の判定）", "確定は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
+    const oddsUrl = officialResultUrl(buy.date, buy.venue, buy.race_no);
 
     if (DRY_RUN) {
       console.log(`[dry-run] ${title}\n${body}\n`);
