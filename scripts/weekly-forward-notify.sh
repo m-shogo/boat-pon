@@ -1,5 +1,6 @@
 #!/bin/bash
-# Boat Pon Forward週次サマリー通知 — launchd から毎週月曜 09:00 JST に呼ばれる
+# Boat Pon 週次の成長まとめ — launchd から毎週月曜 09:00 JST に呼ばれる
+# 先週（月〜日）とその前の週を比べた1通を LINE に送る。ファイル名は launchd の登録に合わせて旧名のまま。
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,6 +17,10 @@ run_tsx() {
   fi
 }
 
-run_tsx scripts/notify-line.ts forward || echo "${LOG_PREFIX} line forward skipped or failed"
+GROWTH_DIR="data/reports/scorecard"
+mkdir -p "${GROWTH_DIR}"
+run_tsx scripts/report-growth.ts --no-months --output "${GROWTH_DIR}/growth-weekly.md" --json-output "${GROWTH_DIR}/growth-weekly.json" \
+  || echo "${LOG_PREFIX} growth report failed"
+run_tsx scripts/notify-line.ts weekly --growth-json "${GROWTH_DIR}/growth-weekly.json" || echo "${LOG_PREFIX} line weekly skipped or failed"
 
-echo "${LOG_PREFIX} weekly forward notify done"
+echo "${LOG_PREFIX} weekly growth notify done"

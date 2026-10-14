@@ -61,6 +61,8 @@ export type DailySummaryInput = {
   sinceFix?: { from: string; ledger: BuyLedgerSummary; notified: number };
   alerts: string[];
   counts: { buy: number; watch: number; skip: number; oddsPresent: number; total: number };
+  /** その日の番組数と、締切5分前の全120通りのオッズを取れたレース数。欠けを番組数に対して見せる。 */
+  coverage?: { programs: number; t5Races: number };
 };
 
 const md = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
@@ -98,6 +100,58 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   }
   if (input.alerts.length) lines.push("", `⚠️ 注意 ${input.alerts.length} 件: ${input.alerts[0]}${input.alerts.length > 1 ? "（ほかはスコアカード）" : ""}`);
   const c = input.counts;
-  lines.push("", `判定の内訳: BUY ${c.buy} / 様子見 ${c.watch} / 見送り ${c.skip} ・ オッズ取得 ${c.oddsPresent}/${c.total}`, PAPER_NOTE);
+  lines.push("", `判定の内訳: BUY ${c.buy} / 様子見 ${c.watch} / 見送り ${c.skip}`);
+  if (input.coverage && input.coverage.programs > 0) {
+    const { programs, t5Races } = input.coverage;
+    const short = c.total < programs * 0.9 || t5Races < programs * 0.9;
+    lines.push(`記録できたレース: 判定 ${c.total}/${programs}・締切5分前のオッズ ${t5Races}/${programs}${short ? "（足りない分は PC のスリープや取得の失敗で記録なし）" : ""}`);
+  } else {
+    lines.push(`オッズ取得: ${c.oddsPresent}/${c.total}`);
+  }
+  lines.push(PAPER_NOTE);
   return { title, body: lines.join("\n") };
+}
+
+export type WeeklyWindow = {
+  from: string;
+  to: string;
+  buys: BuyLedgerSummary;
+  notified: number;
+  decisionCoverage: number | null;
+  t5Coverage: number | null;
+  logLossGap: number | null;
+};
+
+export type WeeklySummaryInput = {
+  thisWeek: WeeklyWindow;
+  lastWeek: WeeklyWindow;
+  knowledgeAdded: number;
+  alerts: string[];
+};
+
+const trend = (now: number | null, before: number | null, higherIsBetter: boolean, eps: number) => {
+  if (now == null || before == null) return "";
+  if (Math.abs(now - before) < eps) return " →";
+  return (now > before) === higherIsBetter ? " ↑" : " ↓";
+};
+const pct0 = (v: number | null) => (v == null ? "-" : `${Math.round(v * 100)}%`);
+
+/** 月曜の週次まとめ。先週と比べて良くなったか（↑ 良くなった / ↓ 悪くなった / → 横ばい）を各行に付ける。 */
+export function formatWeeklySummary(input: WeeklySummaryInput): { title: string; body: string } {
+  const t = input.thisWeek, l = input.lastWeek;
+  const share = (w: WeeklyWindow) => (w.buys.buys ? w.notified / w.buys.buys : null);
+  const lines = [
+    `成績: BUY ${t.buys.buys}件 → ${formatTally(t.buys)}`,
+    `　先週: BUY ${l.buys.buys}件 → ${formatTally(l.buys)}`,
+    `締切前に通知できた BUY: ${t.buys.buys ? `${t.notified}/${t.buys.buys}` : "-"}（先週 ${l.buys.buys ? `${l.notified}/${l.buys.buys}` : "-"}）${trend(share(t), share(l), true, 0.05)}`,
+    `オッズの収集（締切5分前の全120通り）: ${pct0(t.t5Coverage)}（先週 ${pct0(l.t5Coverage)}）${trend(t.t5Coverage, l.t5Coverage, true, 0.05)}`,
+    `判定の記録: 番組の ${pct0(t.decisionCoverage)}（先週 ${pct0(l.decisionCoverage)}）${trend(t.decisionCoverage, l.decisionCoverage, true, 0.05)}`,
+    t.logLossGap == null
+      ? "確率の精度: 比べられるレースが足りない"
+      : `確率の精度: v3 は市場補正より ${t.logLossGap.toFixed(3)} 不正確（先週 ${l.logLossGap == null ? "-" : l.logLossGap.toFixed(3)}、小さいほど良い）${trend(t.logLossGap, l.logLossGap, false, 0.002)}`,
+    `知識: 今週 +${input.knowledgeAdded} 件（教訓・レビュー）`,
+  ];
+  if (input.alerts.length) lines.push("", `⚠️ 注意 ${input.alerts.length} 件: ${input.alerts[0]}${input.alerts.length > 1 ? "（ほかはスコアカード）" : ""}`);
+  lines.push("", "↑ 良くなった / ↓ 悪くなった / → 横ばい", PAPER_NOTE);
+  return { title: `📈 週次まとめ（${md(t.from)}〜${md(t.to)}）`, body: lines.join("\n") };
 }

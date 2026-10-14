@@ -6,10 +6,10 @@ import { buildBuyResultNotification } from "../src/domain/buyResultNotification"
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
-import { formatDailySummary, type DailyBuy } from "../src/domain/lineMessages";
+import { formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
 
-type Mode = "daily" | "test" | "results" | "forward" | "errors";
+type Mode = "daily" | "test" | "results" | "weekly" | "errors";
 
 // --preview: 送信済みかどうかに関係なく文面を表示するだけ（送信しない・DB に書かない・DB は読み取り専用で開く）。
 const PREVIEW = process.argv.includes("--preview");
@@ -50,7 +50,7 @@ function usage() {
     "  pnpm notify:line:test [--dry-run] [--message <text>]",
     "  pnpm notify:line:daily [--date YYYY-MM-DD] [--dry-run]",
     "  pnpm notify:line:results [--date YYYY-MM-DD | --from YYYY-MM-DD --to YYYY-MM-DD] [--dry-run]",
-    "  pnpm notify:line:forward [--dry-run]",
+    "  npx tsx scripts/notify-line.ts weekly [--growth-json path] [--dry-run]",
     "  pnpm notify:line:errors [--date YYYY-MM-DD] [--dry-run]",
     "",
     "Env file:",
@@ -63,7 +63,8 @@ function usage() {
 
 function parseMode(args: string[]): Mode {
   const first = args.find((arg) => !arg.startsWith("--"));
-  if (first === "daily" || first === "test" || first === "results" || first === "forward" || first === "errors") return first;
+  if (first === "forward") return "weekly"; // 旧名（launchd の古いスクリプトから呼ばれても動くように）
+  if (first === "daily" || first === "test" || first === "results" || first === "weekly" || first === "errors") return first;
   throw new Error(`Unknown mode: ${first ?? "(missing)"}\n${usage()}`);
 }
 
@@ -167,6 +168,18 @@ WHERE date = ?
   };
 }
 
+/** 番組数と、締切5分前（T-5）の全120通りのオッズを取れたレース数。 */
+function dailyCoverage(db: DatabaseSync, date: string) {
+  const programs = numberValue((db.prepare(`SELECT COUNT(*) AS n FROM official_programs WHERE date = ?`).get(date) as Record<string, unknown>).n);
+  const t5Races = numberValue((db.prepare(`
+SELECT COUNT(DISTINCT race_id) AS n FROM (
+  SELECT race_id FROM odds_timeseries_snapshots
+  WHERE race_id LIKE ? AND checkpoint_label = 'T-5'
+  GROUP BY race_id, captured_at HAVING COUNT(DISTINCT selection) >= 120
+)`).get(`${date.replaceAll("-", "")}-%`) as Record<string, unknown>).n);
+  return { programs, t5Races };
+}
+
 function scorecardAlerts(now: Date): string[] {
   try {
     const path = "data/reports/scorecard/latest.json";
@@ -230,6 +243,7 @@ ORDER BY p.close_at, dh.venue, dh.race_no
     sinceFix: ledgers.sinceFix,
     alerts: scorecardAlerts(new Date()),
     counts,
+    coverage: dailyCoverage(db, date),
   });
   const summary = upsertPendingNotification(db, {
     raceId: `line-daily-${date}`,
@@ -358,119 +372,38 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
   return notifications;
 }
 
-// ─── forward mode: Forward ROI 週次サマリー ────────────────────────────────
+// ─── weekly mode: 月曜の週次まとめ（先週と比べて良くなったか） ─────────────────
+// 以前の forward mode（風速2〜4×展示1位の格上げ監視）は、候補監視の終了（2026-10-08）で役目を終えた。
+// いまは scripts/report-growth.ts --no-months が書いた JSON を読んで、先週との比較を1通にする。
 
-const FORWARD_START = "2025-01-01";
-const FORWARD_STAKE = 100;
-const EXCLUDED_VENUES = ["戸田", "多摩川", "桐生", "三国", "江戸川"];
-const EXCLUDED_RACE_NOS = [10, 11, 12];
+type GrowthRow = { key: string; from: string; to: string; buys: WeeklyWindow["buys"]; notified: number; decisionCoverage: number | null; t5Coverage: number | null; logLossGap: number | null };
 
-function isoWeek(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00+09:00");
-  const jan4 = new Date(d.getFullYear(), 0, 4);
-  const dayOfYear = Math.floor((d.getTime() - jan4.getTime()) / 86400000) + 4;
-  const weekNum = Math.ceil(dayOfYear / 7);
-  return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
-}
-
-function buildForwardNotifications(db: DatabaseSync, dryRun: boolean): NotificationRow[] {
-  const venueExcl = EXCLUDED_VENUES.map((v) => `'${v}'`).join(",");
-  const raceNoExcl = EXCLUDED_RACE_NOS.join(",");
-  const baseWhere = `
-    decision='BUY' AND run_kind='historical-backfill'
-    AND result IS NOT NULL AND result != ''
-    AND venue NOT IN (${venueExcl})
-    AND race_no NOT IN (${raceNoExcl})
-    AND date >= '${FORWARD_START}'
-  `;
-
-  const baseline = db.prepare(`
-SELECT COUNT(*) as n,
-  SUM(CASE WHEN result=selection THEN 1 ELSE 0 END) as hits,
-  SUM(COALESCE((SELECT rp.payout_yen FROM race_payouts rp
-    WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta'
-    AND rp.combination=dh.selection LIMIT 1), 0)) as pr
-FROM decision_history dh
-WHERE ${baseWhere} AND selection='1-2-3'
-`).get() as { n: number; hits: number; pr: number };
-
-  const baseN = baseline.n ?? 0;
-  const baseRoi = baseN > 0 ? Math.round(((baseline.pr ?? 0) / (baseN * FORWARD_STAKE)) * 10000) / 100 : 0;
-
-  const wind24Exh1Where = `
-    ${baseWhere}
-    AND EXISTS (SELECT 1 FROM race_weather rw WHERE rw.race_id=dh.race_id AND rw.wind_speed_mps >= 2 AND rw.wind_speed_mps < 4)
-    AND EXISTS (SELECT 1 FROM race_entries re
-      JOIN exhibition_data ed ON ed.race_id=re.race_id AND ed.course=re.entry_course
-      WHERE re.race_id=dh.race_id AND re.boat=CAST(substr(dh.selection,1,1) AS INTEGER)
-        AND ed.exhibition_time IS NOT NULL
-        AND ed.exhibition_time = (
-          SELECT MIN(ed2.exhibition_time) FROM exhibition_data ed2 WHERE ed2.race_id=dh.race_id
-        ))
-  `;
-
-  const sw = db.prepare(`
-SELECT COUNT(*) as n,
-  SUM(COALESCE((SELECT rp.payout_yen FROM race_payouts rp
-    WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta'
-    AND rp.combination='1-3-2' LIMIT 1), 0)) as pr132
-FROM decision_history dh
-WHERE ${wind24Exh1Where}
-`).get() as { n: number; pr132: number };
-
-  const swN = sw.n ?? 0;
-  const swStake = swN * FORWARD_STAKE;
-
-  const allPr132 = db.prepare(`
-SELECT COALESCE((SELECT rp.payout_yen FROM race_payouts rp
-  WHERE rp.race_id=dh.race_id AND rp.bet_type='trifecta'
-  AND rp.combination='1-3-2' LIMIT 1), 0) as pr132
-FROM decision_history dh
-WHERE ${wind24Exh1Where}
-ORDER BY pr132 DESC
-`).all().map((r) => (r as { pr132: number }).pr132);
-  const top2Sum = (allPr132[0] ?? 0) + (allPr132[1] ?? 0);
-  const top2ExclRoi = swStake > 0 ? Math.round((((sw.pr132 ?? 0) - top2Sum) / swStake) * 10000) / 100 : 0;
-
-  const upgradeTarget = 200;
-  const remaining = Math.max(0, upgradeTarget - swN);
-  let verdict: string;
-  if (swN < 30) {
-    verdict = "判定不可(n<30)";
-  } else if (remaining > 0) {
-    verdict = `⏳格上げ待ち (残り${remaining}件)`;
-  } else if (top2ExclRoi >= 100) {
-    verdict = "✅格上げ候補";
-  } else {
-    verdict = "観察継続";
+function buildWeeklyNotifications(db: DatabaseSync, growthPath: string, dryRun: boolean): NotificationRow[] {
+  if (!existsSync(growthPath)) {
+    console.error(`weekly: ${growthPath} が無い（report-growth.ts --no-months を先に実行する）`);
+    return [];
   }
-
-  const today = todayJst();
-  const lines = [
-    `■ 風速2〜4×展示1位 1-3-2`,
-    `  forward n=${swN}/${upgradeTarget} | top2除外ROI: ${top2ExclRoi}%`,
-    `  判定: ${verdict}`,
-    "",
-    `■ 全体 baseline (1-2-3)`,
-    `  forward n=${baseN} | payout ROI: ${baseRoi}%`,
-    "",
-    "※実払戻ベース。current_odds判断は参考値。",
-  ];
-
-  const week = isoWeek(today);
-  const title = `📊 Forward週次 | ${today}`;
-  const body = lines.join("\n");
-
-  const notifications: NotificationRow[] = [];
-  const n = upsertPendingNotification(db, {
-    raceId: `line-forward-weekly-${week}`,
-    title,
-    body,
+  const growth = JSON.parse(readFileSync(growthPath, "utf8")) as { generatedAt: string; rows: GrowthRow[]; knowledgeAdded?: Record<string, number> };
+  const now = new Date();
+  if (now.getTime() - Date.parse(growth.generatedAt) > 48 * 3600_000) {
+    console.error(`weekly: ${growthPath} が古い（${growth.generatedAt}）`);
+    return [];
+  }
+  const pick = (key: string): WeeklyWindow | null => {
+    const r = growth.rows.find((row) => row.key === key);
+    return r ? { from: r.from, to: r.to, buys: r.buys, notified: r.notified, decisionCoverage: r.decisionCoverage, t5Coverage: r.t5Coverage, logLossGap: r.logLossGap } : null;
+  };
+  const thisWeek = pick("w0"), lastWeek = pick("w1");
+  if (!thisWeek || !lastWeek) return [];
+  const message = formatWeeklySummary({ thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now) });
+  const notification = upsertPendingNotification(db, {
+    raceId: `line-weekly-growth-${thisWeek.to}`,
+    title: message.title,
+    body: message.body,
     officialUrl: "https://www.boatrace.jp/",
     dryRun,
   });
-  if (n) notifications.push(n);
-  return notifications;
+  return notification ? [notification] : [];
 }
 
 // ─── errors mode: エラーアラート ───────────────────────────────────────────
@@ -577,8 +510,8 @@ async function run() {
           dryRun,
         );
         break;
-      case "forward":
-        notifications = buildForwardNotifications(db, dryRun);
+      case "weekly":
+        notifications = buildWeeklyNotifications(db, argValue(args, "--growth-json") ?? "data/reports/scorecard/growth-weekly.json", dryRun);
         break;
       case "errors":
         notifications = buildErrorNotifications(db, date, dryRun);
