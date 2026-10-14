@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-protocol-admission-failclosed-20261014",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.protocol-admission-unvalidated-retrospective",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "resultMatchesProtocol-runtime-admission",
+  "symptom": "The open PR matcher admits a retrospective protocol when its digest matches, admits malformed result metrics, and throws for null or a failing ambient serializer rather than returning false.",
+  "rootCauseClass": "BOOLEAN_MATCHER_LACKS_RECORD_VALIDATION_CHRONOLOGY_AND_EXCEPTION_BOUNDARY",
+  "attemptSignature": "pr2286-head0568fb1-matcher-adversarial-protocol-result-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22-typescript-isolated-fixtures/github-pr-research",
+    "materialStateKey": "pr2286-vault-blob:539d07ea97950e54adff09d670ded3ca887823ab"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.admissionBoundary.test.ts",
+    "pull/2286"
+  ],
+  "lesson": "A matching digest proves only bytes, not a valid prospectively frozen protocol. A boolean admission matcher must validate both runtime records, enforce protocol-before-result chronology, and convert unexpected exceptions into false.",
+  "guardrail": "Before accepting a Forward Vault result, validate both record kinds and fields, compare exact protocol/result timestamps, require matching frozen digest and metric family, and test malformed, retrospective, and ambient-serializer negative cases. Keep research/production disconnected.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-14T05:01:58.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-14T05:01:58.000Z",
+  "_digest": "438a0e323d18dd8d22c9fa62dd01171e424d4f345e4025827ea398c34325a9a4"
+}

@@ -67,4 +67,16 @@ export function validateForwardVaultRecord(v:unknown):Validation {
 
 export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; if(!existing)return "APPEND"; if(existing.recordId!==next.recordId)return "CONFLICT"; return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; }
 export function canPoolStages(stages:EvidenceStage[]):boolean { return new Set(stages).size<=1; }
-export function resultMatchesProtocol(result:EvaluationResult,protocol:EvaluationProtocol):boolean { return result.evidenceStage===protocol.evidenceStage&&result.evaluationProtocolId===protocol.evaluationProtocolId&&result.evaluationProtocolDigest===forwardVaultDigest(protocol)&&result.comparisonMode===protocol.comparisonMode&&result.oddsBasis===protocol.oddsBasis&&protocol.metricFamilies.includes(result.metricFamily); }
+export function resultMatchesProtocol(result:EvaluationResult,protocol:EvaluationProtocol):boolean {
+  try {
+    // Runtime inputs must be valid records of the intended kinds; a matching
+    // digest alone does not make a retrospectively authored protocol prospective.
+    if(!validateForwardVaultRecord(result).valid||!validateForwardVaultRecord(protocol).valid)return false;
+    if(result.kind!=="RESULT"||protocol.kind!=="EVALUATION_PROTOCOL")return false;
+    if(Date.parse(protocol.createdAt)>=Date.parse(result.createdAt))return false;
+    return result.evidenceStage===protocol.evidenceStage&&result.evaluationProtocolId===protocol.evaluationProtocolId&&result.evaluationProtocolDigest===forwardVaultDigest(protocol)&&result.comparisonMode===protocol.comparisonMode&&result.oddsBasis===protocol.oddsBasis&&protocol.metricFamilies.includes(result.metricFamily);
+  } catch {
+    // Fail closed even if a getter or ambient JSON serializer throws.
+    return false;
+  }
+}
