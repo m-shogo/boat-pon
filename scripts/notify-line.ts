@@ -122,7 +122,8 @@ SELECT id, race_id, title, body, official_url
 FROM notification_log
 WHERE channel = 'line'
   AND status = 'PENDING'
-  AND created_at >= datetime('now', '-3 days')
+  -- LINE の再試行キーは24時間で切れる。それより古い通知を送り直すと、前の回で届いていた場合に二重になるので、23時間以内だけを送り直す。
+  AND created_at >= datetime('now', '-23 hours')
 ORDER BY id ASC
 `).all().map(notificationRowFromRecord);
 

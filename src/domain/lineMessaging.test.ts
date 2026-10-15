@@ -207,3 +207,17 @@ test("409 は再試行キーが無ければ失敗のまま", async () => {
     /LINE push failed: 409/,
   );
 });
+
+test("締め切りを過ぎたら、送り直しを含めて新しい送信を始めない", async () => {
+  let attempts = 0;
+  await assert.rejects(
+    sendLinePushText({
+      channelAccessToken: "t", to: "U123", text: "hi", endpoint: "https://example.test/push", retryKey: "k-2",
+      deadlineMs: Date.now() + 50,
+      fetchImpl: async () => { attempts += 1; throw new TypeError("fetch failed"); },
+      sleepImpl: (ms) => new Promise((resolve) => setTimeout(resolve, ms > 100 ? 100 : ms)),
+    }),
+    /past deadline/,
+  );
+  assert.equal(attempts, 1);
+});

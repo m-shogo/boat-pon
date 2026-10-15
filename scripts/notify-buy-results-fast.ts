@@ -142,7 +142,7 @@ WHERE notification_log.status <> 'SENT'
         recipients: envConfig.config.recipients,
         text: buildLineText(title, body, oddsUrl),
         endpoint: envConfig.config.endpoint,
-        retryKeyBase: key,
+        retryKeyBase: `${key}:${buy.selection}`,
       });
     } catch (err) {
       // 送れなかったことを記録に残し（スコアカードが数える）、次の回に送り直す。1件の失敗で残りを止めない。

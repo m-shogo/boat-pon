@@ -470,7 +470,10 @@ try {
                 recipients: envConfig.config.recipients,
                 text,
                 endpoint: envConfig.config.endpoint,
-                retryKeyBase: `buy-alert:${buy.race_id}`,
+                // 買い目ごとのキー（同じレースで買い目が変わったら別の通知として送る。Codex のレビュー）。
+                retryKeyBase: `buy-alert:${buy.race_id}:${buy.selection}`,
+                // 送り直しを含め、締切の5分前を過ぎたら新しい送信を始めない。
+                deadlineMs: Date.now() + (actualMinutesBeforeClose - 5) * 60_000,
               });
             } catch (err) {
               // 送れなかったことを記録に残す（スコアカードが「送れていない LINE 通知」として数える）。

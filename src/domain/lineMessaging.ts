@@ -136,6 +136,8 @@ export async function sendLinePushText(args: {
   /** 再試行キー。あれば、通信の失敗・タイムアウト・5xx でも同じキーで送り直す（二重には届かない）。 */
   retryKey?: string;
   timeoutMs?: number;
+  /** この時刻（エポックミリ秒）を過ぎたら、送り直しを含めて新しい送信を始めない（BUY 通知の締め切り）。 */
+  deadlineMs?: number;
 }) {
   const endpoint = args.endpoint ?? LINE_PUSH_ENDPOINT;
   const fetchImpl = args.fetchImpl ?? fetch;
@@ -147,6 +149,7 @@ export async function sendLinePushText(args: {
   };
   if (args.retryKey) headers["X-Line-Retry-Key"] = args.retryKey;
   for (let attempt = 0; ; attempt += 1) {
+    if (args.deadlineMs != null && Date.now() > args.deadlineMs) throw new Error("LINE push skipped: past deadline");
     const delayMs = LINE_DNS_RETRY_DELAYS_MS[attempt];
     let response: Awaited<ReturnType<FetchLike>>;
     let responseText: string;
@@ -181,6 +184,7 @@ export async function sendLinePushTextToRecipients(args: {
   sleepImpl?: SleepLike;
   /** 通知ごとに決まった文字列（例: notification_log の race_id）。宛先ごとの再試行キーを作る。 */
   retryKeyBase?: string;
+  deadlineMs?: number;
 }) {
   const results: Array<{ to: string; status: number; body: string }> = [];
   for (const to of args.recipients) {
@@ -192,6 +196,7 @@ export async function sendLinePushTextToRecipients(args: {
       fetchImpl: args.fetchImpl,
       sleepImpl: args.sleepImpl,
       retryKey: args.retryKeyBase ? lineRetryKey(args.retryKeyBase, to) : undefined,
+      deadlineMs: args.deadlineMs,
     });
     results.push({ to, ...result });
   }
