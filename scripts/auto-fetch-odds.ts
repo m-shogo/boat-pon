@@ -116,6 +116,42 @@ try {
     row.candidate.closeAt,
     now,
   ));
+  // 直前情報が無いと BUY にならない（requireBeforeInfoForBuy）。30分おきの auto-exhibition を待つと、
+  // 締切後に届くことが多かった（2026-10-08: BUY の 94件）。行動の締め切り前（締切 5〜25 分前）で
+  // 直前情報がまだ無いレースだけ、ここで取りに行く（締切が近い順に1回最大 6 件）。
+  // 2026-10-15: オッズの取得とは互いに関係しないので、並行して進める。以前は順番に待っていて、判定までの遅れが
+  // 両方の合計（10/15 朝は直前情報 21〜53 秒＋オッズ 10〜35 秒で 40〜79 秒）になっていた。公式サイトへの同時接続は最大 3。
+  // 保存はどちらも同期の処理で、オッズの保存（BEGIN〜COMMIT）の途中に await は無いので、トランザクションは混ざらない。
+  const fetchBeforeInfoInline = async () => {
+    const startedAt = Date.now();
+    const beforeInfoTargets = collectionPrograms
+      .map((program) => ({
+        program: { raceId: program.race_id, date: program.date, venue: program.venue, raceNo: program.race_no },
+        minutes: minutesUntilRaceClose(program.date, program.close_at, new Date()),
+      }))
+      .filter(({ program, minutes }) => minutes >= settings.minMinutesBeforeClose && minutes <= 25 && !hasBeforeInfoData(db, program.raceId))
+      .sort((a, b) => a.minutes - b.minutes)
+      .slice(0, 6);
+    const beforeInfoCounts = { saved: 0, empty: 0, failed: 0 };
+    for (const { program } of beforeInfoTargets) {
+      try {
+        const result = await fetchAndSaveBeforeInfo(db, program);
+        if (result.status === "saved") beforeInfoCounts.saved += 1;
+        else beforeInfoCounts.empty += 1;
+      } catch (err) {
+        beforeInfoCounts.failed += 1;
+        console.error(`beforeinfo-inline error: ${program.raceId}`, err instanceof Error ? err.message : err);
+      }
+      await sleep(1000);
+    }
+    if (beforeInfoTargets.length > 0) {
+      console.log(`beforeinfo-inline: targets=${beforeInfoTargets.length} saved=${beforeInfoCounts.saved} empty=${beforeInfoCounts.empty} failed=${beforeInfoCounts.failed} ms=${Date.now() - startedAt}`);
+    }
+  };
+  // 後で await するまでの間に失敗しても、未処理の reject で落ちないように catch を付けておく。
+  const beforeInfoDone = (dryRun ? Promise.resolve() : fetchBeforeInfoInline()).catch((err) => {
+    console.error("beforeinfo-inline failed:", err instanceof Error ? err.message : err);
+  });
   await runWithConcurrency(fetchRows, OFFICIAL_FETCH_CONCURRENCY, async (row) => {
     const { candidate } = row;
     if (candidate.source === "sample") return;
@@ -267,30 +303,8 @@ try {
   // 区間ごとの所要時間（判定までの遅れが通知の間に合わなさに直結するので、どこで時間を使っているかを残す）
   const fetchPhaseEndedAt = Date.now();
   if (!dryRun) {
-    // 直前情報が無いと BUY にならない（requireBeforeInfoForBuy）。30分おきの auto-exhibition を待つと、
-    // 締切後に届くことが多かった（2026-10-08: BUY の 94件）。行動の締め切り前（締切 5〜25 分前）で
-    // 直前情報がまだ無いレースだけ、ここで取りに行く（締切が近い順に1回最大 6 件。応答が10秒かかることもあるので、5分の間隔に収める）。
-    const beforeInfoTargets = listProgramInputs(db, today)
-      .map((program) => ({ program, minutes: minutesUntilRaceClose(program.date, program.closeAt, new Date()) }))
-      .filter(({ program, minutes }) => minutes >= settings.minMinutesBeforeClose && minutes <= 25 && !hasBeforeInfoData(db, program.raceId))
-      .sort((a, b) => a.minutes - b.minutes)
-      .slice(0, 6);
-    const beforeInfoCounts = { saved: 0, empty: 0, failed: 0 };
-    for (const { program } of beforeInfoTargets) {
-      try {
-        const result = await fetchAndSaveBeforeInfo(db, program);
-        if (result.status === "saved") beforeInfoCounts.saved += 1;
-        else beforeInfoCounts.empty += 1;
-      } catch (err) {
-        beforeInfoCounts.failed += 1;
-        console.error(`beforeinfo-inline error: ${program.raceId}`, err instanceof Error ? err.message : err);
-      }
-      await sleep(1000);
-    }
-    if (beforeInfoTargets.length > 0) {
-      console.log(`beforeinfo-inline: targets=${beforeInfoTargets.length} saved=${beforeInfoCounts.saved} empty=${beforeInfoCounts.empty} failed=${beforeInfoCounts.failed}`);
-    }
-
+    await beforeInfoDone;
+    const beforeInfoWaitEndedAt = Date.now();
     const decisionPhaseStartedAt = Date.now();
     // 判定にはこの時点の時刻を使う。実行開始時の時刻を使うと、取得に時間がかかった回（スリープをまたいだ回など）で
     // 締切後なのに「締め切り前」と判定してしまう（2026-10-13 浜名湖3R は締切の 18 分後に BUY の行が作られた）。
@@ -462,7 +476,7 @@ try {
         console.error("LINE realtime notify error:", err instanceof Error ? err.message : err);
       }
     }
-    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt} frozen=${frozenCount} frozenBuys=${frozenBuyCount} buysToday=${buyCountToday} phaseMs=fetch:${fetchPhaseEndedAt - runStartedAt},beforeinfo:${decisionPhaseStartedAt - fetchPhaseEndedAt},build:${candidatesBuiltAt - decisionPhaseStartedAt},judge:${judgedAt - candidatesBuiltAt},notify:${Date.now() - judgedAt}`);
+    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt} frozen=${frozenCount} frozenBuys=${frozenBuyCount} buysToday=${buyCountToday} phaseMs=fetch:${fetchPhaseEndedAt - runStartedAt},beforeinfoWait:${beforeInfoWaitEndedAt - fetchPhaseEndedAt},build:${candidatesBuiltAt - decisionPhaseStartedAt},judge:${judgedAt - candidatesBuiltAt},notify:${Date.now() - judgedAt}`);
   }
 
   console.log(`auto-fetch-odds done: fetched=${fetched} skipped=${skipped} checkpointCompleteSkipped=${checkpointCompleteSkipped} failed=${failed} saved=${saved} dryRun=${dryRun} elapsedMs=${Date.now() - runStartedAt}`);
