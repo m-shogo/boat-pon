@@ -341,9 +341,14 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
   const ledgers = loadBuyLedgers(db, todayJst());
   for (const row of rows) {
     // 締切後の速報（scripts/notify-buy-results-fast.ts）を送っていて（はずれを日次まとめに載せた IN_SUMMARY も含む）、着順が確定と同じなら、確定通知は送らない。
-    const fast = db.prepare("SELECT body FROM notification_log WHERE race_id = ? AND channel = 'line' AND status IN ('SENT', 'IN_SUMMARY')")
-      .get(`line-buy-result-fast-${row.race_id}`) as { body: string } | undefined;
-    if (fast && row.trifecta && fast.body.includes(`実着順: ${row.trifecta}\n`)) continue;
+    const fast = db.prepare("SELECT status, body FROM notification_log WHERE race_id = ? AND channel = 'line' AND status IN ('SENT', 'IN_SUMMARY')")
+      .get(`line-buy-result-fast-${row.race_id}`) as { status: string; body: string } | undefined;
+    // IN_SUMMARY（はずれを日次まとめに載せた）は、その日の日次まとめが実際に送れたときだけ「伝えた」とみなす。
+    // 日次まとめが失敗していたら、確定通知で知らせる（Codex のレビューの指摘）。
+    const delivered = fast?.status === "SENT" || (fast?.status === "IN_SUMMARY" && db.prepare(
+      "SELECT 1 FROM notification_log WHERE race_id = ? AND channel = 'line' AND status = 'SENT'",
+    ).get(`line-daily-${row.date}`) != null);
+    if (fast && delivered && row.trifecta && fast.body.includes(`実着順: ${row.trifecta}\n`)) continue;
     const message = buildBuyResultNotification({
       venue: row.venue,
       raceNo: row.race_no,
