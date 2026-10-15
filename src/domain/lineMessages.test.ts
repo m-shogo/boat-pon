@@ -9,7 +9,7 @@ test("BUY の通知は 🔔 で始まり、オッズ・当たる確率・期待�
     calibratedProbability: 0.011, v3Probability: 0.058, voteUrl: "https://example.invalid/vote",
   });
   assert.equal(title, "🔔 BUY 常滑8R 1-2-3（締切 13:46）");
-  assert.match(body, /^オッズ 66\.1倍 → 当たれば 100円が 6,610円/);
+  assert.match(body, /^買い方: 常滑 8R・3連単 1-2-3（締切 13:46 まで）\nオッズ 66\.1倍 → 当たれば 100円が 6,610円/);
   assert.match(body, /当たる確率: 約1\.1%（v3 の予想は 5\.8%）/);
   assert.match(body, /期待回収: 73%（続けると 100円あたり約73円が戻る計算）/);
   assert.doesNotMatch(body, /これまでの BUY/);
@@ -22,7 +22,7 @@ test("市場補正が計算できないときは v3 の予想だけを出す", (
     venue: "福岡", raceNo: 5, selection: "1-2-3", closeAt: null, quoteOdds: null,
     calibratedProbability: null, v3Probability: 0.06, voteUrl: "https://example.invalid/vote",
   });
-  assert.match(body, /^当たる確率: v3 の予想で 6\.0%（市場補正は計算できず）/);
+  assert.match(body, /^買い方: 福岡 5R・3連単 1-2-3\n当たる確率: v3 の予想で 6\.0%（市場補正は計算できず）/);
 });
 
 const ledger = (rows: Array<[string, boolean | null, number | null]>) => summarizeBuyLedger(rows.map(([date, hit, payoutYen]) => ({ date, hit, payoutYen })));
@@ -91,7 +91,7 @@ test("BUY の通知に、これまでの BUY の通算成績（勝敗・収支�
     calibratedProbability: 0.011, v3Probability: 0.058, voteUrl: "https://example.invalid/vote",
     total: ledger([["2026-08-01", true, 4_270], ["2026-10-13", false, null], ["2026-10-14", null, null]]),
   });
-  assert.match(body, /これまでの BUY: 1勝 1敗（\+4,070円）・回収率 2135%\n\n投票:/);
+  assert.match(body, /これまでの BUY: 1勝 1敗（\+4,070円）・回収率 2135%\n\n投票サイト:/);
 });
 
 test("日次まとめに本命予想の欄と、BUY との比較を出す", () => {
@@ -108,4 +108,14 @@ test("日次まとめに本命予想の欄と、BUY との比較を出す", () =
   assert.match(body, /⭐ 本命予想（参考。各レースで締切前のオッズがいちばん当たりやすい1点を、後から集計。通知・購入の推奨ではない）\n10\/14: 1勝 9敗・収支 -300円（払戻 700円 \/ 買った額 1,000円・回収率 70%）/);
   assert.match(body, /7\/1 から: 2勝 18敗・収支 -600円/);
   assert.match(body, /比べると（通算）: 的中率 BUY 50\.0% \/ 本命予想 10\.0%・回収率 BUY 2135% \/ 本命予想 70%/);
+});
+
+test("BUY の通知は、買い方（場・R・券種・買い目・金額・締切）と、このレースの公式ページへのリンクを出す", () => {
+  const { body } = formatBuyAlert({
+    venue: "芦屋", raceNo: 6, selection: "1-2-3", closeAt: "11:00", quoteOdds: 75.4,
+    calibratedProbability: 0.01, v3Probability: 0.061, voteUrl: "https://bu.tbbr.jp/",
+    stakeYen: 100, officialRaceUrl: "https://www.boatrace.jp/owpc/pc/race/odds3t?rno=6&jcd=21&hd=20261015",
+  });
+  assert.match(body, /^買い方: 芦屋 6R・3連単 1-2-3・100円（締切 11:00 まで）/);
+  assert.match(body, /① このレースの公式ページ（ログインして「投票」から）: https:\/\/www\.boatrace\.jp\/owpc\/pc\/race\/odds3t\?rno=6&jcd=21&hd=20261015\n② 投票サイト: https:\/\/bu\.tbbr\.jp\//);
 });

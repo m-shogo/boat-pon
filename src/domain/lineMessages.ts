@@ -23,11 +23,17 @@ export type BuyAlertInput = {
   voteUrl: string;
   /** これまでの BUY の通算成績（渡すと「これまでの BUY」の行を出す）。 */
   total?: BuyLedgerSummary;
+  /** 1点の金額（円）。渡すと「買い方」の行に出す。 */
+  stakeYen?: number;
+  /** このレースの公式ページ（ログインすると、ページの「投票」から買える）。 */
+  officialRaceUrl?: string;
 };
 
 export function formatBuyAlert(input: BuyAlertInput): { title: string; body: string } {
   const title = `🔔 BUY ${input.venue}${input.raceNo}R ${input.selection}${input.closeAt ? `（締切 ${input.closeAt}）` : ""}`;
   const lines: string[] = [];
+  // 買うときに入力するものを最初に1行で（2026-10-15、ユーザーの要望「BUY は簡単に買えるように」）
+  lines.push(`買い方: ${input.venue} ${input.raceNo}R・3連単 ${input.selection}${input.stakeYen ? `・${yen(input.stakeYen)}` : ""}${input.closeAt ? `（締切 ${input.closeAt} まで）` : ""}`);
   if (input.quoteOdds != null) lines.push(`オッズ ${input.quoteOdds.toFixed(1)}倍 → 当たれば 100円が ${yen(input.quoteOdds * 100)}`);
   if (input.calibratedProbability != null) {
     lines.push(`当たる確率: 約${pct1(input.calibratedProbability)}${input.v3Probability != null ? `（v3 の予想は ${pct1(input.v3Probability)}）` : ""}`);
@@ -41,7 +47,9 @@ export function formatBuyAlert(input: BuyAlertInput): { title: string; body: str
   if (input.total && input.total.settled > 0) {
     lines.push(`これまでの BUY: ${formatTally(input.total)}・回収率 ${Math.round((input.total.officialRoi ?? 0) * 100)}%`);
   }
-  lines.push("", `投票: ${input.voteUrl}`, PAPER_NOTE);
+  lines.push("");
+  if (input.officialRaceUrl) lines.push(`① このレースの公式ページ（ログインして「投票」から）: ${input.officialRaceUrl}`);
+  lines.push(`${input.officialRaceUrl ? "② " : ""}投票サイト: ${input.voteUrl}`, PAPER_NOTE);
   return { title, body: lines.join("\n") };
 }
 

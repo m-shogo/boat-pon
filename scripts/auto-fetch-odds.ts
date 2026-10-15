@@ -462,8 +462,11 @@ try {
               v3Probability: buy.estimated_hit_rate,
               voteUrl,
               total: totalLedger,
+              stakeYen: buy.recommended_stake_yen,
+              officialRaceUrl: oddsUrl,
             });
-            const text = buildLineText(title, body, oddsUrl);
+            // 公式ページのリンクは本文の「買い方」の下に出すので、末尾の「公式:」は付けない
+            const text = buildLineText(title, body);
 
             try {
               await sendLinePushTextToRecipients({
