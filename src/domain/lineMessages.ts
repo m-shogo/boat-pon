@@ -4,7 +4,7 @@
  * 専門用語（EV・logloss・モデル名）は LINE に出さず、スコアカードに寄せる。
  */
 import type { BuyLedgerSummary } from "./accuracyScorecard";
-import { formatMoney, formatNet, formatTally } from "./buyResultNotification";
+import { formatNet, formatTally, formatTallyMoney } from "./buyResultNotification";
 
 const PAPER_NOTE = "※paper検証（実際の購入なし）";
 const yen = (value: number) => `${Math.round(value).toLocaleString("ja-JP")}円`;
@@ -104,16 +104,11 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   lines.push(
     "",
     "💰 収支（100円ずつ買った場合・公式の払戻）",
-    `今月: ${formatTally(input.month)}`,
-    `　${formatMoney(input.month)}`,
-    `通算: ${formatTally(input.total)}`,
-    `　${formatMoney(input.total)}`,
+    `今月: ${formatTallyMoney(input.month)}`,
+    `通算: ${formatTallyMoney(input.total)}`,
   );
   if (input.notifiedTotal) {
-    lines.push(`うち締切前に通知できた分（実際に買えた分）: ${input.notifiedTotal.buys}件 ${formatTally(input.notifiedTotal)}・回収率 ${input.notifiedTotal.settled ? `${Math.round((input.notifiedTotal.officialRoi ?? 0) * 100)}%` : "-"}`);
-  }
-  if (input.sinceFix) {
-    lines.push(`${md(input.sinceFix.from)} 以降（締切前に判定を固定した記録）: ${formatTally(input.sinceFix.ledger)}・締切前に通知 ${input.sinceFix.notified}/${input.sinceFix.ledger.buys}`);
+    lines.push(`うち締切前に通知できた分（実際に買えた分）: ${formatTallyMoney(input.notifiedTotal)}`);
   }
   if (input.alerts.length) lines.push("", `⚠️ 注意 ${input.alerts.length} 件: ${input.alerts[0]}${input.alerts.length > 1 ? "（ほかはスコアカード）" : ""}`);
   const c = input.counts;
@@ -162,7 +157,7 @@ export function formatWeeklySummary(input: WeeklySummaryInput): { title: string;
   const lines = [
     `成績: BUY ${t.buys.buys}件 → ${formatTally(t.buys)}`,
     `　先週: BUY ${l.buys.buys}件 → ${formatTally(l.buys)}`,
-    ...(input.total ? [`通算: ${formatTally(input.total)}`, `　${formatMoney(input.total)}`] : []),
+    ...(input.total ? [`通算: ${formatTallyMoney(input.total)}`] : []),
     `締切前に通知できた BUY: ${t.buys.buys ? `${t.notified}/${t.buys.buys}` : "-"}（先週 ${l.buys.buys ? `${l.notified}/${l.buys.buys}` : "-"}）${trend(share(t), share(l), true, 0.05)}`,
     `オッズの収集（締切5分前の全120通り）: ${pct0(t.t5Coverage)}（先週 ${pct0(l.t5Coverage)}）${trend(t.t5Coverage, l.t5Coverage, true, 0.05)}`,
     `判定の記録: 番組の ${pct0(t.decisionCoverage)}（先週 ${pct0(l.decisionCoverage)}）${trend(t.decisionCoverage, l.decisionCoverage, true, 0.05)}`,
