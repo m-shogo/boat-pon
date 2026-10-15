@@ -12,6 +12,7 @@ test("BUY の通知は 🔔 で始まり、オッズ・当たる確率・期待�
   assert.match(body, /^オッズ 66\.1倍 → 当たれば 100円が 6,610円/);
   assert.match(body, /当たる確率: 約1\.1%（v3 の予想は 5\.8%）/);
   assert.match(body, /期待回収: 73%（続けると 100円あたり約73円が戻る計算）/);
+  assert.doesNotMatch(body, /これまでの BUY/);
   assert.match(body, /※paper検証（実際の購入なし）$/);
   assert.doesNotMatch(`${title}\n${body}`, /🎯|EV|logloss/);
 });
@@ -82,4 +83,13 @@ test("週次まとめは、先週と比べた良し悪しを各行に付ける",
   assert.match(body, /オッズの収集（締切5分前の全120通り）: 72%（先週 60%） ↑/);
   assert.match(body, /確率の精度: v3 は市場補正より 0\.015 不正確（先週 0\.012、小さいほど良い） ↓/);
   assert.match(body, /知識: 今週 \+4 件/);
+});
+
+test("BUY の通知に、これまでの BUY の通算成績（勝敗・収支・回収率）を出す", () => {
+  const { body } = formatBuyAlert({
+    venue: "常滑", raceNo: 8, selection: "1-2-3", closeAt: "13:46", quoteOdds: 66.1,
+    calibratedProbability: 0.011, v3Probability: 0.058, voteUrl: "https://example.invalid/vote",
+    total: ledger([["2026-08-01", true, 4_270], ["2026-10-13", false, null], ["2026-10-14", null, null]]),
+  });
+  assert.match(body, /これまでの BUY: 1勝 1敗（\+4,070円）・回収率 2135%\n\n投票:/);
 });

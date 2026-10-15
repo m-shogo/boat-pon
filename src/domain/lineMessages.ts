@@ -21,6 +21,8 @@ export type BuyAlertInput = {
   /** v3 の推定的中率（BUY 行では実態の数倍になりやすい）。 */
   v3Probability: number | null;
   voteUrl: string;
+  /** これまでの BUY の通算成績（渡すと「これまでの BUY」の行を出す）。 */
+  total?: BuyLedgerSummary;
 };
 
 export function formatBuyAlert(input: BuyAlertInput): { title: string; body: string } {
@@ -35,6 +37,9 @@ export function formatBuyAlert(input: BuyAlertInput): { title: string; body: str
     }
   } else if (input.v3Probability != null) {
     lines.push(`当たる確率: v3 の予想で ${pct1(input.v3Probability)}（市場補正は計算できず）`);
+  }
+  if (input.total && input.total.settled > 0) {
+    lines.push(`これまでの BUY: ${formatTally(input.total)}・回収率 ${Math.round((input.total.officialRoi ?? 0) * 100)}%`);
   }
   lines.push("", `投票: ${input.voteUrl}`, PAPER_NOTE);
   return { title, body: lines.join("\n") };

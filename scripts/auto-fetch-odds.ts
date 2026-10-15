@@ -29,6 +29,7 @@ import { calibratedSelectionProbability } from "../src/domain/accuracyScorecard"
 import { formatBuyAlert } from "../src/domain/lineMessages";
 import { loadChampionCalibration, loadLatestCapturesForRace } from "./lib/marketCaptures";
 import { fetchAndSaveBeforeInfo } from "./lib/beforeInfo";
+import { loadBuyLedgers } from "./lib/buyLedger";
 import { OWNER_PROPELLER_STABLE_START } from "../src/domain/raceRegime";
 
 const dryRun = process.argv.includes("--dry-run");
@@ -420,6 +421,9 @@ try {
         loadEnvFiles([".env"]);
         const envConfig = lineMessagingConfigFromEnv(process.env);
         if (envConfig.enabled && !envConfig.config.dryRun) {
+          // これまでの BUY の通算成績（通知に1行出す）。読めなくても通知は止めない。
+          let totalLedger: ReturnType<typeof loadBuyLedgers>["total"] | undefined;
+          try { totalLedger = loadBuyLedgers(db, today).total; } catch (err) { console.error("LINE realtime ledger skipped:", err instanceof Error ? err.message : err); }
           for (const buy of pendingBuys) {
             const actualMinutesBeforeClose = buy.close_at == null ? null : minutesUntilRaceClose(buy.date, buy.close_at, new Date());
             if (actualMinutesBeforeClose == null || actualMinutesBeforeClose < 5) {
@@ -453,6 +457,7 @@ try {
               calibratedProbability,
               v3Probability: buy.estimated_hit_rate,
               voteUrl,
+              total: totalLedger,
             });
             const text = buildLineText(title, body, oddsUrl);
 
