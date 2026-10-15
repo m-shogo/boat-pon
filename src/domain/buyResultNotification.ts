@@ -23,6 +23,20 @@ const yen = (value: number) => `${value.toLocaleString("ja-JP")}円`;
 const signedYen = (value: number) => `${value >= 0 ? "+" : "-"}${Math.abs(value).toLocaleString("ja-JP")}円`;
 
 /** 成績を「n勝 m敗（±円）」で表す。100円ずつ買った場合の収支。 */
+/** 100円ずつ買った場合の、払戻・買った額・収支・回収率（精算済みだけ。結果待ち・返還は含めない）。 */
+export function formatMoney(ledger: BuyLedgerSummary): string {
+  const stake = ledger.settled * 100;
+  const payout = Math.round((ledger.officialRoi ?? 0) * stake);
+  const rate = stake ? `${Math.round((payout / stake) * 100)}%` : "-";
+  return `払戻 ${payout.toLocaleString("ja-JP")}円 / 買った額 ${stake.toLocaleString("ja-JP")}円 = 収支 ${signedYen(payout - stake)}（回収率 ${rate}）`;
+}
+
+/** 収支だけ（見出し用）。 */
+export function formatNet(ledger: BuyLedgerSummary): string {
+  const stake = ledger.settled * 100;
+  return signedYen(Math.round((ledger.officialRoi ?? 0) * stake) - stake);
+}
+
 export function formatTally(ledger: BuyLedgerSummary): string {
   const payout = Math.round((ledger.officialRoi ?? 0) * ledger.settled * 100);
   return `${ledger.hits}勝 ${ledger.misses}敗（${signedYen(payout - ledger.settled * 100)}）`;

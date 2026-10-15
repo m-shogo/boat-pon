@@ -22,7 +22,7 @@ import { minutesUntilRaceClose } from "../src/domain/livePersistence";
 import { officialResultUrl } from "../src/domain/officialLinks";
 import { parseRaceResultTrifecta } from "../src/domain/officialRaceResultPage";
 import { venueCodes } from "./fetch-official-odds";
-import { loadBuyLedgers } from "./lib/buyLedger";
+import { loadBuyLedgers, loadFastOutcomes } from "./lib/buyLedger";
 
 const MIN_MINUTES_AFTER_CLOSE = 8;
 const MAX_MINUTES_AFTER_CLOSE = 120;
@@ -98,7 +98,7 @@ ORDER BY p.close_at
       currentOdds: buy.current_odds,
       // 速報の時点では確定結果（race_results）が無いので、このレースの結果を足して今月・通算を出す。
       tally: (() => {
-        const ledgers = loadBuyLedgers(db, buy.date, new Map([[buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null }]]));
+        const ledgers = loadBuyLedgers(db, buy.date, new Map([...loadFastOutcomes(db), [buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null }]]));
         return { month: ledgers.month, total: ledgers.total };
       })(),
     });

@@ -4,7 +4,7 @@
  * 専門用語（EV・logloss・モデル名）は LINE に出さず、スコアカードに寄せる。
  */
 import type { BuyLedgerSummary } from "./accuracyScorecard";
-import { formatTally } from "./buyResultNotification";
+import { formatMoney, formatNet, formatTally } from "./buyResultNotification";
 
 const PAPER_NOTE = "※paper検証（実際の購入なし）";
 const yen = (value: number) => `${Math.round(value).toLocaleString("ja-JP")}円`;
@@ -59,6 +59,8 @@ export type DailySummaryInput = {
   total: BuyLedgerSummary;
   /** 判定を締め切りで固定した後の記録（行動できた記録）。 */
   sinceFix?: { from: string; ledger: BuyLedgerSummary; notified: number };
+  /** 通算のうち、締切前に通知できた BUY だけ（実際に行動できた分）。 */
+  notifiedTotal?: BuyLedgerSummary;
   alerts: string[];
   counts: { buy: number; watch: number; skip: number; oddsPresent: number; total: number };
   /** その日の番組数と、締切5分前の全120通りのオッズを取れたレース数。欠けを番組数に対して見せる。 */
@@ -79,7 +81,7 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   const hits = settledToday.filter((b) => b.result === "hit").length;
   const misses = settledToday.filter((b) => b.result === "miss").length;
   const titleResult = settledToday.length ? ` → ✅${hits} ❌${misses}` : "";
-  const title = `📊 ${md(input.date)} のまとめ: BUY ${input.todayBuys.length}件${titleResult}`;
+  const title = `📊 ${md(input.date)} のまとめ: BUY ${input.todayBuys.length}件${titleResult}｜通算 ${formatNet(input.total)}`;
 
   const lines: string[] = [];
   if (input.todayBuys.length === 0) {
@@ -94,7 +96,17 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   if (input.lastSettledDay && input.lastSettledDay.date !== input.date && input.lastSettledDay.ledger.settled > 0) {
     lines.push(`${md(input.lastSettledDay.date)} の結果: ${formatTally(input.lastSettledDay.ledger)}`);
   }
-  lines.push("", `今月: ${formatTally(input.month)}`, `通算: ${formatTally(input.total)}`);
+  lines.push(
+    "",
+    "💰 収支（100円ずつ買った場合・公式の払戻）",
+    `今月: ${formatTally(input.month)}`,
+    `　${formatMoney(input.month)}`,
+    `通算: ${formatTally(input.total)}`,
+    `　${formatMoney(input.total)}`,
+  );
+  if (input.notifiedTotal) {
+    lines.push(`うち締切前に通知できた分（実際に買えた分）: ${input.notifiedTotal.buys}件 ${formatTally(input.notifiedTotal)}・回収率 ${input.notifiedTotal.settled ? `${Math.round((input.notifiedTotal.officialRoi ?? 0) * 100)}%` : "-"}`);
+  }
   if (input.sinceFix) {
     lines.push(`${md(input.sinceFix.from)} 以降（締切前に判定を固定した記録）: ${formatTally(input.sinceFix.ledger)}・締切前に通知 ${input.sinceFix.notified}/${input.sinceFix.ledger.buys}`);
   }

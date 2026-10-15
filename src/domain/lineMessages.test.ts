@@ -37,16 +37,18 @@ test("日次まとめは、今日の BUY の結果・昨日の結果・今月と
     month: ledger([["2026-10-13", false, null], ["2026-10-13", false, null]]),
     total: ledger([["2026-08-01", true, 4_270], ["2026-10-13", false, null]]),
     sinceFix: { from: "2026-10-10", ledger: ledger([["2026-10-13", false, null]]), notified: 1 },
+    notifiedTotal: ledger([["2026-10-13", false, null], ["2026-10-13", false, null]]),
     alerts: ["ジョブ auto-odds が 3.0 時間動いていない"],
     counts: { buy: 2, watch: 5, skip: 115, oddsPresent: 122, total: 122 },
     coverage: { programs: 156, t5Races: 88 },
   });
-  assert.equal(title, "📊 10/14 のまとめ: BUY 2件 → ✅1 ❌0");
+  assert.equal(title, "📊 10/14 のまとめ: BUY 2件 → ✅1 ❌0｜通算 +4,070円");
   assert.match(body, /記録できたレース: 判定 122\/156・締切5分前のオッズ 88\/156（足りない分は PC のスリープや取得の失敗で記録なし）/);
   assert.match(body, /・常滑8R 1-2-3（🔔 通知済み）→ ✅ 的中 4,270円/);
   assert.match(body, /・津4R 1-2-3（🔔 通知済み）→ ⏳ 結果待ち/);
   assert.match(body, /10\/13 の結果: 0勝 2敗（-200円）/);
-  assert.match(body, /今月: 0勝 2敗（-200円）\n通算: 1勝 1敗（\+4,070円）/);
+  assert.match(body, /💰 収支（100円ずつ買った場合・公式の払戻）\n今月: 0勝 2敗（-200円）\n　払戻 0円 \/ 買った額 200円 = 収支 -200円（回収率 0%）\n通算: 1勝 1敗（\+4,070円）\n　払戻 4,270円 \/ 買った額 200円 = 収支 \+4,070円（回収率 2135%）/);
+  assert.match(body, /うち締切前に通知できた分（実際に買えた分）: 2件 0勝 2敗（-200円）・回収率 0%/);
   assert.match(body, /10\/10 以降（締切前に判定を固定した記録）: 0勝 1敗（-100円）・締切前に通知 1\/1/);
   assert.match(body, /⚠️ 注意 1 件: ジョブ auto-odds が 3\.0 時間動いていない/);
   assert.doesNotMatch(`${title}\n${body}`, /🎯|model=|EV/);
@@ -58,7 +60,7 @@ test("BUY が無い日は見送りの件数だけを出す", () => {
     month: ledger([]), total: ledger([]), alerts: [],
     counts: { buy: 0, watch: 3, skip: 150, oddsPresent: 100, total: 156 },
   });
-  assert.equal(title, "📊 10/14 のまとめ: BUY 0件");
+  assert.equal(title, "📊 10/14 のまとめ: BUY 0件｜通算 +0円");
   assert.match(body, /^今日の BUY: なし（見送り 150 レース）/);
 });
 

@@ -15,13 +15,39 @@ export type BuyLedgers = {
   month: BuyLedgerSummary;
   total: BuyLedgerSummary;
   sinceFix: { from: string; ledger: BuyLedgerSummary; notified: number };
+  /** 通算のうち、締切前に通知できた BUY だけ（実際に行動できた分の収支）。 */
+  notifiedTotal: BuyLedgerSummary;
   lastSettledDay: { date: string; ledger: BuyLedgerSummary } | null;
 };
+
+type ExtraOutcomes = Map<string, { hit: boolean; payoutYen: number | null }>;
+
+/**
+ * 速報（公式の結果ページ）で送った結果。確定結果（K ファイルの取り込み）は翌日の 21:30 なので、それまではこれで精算する。
+ * 21:30 は結果の取り込みと日次まとめが同時に動くため、確定結果だけを見ると「前日の結果」が一昨日の分になることがあった。
+ * 的中で払戻がわからない（同着など）ものは、未精算のままにする。
+ */
+export function loadFastOutcomes(db: DatabaseSync): ExtraOutcomes {
+  const rows = db.prepare(`SELECT race_id, title, body FROM notification_log
+    WHERE race_id LIKE 'line-buy-result-fast-%' AND channel = 'line' AND status = 'SENT'`).all() as Array<{ race_id: string; title: string; body: string }>;
+  const outcomes: ExtraOutcomes = new Map();
+  for (const row of rows) {
+    const raceId = row.race_id.replace("line-buy-result-fast-", "");
+    const actual = row.body.match(/実着順: (\d-\d-\d)/)?.[1];
+    const selection = row.body.match(/買い目: (\d-\d-\d)/)?.[1];
+    if (!actual || !selection) continue;
+    const hit = actual === selection;
+    const payout = row.title.match(/払戻 ([\d,]+)円/)?.[1];
+    if (hit && !payout) continue;
+    outcomes.set(raceId, { hit, payoutYen: hit && payout ? Number(payout.replaceAll(",", "")) : null });
+  }
+  return outcomes;
+}
 
 export function loadBuyLedgers(
   db: DatabaseSync,
   today: string,
-  extraOutcomes: Map<string, { hit: boolean; payoutYen: number | null }> = new Map(),
+  extraOutcomes: ExtraOutcomes = loadFastOutcomes(db),
 ): BuyLedgers {
   // 同じレース・券種・買い目の判定行が複数あっても、最新の1行だけを数える。
   const rows = db.prepare(`
@@ -40,15 +66,18 @@ LEFT JOIN official_programs p ON p.race_id = dh.race_id
 WHERE dh.row_num = 1
 `).all(LIVE_MONITOR_MODEL_VERSION, today) as Row[];
 
+  // 確定結果（race_results）があればそれを使い、無ければ速報の結果を使う。
   const outcome = (row: Row): BuyOutcome => {
+    const settled = row.trifecta != null && row.trifecta !== "" && !row.returned && row.payout_yen != null;
+    if (settled || row.returned) return { date: row.date, hit: settled ? row.trifecta === row.selection : null, payoutYen: row.payout_yen };
     const extra = extraOutcomes.get(row.race_id);
     if (extra) return { date: row.date, hit: extra.hit, payoutYen: extra.payoutYen };
-    const settled = row.trifecta != null && row.trifecta !== "" && !row.returned && row.payout_yen != null;
-    return { date: row.date, hit: settled ? row.trifecta === row.selection : null, payoutYen: row.payout_yen };
+    return { date: row.date, hit: null, payoutYen: null };
   };
   const month = today.slice(0, 7);
   const sinceFixRows = rows.filter((row) => row.date >= LIVE_RECORD_FIX_DATE);
-  const notified = sinceFixRows.filter((row) => classifyBuyTiming({ date: row.date, closeAt: row.close_at, sentAt: row.sent_at, infoAt: row.info_at }) === "notified").length;
+  const isNotified = (row: Row) => classifyBuyTiming({ date: row.date, closeAt: row.close_at, sentAt: row.sent_at, infoAt: row.info_at }) === "notified";
+  const notified = sinceFixRows.filter(isNotified).length;
 
   // 直近で「BUY があって、全部の結果がそろった日」。ふつうは昨日。
   const dates = [...new Set(rows.map((row) => row.date))].filter((date) => date < today).sort().reverse();
@@ -65,6 +94,7 @@ WHERE dh.row_num = 1
     month: summarizeBuyLedger(rows.filter((row) => row.date.startsWith(month)).map(outcome)),
     total: summarizeBuyLedger(rows.map(outcome)),
     sinceFix: { from: LIVE_RECORD_FIX_DATE, ledger: summarizeBuyLedger(sinceFixRows.map(outcome)), notified },
+    notifiedTotal: summarizeBuyLedger(rows.filter(isNotified).map(outcome)),
     lastSettledDay,
   };
 }

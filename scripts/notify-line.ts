@@ -241,6 +241,7 @@ ORDER BY p.close_at, dh.venue, dh.race_no
     month: ledgers.month,
     total: ledgers.total,
     sinceFix: ledgers.sinceFix,
+    notifiedTotal: ledgers.notifiedTotal,
     alerts: scorecardAlerts(new Date()),
     counts,
     coverage: dailyCoverage(db, date),
