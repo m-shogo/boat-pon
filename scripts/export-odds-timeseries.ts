@@ -17,6 +17,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSy
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { gunzipSync, gzipSync } from "node:zlib";
+import { loadEnvFiles } from "../src/domain/envFile";
 import { addDays, todayJst } from "./lib/marketCaptures";
 import {
   canonicalOddsTimeseriesRows, expandOddsTimeseriesCaptures, groupOddsTimeseriesRows,
@@ -31,6 +32,8 @@ const TO = single ?? arg("--to") ?? FROM;
 const FORCE = args.includes("--force");
 const VERIFY = args.includes("--verify");
 const EXPORT_ROOT = "data/exports/odds-timeseries";
+// 複製先は .env の BOAT_PON_EXPORT_MIRROR_DIR（シェルの環境変数が優先）。launchd のジョブは .env を自動では読まないので、ここで読む。
+loadEnvFiles([".env"]);
 const MIRROR = process.env.BOAT_PON_EXPORT_MIRROR_DIR?.trim() || null;
 for (const d of [FROM, TO]) if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error(`invalid date: ${d}`);
 
