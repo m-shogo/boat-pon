@@ -48,7 +48,7 @@
 - 本番への反映は、テストを通してから本番の作業コピーで `git merge --ff-only <ブランチ>` をして push する。auto-odds・通知などライブ経路の変更は、レースの無い 21:05〜07:30 にだけ反映する。実行中のジョブがあれば終わるまで待つ。
 - 2026-10-14 時点では、本番の作業コピーは修正ブランチ `docs/strict-review-20261008` で動いている。PR がマージされたら `git switch main && git pull --ff-only` で main に戻す。
 
-## 7. 動いているもの（2026-10-14 時点）
+## 7. 動いているもの（2026-10-15 時点）
 
 | ジョブ | いつ | すること |
 |---|---|---|
@@ -61,7 +61,13 @@
 | 速報（未登録） | 10分ごと | `scripts/notify-buy-results-fast.ts`。登録はユーザー作業 |
 | 公開版スコアカード（未登録） | 22:15 | `scripts/publish-accuracy-scorecard.sh`。ChatGPT のタスクが読む。登録はユーザー作業 |
 
-止めるもの（ユーザー作業）: 研究工場（intent dispatch・N2 の定期ワークフロー・self-hosted runner・認可切れの private capture）、週次レビュー（`com.shogo.boat-pon.weekly-review`）。手順はレビュー文書の末尾。
+止めるもの（ユーザー作業）: 研究工場（self-hosted runner・認可切れの private capture の launchd）、週次レビュー（`com.shogo.boat-pon.weekly-review`。2026-10-15 からスクリプトは何もしないで終わる）。手順はレビュー文書の末尾。研究用の GitHub のワークフローは、main に入れば止まる（2026-10-15 にファイルを外した）。
+
+## 7.5 構成（2026-10-15〜 最小構成）
+
+- 撤退前の研究基盤・研究コード・研究計画の文書・旧レポート（約 2,450 ファイル）は main から外した。外す前の状態はタグ `archive/before-minimal-20261015`。**読まない・戻さない**のが原則。戻すのは、ユーザーが決めた決定的な実験に必要なときだけ（`git checkout archive/before-minimal-20261015 -- <path>`）。
+- 残したのは、launchd の入口から import をたどって届くファイルと、そのテスト・画面・文書だけ。新しいファイルを足すときは「ライブ経路・通知・精度・監査のどれに使うか」をコミットに書く。使わなくなったら消す。
+- 少しずつ遅くなる処理・ディスク・LINE の送信失敗は、毎晩のスコアカードが見張る（目安を超えたら日次の LINE の「注意」に出る）。
 
 ## 8. データの注意（監査 2026-10-14、[`docs/reviews/2026-10-14-data-audit.md`](docs/reviews/2026-10-14-data-audit.md)）
 
@@ -77,4 +83,5 @@
 - `npm run audit:data-integrity` … 過去データの監査
 - `npm run report:growth` … 1週間前・1か月前・半年前との比較（半年分で約5分。`--no-months` は直近60日だけで数秒〜数十秒）
 - `npx tsx scripts/notify-line.ts daily --date YYYY-MM-DD --preview` … LINE の文面の確認（送らない・DB に書かない）。週次は `weekly --preview`
-- 判定の再現: `npx tsx scripts/review-20261007-t5-residual-extended.ts` / `npx tsx scripts/review-20261007-late-money.ts`
+- 判定の再現: `npm run review:t5-residual` / `npm run review:late-money`（読み取り専用）
+- npm スクリプトは 34 個だけ（2026-10-15 に 264 個から減らした）。一覧は `package.json`

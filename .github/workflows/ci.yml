@@ -1,13 +1,21 @@
 name: CI
 
+# 撤退後の最小構成（2026-10-15〜）: 型チェック・テスト・画面のビルドだけを回す。
+# 研究用のワークフロー（intent dispatch・N2・公開ダッシュボードのデプロイなど）は外した。
+# 外す前の状態はタグ archive/before-minimal-20261015 にある。
+
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -18,14 +26,6 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.302
-
-      - name: Restore Fable
-        run: npm run fable:restore
 
       - name: Install
         run: npm ci
@@ -37,70 +37,11 @@ jobs:
             exit 1
           fi
 
-      - name: Verify product/public one-way boundaries
-        run: node scripts/verify-product-boundaries.mjs
-
-      - name: Verify BUY/LINE learning boundaries
-        run: node scripts/verify-buy-line-learning-boundaries.mjs
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Test
         run: npm test
 
-      - name: Verify Research Replay golden fixture
-        run: npm run research:golden:verify
-
-      - name: Verify Research Replay rollout readiness
-        run: |
-          npm run research:approval:record -- \
-            --event=grant \
-            --root=/tmp/boat-pon-f0r-ci \
-            --sidecar=/tmp/boat-pon-f0r-ci/tmp/research-replay-dry-run.sqlite \
-            --approval-id=ci-simulated-f0r-approval \
-            --scope=F0-R_START_AND_SIDECAR_ROLLOUT \
-            --source=github-actions-simulated \
-            --reference=ci-f0r-readiness \
-            --target-stage=F0-R \
-            --target-schema=f0r.2.0 \
-            --target-contract=f0r-approval-v2 \
-            --approved-at=2026-07-24T00:00:00.000Z \
-            --approval-mode=simulated
-          npm run research:rollout:dry-run -- --root=/tmp/boat-pon-f0r-ci
-
       - name: Build
-        run: npm run build
-
-  research-governance:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - name: Install
-        run: npm ci
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Research governance check (schema/lineage/clean-room/holdout/separation/production-isolation)
-        run: npm run research:governance-check
-      - name: Secret scan (research + governance config)
-        run: |
-          if git grep -nE 'ghp_[0-9A-Za-z]{20}|github_pat_[0-9A-Za-z_]{20}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]{10}' -- 'src/research/**' 'config/research-governance/**' 'research/**' 'scripts/research-governance-check.ts'; then
-            echo "::error::secret-like token found under research paths"; exit 1
-          fi
-          echo "no secrets under research paths"
-      - name: No large DB/raw/model artifact under research
-        run: |
-          if git ls-files 'research/**' 'config/research-governance/**' | grep -E '\.(sqlite|sqlite-.*|duckdb|parquet|lzh|zip|bin|model)$'; then
-            echo "::error::large/binary artifact tracked under research"; exit 1
-          fi
-          echo "no large artifacts under research"
-      - name: No production/BUY connection in research code
-        run: |
-          # executorSdk（guard 定義本体）と test は marker 文字列を正当に含むため除外する。
-          if git grep -nE 'app_settings|auto_vote|auto_purchase|production_writer|live_odds_writer' -- 'src/research/**' ':!src/research/governance/executorSdk.ts' ':!src/research/governance/executorSdk.test.ts'; then
-            echo "::error::research code references production/BUY markers"; exit 1
-          fi
-          echo "research code has no production/BUY connection"
+        run: npx vite build

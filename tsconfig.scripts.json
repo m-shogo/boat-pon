@@ -7,9 +7,5 @@
   "include": [
     "src/**/*.ts",
     "scripts/**/*.ts"
-  ],
-  "exclude": [
-    "src/generate-buffett-quality.ts",
-    "src/generate-valuation-snapshot.ts"
   ]
 }

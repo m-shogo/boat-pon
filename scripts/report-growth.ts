@@ -124,15 +124,6 @@ const reviewDocs = existsSync("docs/reviews") ? readdirSync("docs/reviews").filt
 for (const f of reviewDocs) { const d = f.match(/^20\d\d-\d\d-\d\d/); if (d) knowledgeDates.push(d[0]); }
 // 直近の期間ごとに増えた知識（教訓の項目＋レビュー文書）
 const knowledgeAdded = Object.fromEntries(recentWindows.map((w) => [w.key, knowledgeDates.filter((d) => d >= w.from && d <= w.to).length]));
-// 研究工場は教訓を lessons-learned ではなく research/registries/learnings/*.json（機械向け）に書いていた。
-const registryLearningsByMonth = new Map<string, number>();
-if (existsSync("research/registries/learnings")) {
-  for (const file of readdirSync("research/registries/learnings")) {
-    const d = file.match(/(20\d\d)(\d\d)\d\d/);
-    if (d) registryLearningsByMonth.set(`${d[1]}-${d[2]}`, (registryLearningsByMonth.get(`${d[1]}-${d[2]}`) ?? 0) + 1);
-  }
-}
-
 // 6. 作業の性質（月別のコミットの種類）
 const workByMonth = new Map<string, Record<string, number>>();
 try {
@@ -194,14 +185,14 @@ const md = [
   ...(monthWindows.length ? ["## 月別（半年の推移）", "", head, ...monthWindows.map((w) => tableRow(byKey.get(w.key)!)), ""] : []),
   "## 知識と作業（月別）",
   "",
-  "| 月 | 教訓（lessons-learned） | 研究の学び（registries） | 研究基盤のコミット | 通知・収集・精度のコミット | 記録のコミット | その他 |",
-  "|---|---:|---:|---:|---:|---:|---:|",
-  ...months.map((m) => { const w = workByMonth.get(m) ?? {}; return `| ${m} | ${knowledgeByMonth.get(m) ?? 0} | ${registryLearningsByMonth.get(m) ?? 0} | ${w["研究基盤"] ?? 0} | ${w["通知・収集・精度"] ?? 0} | ${w["記録"] ?? 0} | ${w["その他"] ?? 0} |`; }),
+  "| 月 | 教訓（lessons-learned） | 研究基盤のコミット | 通知・収集・精度のコミット | 記録のコミット | その他 |",
+  "|---|---:|---:|---:|---:|---:|",
+  ...months.map((m) => { const w = workByMonth.get(m) ?? {}; return `| ${m} | ${knowledgeByMonth.get(m) ?? 0} | ${w["研究基盤"] ?? 0} | ${w["通知・収集・精度"] ?? 0} | ${w["記録"] ?? 0} | ${w["その他"] ?? 0} |`; }),
   "",
   `- レビュー・監査の文書: ${reviewDocs.length} 件（docs/reviews/）`,
   "- 確率の精度と T-5 カバー率は 2026-07-01 以降（T-5 のオッズがそろう期間）の同じレースで、v3 と市場補正の logloss の差を見る（小さいほど v3 が市場に近い。比較レースが 200 未満の期間は「-」）。BUY の実績/予測は 1 に近いほど正確（BUY が 10件未満の期間は「-」）。",
   "",
 ].join("\n");
-const report = { generatedAt: new Date().toISOString(), to: TO, rows: rows.map((r) => ({ ...r, logLossGap: gap(r) })), verdicts, knowledgeByMonth: Object.fromEntries(knowledgeByMonth), registryLearningsByMonth: Object.fromEntries(registryLearningsByMonth), workByMonth: Object.fromEntries(workByMonth), reviewDocs: reviewDocs.length, knowledgeAdded };
+const report = { generatedAt: new Date().toISOString(), to: TO, rows: rows.map((r) => ({ ...r, logLossGap: gap(r) })), verdicts, knowledgeByMonth: Object.fromEntries(knowledgeByMonth), workByMonth: Object.fromEntries(workByMonth), reviewDocs: reviewDocs.length, knowledgeAdded };
 if (OUTPUT) writeFileSync(OUTPUT, md, "utf8"); else process.stdout.write(md);
 if (JSON_OUTPUT) writeFileSync(JSON_OUTPUT, `${JSON.stringify(report, null, 2)}\n`, "utf8");

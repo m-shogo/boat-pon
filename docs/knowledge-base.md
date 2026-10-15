@@ -58,7 +58,7 @@
 5. **静かに落とさない。** 条件で通知しなかった BUY も、理由をログに出す（`LINE realtime not-sent:`）。
 6. **結論は repo に書く。** 2026-06-05 の「利益化不可能」は memory にしか無く、研究工場からは見えなかった。この文書がその置き場所。
 7. **毎回「全期間」を読む処理は、データが増えるほど遅くなる。** auto-odds は判定の前に全期間のオッズ（約230万行）を毎回読み、約40秒かかっていた。遅さは少しずつ増えるので気づきにくい。ライブ経路は、その日のデータだけを読む（2026-10-14 に修正。判定は 12 通りの比較で一致）。
-8. **知識の量は「教訓の数」で測れる。** lessons-learned の項目は 5月 23件 → 6〜9月 0件 → 10月 3件。8〜9月はコミットが最も多かったが、人が読める知識は増えていなかった（研究工場の学びは `research/registries/learnings/` の機械向け JSON 11件だけ）。
+8. **知識の量は「教訓の数」で測れる。** lessons-learned の項目は 5月 23件 → 6〜9月 0件 → 10月 3件。8〜9月はコミットが最も多かったが、人が読める知識は増えていなかった（研究工場の学びは `research/registries/learnings/` の機械向け JSON 11件だけ。このフォルダは 2026-10-15 に main から外した）。
 
 ## 6. いまの数字（2026-10-13 時点。全体は [growth-report](reviews/2026-10-14-growth-report.md)。毎週月曜に LINE で届く）
 
@@ -79,7 +79,7 @@
 - 欠けたデータ（番組表の半年・結果の 27日・全券種の払戻表）を取り直すか。精度の評価には効くが、K1 の結論は変わらない。
 - v3 の確率を市場補正に置き換えるか（BUY の判定に関わるので、判定ロジックの変更になる。ユーザーの承認が要る）。
 
-## 古い文書の扱い
+## 古い文書・コードの扱い
 
-`docs/` の次の文書は、撤退前の研究計画・研究基盤の設計で、いまの判断には使わない（削除はしない）:
-`research-*`・`n1-*`・`n2-*`・`edge-discovery-system.md`・`market-residual-ticket-selection-roadmap.md`・`model-roadmap.md`・`prediction-improvement-roadmap.md`・`boat-pon-research-dispatch.md`・`rule-candidates.md`・`claude-next-work-order.md`・`boat-improvement-work-order.md`。
+2026-10-15 に、撤退前の研究基盤・研究コード・研究計画の文書・旧レポート（約 2,450 ファイル）を main から外した。
+いまの判断には使わない。必要になったら、タグ `archive/before-minimal-20261015` から1ファイルずつ戻せる（`git checkout archive/before-minimal-20261015 -- <path>`）。

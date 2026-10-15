@@ -4,14 +4,10 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    entries: ["index.html", "public-dashboard.html"],
-  },
   build: {
     rollupOptions: {
       input: {
         app: resolve(process.cwd(), "index.html"),
-        publicDashboard: resolve(process.cwd(), "public-dashboard.html"),
       },
     },
   },
