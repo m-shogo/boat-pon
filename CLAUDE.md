@@ -58,10 +58,10 @@
 | daily-results | 21:30 | 結果と全券種の払戻の取り込み、確定結果の通知（速報と同じなら省く） |
 | daily-notify | 21:30 | `daily-line-summary.sh`: 成長ループ（週1の改善処理 → スコアカードを `data/reports/scorecard/` に記録）→ 締切前のオッズの時系列と、取り直せない記録（判定・通知・設定）の書き出し（`data/exports/`、Google Drive に複製）→ 今日の BUY の当たり外れ（速報が未送信の分を公式の結果ページで）→ 日次まとめ |
 | weekly-forward-notify | 月曜 09:00 | 週次の成長まとめ（`report-growth.ts --no-months` → 先週との比較を LINE で1通）。名前は旧名のまま |
-| 速報（未登録） | 10分ごと | `scripts/notify-buy-results-fast.ts`。登録はユーザー作業 |
+| buy-results-fast | 10分ごと | 当たり外れの速報（`scripts/notify-buy-results-fast.ts`。締切の8〜120分後に公式の結果ページを見る）。2026-10-15 にユーザーが登録 |
 | 公開版スコアカード（未登録） | 22:15 | `scripts/publish-accuracy-scorecard.sh`。ChatGPT のタスクが読む。登録はユーザー作業 |
 
-止めるもの（ユーザー作業）: 研究工場（self-hosted runner・認可切れの private capture の launchd）、週次レビュー（`com.shogo.boat-pon.weekly-review`。2026-10-15 からスクリプトは何もしないで終わる）。手順はレビュー文書の末尾。研究用の GitHub のワークフローは、main に入れば止まる（2026-10-15 にファイルを外した）。
+止めたもの（2026-10-15 にユーザーが `launchctl bootout`）: 研究工場（self-hosted runner・認可切れの private capture）、週次レビュー（`com.shogo.boat-pon.weekly-review`）。再起動で戻らないよう `launchctl disable` も要る（ユーザー作業）。研究用のリモートブランチ 2,438 本も 10/15 にユーザーが削除した（残りは main・作業ブランチなど 5 本）。研究用の GitHub のワークフローは、main に入れば止まる（2026-10-15 にファイルを外した）。
 
 ## 7.5 構成（2026-10-15〜 最小構成）
 
