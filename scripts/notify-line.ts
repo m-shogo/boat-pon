@@ -8,6 +8,7 @@ import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
+import { claimNotification, recoverStuckNotifications, releaseNotification } from "./lib/notificationLog";
 
 type Mode = "daily" | "test" | "results" | "weekly" | "errors";
 
@@ -93,7 +94,8 @@ WHERE race_id = ? AND channel = 'line'
 `).get(args.raceId) as Record<string, unknown> | undefined;
 
   if (PREVIEW) return { id: 0, raceId: args.raceId, title: args.title, body: args.body, officialUrl: args.officialUrl };
-  if (existing?.status === "SENT") return null;
+  // 送信済み・別のジョブが送信中（SENDING）の通知は、作り直さない（二重送信を防ぐ）。
+  if (existing?.status === "SENT" || existing?.status === "SENDING") return null;
   if (args.dryRun) {
     return {
       id: 0,
@@ -128,6 +130,7 @@ WHERE race_id = ? AND channel = 'line'
 function markNotificationSent(db: DatabaseSync, id: number) {
   db.prepare("UPDATE notification_log SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
 }
+
 
 function mergeRecentPendingNotifications(db: DatabaseSync, notifications: NotificationRow[], dryRun: boolean): NotificationRow[] {
   if (dryRun) return notifications;
@@ -279,12 +282,21 @@ async function deliverNotifications(db: DatabaseSync | null, notifications: Noti
     }
 
     if (!envConfig.enabled) continue;
-    await sendLinePushTextToRecipients({
-      channelAccessToken: envConfig.config.channelAccessToken,
-      recipients: envConfig.config.recipients,
-      text,
-      endpoint: envConfig.config.endpoint,
-    });
+    if (db && notification.id > 0 && !claimNotification(db, notification.id)) {
+      console.log(`LINE notify skipped (already sent or being sent): ${notification.raceId}`);
+      continue;
+    }
+    try {
+      await sendLinePushTextToRecipients({
+        channelAccessToken: envConfig.config.channelAccessToken,
+        recipients: envConfig.config.recipients,
+        text,
+        endpoint: envConfig.config.endpoint,
+      });
+    } catch (error) {
+      if (db && notification.id > 0) releaseNotification(db, notification.id);
+      throw error;
+    }
     if (db && notification.id > 0) markNotificationSent(db, notification.id);
     console.log(`LINE notify sent: ${notification.raceId}`);
   }
@@ -527,6 +539,7 @@ async function run() {
       for (const n of notifications) console.log(`--- ${n.raceId}\n${buildLineText(n.title, n.body, n.officialUrl)}\n`);
       return;
     }
+    if (!dryRun) recoverStuckNotifications(db);
     notifications = mergeRecentPendingNotifications(db, notifications, dryRun);
     await deliverNotifications(db, notifications, dryRun);
   } finally {
