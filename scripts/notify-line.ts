@@ -166,15 +166,17 @@ SELECT COUNT(DISTINCT race_id) AS n FROM (
   return { programs, t5Races };
 }
 
+// スコアカードが無い・壊れている・古いときに「注意なし」と区別がつかないと、見張りが止まったことに気づけない（2026-10-15 の監査）。
+const SCORECARD_UNAVAILABLE = "スコアカード（data/reports/scorecard/latest.json）を読めない・古い。見張りが止まっている（daily-notify.log を確認）";
 function scorecardAlerts(now: Date): string[] {
   try {
     const path = "data/reports/scorecard/latest.json";
-    if (!existsSync(path)) return [];
+    if (!existsSync(path)) return [SCORECARD_UNAVAILABLE];
     const snapshot = accuracySnapshotFromReport(JSON.parse(readFileSync(path, "utf8")));
-    if (!snapshot || now.getTime() - Date.parse(snapshot.generatedAt) > 48 * 3600_000) return [];
+    if (!snapshot || now.getTime() - Date.parse(snapshot.generatedAt) > 48 * 3600_000) return [SCORECARD_UNAVAILABLE];
     return snapshot.alerts;
   } catch {
-    return [];
+    return [SCORECARD_UNAVAILABLE];
   }
 }
 
@@ -275,6 +277,8 @@ async function deliverNotifications(db: DatabaseSync | null, notifications: Noti
         recipients: envConfig.config.recipients,
         text,
         endpoint: envConfig.config.endpoint,
+        // 通知ごとに決まった再試行キー。前の回で届いていれば LINE が 409 を返し、二重には届かない。
+        retryKeyBase: notification.id > 0 ? notification.raceId : undefined,
       });
     } catch (error) {
       if (db && notification.id > 0) releaseNotification(db, notification.id);
@@ -497,6 +501,8 @@ async function run() {
 
   const date = argValue(args, "--date") ?? todayJst();
   const db = new DatabaseSync(process.env.BOAT_PON_DB_URI ?? "data/boat.sqlite", PREVIEW ? { readOnly: true } : {});
+  // 21:30 は結果の取り込みと通知が同時に動く。書き込みのロックを待つ（待たないと SQLITE_BUSY で失敗する。2026-10-15 の監査）。
+  db.exec("PRAGMA busy_timeout = 30000;");
   try {
     // 送信中のまま止まった通知は、どの通知を作るより先に送り直しの対象へ戻す（作り直しや再送の対象から漏れないように）。
     // 再送は直近3日に作られたものだけ（それより古い通知は、今送っても意味がない）。

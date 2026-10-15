@@ -351,8 +351,11 @@ try {
     const notifiedRaceIds = new Set((db.prepare(`
       SELECT race_id FROM notification_log WHERE channel = 'line' AND status = 'SENT' AND race_id LIKE ?
     `).all(`${today.replaceAll("-", "")}-%`) as Array<{ race_id: string }>).map((row) => row.race_id));
+    // 締め切りの判定・判定・記録には、候補を作り終えた「いまの時刻」を使う。候補を作る前の時刻（decisionNow）だと、
+    // 読み込みや計算の間に締め切りを越えたレースを、締め切り前として記録しうる（2026-10-15 の監査）。
+    const judgeNow = new Date();
     const isFrozen = (candidate: (typeof selectedCandidates)[number]) =>
-      persistHistory && candidate.date === today && (isPastActionDeadline(candidate, settings, decisionNow) || notifiedRaceIds.has(candidate.raceId));
+      persistHistory && candidate.date === today && (isPastActionDeadline(candidate, settings, judgeNow) || notifiedRaceIds.has(candidate.raceId));
     let buyCountToday = 0;
     let reservedBudgetYen = 0;
     let frozenCount = 0;
@@ -368,12 +371,12 @@ try {
     const frozenBuyCount = buyCountToday;
     for (const candidate of selectedCandidates) {
       if (isFrozen(candidate)) continue;
-      const decision = judgeCandidate(candidate, settings, { now: decisionNow, buyCountToday, reservedBudgetYen });
+      const decision = judgeCandidate(candidate, settings, { now: judgeNow, buyCountToday, reservedBudgetYen });
       if (decision.status === "BUY") {
         buyCountToday += 1;
         reservedBudgetYen += decision.recommendedAmount;
       }
-      if (persistHistory && shouldPersistDecisionHistory(candidate, settings, LIVE_MONITOR_FROM, decisionNow)) {
+      if (persistHistory && shouldPersistDecisionHistory(candidate, settings, LIVE_MONITOR_FROM, judgeNow)) {
         insertDecisionHistory(db, candidate, decision, { replaceRace: true });
         saved += 1;
       }
@@ -467,6 +470,7 @@ try {
                 recipients: envConfig.config.recipients,
                 text,
                 endpoint: envConfig.config.endpoint,
+                retryKeyBase: `buy-alert:${buy.race_id}`,
               });
             } catch (err) {
               // 送れなかったことを記録に残す（スコアカードが「送れていない LINE 通知」として数える）。

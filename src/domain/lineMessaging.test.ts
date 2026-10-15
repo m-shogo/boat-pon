@@ -4,7 +4,9 @@ import {
   buildLinePushRequest,
   buildLineText,
   lineMessagingConfigFromEnv,
+  lineRetryKey,
   sendLinePushText,
+  sendLinePushTextToRecipients,
   splitLineRecipients,
   truncateLineText,
 } from "./lineMessaging";
@@ -150,4 +152,58 @@ test("LINE push does not retry ambiguous network failures", async () => {
     /fetch failed/,
   );
   assert.equal(attempts, 1);
+});
+
+test("再試行キーは通知と宛先ごとに決まった UUID 形式で、ヘッダーに付く", async () => {
+  const key = lineRetryKey("line-daily-2026-10-15", "U123");
+  assert.match(key, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.equal(lineRetryKey("line-daily-2026-10-15", "U123"), key);
+  assert.notEqual(lineRetryKey("line-daily-2026-10-15", "U999"), key);
+  assert.notEqual(lineRetryKey("line-daily-2026-10-16", "U123"), key);
+  const seen: string[] = [];
+  await sendLinePushTextToRecipients({
+    channelAccessToken: "t", recipients: ["U123"], text: "hi", endpoint: "https://example.test/push", retryKeyBase: "line-daily-2026-10-15",
+    fetchImpl: async (_input, init) => { seen.push(init.headers["X-Line-Retry-Key"]); return { ok: true, status: 200, statusText: "OK", text: async () => "{}" }; },
+  });
+  assert.deepEqual(seen, [key]);
+});
+
+test("再試行キーがあれば、届いたかわからない失敗と 5xx を同じキーで送り直し、409（受け付け済み）は成功として扱う", async () => {
+  const keys: string[] = [];
+  let attempts = 0;
+  const result = await sendLinePushText({
+    channelAccessToken: "t", to: "U123", text: "hi", endpoint: "https://example.test/push", retryKey: "k-1",
+    fetchImpl: async (_input, init) => {
+      attempts += 1;
+      keys.push(init.headers["X-Line-Retry-Key"]);
+      if (attempts === 1) throw new TypeError("fetch failed");
+      if (attempts === 2) return { ok: false, status: 503, statusText: "Unavailable", text: async () => "" };
+      return { ok: false, status: 409, statusText: "Conflict", text: async () => '{"message":"The retry key is already accepted"}' };
+    },
+    sleepImpl: async () => {},
+  });
+  assert.equal(result.status, 409);
+  assert.equal((result as { alreadyAccepted?: boolean }).alreadyAccepted, true);
+  assert.deepEqual(keys, ["k-1", "k-1", "k-1"]);
+});
+
+test("応答が返らない送信は期限で打ち切る（キーが無ければ送り直さない）", async () => {
+  await assert.rejects(
+    sendLinePushText({
+      channelAccessToken: "t", to: "U123", text: "hi", endpoint: "https://example.test/push", timeoutMs: 20,
+      fetchImpl: (_input, init) => new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason))),
+      sleepImpl: async () => assert.fail("unexpected retry"),
+    }),
+    /timeout|aborted/i,
+  );
+});
+
+test("409 は再試行キーが無ければ失敗のまま", async () => {
+  await assert.rejects(
+    sendLinePushText({
+      channelAccessToken: "t", to: "U123", text: "hi", endpoint: "https://example.test/push",
+      fetchImpl: async () => ({ ok: false, status: 409, statusText: "Conflict", text: async () => "" }),
+    }),
+    /LINE push failed: 409/,
+  );
 });
