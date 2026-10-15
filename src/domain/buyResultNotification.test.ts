@@ -68,3 +68,13 @@ test("成績を渡すと2行目に今月と通算の勝敗・収支を出す", (
   });
   assert.equal(message.body.split("\n")[1], "今月 0勝 2敗（-200円） / 通算 1勝 1敗（+4,070円）");
 });
+
+test("財布の行を渡すと、今月・通算の行の代わりに財布の行を出す", () => {
+  const month = summarizeBuyLedger([{ date: "2026-10-01", hit: false, payoutYen: null }]);
+  const message = buildBuyResultNotification({
+    venue: "常滑", raceNo: 8, betType: "3連単", selection: "1-2-3", resultSelection: "1-5-4",
+    winningPayoutYen: 5_750, returned: false, currentOdds: 66.1, tally: { month, total: month },
+    bankrollLine: "🚤 2代目の財布: 9,900円（10,000円から -100円・1回 0的中）",
+  });
+  assert.deepEqual(message.body.split("\n").slice(0, 3), ["-100円（結果の組 1-5-4 の払戻は 5,750円）", "🚤 2代目の財布: 9,900円（10,000円から -100円・1回 0的中）", ""]);
+});

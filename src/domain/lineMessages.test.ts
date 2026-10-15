@@ -107,7 +107,7 @@ test("日次まとめに本命予想の欄と、BUY との比較を出す", () =
   });
   assert.match(body, /⭐ 本命予想（参考。各レースで締切前のオッズがいちばん当たりやすい1点を、後から集計。通知・購入の推奨ではない）\n10\/14: 1勝 9敗・収支 -300円（払戻 700円 \/ 買った額 1,000円・回収率 70%）/);
   assert.match(body, /7\/1 から: 2勝 18敗・収支 -600円/);
-  assert.match(body, /比べると（通算）: 的中率 BUY 50\.0% \/ 本命予想 10\.0%・回収率 BUY 2135% \/ 本命予想 70%/);
+  assert.match(body, /比べると（BUY は締切後に付いた分も含む全件）: 的中率 BUY 50\.0% \/ 本命予想 10\.0%・回収率 BUY 2135% \/ 本命予想 70%/);
 });
 
 test("BUY の通知は、買い方（場・R・券種・買い目・金額・締切）と、このレースの公式ページへのリンクを出す", () => {
@@ -130,21 +130,33 @@ test("判断の日に、BUY と本命予想の比較とおすすめを出す", (
   assert.match(formatBuyReview({ from: "2026-10-10", buy: ledger([["2026-10-12", true, 9_000]]), favorite: fav }).at(-1)!, /偶然の差の可能性が大きい/);
 });
 
-test("仮想の財布（1万円スタート）を、日次まとめの見出しと本文、BUY の通知に出す", async () => {
-  const { computeBankroll } = await import("./bankroll");
-  const bankroll = computeBankroll([
+test("代ごとの財布（初代・2代目）を、日次まとめの見出しと本文、BUY の通知、週次まとめに出す", async () => {
+  const { computeWallets } = await import("./bankroll");
+  const wallets = computeWallets([
+    { order: "2026-08-01 11:00", date: "2026-08-01", hit: false, payoutYen: null },
     { order: "2026-10-10 11:00", date: "2026-10-10", hit: false, payoutYen: null },
     { order: "2026-10-15 16:48", date: "2026-10-15", hit: null, payoutYen: null },
-  ], { id: 1, from: "2026-10-10", startYen: 10_000, stakeYen: 100, note: "t" });
+  ], "2026-10-15", [
+    { generation: 1, from: "2026-07-20", startYen: 10_000, stakeYen: 100, note: "t" },
+    { generation: 2, from: "2026-10-10", startYen: 10_000, stakeYen: 100, note: "t" },
+  ]);
   const { title, body } = formatDailySummary({
     date: "2026-10-15", todayBuys: [], lastSettledDay: null, month: ledger([]), total: ledger([]), alerts: [],
-    counts: { buy: 0, watch: 0, skip: 0, oddsPresent: 0, total: 0 }, bankroll,
+    counts: { buy: 0, watch: 0, skip: 0, oddsPresent: 0, total: 0 }, wallets,
   });
-  assert.equal(title, "📊 10/15 のまとめ: BUY 0件｜資産 9,800円");
-  assert.match(body, /💴 資産 9,800円（第1期 10,000円スタートから -200円・最高 10,000円・最低 9,800円・2回 0的中・結果待ち 1件）/);
+  assert.equal(title, "📊 10/15 のまとめ: BUY 0件｜🚤2代目 9,800円");
+  assert.match(body, /👛 財布くらべ（どの代も 1万円から・届いた BUY を毎回 100円・公式の払戻。マイナスになっても続ける）\n🚤 2代目（現役・10\/10〜）: 9,800円（10,000円から -200円）\n　2回 0的中・結果待ち 1件／最高 10,000円・最低 9,800円\n⚓ 初代（引退・7\/20〜10\/9）: 9,900円（10,000円から -100円）\n/);
+  assert.doesNotMatch(body, /💰 収支/);
+  // 財布の決まり（1回100円）で計算する。推奨額（stakeYen）が 200円でも、財布は 100円（Codex のレビュー）
   const alert = formatBuyAlert({
     venue: "芦屋", raceNo: 6, selection: "1-2-3", closeAt: "11:00", quoteOdds: 75.4, calibratedProbability: 0.01, v3Probability: 0.061,
-    voteUrl: "https://bu.tbbr.jp/", stakeYen: 100, bankrollYen: 9_800,
+    voteUrl: "https://bu.tbbr.jp/", stakeYen: 200, wallet: { generation: 2, balanceYen: 9_800, stakeYen: 100 },
   });
-  assert.match(alert.body, /💴 資産 9,800円 → この BUY に 100円（当たれば 17,240円 前後）/);
+  assert.match(alert.body, /🚤 2代目の財布: 9,800円 → この BUY に 100円（当たれば 17,240円 前後）/);
+  const weekly = formatWeeklySummary({
+    thisWeek: { from: "2026-10-09", to: "2026-10-15", buys: ledger([]), notified: 0, decisionCoverage: null, t5Coverage: null, logLossGap: null },
+    lastWeek: { from: "2026-10-02", to: "2026-10-08", buys: ledger([]), notified: 0, decisionCoverage: null, t5Coverage: null, logLossGap: null },
+    knowledgeAdded: 0, alerts: [], wallets: { list: wallets, lastWeekEnd: "2026-10-08" },
+  });
+  assert.match(weekly.body, /🚤 2代目の財布: 9,800円（10,000円から -200円・2回 0的中・結果待ち 1件）\n　先週末: 10,000円（この1週間で -200円）\n⚓ 初代の財布（引退）: 9,900円/);
 });

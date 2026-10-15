@@ -11,7 +11,7 @@ export type BuyResultNotificationInput = {
   currentOdds: number | null;
   /** 今月と通算の成績（100円ずつ買った場合）。渡すと2行目に出す。 */
   tally?: { month?: BuyLedgerSummary; total?: BuyLedgerSummary };
-  /** 仮想の財布の行（src/domain/bankroll.ts の formatBankrollLine）。渡すと成績の次に出す。 */
+  /** 仮想の財布の行（src/domain/bankroll.ts の formatBankrollLine）。渡すと、今月・通算の行の代わりに出す（締切後に付いた BUY も混ざる通算は紛らわしいため）。 */
   bankrollLine?: string;
 };
 
@@ -78,7 +78,7 @@ export function buildBuyResultNotification(input: BuyResultNotificationInput): B
     title,
     body: [
       outcomeLine,
-      tallyParts.length ? tallyParts.join(" / ") : null,
+      tallyParts.length && !input.bankrollLine ? tallyParts.join(" / ") : null,
       input.bankrollLine ?? null,
       "",
       `買い目: ${input.selection}（${input.betType}）`,

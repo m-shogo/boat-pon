@@ -8,7 +8,7 @@ import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { BUY_REVIEW_DATE, formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
-import { formatBankrollLine } from "../src/domain/bankroll";
+import { formatBankrollLine, walletFor } from "../src/domain/bankroll";
 import { ensureFavoritePicks, FAVORITE_FROM, loadFavoriteLedgers } from "./lib/favoriteLedger";
 import { claimNotification, recoverStuckNotifications, releaseNotification, upsertPendingRow } from "./lib/notificationLog";
 
@@ -250,7 +250,7 @@ ORDER BY p.close_at, dh.venue, dh.race_no
     sinceFix: ledgers.sinceFix,
     notifiedTotal: ledgers.notifiedTotal,
     favorite,
-    bankroll: ledgers.bankroll,
+    wallets: ledgers.wallets,
     // 判断の日（11/15）だけ、BUY と本命予想の比較とおすすめを載せる（ユーザーの要望「自動化して」）
     decision: date === BUY_REVIEW_DATE && favorite
       ? { from: ledgers.sinceFix.from, buy: ledgers.sinceFix.notifiedLedger, favorite: favorite.between(ledgers.sinceFix.from, date) }
@@ -383,7 +383,7 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
       returned: row.returned !== 0,
       currentOdds: row.current_odds,
       tally: { month: ledgers.month, total: ledgers.total },
-      bankrollLine: formatBankrollLine(ledgers.bankroll),
+      bankrollLine: (() => { const w = walletFor(ledgers.wallets, row.date); return w ? formatBankrollLine(w) : undefined; })(),
     });
     // 締切前にリアルタイム通知できなかった BUY は、行動できなかったことを結果の末尾に書いておく。
     const timing = db.prepare(`SELECT p.close_at,
@@ -394,7 +394,7 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
     const notification = upsertPendingNotification(db, {
       raceId: `line-buy-result-${row.race_id}-${row.bet_type}-${row.selection}`,
       title: message.title,
-      body: notifiedBeforeClose ? message.body : `${message.body}\n（この BUY は締切前に通知できなかった。締切後の判定）`,
+      body: notifiedBeforeClose ? message.body : `${message.body}\n（この BUY は締切前に通知できなかった。締切後の判定なので、財布には入れていない）`,
       officialUrl: officialResultUrl(row.date, row.venue, row.race_no),
       dryRun,
     });
@@ -427,10 +427,11 @@ function buildWeeklyNotifications(db: DatabaseSync, growthPath: string, dryRun: 
   const thisWeek = pick("w0"), lastWeek = pick("w1");
   if (!thisWeek || !lastWeek) return [];
   const fav = loadFavoriteForSummary(db, todayJst());
+  const ledgers = loadBuyLedgers(db, todayJst());
   const message = formatWeeklySummary({
-    thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now), total: loadBuyLedgers(db, todayJst()).total,
+    thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now), total: ledgers.total,
     favorite: fav ? { thisWeek: fav.between(thisWeek.from, thisWeek.to), lastWeek: fav.between(lastWeek.from, lastWeek.to) } : undefined,
-    bankroll: (() => { const b = loadBuyLedgers(db, todayJst()).bankroll; return { now: b, lastWeekEndYen: b.balanceAt(lastWeek.to) }; })(),
+    wallets: { list: ledgers.wallets, lastWeekEnd: lastWeek.to },
   });
   const notification = upsertPendingNotification(db, {
     raceId: `line-weekly-growth-${thisWeek.to}`,

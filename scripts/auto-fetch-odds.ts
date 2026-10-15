@@ -427,8 +427,9 @@ try {
           // これまでの BUY の通算成績（通知に1行出す）。読めなくても通知は止めない。
           let ledgers: ReturnType<typeof loadBuyLedgers> | undefined;
           try { ledgers = loadBuyLedgers(db, today); } catch (err) { console.error("LINE realtime ledger skipped:", err instanceof Error ? err.message : err); }
-          // 同じ回に複数の BUY を送るときは、前の BUY の 100 円を払った後の資産を出す
-          let bankrollYen = ledgers?.bankroll.balanceYen;
+          // 現役の代の財布。同じ回に複数の BUY を送るときは、前の BUY の 100 円（財布の決まりの額）を払った後の資産を出す
+          const wallet = ledgers?.bankroll;
+          let walletYen = wallet?.balanceYen;
           for (const buy of pendingBuys) {
             const measuredAt = Date.now();
             const actualMinutesBeforeClose = buy.close_at == null ? null : minutesUntilRaceClose(buy.date, buy.close_at, new Date(measuredAt));
@@ -466,7 +467,7 @@ try {
               total: ledgers?.total,
               stakeYen: buy.recommended_stake_yen,
               officialRaceUrl: oddsUrl,
-              bankrollYen,
+              wallet: wallet && walletYen != null ? { generation: wallet.wallet.generation, balanceYen: walletYen, stakeYen: wallet.wallet.stakeYen } : undefined,
             });
             // 公式ページのリンクは本文の「買い方」の下に出すので、末尾の「公式:」は付けない
             const text = buildLineText(title, body);
@@ -503,7 +504,7 @@ try {
             `).run(buy.race_id, title, body, oddsUrl, title, body, oddsUrl);
 
             console.log(`LINE realtime: ${buy.race_id} ${buy.selection}`);
-            if (bankrollYen != null) bankrollYen -= buy.recommended_stake_yen ?? 100;
+            if (wallet && walletYen != null) walletYen -= wallet.wallet.stakeYen;
           }
         }
       } catch (err) {

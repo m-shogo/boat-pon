@@ -24,7 +24,7 @@ import { officialResultUrl } from "../src/domain/officialLinks";
 import { parseRaceResultTrifecta } from "../src/domain/officialRaceResultPage";
 import { venueCodes } from "./fetch-official-odds";
 import { loadBuyLedgers, loadFastOutcomes } from "./lib/buyLedger";
-import { formatBankrollLine } from "../src/domain/bankroll";
+import { formatBankrollLine, walletFor } from "../src/domain/bankroll";
 
 const MIN_MINUTES_AFTER_CLOSE = 8;
 const MAX_MINUTES_AFTER_CLOSE = 120;
@@ -101,7 +101,8 @@ ORDER BY p.close_at
       // 速報の時点では確定結果（race_results）が無いので、このレースの結果を足して今月・通算を出す。
       ...(() => {
         const ledgers = loadBuyLedgers(db, buy.date, new Map([...loadFastOutcomes(db), [buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null, selection: buy.selection }]]));
-        return { tally: { month: ledgers.month, total: ledgers.total }, bankrollLine: formatBankrollLine(ledgers.bankroll) };
+        const wallet = walletFor(ledgers.wallets, buy.date);
+        return { tally: { month: ledgers.month, total: ledgers.total }, bankrollLine: wallet ? formatBankrollLine(wallet) : undefined };
       })(),
     });
     const title = `${message.title}（速報）`;
@@ -110,7 +111,7 @@ ORDER BY p.close_at
       (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
       (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = ?) AS info_at`).get(buy.race_id, buy.race_id) as { sent_at: string | null; info_at: string | null };
     const notifiedBeforeClose = classifyBuyTiming({ date: buy.date, closeAt: buy.close_at, sentAt: timing.sent_at, infoAt: timing.info_at }) === "notified";
-    const body = [message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, notifiedBeforeClose ? null : "（この BUY は締切前に通知できなかった。締切後の判定）", "確定は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
+    const body = [message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, notifiedBeforeClose ? null : "（この BUY は締切前に通知できなかった。締切後の判定なので、財布には入れていない）", "確定は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
     const oddsUrl = officialResultUrl(buy.date, buy.venue, buy.race_no);
 
     // LINE の無料枠は月 200 通（2026-10-15 に API で確認）。21:30 のまとめ取り込み（--catch-up）で分かった「はずれ」は、
