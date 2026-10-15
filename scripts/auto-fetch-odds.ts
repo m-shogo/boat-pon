@@ -456,12 +456,25 @@ try {
             });
             const text = buildLineText(title, body, oddsUrl);
 
-            await sendLinePushTextToRecipients({
-              channelAccessToken: envConfig.config.channelAccessToken,
-              recipients: envConfig.config.recipients,
-              text,
-              endpoint: envConfig.config.endpoint,
-            });
+            try {
+              await sendLinePushTextToRecipients({
+                channelAccessToken: envConfig.config.channelAccessToken,
+                recipients: envConfig.config.recipients,
+                text,
+                endpoint: envConfig.config.endpoint,
+              });
+            } catch (err) {
+              // 送れなかったことを記録に残す（スコアカードが「送れていない LINE 通知」として数える）。
+              // 次の実行で締切5分以上前なら送り直す。送信済み（SENT）は書き換えない。1件の失敗で残りの BUY を止めない。
+              console.error(`LINE realtime send failed: ${buy.race_id}`, err instanceof Error ? err.message : err);
+              db.prepare(`
+                INSERT INTO notification_log (race_id, channel, status, title, body, official_url)
+                VALUES (?, 'line', 'FAILED', ?, ?, ?)
+                ON CONFLICT(race_id, channel) DO UPDATE SET status='FAILED', title=excluded.title, body=excluded.body, official_url=excluded.official_url
+                WHERE notification_log.status <> 'SENT'
+              `).run(buy.race_id, title, body, oddsUrl);
+              continue;
+            }
 
             db.prepare(`
               INSERT INTO notification_log (race_id, channel, status, title, body, official_url, sent_at)

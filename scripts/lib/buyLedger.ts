@@ -20,7 +20,8 @@ export type BuyLedgers = {
   lastSettledDay: { date: string; ledger: BuyLedgerSummary } | null;
 };
 
-type ExtraOutcomes = Map<string, { hit: boolean; payoutYen: number | null }>;
+/** レースごとの速報の結果。selection はその速報の買い目（同じレースの別の買い目には当てはめない）。 */
+type ExtraOutcomes = Map<string, { hit: boolean; payoutYen: number | null; selection?: string }>;
 
 /**
  * 速報（公式の結果ページ）で送った結果。確定結果（K ファイルの取り込み）は翌日の 21:30 なので、それまではこれで精算する。
@@ -39,7 +40,7 @@ export function loadFastOutcomes(db: DatabaseSync): ExtraOutcomes {
     const hit = actual === selection;
     const payout = row.title.match(/払戻 ([\d,]+)円/)?.[1];
     if (hit && !payout) continue;
-    outcomes.set(raceId, { hit, payoutYen: hit && payout ? Number(payout.replaceAll(",", "")) : null });
+    outcomes.set(raceId, { hit, payoutYen: hit && payout ? Number(payout.replaceAll(",", "")) : null, selection });
   }
   return outcomes;
 }
@@ -71,7 +72,7 @@ WHERE dh.row_num = 1
     const settled = row.trifecta != null && row.trifecta !== "" && !row.returned && row.payout_yen != null;
     if (settled || row.returned) return { date: row.date, hit: settled ? row.trifecta === row.selection : null, payoutYen: row.payout_yen };
     const extra = extraOutcomes.get(row.race_id);
-    if (extra) return { date: row.date, hit: extra.hit, payoutYen: extra.payoutYen };
+    if (extra && (extra.selection == null || extra.selection === row.selection)) return { date: row.date, hit: extra.hit, payoutYen: extra.payoutYen };
     return { date: row.date, hit: null, payoutYen: null };
   };
   const month = today.slice(0, 7);

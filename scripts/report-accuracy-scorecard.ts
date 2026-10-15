@@ -150,19 +150,26 @@ const liveness = evaluateJobLiveness([
 ]);
 
 // ─── 長く動かし続けるための見張り: 処理の遅さ・ディスクの残り・LINE の送信失敗 ───
+// 見張りの値が取れなくても、スコアカード全体は止めない（取れなかった値は「-」）。
 const readTail = (path: string, bytes = 2_000_000): string[] => {
-  if (!existsSync(path)) return [];
-  const size = statSync(path).size;
-  const length = Math.min(bytes, size);
-  const buffer = Buffer.alloc(length);
-  const fd = openSync(path, "r");
-  try { readSync(fd, buffer, 0, length, size - length); } finally { closeSync(fd); }
-  return buffer.toString("utf8").split("\n");
+  try {
+    if (!existsSync(path)) return [];
+    const size = statSync(path).size;
+    const length = Math.min(bytes, size);
+    const buffer = Buffer.alloc(length);
+    const fd = openSync(path, "r");
+    try { readSync(fd, buffer, 0, length, size - length); } finally { closeSync(fd); }
+    return buffer.toString("utf8").split("\n");
+  } catch (err) {
+    console.error(`[accuracy-scorecard] ${path} を読めなかった:`, err instanceof Error ? err.message : err);
+    return [];
+  }
 };
 const runTiming = summarizeRunTiming(readTail("data/logs/auto-odds.log").filter((line) => line.startsWith("decision-phase:")).slice(-60));
 let diskFreeBytes: number | null = null;
 try { const fsStats = statfsSync("."); diskFreeBytes = Number(fsStats.bavail) * Number(fsStats.bsize); } catch { diskFreeBytes = null; }
-const dbBytes = existsSync("data/boat.sqlite") ? statSync("data/boat.sqlite").size : null;
+let dbBytes: number | null = null;
+try { dbBytes = statSync("data/boat.sqlite").size; } catch { dbBytes = null; }
 const systemAlerts = evaluateSystemHealth({ runTiming, diskFreeBytes, unsentNotifications });
 
 // ─── 注意（対応が要るものだけ）と、既知の状態 ───

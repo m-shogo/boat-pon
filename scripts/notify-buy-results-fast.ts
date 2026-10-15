@@ -98,7 +98,7 @@ ORDER BY p.close_at
       currentOdds: buy.current_odds,
       // 速報の時点では確定結果（race_results）が無いので、このレースの結果を足して今月・通算を出す。
       tally: (() => {
-        const ledgers = loadBuyLedgers(db, buy.date, new Map([...loadFastOutcomes(db), [buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null }]]));
+        const ledgers = loadBuyLedgers(db, buy.date, new Map([...loadFastOutcomes(db), [buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null, selection: buy.selection }]]));
         return { month: ledgers.month, total: ledgers.total };
       })(),
     });
@@ -121,12 +121,24 @@ ORDER BY p.close_at
       console.log(`fast-result LINE disabled: ${buy.race_id}`);
       continue;
     }
-    await sendLinePushTextToRecipients({
-      channelAccessToken: envConfig.config.channelAccessToken,
-      recipients: envConfig.config.recipients,
-      text: buildLineText(title, body, oddsUrl),
-      endpoint: envConfig.config.endpoint,
-    });
+    try {
+      await sendLinePushTextToRecipients({
+        channelAccessToken: envConfig.config.channelAccessToken,
+        recipients: envConfig.config.recipients,
+        text: buildLineText(title, body, oddsUrl),
+        endpoint: envConfig.config.endpoint,
+      });
+    } catch (err) {
+      // 送れなかったことを記録に残し（スコアカードが数える）、次の回に送り直す。1件の失敗で残りを止めない。
+      console.error(`fast-result send failed: ${buy.race_id}`, err instanceof Error ? err.message : err);
+      db.prepare(`
+INSERT INTO notification_log (race_id, channel, status, title, body, official_url)
+VALUES (?, 'line', 'FAILED', ?, ?, ?)
+ON CONFLICT(race_id, channel) DO UPDATE SET status='FAILED', title=excluded.title, body=excluded.body, official_url=excluded.official_url
+WHERE notification_log.status <> 'SENT'
+`).run(key, title, body, oddsUrl);
+      continue;
+    }
     db.prepare(`
 INSERT INTO notification_log (race_id, channel, status, title, body, official_url, sent_at)
 VALUES (?, 'line', 'SENT', ?, ?, ?, CURRENT_TIMESTAMP)
