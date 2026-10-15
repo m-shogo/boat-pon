@@ -3,7 +3,8 @@
  * exit code: 0=正常/警告のみ, 1=致命的エラー
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 import { openDb } from "../server/db";
 
@@ -154,6 +155,40 @@ try {
   }
 } catch (e) {
   warn("backup:check", `確認エラー: ${e}`);
+}
+
+// --- launchd: 登録済みのジョブと repo の控え（docs/launchd/）の食い違い・実行するファイルの有無 ---
+// 2026-10-15: repo の控えが実際の登録と違っていた（daily-notify）。控えから登録し直すと古い処理に戻るので、ずれを見つける。
+const AGENTS_DIR = `${process.env.HOME ?? ""}/Library/LaunchAgents`;
+const plistJson = (path: string): Record<string, unknown> | null => {
+  try {
+    return JSON.parse(execFileSync("plutil", ["-convert", "json", "-o", "-", path], { encoding: "utf8" })) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+if (process.platform === "darwin" && existsSync("docs/launchd")) {
+  for (const file of readdirSync("docs/launchd").filter((f) => f.endsWith(".plist"))) {
+    const label = file.replace(/\.plist$/, "");
+    const installedPath = `${AGENTS_DIR}/${file}`;
+    if (!existsSync(installedPath)) {
+      warn(`launchd:${label}`, "未登録（docs/launchd に控えだけある）");
+      continue;
+    }
+    const repo = plistJson(`docs/launchd/${file}`);
+    const installed = plistJson(installedPath);
+    if (!repo || !installed) {
+      warn(`launchd:${label}`, "plist を読めない");
+      continue;
+    }
+    const pick = (p: Record<string, unknown>) => JSON.stringify([p.ProgramArguments, p.StartInterval ?? null, p.StartCalendarInterval ?? null, p.WorkingDirectory ?? null]);
+    if (pick(repo) !== pick(installed)) warn(`launchd:${label}`, "登録済みの内容と repo の控えが違う（どちらが正しいか確かめて、控えを直す）");
+    const args = (installed.ProgramArguments as string[] | undefined) ?? [];
+    const cwd = String(installed.WorkingDirectory ?? "");
+    const missing = args.filter((a) => /\.(ts|sh|mjs)$/.test(a)).map((a) => (a.startsWith("/") ? a : `${cwd}/${a}`)).filter((a) => !existsSync(a));
+    if (missing.length) error(`launchd:${label}`, `実行するファイルが無い: ${missing.join(", ")}`);
+    else if (pick(repo) === pick(installed)) ok(`launchd:${label}`);
+  }
 }
 
 // --- 出力 ---
