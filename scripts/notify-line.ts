@@ -8,7 +8,7 @@ import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
-import { claimNotification, recoverStuckNotifications, releaseNotification } from "./lib/notificationLog";
+import { claimNotification, recoverStuckNotifications, releaseNotification, upsertPendingRow } from "./lib/notificationLog";
 
 type Mode = "daily" | "test" | "results" | "weekly" | "errors";
 
@@ -106,25 +106,8 @@ WHERE race_id = ? AND channel = 'line'
     };
   }
 
-  if (existing) {
-    db.prepare(`
-UPDATE notification_log
-SET status = 'PENDING', title = ?, body = ?, official_url = ?
-WHERE id = ?
-`).run(args.title, args.body, args.officialUrl, Number(existing.id));
-  } else {
-    db.prepare(`
-INSERT INTO notification_log (race_id, channel, status, title, body, official_url)
-VALUES (?, 'line', 'PENDING', ?, ?, ?)
-`).run(args.raceId, args.title, args.body, args.officialUrl);
-  }
-
-  const row = db.prepare(`
-SELECT id, race_id, title, body, official_url
-FROM notification_log
-WHERE race_id = ? AND channel = 'line'
-`).get(args.raceId) as Record<string, unknown>;
-  return notificationRowFromRecord(row);
+  const row = upsertPendingRow(db, args);
+  return row ? notificationRowFromRecord(row) : null;
 }
 
 function markNotificationSent(db: DatabaseSync, id: number) {
@@ -515,6 +498,9 @@ async function run() {
   const date = argValue(args, "--date") ?? todayJst();
   const db = new DatabaseSync(process.env.BOAT_PON_DB_URI ?? "data/boat.sqlite", PREVIEW ? { readOnly: true } : {});
   try {
+    // 送信中のまま止まった通知は、どの通知を作るより先に送り直しの対象へ戻す（作り直しや再送の対象から漏れないように）。
+    // 再送は直近3日に作られたものだけ（それより古い通知は、今送っても意味がない）。
+    if (!PREVIEW && !dryRun) recoverStuckNotifications(db);
     let notifications: NotificationRow[];
     switch (mode) {
       case "daily":
@@ -539,7 +525,6 @@ async function run() {
       for (const n of notifications) console.log(`--- ${n.raceId}\n${buildLineText(n.title, n.body, n.officialUrl)}\n`);
       return;
     }
-    if (!dryRun) recoverStuckNotifications(db);
     notifications = mergeRecentPendingNotifications(db, notifications, dryRun);
     await deliverNotifications(db, notifications, dryRun);
   } finally {

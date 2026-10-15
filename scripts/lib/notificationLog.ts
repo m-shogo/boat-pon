@@ -19,3 +19,26 @@ export function recoverStuckNotifications(db: DatabaseSync) {
   const changes = db.prepare("UPDATE notification_log SET status = 'PENDING', sent_at = NULL WHERE channel = 'line' AND status = 'SENDING' AND sent_at < datetime('now', '-15 minutes')").run().changes;
   if (changes > 0) console.log(`LINE notify recovered stuck SENDING: ${changes}`);
 }
+
+/**
+ * 通知を「未送信（PENDING）」として作る・作り直す。読んでから書くまでの間に、別のジョブが送信中・送信済みにしているかもしれないので、
+ * 書く側でも状態を条件にして SENDING・SENT を PENDING に巻き戻さない（Codex のレビューで巻き戻しと二重送信を再現）。
+ * 作り直せなかった（送信中・送信済み）ときは null。
+ */
+export function upsertPendingRow(
+  db: DatabaseSync,
+  args: { raceId: string; title: string; body: string; officialUrl: string },
+): Record<string, unknown> | null {
+  db.prepare(`
+INSERT INTO notification_log (race_id, channel, status, title, body, official_url)
+VALUES (?, 'line', 'PENDING', ?, ?, ?)
+ON CONFLICT(race_id, channel) DO UPDATE SET status = 'PENDING', title = excluded.title, body = excluded.body, official_url = excluded.official_url
+WHERE notification_log.status NOT IN ('SENT', 'SENDING')
+`).run(args.raceId, args.title, args.body, args.officialUrl);
+  const row = db.prepare(`
+SELECT id, race_id, status, title, body, official_url
+FROM notification_log
+WHERE race_id = ? AND channel = 'line'
+`).get(args.raceId) as Record<string, unknown> | undefined;
+  return row && row.status === "PENDING" ? row : null;
+}
