@@ -49,7 +49,7 @@
    launchctl bootout gui/$(id -u)/com.shogo.boat-pon.weekly-review
    launchctl bootout gui/$(id -u)/actions.runner.m-shogo-boat-pon.boat-pon-mac-local
    ```
-3. **当たり外れの速報を登録する**（締切の 8 分後から 10 分ごと。登録しなくても 21:30 には届く。LINE の通数は月 +30 程度）:
+3. **当たり外れの速報を登録する**（締切の 8 分後から 10 分ごと。登録しなくても 21:30 には届く。はずれも1通ずつ届くので、LINE の通数は月 +60 前後。月 200 通の枠に近づいたらスコアカードが注意を出す）:
    ```sh
    cp docs/launchd/com.boatpon.buy-results-fast.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boatpon.buy-results-fast.plist
    ```
