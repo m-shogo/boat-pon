@@ -9,7 +9,7 @@
  *   BOAT_PON_DB_URI='file:data/boat.sqlite?mode=ro&immutable=1' npx tsx scripts/review-20261016-benter.ts
  */
 import { DatabaseSync } from "node:sqlite";
-import { calibratedMarketProbabilities } from "../src/domain/accuracyScorecard";
+import { calibratedMarketProbabilities, normalizedMarketProbabilities } from "../src/domain/accuracyScorecard";
 import { loadChampionCalibration, loadCompleteCaptures } from "./lib/marketCaptures";
 
 const db = new DatabaseSync(process.env.BOAT_PON_DB_URI ?? "file:data/boat.sqlite?mode=ro", { readOnly: true });
@@ -88,7 +88,7 @@ function loadTrainingRaces(): Race[] {
 }
 
 // ─── 2段目・評価用（2026-07〜10）: 締切5分前の市場・番組・直前情報の展示・確定した1着 ───
-type MarketRace = Race & { marketWin: number[]; trifecta: Map<string, number>; winnerCombo: string; xPointInTime: number[][]; exhibitionKnownAtT5: boolean };
+type MarketRace = Race & { marketWin: number[]; marketWinRaw: number[]; trifecta: Map<string, number>; winnerCombo: string; xPointInTime: number[][]; exhibitionKnownAtT5: boolean };
 function loadMarketRaces(from: string, to: string): MarketRace[] {
   const programs = loadPrograms(from, to);
   const { t5, t10, t20 } = loadCompleteCaptures(db, from, to);
@@ -115,6 +115,10 @@ function loadMarketRaces(from: string, to: string): MarketRace[] {
     const marketWin = [0, 0, 0, 0, 0, 0];
     for (const [selection, prob] of p) marketWin[Number(selection[0]) - 1] += prob;
     if (marketWin.some((v) => !(v > 0))) continue;
+    // 補正なしの市場（締切5分前のオッズをそのまま確率にしたもの）。補正のパラメータが評価の期間で選ばれた疑いを除くため（Codex のレビュー 14回目）
+    const marketWinRaw = [0, 0, 0, 0, 0, 0];
+    for (const [selection, prob] of normalizedMarketProbabilities(odds) ?? new Map<string, number>()) marketWinRaw[Number(selection[0]) - 1] += prob;
+    if (marketWinRaw.some((v) => !(v > 0))) continue;
     const x = raceFeatures(program.boats, exhibitions.get(r.race_id) ?? new Map());
     if (!x) continue;
     if (!p.has(r.trifecta)) continue;
@@ -123,7 +127,7 @@ function loadMarketRaces(from: string, to: string): MarketRace[] {
     const fetchedAt = exhibitionFetchedAt.get(r.race_id);
     const exhibitionKnownAtT5 = fetchedAt != null && Number.isFinite(close) && fetchedAt <= close - 5 * 60_000;
     const xPointInTime = exhibitionKnownAtT5 ? x : raceFeatures(program.boats, new Map())!;
-    races.push({ raceId: r.race_id, date: r.date, x, winner: Number(r.trifecta[0]) - 1, marketWin, trifecta: p, winnerCombo: r.trifecta, xPointInTime, exhibitionKnownAtT5 });
+    races.push({ raceId: r.race_id, date: r.date, x, winner: Number(r.trifecta[0]) - 1, marketWin, marketWinRaw, trifecta: p, winnerCombo: r.trifecta, xPointInTime, exhibitionKnownAtT5 });
   }
   return races.sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -278,6 +282,21 @@ console.log("\n合否（事前登録）: ΔR² 0.009 以上かつ 9月・10月�
   const known = es.filter((r) => r.exhibitionKnownAtT5);
   console.log(`[参考] その時点の値だけ（展示は締切5分前までに取れたレースだけ使う）: 評価の ΔR² ${delta(es).toFixed(4)}（α=${sc.alpha.toFixed(3)}・評価 ${es.length} レースのうち展示が間に合ったのは ${known.length}）`);
   console.log(`[参考] 展示が締切5分前までに取れていたレースだけ: ΔR² ${delta(known).toFixed(4)}（${known.length} レース）/ 取れていなかったレースだけ: ΔR² ${delta(es.filter((r) => !r.exhibitionKnownAtT5)).toFixed(4)}`);
+}
+
+// (5) いちばん厳しい条件: 補正なしの市場（オッズそのまま）× 締切5分前までに手元にあった展示だけ
+{
+  const strict = (r: MarketRace) => ({ ...r, f: fundamentalProbs(w, r.xPointInTime), pi: r.marketWinRaw });
+  const cs = combineSet.map(strict), es = evalSet.map(strict);
+  const sc = fitStage2(cs, true), sm = fitStage2(cs, false);
+  const delta = (races: typeof es) => {
+    const winners = races.map((r) => r.winner);
+    return r2(meanLogLoss(races.map((r) => combined(sc, r.f, r.pi)), winners)) - r2(meanLogLoss(races.map((r) => combined(sm, r.f, r.pi)), winners));
+  };
+  const d = es.map((r) => -Math.log(combined(sm, r.f, r.pi)[r.winner]) + Math.log(combined(sc, r.f, r.pi)[r.winner]));
+  const mean = d.reduce((s, v) => s + v, 0) / d.length;
+  const se = Math.sqrt(d.reduce((s, v) => s + (v - mean) ** 2, 0) / (d.length - 1)) / Math.sqrt(d.length);
+  console.log(`[参考] いちばん厳しい条件（補正なしの市場・手元にあった展示だけ）: 評価の ΔR² ${delta(es).toFixed(4)}（9月 ${delta(es.filter((r) => r.date.startsWith("2026-09"))).toFixed(4)}・10月 ${delta(es.filter((r) => r.date.startsWith("2026-10"))).toFixed(4)}・α=${sc.alpha.toFixed(3)}・logloss の差 ${mean.toFixed(4)}±${se.toFixed(4)}）`);
 }
 
 // (3) どの材料が効いているか: 材料のまとまりを外して学習し直し、評価の ΔR² を比べる
