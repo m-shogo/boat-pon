@@ -37,3 +37,6 @@ run_tsx scripts/notify-buy-results-fast.ts --catch-up || echo "${LOG_PREFIX} buy
 
 run_tsx scripts/notify-line.ts daily --date "$TODAY" || echo "${LOG_PREFIX} line daily skipped or failed"
 echo "${LOG_PREFIX} line daily attempted: ${TODAY}"
+
+# 月1回の DB の点検（壊れていないか・書き出しから戻せるか・複製先）。前回から 28 日たつと動く（約5分）。日次まとめの後に回す。
+run_tsx scripts/monthly-db-check.ts --if-due || echo "${LOG_PREFIX} monthly db check found problems or failed"

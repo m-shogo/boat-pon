@@ -230,7 +230,18 @@ const pendingOld = buys.filter((d) => !isSettled(d) && d.date <= addDays(todayJs
 if (pendingOld > 0) alerts.push(`3日以上前の BUY のうち ${pendingOld} 件の結果が未取り込み（結果の取り込みが止まっていないか確認）`);
 if (STATE_DIR && (!lastGrowth || now.getTime() - Date.parse(lastGrowth.evaluatedAt) > 9 * 24 * 3600_000)) alerts.push("週次の改善処理（run-accuracy-growth）が9日以上動いていない");
 
+// 月1回の DB の点検（scripts/monthly-db-check.ts。壊れていないか・書き出しから戻せるか・複製先）
+type DbCheck = { checkedAt: string; ok: boolean; problems: string[] };
+const dbCheck = ((): DbCheck | null => {
+  try {
+    return existsSync("data/reports/scorecard/db-check.json") ? (JSON.parse(readFileSync("data/reports/scorecard/db-check.json", "utf8")) as DbCheck) : null;
+  } catch { return null; }
+})();
+if (dbCheck && !dbCheck.ok) alerts.push(`DB の点検で問題（${dbCheck.checkedAt.slice(0, 10)}）: ${dbCheck.problems[0] ?? "-"}${dbCheck.problems.length > 1 ? ` ほか ${dbCheck.problems.length - 1} 件` : ""}`);
+if (dbCheck && now.getTime() - Date.parse(dbCheck.checkedAt) > 40 * 86_400_000) alerts.push(`DB の月1回の点検が40日以上動いていない（前回 ${dbCheck.checkedAt.slice(0, 10)}）`);
+
 const knownFacts: string[] = [];
+if (!dbCheck) knownFacts.push("DB の月1回の点検（scripts/monthly-db-check.ts）はまだ動いていない。毎晩の daily-notify が、前回から 28 日たつと動かす");
 if (v3All.logLoss != null && calAll.logLoss != null && v3All.logLoss > calAll.logLoss) knownFacts.push(`v3 の確率は市場補正より不正確（logloss ${num(v3All.logLoss, 5)} > ${num(calAll.logLoss, 5)}。知識ベース K6）`);
 if (v3Buy.actualToPredicted != null && v3Buy.n >= 30 && v3Buy.actualToPredicted < 0.5) knownFacts.push(`BUY での v3 の的中予測が過大（実績/予測 = ${num(v3Buy.actualToPredicted, 2)}）`);
 if (notifiedShare != null && buys.length >= 20 && notifiedShare < 0.5) knownFacts.push(`通算で締切前に通知できた BUY は ${pct(notifiedShare)}（${ledgerByTiming[0].buys}/${buys.length}）。${LIVE_RECORD_FIX_DATE} より前は、締切後に BUY のラベルが付いたものが多い（知識ベース K5）`);
