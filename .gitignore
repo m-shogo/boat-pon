@@ -30,3 +30,5 @@ backups/
 
 /boat.sqlite
 data/reports/
+# 締切前のオッズの時系列の書き出し（scripts/export-odds-timeseries.ts）。Git には入れない（複製は BOAT_PON_EXPORT_MIRROR_DIR）
+data/exports/
