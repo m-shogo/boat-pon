@@ -337,13 +337,16 @@ export function evaluateJobLiveness(jobs: JobLivenessInput[]) {
  */
 export function windowedAgeMinutes(lastMs: number | null, nowMs: number, window = { startMinute: 8 * 60, endMinute: 21 * 60 + 5 }): number | null {
   if (lastMs == null) return null;
-  const JST = 9 * 3_600_000;
-  const dayStart = Math.floor((nowMs + JST) / 86_400_000) * 86_400_000 - JST;
-  const minuteOfDay = (nowMs - dayStart) / 60_000;
-  const reference = minuteOfDay < window.startMinute
-    ? dayStart - 86_400_000 + window.endMinute * 60_000 // 時間帯の前: 前の日の終わり
-    : minuteOfDay > window.endMinute ? dayStart + window.endMinute * 60_000 : nowMs;
-  return Math.max(0, (reference - lastMs) / 60_000);
+  if (lastMs >= nowMs) return 0;
+  // 最後の更新からいままでのうち、時間帯の中の分だけを足す（夜の時間は数えない。朝 08:00 に前の夜の分を足さない。Codex のレビュー）
+  const JST = 9 * 3_600_000, DAY = 86_400_000;
+  let total = 0;
+  for (let day = Math.floor((lastMs + JST) / DAY) * DAY - JST, i = 0; day <= nowMs && i < 400; day += DAY, i += 1) {
+    const start = Math.max(lastMs, day + window.startMinute * 60_000);
+    const end = Math.min(nowMs, day + window.endMinute * 60_000);
+    if (end > start) total += end - start;
+  }
+  return total / 60_000;
 }
 
 // ─── BUY を「実際に知らせられたか」で分ける ───
@@ -416,6 +419,8 @@ export type SystemHealthInput = {
   backupAgeDays?: number | null;
   /** 締切前のオッズの時系列の、いちばん新しい書き出しから何日たったか（書き出しが無ければ null）。省略したら見ない。 */
   oddsExportAgeDays?: number | null;
+  /** 判定・通知の記録の書き出し（data/exports/records/latest.jsonl.gz）の経過日数。 */
+  recordsExportAgeDays?: number | null;
   /** LINE の今月の送信の上限と使用量（LINE の API で読む。読めなければ null）。 */
   lineQuota?: { limit: number | null; used: number } | null;
   /** 直近3日に作られて、送れていない LINE 通知の数。 */
@@ -438,7 +443,9 @@ export function evaluateSystemHealth(input: SystemHealthInput): string[] {
   // DB 全体のバックアップの古さは、取り直せないもの（締切前のオッズの時系列）の書き出しが止まっているときだけ注意にする。
   // 番組・結果・払戻は公式から取り直せ、オッズの時系列と判定・通知の記録は毎晩書き出して Google Drive に複製している（2026-10-15〜）。
   // 書き出しが動いている間も毎日「バックアップが古い」と出すと、注意が読まれなくなる（2026-10-15 の夜は注意がこの1件だけだった）。
-  const exportsCovering = input.oddsExportAgeDays != null && input.oddsExportAgeDays <= 3;
+  // 判定・通知の記録の書き出しも見る（渡されたとき。Codex のレビュー: オッズだけで判断すると、記録の書き出しの停止を見逃す）
+  const fresh = (days: number | null | undefined) => days != null && days <= 3;
+  const exportsCovering = fresh(input.oddsExportAgeDays) && (input.recordsExportAgeDays === undefined || fresh(input.recordsExportAgeDays));
   if (input.backupAgeDays !== undefined && !exportsCovering) {
     if (input.backupAgeDays == null) alerts.push("DB のバックアップが1つも無い（締切前のオッズの時系列は後から取り直せない）");
     else if (input.backupAgeDays > SYSTEM_HEALTH_LIMITS.backupAgeDays) alerts.push(`DB のいちばん新しいバックアップが ${Math.floor(input.backupAgeDays)} 日前（目安 ${SYSTEM_HEALTH_LIMITS.backupAgeDays} 日以内。締切前のオッズの時系列は後から取り直せない）`);
@@ -446,6 +453,10 @@ export function evaluateSystemHealth(input: SystemHealthInput): string[] {
   if (input.oddsExportAgeDays !== undefined) {
     if (input.oddsExportAgeDays == null) alerts.push("締切前のオッズの時系列の書き出しが無い（scripts/export-odds-timeseries.ts）");
     else if (input.oddsExportAgeDays > 3) alerts.push(`締切前のオッズの時系列の書き出しが ${Math.floor(input.oddsExportAgeDays)} 日止まっている（毎晩の daily-notify で書き出す）`);
+  }
+  if (input.recordsExportAgeDays !== undefined) {
+    if (input.recordsExportAgeDays == null) alerts.push("判定・通知の記録の書き出しが無い（scripts/export-records.ts）");
+    else if (input.recordsExportAgeDays > 3) alerts.push(`判定・通知の記録の書き出しが ${Math.floor(input.recordsExportAgeDays)} 日止まっている（毎晩の daily-notify で書き出す）`);
   }
   if (input.lineQuota?.limit && input.lineQuota.used >= input.lineQuota.limit * 0.8) {
     alerts.push(`LINE の今月の送信が ${input.lineQuota.used}/${input.lineQuota.limit} 通（8割を超えた）。上限を超えると月末まで通知が止まる`);

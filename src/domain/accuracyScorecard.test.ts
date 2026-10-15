@@ -205,6 +205,12 @@ test("DB のバックアップが古い・無いときは注意にする（省�
   // 取り直せないオッズの時系列を毎晩書き出せている間は、DB 全体のバックアップの古さを注意にしない
   assert.deepEqual(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 126, oddsExportAgeDays: 1 }), []);
   assert.equal(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 126, oddsExportAgeDays: 5 }).length, 2);
+  // 判定・通知の記録の書き出しが止まっていれば、それとバックアップの古さを注意にする（Codex のレビュー）
+  const stale = evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: null, oddsExportAgeDays: 1, recordsExportAgeDays: 6 });
+  assert.equal(stale.length, 2);
+  assert.match(stale.join("\n"), /判定・通知の記録の書き出しが 6 日止まっている/);
+  assert.match(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 126, oddsExportAgeDays: 1, recordsExportAgeDays: null }).join("\n"), /記録の書き出しが無い/);
+  assert.deepEqual(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 126, oddsExportAgeDays: 1, recordsExportAgeDays: 0.5 }), []);
 });
 
 test("締切前のオッズの書き出しが止まったら注意にする", () => {
@@ -229,8 +235,12 @@ test("auto-odds の古さは、動く時間帯（08:00〜21:05 JST）の中で�
   assert.equal(windowedAgeMinutes(jst("2026-10-15T20:45:00"), jst("2026-10-15T22:09:00")), 20);
   // 時間帯の中ではいまを基準にする
   assert.equal(windowedAgeMinutes(jst("2026-10-15T12:00:00"), jst("2026-10-15T13:30:00")), 90);
-  // 朝の 07:00 は前の日の 21:05 を基準にする
+  // 朝の 07:00 は前の日の 21:05 を基準にする。08:00 ちょうどに夜の分を足さない（Codex のレビュー）
   assert.equal(windowedAgeMinutes(jst("2026-10-15T21:05:00"), jst("2026-10-16T07:00:00")), 0);
+  assert.equal(windowedAgeMinutes(jst("2026-10-15T21:05:00"), jst("2026-10-16T08:00:00")), 0);
+  assert.equal(windowedAgeMinutes(jst("2026-10-15T21:05:00"), jst("2026-10-16T08:10:00")), 10);
+  // 前の日の 20:45 から翌朝 08:10 まで: 前の日の 20 分 + 朝の 10 分
+  assert.equal(windowedAgeMinutes(jst("2026-10-15T20:45:00"), jst("2026-10-16T08:10:00")), 30);
   // 昼に止まっていれば、夜に見ても注意になる長さ
   assert.equal(windowedAgeMinutes(jst("2026-10-15T15:05:00"), jst("2026-10-15T22:00:00")), 360);
   assert.equal(windowedAgeMinutes(null, jst("2026-10-15T22:00:00")), null);
