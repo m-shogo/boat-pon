@@ -15,6 +15,7 @@
  */
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, statfsSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { loadEnvFiles } from "../src/domain/envFile";
 import {
   BUY_TIMING_LABEL, binaryMetrics, describeCalibration, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, evaluateSystemHealth, normalizedMarketProbabilities, summarizeBuyLedger, summarizeRunTiming,
   type BinaryMetrics, type BinaryPrediction, type BuyTimingKind,
@@ -65,7 +66,7 @@ const maxDates = db.prepare(`SELECT
     (SELECT MAX(date) FROM race_payouts WHERE bet_type = 'trifecta') AS payouts,
     (SELECT MAX(date) FROM official_programs) AS programs`).get() as { results: string | null; payouts: string | null; programs: string | null };
 const programsByDate = new Map((db.prepare(`SELECT date, COUNT(*) n FROM official_programs WHERE date >= ? AND date <= ? GROUP BY date`).all(healthFrom, TO) as Array<{ date: string; n: number }>).map((r) => [r.date, r.n]));
-const unsentNotifications = (db.prepare(`SELECT COUNT(*) n FROM notification_log WHERE channel = 'line' AND status <> 'SENT' AND created_at >= datetime('now', '-3 days')`).get() as { n: number }).n;
+const unsentNotifications = (db.prepare(`SELECT COUNT(*) n FROM notification_log WHERE channel = 'line' AND status NOT IN ('SENT', 'IN_SUMMARY') AND created_at >= datetime('now', '-3 days')`).get() as { n: number }).n;
 db.close();
 
 // ─── 当たり外れ ───
@@ -185,7 +186,24 @@ try {
   const latest = files.map((f) => f.match(/^(\d{4}-\d{2}-\d{2})\.jsonl\.gz$/)?.[1]).filter((d): d is string => !!d).sort().at(-1);
   if (latest) oddsExportAgeDays = (Date.parse(`${todayJst()}T00:00:00+09:00`) - Date.parse(`${latest}T00:00:00+09:00`)) / 86_400_000;
 } catch { oddsExportAgeDays = null; }
-const systemAlerts = evaluateSystemHealth({ runTiming, diskFreeBytes, unsentNotifications, backupAgeDays, oddsExportAgeDays });
+// LINE の月の送信の上限と使用量（無料枠は月 200 通。2026-10-15 に確認）。読むだけで送らない。トークンが無ければ見ない。
+let lineQuota: { limit: number | null; used: number } | null = null;
+try {
+  loadEnvFiles([".env"]);
+  const token = process.env.BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN;
+  if (token) {
+    const get = async (path: string) => {
+      const res = await fetch(`https://api.line.me${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<Record<string, unknown>>;
+    };
+    const [quota, consumption] = await Promise.all([get("/v2/bot/message/quota"), get("/v2/bot/message/quota/consumption")]);
+    lineQuota = { limit: quota.type === "limited" ? Number(quota.value) : null, used: Number(consumption.totalUsage) };
+  }
+} catch (err) {
+  console.error("[accuracy-scorecard] LINE の使用量を読めなかった:", err instanceof Error ? err.message : err);
+}
+const systemAlerts = evaluateSystemHealth({ runTiming, diskFreeBytes, unsentNotifications, backupAgeDays, oddsExportAgeDays, lineQuota });
 
 // ─── 注意（対応が要るものだけ）と、既知の状態 ───
 // 2026-10-14: 毎日同じ既知の事実（v3 の不正確さ・止めた private capture の期限切れなど）が日次の LINE の先頭に出続け、
@@ -219,7 +237,7 @@ const report = {
   ledgerSinceFix: { from: LIVE_RECORD_FIX_DATE, ...ledgerSinceFix, notifiedBeforeClose: notifiedSinceFix },
   recentBuys: PUBLIC ? undefined : recentBuys,
   accuracy: { comparedRaces: scored.length, calibration: champion, all: accuracyAll, buyOnly: accuracyBuy, buyEv },
-  health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows, runTiming, diskFreeBytes, dbBytes, unsentNotifications, backupAgeDays, oddsExportAgeDays },
+  health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows, runTiming, diskFreeBytes, dbBytes, unsentNotifications, backupAgeDays, oddsExportAgeDays, lineQuota },
   growth: { champion, lastEvaluation: lastGrowth, evaluations: growthLedger.length, promotions: growthLedger.filter((g) => g.promote).length },
   alerts,
   knownFacts,
@@ -320,6 +338,7 @@ function renderMarkdown() {
     `- データの最終日: 結果 ${maxDates.results ?? "-"} / 全券種の払戻 ${maxDates.payouts ?? "-"} / 番組表 ${maxDates.programs ?? "-"}`,
     `- auto-odds（直近 ${runTiming.runs} 回の中央値）: 判定までの遅れ ${runTiming.medianLagMs == null ? "-" : `${Math.round(runTiming.medianLagMs / 1000)} 秒`}・判定の前の読み込み ${runTiming.medianBuildMs == null ? "-" : `${(runTiming.medianBuildMs / 1000).toFixed(1)} 秒`}`,
     `- ディスクの空き ${diskFreeBytes == null ? "-" : `${(diskFreeBytes / 1024 ** 3).toFixed(0)} GB`} / DB ${dbBytes == null ? "-" : `${(dbBytes / 1024 ** 3).toFixed(1)} GB`} / 直近3日に送れていない LINE 通知 ${unsentNotifications} 件 / DB のバックアップ ${backupAgeDays == null ? "なし" : `${Math.floor(backupAgeDays)} 日前`} / オッズの時系列の書き出し ${oddsExportAgeDays == null ? "なし" : `${Math.floor(oddsExportAgeDays)} 日前`}`,
+    `- LINE の今月の送信: ${lineQuota ? `${lineQuota.used}${lineQuota.limit ? `/${lineQuota.limit}` : ""} 通` : "-"}`,
     "",
     "## 定期ジョブの稼働（ログの最終更新）",
     "",

@@ -11,6 +11,7 @@
  *   --dry-run と --date を一緒に使うと、過去日の動作確認として締切後の時間帯の条件を外す。
  *   --catch-up: 締切から 120 分を超えたレースも対象にする。21:30 の日次まとめ（daily-line-summary.sh）の前に呼び、
  *               10分ごとの速報が登録されていなくても、その日の BUY の当たり外れを当日中に届ける。
+ *               はずれは別の1通を送らず、日次まとめの一覧に載せる（LINE の月 200 通の枠を守るため）。
  */
 import { DatabaseSync } from "node:sqlite";
 import { classifyBuyTiming } from "../src/domain/accuracyScorecard";
@@ -55,11 +56,11 @@ WHERE d.date = ? AND d.decision = 'BUY' AND d.run_kind = 'paper-live' AND d.mode
 ORDER BY p.close_at
 `).all(DATE, LIVE_MONITOR_MODEL_VERSION) as Buy[];
 
-  let fetches = 0, sent = 0, pending = 0;
+  let fetches = 0, sent = 0, pending = 0, folded = 0;
   for (const buy of buys) {
     const key = `line-buy-result-fast-${buy.race_id}`;
     const already = db.prepare("SELECT status FROM notification_log WHERE race_id = ? AND channel = 'line'").get(key) as { status: string } | undefined;
-    if (already?.status === "SENT" || !buy.close_at) continue;
+    if (already?.status === "SENT" || already?.status === "IN_SUMMARY" || !buy.close_at) continue;
     const minutesAfterClose = -minutesUntilRaceClose(buy.date, buy.close_at, new Date());
     // 過去日付の dry-run（動作確認）のときだけ、締切後の時間帯の条件を外す。
     const ignoreWindow = DRY_RUN && dateArgIndex >= 0;
@@ -111,8 +112,22 @@ ORDER BY p.close_at
     const body = [message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, notifiedBeforeClose ? null : "（この BUY は締切前に通知できなかった。締切後の判定）", "確定は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
     const oddsUrl = officialResultUrl(buy.date, buy.venue, buy.race_no);
 
+    // LINE の無料枠は月 200 通（2026-10-15 に API で確認）。21:30 のまとめ取り込み（--catch-up）で分かった「はずれ」は、
+    // 直後の日次まとめの一覧に載るので、別の1通は送らない（IN_SUMMARY で記録だけ残す）。的中は1通で知らせる。
+    const foldIntoSummary = CATCH_UP && !hit;
     if (DRY_RUN) {
-      console.log(`[dry-run] ${title}\n${body}\n`);
+      console.log(`[dry-run]${foldIntoSummary ? "（送らずに日次まとめへ）" : ""} ${title}\n${body}\n`);
+      continue;
+    }
+    if (foldIntoSummary) {
+      db.prepare(`
+INSERT INTO notification_log (race_id, channel, status, title, body, official_url)
+VALUES (?, 'line', 'IN_SUMMARY', ?, ?, ?)
+ON CONFLICT(race_id, channel) DO UPDATE SET status='IN_SUMMARY', title=excluded.title, body=excluded.body, official_url=excluded.official_url
+WHERE notification_log.status <> 'SENT'
+`).run(key, title, body, oddsUrl);
+      folded += 1;
+      console.log(`fast-result folded into daily summary: ${buy.race_id} miss`);
       continue;
     }
     loadEnvFiles([".env"]);
@@ -147,7 +162,7 @@ ON CONFLICT(race_id, channel) DO UPDATE SET status='SENT', title=?, body=?, offi
     sent += 1;
     console.log(`fast-result sent: ${buy.race_id} ${hit ? "hit" : "miss"}`);
   }
-  console.log(`notify-buy-results-fast done: date=${DATE} buys=${buys.length} fetches=${fetches} sent=${sent} pending=${pending} dryRun=${DRY_RUN} catchUp=${CATCH_UP}`);
+  console.log(`notify-buy-results-fast done: date=${DATE} buys=${buys.length} fetches=${fetches} sent=${sent} folded=${folded} pending=${pending} dryRun=${DRY_RUN} catchUp=${CATCH_UP}`);
 } finally {
   db.close();
 }

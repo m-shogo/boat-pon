@@ -400,6 +400,8 @@ export type SystemHealthInput = {
   backupAgeDays?: number | null;
   /** 締切前のオッズの時系列の、いちばん新しい書き出しから何日たったか（書き出しが無ければ null）。省略したら見ない。 */
   oddsExportAgeDays?: number | null;
+  /** LINE の今月の送信の上限と使用量（LINE の API で読む。読めなければ null）。 */
+  lineQuota?: { limit: number | null; used: number } | null;
   /** 直近3日に作られて、送れていない LINE 通知の数。 */
   unsentNotifications: number;
 };
@@ -424,6 +426,9 @@ export function evaluateSystemHealth(input: SystemHealthInput): string[] {
   if (input.oddsExportAgeDays !== undefined) {
     if (input.oddsExportAgeDays == null) alerts.push("締切前のオッズの時系列の書き出しが無い（scripts/export-odds-timeseries.ts）");
     else if (input.oddsExportAgeDays > 3) alerts.push(`締切前のオッズの時系列の書き出しが ${Math.floor(input.oddsExportAgeDays)} 日止まっている（毎晩の daily-notify で書き出す）`);
+  }
+  if (input.lineQuota?.limit && input.lineQuota.used >= input.lineQuota.limit * 0.8) {
+    alerts.push(`LINE の今月の送信が ${input.lineQuota.used}/${input.lineQuota.limit} 通（8割を超えた）。上限を超えると月末まで通知が止まる`);
   }
   if (input.unsentNotifications > 0) {
     alerts.push(`直近3日に送れていない LINE 通知が ${input.unsentNotifications} 件（トークンの期限切れ・通信の失敗を確認）`);

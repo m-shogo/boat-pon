@@ -210,3 +210,11 @@ test("締切前のオッズの書き出しが止まったら注意にする", ()
   assert.match(evaluateSystemHealth({ ...base, oddsExportAgeDays: 5.2 })[0], /書き出しが 5 日止まっている/);
   assert.match(evaluateSystemHealth({ ...base, oddsExportAgeDays: null })[0], /書き出しが無い/);
 });
+
+test("LINE の今月の送信が上限の8割を超えたら注意にする", () => {
+  const base = { runTiming: { runs: 0, medianLagMs: null, medianBuildMs: null }, diskFreeBytes: null, unsentNotifications: 0 };
+  assert.deepEqual(evaluateSystemHealth({ ...base, lineQuota: { limit: 200, used: 82 } }), []);
+  assert.deepEqual(evaluateSystemHealth({ ...base, lineQuota: { limit: null, used: 500 } }), []);
+  assert.deepEqual(evaluateSystemHealth({ ...base, lineQuota: null }), []);
+  assert.match(evaluateSystemHealth({ ...base, lineQuota: { limit: 200, used: 165 } })[0], /LINE の今月の送信が 165\/200 通/);
+});

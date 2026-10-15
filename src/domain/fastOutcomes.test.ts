@@ -17,12 +17,15 @@ test("速報の文面から、的中・はずれ・払戻を読む。払戻が�
   insert("20261015-芦屋-08", { ...base, raceNo: 8, resultSelection: "2-1-3", winningPayoutYen: 1_980 });
   insert("20261015-津-04", { ...base, venue: "津", raceNo: 4, resultSelection: "1-2-3", winningPayoutYen: null });
   insert("20261015-津-05", { ...base, venue: "津", raceNo: 5, resultSelection: "1-2-3", winningPayoutYen: 900 }, "PENDING");
+  insert("20261015-津-06", { ...base, venue: "津", raceNo: 6, resultSelection: "3-2-1", winningPayoutYen: 5_000 }, "IN_SUMMARY");
 
   const outcomes = loadFastOutcomes(db);
   assert.deepEqual(outcomes.get("20261015-芦屋-06"), { hit: true, payoutYen: 7_210, selection: "1-2-3" });
   assert.deepEqual(outcomes.get("20261015-芦屋-08"), { hit: false, payoutYen: null, selection: "1-2-3" });
   assert.equal(outcomes.has("20261015-津-04"), false);
   assert.equal(outcomes.has("20261015-津-05"), false);
+  // 21:30 のはずれは送らずに日次まとめへ（IN_SUMMARY）。精算には使う
+  assert.deepEqual(outcomes.get("20261015-津-06"), { hit: false, payoutYen: null, selection: "1-2-3" });
 });
 
 test("収支: 確定結果を優先し、無ければ速報で精算する。速報は同じ買い目にだけ当てはめる", async () => {

@@ -208,7 +208,7 @@ WITH buy_rows AS (
 SELECT dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, p.close_at, rr.trifecta, rr.payout_yen, rr.returned,
   (SELECT n.sent_at FROM notification_log n WHERE n.race_id = dh.race_id AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
   (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = dh.race_id) AS info_at,
-  (SELECT n.body FROM notification_log n WHERE n.race_id = 'line-buy-result-fast-' || dh.race_id AND n.channel = 'line' AND n.status = 'SENT') AS fast_body
+  (SELECT n.body FROM notification_log n WHERE n.race_id = 'line-buy-result-fast-' || dh.race_id AND n.channel = 'line' AND n.status IN ('SENT', 'IN_SUMMARY')) AS fast_body
 FROM buy_rows dh
 LEFT JOIN official_programs p ON p.race_id = dh.race_id
 LEFT JOIN race_results rr ON rr.race_id = dh.race_id
@@ -340,8 +340,8 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
   const notifications: NotificationRow[] = [];
   const ledgers = loadBuyLedgers(db, todayJst());
   for (const row of rows) {
-    // 締切後の速報（scripts/notify-buy-results-fast.ts）を送っていて、着順が確定と同じなら、確定通知は送らない。
-    const fast = db.prepare("SELECT body FROM notification_log WHERE race_id = ? AND channel = 'line' AND status = 'SENT'")
+    // 締切後の速報（scripts/notify-buy-results-fast.ts）を送っていて（はずれを日次まとめに載せた IN_SUMMARY も含む）、着順が確定と同じなら、確定通知は送らない。
+    const fast = db.prepare("SELECT body FROM notification_log WHERE race_id = ? AND channel = 'line' AND status IN ('SENT', 'IN_SUMMARY')")
       .get(`line-buy-result-fast-${row.race_id}`) as { body: string } | undefined;
     if (fast && row.trifecta && fast.body.includes(`実着順: ${row.trifecta}\n`)) continue;
     const message = buildBuyResultNotification({

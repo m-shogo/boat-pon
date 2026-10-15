@@ -30,7 +30,7 @@ type ExtraOutcomes = Map<string, { hit: boolean; payoutYen: number | null; selec
  */
 export function loadFastOutcomes(db: DatabaseSync): ExtraOutcomes {
   const rows = db.prepare(`SELECT race_id, title, body FROM notification_log
-    WHERE race_id LIKE 'line-buy-result-fast-%' AND channel = 'line' AND status = 'SENT'`).all() as Array<{ race_id: string; title: string; body: string }>;
+    WHERE race_id LIKE 'line-buy-result-fast-%' AND channel = 'line' AND status IN ('SENT', 'IN_SUMMARY')`).all() as Array<{ race_id: string; title: string; body: string }>;
   const outcomes: ExtraOutcomes = new Map();
   for (const row of rows) {
     const raceId = row.race_id.replace("line-buy-result-fast-", "");
