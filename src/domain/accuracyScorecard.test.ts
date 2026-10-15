@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   accuracySnapshotFromReport, binaryMetrics, calibratedMarketProbabilities, describeBuyProbability, evaluateChallenger, evaluateDataFreshness, evaluateJobLiveness, fitMarketCalibration,
-  classifyBuyTiming, describeCalibration, fitChallengers, fitOddsBandWeights, formatLedgerAndAccuracyLines, multiclassLogLoss, oddsBandIndex, normalizedMarketProbabilities, parseDbTimestamp, summarizeBuyLedger, type MarketRace,
+  classifyBuyTiming, describeCalibration, evaluateSystemHealth, fitChallengers, fitOddsBandWeights, formatLedgerAndAccuracyLines, multiclassLogLoss, oddsBandIndex, normalizedMarketProbabilities, parseDbTimestamp, summarizeBuyLedger, summarizeRunTiming, type MarketRace,
 } from "./accuracyScorecard";
 
 test("binaryMetrics は期待的中数・Brier・logloss を出す", () => {
@@ -175,4 +175,22 @@ test("日次まとめは、スコアカードの注意を1行で載せる", () =
   })!;
   const lines = formatLedgerAndAccuracyLines(summarizeBuyLedger([]), snapshot, new Date("2026-10-09T14:00:00.000Z"));
   assert.match(lines.at(-1)!, /^⚠️ 注意 2 件: ジョブ auto-odds が 3\.0 時間動いていない（ほかは公開版スコアカード）$/);
+});
+
+test("auto-odds のログから判定までの遅れと読み込みの中央値を出し、目安を超えたら注意にする", () => {
+  const line = (lag: number, build: number) => `decision-phase: clockLagMs=${lag} frozen=1 frozenBuys=0 buysToday=0 phaseMs=fetch:1,beforeinfoWait:1,build:${build},judge:1,notify:1`;
+  const fast = summarizeRunTiming([...Array.from({ length: 12 }, () => line(30_000, 3_000)), "auto-fetch-odds done: elapsedMs=1", line(600_000, 3_000)]);
+  assert.deepEqual(fast, { runs: 13, medianLagMs: 30_000, medianBuildMs: 3_000 });
+  assert.deepEqual(evaluateSystemHealth({ runTiming: fast, diskFreeBytes: 100 * 1024 ** 3, unsentNotifications: 0 }), []);
+
+  const slow = summarizeRunTiming(Array.from({ length: 12 }, () => line(95_000, 41_000)));
+  const alerts = evaluateSystemHealth({ runTiming: slow, diskFreeBytes: 10 * 1024 ** 3, unsentNotifications: 2 });
+  assert.equal(alerts.length, 4);
+  assert.match(alerts[0], /判定までの遅れ（直近 12 回の中央値）が 95 秒/);
+  assert.match(alerts[1], /全期間を読む処理が混ざった疑い/);
+  assert.match(alerts[2], /ディスクの空きが 10\.0 GB/);
+  assert.match(alerts[3], /送れていない LINE 通知が 2 件/);
+
+  // 回数が少ないとき（朝いちばん・スリープ明け）は判断しない
+  assert.deepEqual(evaluateSystemHealth({ runTiming: summarizeRunTiming([line(600_000, 50_000)]), diskFreeBytes: null, unsentNotifications: 0 }), []);
 });

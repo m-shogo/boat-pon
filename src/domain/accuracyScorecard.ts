@@ -360,3 +360,60 @@ export function classifyBuyTiming(args: { date: string; closeAt: string | null; 
   if (info == null) return "no-info";
   return info >= close ? "info-after-close" : "not-notified";
 }
+
+// ─── 長く動かし続けるための見張り（2026-10-15） ───
+// 少しずつ遅くなる処理（全期間を毎回読む読み込みで、判定までの遅れが 19 秒 → 60 秒に伸びていた）、
+// ディスクの残り、LINE の送信失敗は、止まるまで誰も気づかない。毎晩のスコアカードで数字を見て、目安を超えたら注意にする。
+
+export type RunTimingSummary = { runs: number; medianLagMs: number | null; medianBuildMs: number | null };
+
+const median = (values: number[]) => {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+};
+
+/** auto-odds.log の decision-phase 行から、判定までの遅れ（clockLagMs）と判定の前の読み込み（build）の中央値を出す。スリープをまたいだ回は中央値で薄める。 */
+export function summarizeRunTiming(lines: string[]): RunTimingSummary {
+  const lags: number[] = [], builds: number[] = [];
+  for (const line of lines) {
+    if (!line.startsWith("decision-phase:")) continue;
+    const lag = line.match(/clockLagMs=(\d+)/);
+    if (lag) lags.push(Number(lag[1]));
+    const build = line.match(/build:(\d+)/);
+    if (build) builds.push(Number(build[1]));
+  }
+  return { runs: lags.length, medianLagMs: median(lags), medianBuildMs: median(builds) };
+}
+
+export const SYSTEM_HEALTH_LIMITS = {
+  medianLagMs: 90_000,
+  medianBuildMs: 20_000,
+  diskFreeBytes: 20 * 1024 ** 3,
+};
+
+export type SystemHealthInput = {
+  runTiming: RunTimingSummary;
+  diskFreeBytes: number | null;
+  /** 直近3日に作られて、送れていない LINE 通知の数。 */
+  unsentNotifications: number;
+};
+
+export function evaluateSystemHealth(input: SystemHealthInput): string[] {
+  const alerts: string[] = [];
+  const sec = (ms: number) => `${Math.round(ms / 1000)} 秒`;
+  const { runTiming } = input;
+  if (runTiming.runs >= 10 && runTiming.medianLagMs != null && runTiming.medianLagMs > SYSTEM_HEALTH_LIMITS.medianLagMs) {
+    alerts.push(`auto-odds の判定までの遅れ（直近 ${runTiming.runs} 回の中央値）が ${sec(runTiming.medianLagMs)}（目安 ${sec(SYSTEM_HEALTH_LIMITS.medianLagMs)} 以内）。締切5分前の通知に間に合わなくなる`);
+  }
+  if (runTiming.runs >= 10 && runTiming.medianBuildMs != null && runTiming.medianBuildMs > SYSTEM_HEALTH_LIMITS.medianBuildMs) {
+    alerts.push(`auto-odds の判定の前の読み込み（中央値）が ${sec(runTiming.medianBuildMs)}（目安 ${sec(SYSTEM_HEALTH_LIMITS.medianBuildMs)} 以内）。全期間を読む処理が混ざった疑い`);
+  }
+  if (input.diskFreeBytes != null && input.diskFreeBytes < SYSTEM_HEALTH_LIMITS.diskFreeBytes) {
+    alerts.push(`ディスクの空きが ${(input.diskFreeBytes / 1024 ** 3).toFixed(1)} GB（目安 20 GB 以上）。DB とログが書けなくなる前に整理する`);
+  }
+  if (input.unsentNotifications > 0) {
+    alerts.push(`直近3日に送れていない LINE 通知が ${input.unsentNotifications} 件（トークンの期限切れ・通信の失敗を確認）`);
+  }
+  return alerts;
+}
