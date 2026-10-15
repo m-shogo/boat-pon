@@ -108,8 +108,9 @@ ORDER BY p.close_at
     const title = `${message.title}（速報）`;
     // 締切前にリアルタイム通知できなかった BUY（締切後の再評価で BUY になったもの）は、その旨を先頭に書く。
     const timing = db.prepare(`SELECT
-      (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
-      (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = ?) AS info_at`).get(buy.race_id, buy.race_id) as { sent_at: string | null; info_at: string | null };
+      (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT'
+        AND n.title LIKE '% ' || ? || '%') AS sent_at,
+      (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = ?) AS info_at`).get(buy.race_id, buy.selection, buy.race_id) as { sent_at: string | null; info_at: string | null };
     const notifiedBeforeClose = classifyBuyTiming({ date: buy.date, closeAt: buy.close_at, sentAt: timing.sent_at, infoAt: timing.info_at }) === "notified";
     const body = [message.body, deadHeat ? `同着: ${parsed.combinations.join(" / ")}（払戻は翌日の確定で）` : null, notifiedBeforeClose ? null : "（この BUY は締切前に通知できなかった。締切後の判定なので、財布には入れていない）", "確定は翌日の取り込みで再確認します。"].filter(Boolean).join("\n");
     const oddsUrl = officialResultUrl(buy.date, buy.venue, buy.race_no);

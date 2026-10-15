@@ -212,7 +212,9 @@ WITH buy_rows AS (
   WHERE dh.date = ? AND dh.decision = 'BUY' AND dh.model_version = ? AND dh.run_kind = 'paper-live'
 )
 SELECT dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, p.close_at, rr.trifecta, rr.payout_yen, rr.returned,
-  (SELECT n.sent_at FROM notification_log n WHERE n.race_id = dh.race_id AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
+  -- 通知の記録はレースに1行。見出しの買い目で、この買い目を通知したかを確かめる（財布の台帳 scripts/lib/buyLedger.ts と同じ）
+  (SELECT n.sent_at FROM notification_log n WHERE n.race_id = dh.race_id AND n.channel = 'line' AND n.status = 'SENT'
+    AND n.title LIKE '% ' || dh.selection || '%') AS sent_at,
   (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = dh.race_id) AS info_at,
   (SELECT n.body FROM notification_log n WHERE n.race_id = 'line-buy-result-fast-' || dh.race_id AND n.channel = 'line' AND n.status IN ('SENT', 'IN_SUMMARY')) AS fast_body
 FROM buy_rows dh
@@ -387,9 +389,10 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
     });
     // 締切前にリアルタイム通知できなかった BUY は、行動できなかったことを結果の末尾に書いておく。
     const timing = db.prepare(`SELECT p.close_at,
-      (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT') AS sent_at,
+      (SELECT n.sent_at FROM notification_log n WHERE n.race_id = ? AND n.channel = 'line' AND n.status = 'SENT'
+        AND n.title LIKE '% ' || ? || '%') AS sent_at,
       (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = ?) AS info_at
-      FROM official_programs p WHERE p.race_id = ?`).get(row.race_id, row.race_id, row.race_id) as { close_at: string | null; sent_at: string | null; info_at: string | null } | undefined;
+      FROM official_programs p WHERE p.race_id = ?`).get(row.race_id, row.selection, row.race_id, row.race_id) as { close_at: string | null; sent_at: string | null; info_at: string | null } | undefined;
     const notifiedBeforeClose = timing != null && classifyBuyTiming({ date: row.date, closeAt: timing.close_at, sentAt: timing.sent_at, infoAt: timing.info_at }) === "notified";
     const notification = upsertPendingNotification(db, {
       raceId: `line-buy-result-${row.race_id}-${row.bet_type}-${row.selection}`,
