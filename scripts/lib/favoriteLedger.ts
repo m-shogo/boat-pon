@@ -4,8 +4,13 @@
  * 記録: data/reports/scorecard/favorite-picks/YYYY-MM-DD.json（その日の締切5分前の全120通りがそろったレースごとに1点）。
  * 一度作った日のファイルは書き直さない（後から市場補正のパラメータが変わっても、その日の予想は変えない）。当日分は 21:10 以降だけ作る。
  * 精算: 公式の確定結果（race_results）。返還は除く。100 円ずつ買った場合として数える（購入の推奨ではない）。
+ *
+ * 性格（Codex のレビュー 2026-10-15）: 本命予想は通知していない「後から集計した参考」。使うオッズは収集の仕組み上すべて締切前
+ * （締切1分前まで）に取れたものだが、BUY のように行動の締め切り（締切5分前）で固定した記録ではない。
+ * 2026-10-15 より前の日は、その日の夜に作ったものではなく 10/15 に作った再構成（市場補正のパラメータは 6月のデータで決めて
+ * 10/7 から固定している値で、7月以降の情報は入っていない）。ファイルの kind で区別する。
  */
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 import { summarizeBuyLedger, type BuyLedgerSummary, type BuyOutcome } from "../../src/domain/accuracyScorecard";
 import { pickFavorite, type FavoritePick } from "../../src/domain/favoritePick";
@@ -14,7 +19,10 @@ import { addDays, DEFAULT_SCORECARD_STATE_DIR, loadChampionCalibration, loadComp
 /** 締切5分前の全120通りがそろい始めた月（6月は 5% しかない）。 */
 export const FAVORITE_FROM = "2026-07-01";
 
-type DayFile = { date: string; generatedAt: string; calibration: unknown; picks: FavoritePick[] };
+type DayFile = { date: string; generatedAt: string; kind: "nightly" | "reconstructed"; calibration: unknown; picks: FavoritePick[] };
+
+/** この日より前の記録は、後から作った再構成。 */
+const NIGHTLY_FROM = "2026-10-15";
 
 const fileFor = (stateDir: string, date: string) => `${stateDir}/favorite-picks/${date}.json`;
 
@@ -39,10 +47,19 @@ export function ensureFavoritePicks(db: DatabaseSync, toDate: string, stateDir =
     }
     picks.sort((a, b) => a.raceId.localeCompare(b.raceId));
     mkdirSync(`${stateDir}/favorite-picks`, { recursive: true });
-    const body: DayFile = { date, generatedAt: now.toISOString(), calibration, picks };
-    writeFileSync(`${path}.tmp`, `${JSON.stringify(body)}\n`);
-    renameSync(`${path}.tmp`, path);
-    created += 1;
+    const body: DayFile = { date, generatedAt: now.toISOString(), kind: date >= NIGHTLY_FROM ? "nightly" : "reconstructed", calibration, picks };
+    // 実行ごとに別名の一時ファイルに書き、正式な名前には「まだ無いときだけ」置く（link は既にあれば失敗する）。
+    // 2つの実行が同時に作っても、先に置いた方だけが残り、後の方は何も上書きしない（Codex のレビュー）。
+    const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(tmp, `${JSON.stringify(body)}\n`);
+    try {
+      linkSync(tmp, path);
+      created += 1;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    } finally {
+      unlinkSync(tmp);
+    }
   }
   return created;
 }

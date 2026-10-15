@@ -114,7 +114,7 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   }
   const fav = input.favorite;
   if (fav && fav.total.settled > 0) {
-    lines.push("", "⭐ 本命予想（各レース1点。締切5分前にいちばん当たりやすい買い目。購入の推奨ではない）");
+    lines.push("", "⭐ 本命予想（参考。各レースで締切前のオッズがいちばん当たりやすい1点を、後から集計。通知・購入の推奨ではない）");
     if (fav.lastSettledDay) lines.push(`${md(fav.lastSettledDay.date)}: ${formatTallyMoney(fav.lastSettledDay.ledger)}`);
     lines.push(`今月: ${formatTallyMoney(fav.month)}`, `${md(fav.from)} から: ${formatTallyMoney(fav.total)}`);
     if (input.total.settled > 0) {
