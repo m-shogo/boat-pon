@@ -28,5 +28,4 @@ echo "${LOG_PREFIX} verify current-day program inventory"
 export BOAT_PON_PROGRAM_READINESS_MAX_AGE_MINUTES=180
 run_tsx scripts/check-official-program-live-readiness.ts "$TODAY"
 
-echo "${LOG_PREFIX} generate private daily trifecta capture plan"
-run_tsx scripts/generate-n2-trifecta-private-daily-plan.ts "$TODAY"
+# 2026-10-15: 研究用の収集（private capture）の計画づくりは、研究工場の停止に合わせて外した。

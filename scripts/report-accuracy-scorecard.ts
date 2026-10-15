@@ -8,7 +8,7 @@
  * 使い方: npx tsx scripts/report-accuracy-scorecard.ts [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--accuracy-days N]
  *          [--format md|json] [--public] [--output path] [--json-output path] [--state-dir dir]
  * 当たり外れの台帳は --from からの全期間。確率の精度はオッズ時系列の走査が重いので直近 --accuracy-days 日（既定 60、0 で全期間）に絞る。
- * --public はレース ID・買い目・オッズを出さない（公開境界: scripts/verify-product-boundaries.mjs と同じ方針）。
+ * --public はレース ID・買い目・オッズを出さない（公開してよいのは集計値だけ）。
  * --state-dir を付けると、履歴（history.jsonl）に1行足し、前回は無かった注意をイベント（events.jsonl）に記録する。
  * --no-record を足すと、状態は読むが履歴とイベントには書かない（記録は毎晩の日次まとめの前の1回だけにする）。
  * DB は読み取り専用で開く。BOAT_PON_DB_URI で接続先を変えられる。DB にもリポジトリの追跡ファイルにも書かない。
