@@ -6,7 +6,7 @@ import { buildBuyResultNotification } from "../src/domain/buyResultNotification"
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
-import { formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
+import { BUY_REVIEW_DATE, formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
 import { ensureFavoritePicks, FAVORITE_FROM, loadFavoriteLedgers } from "./lib/favoriteLedger";
 import { claimNotification, recoverStuckNotifications, releaseNotification, upsertPendingRow } from "./lib/notificationLog";
@@ -249,6 +249,10 @@ ORDER BY p.close_at, dh.venue, dh.race_no
     sinceFix: ledgers.sinceFix,
     notifiedTotal: ledgers.notifiedTotal,
     favorite,
+    // 判断の日（11/15）だけ、BUY と本命予想の比較とおすすめを載せる（ユーザーの要望「自動化して」）
+    decision: date === BUY_REVIEW_DATE && favorite
+      ? { from: ledgers.sinceFix.from, buy: ledgers.sinceFix.notifiedLedger, favorite: favorite.between(ledgers.sinceFix.from, date) }
+      : undefined,
     alerts: scorecardAlerts(new Date()),
     counts,
     coverage: dailyCoverage(db, date),

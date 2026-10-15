@@ -38,7 +38,8 @@
     "review:t5-residual": "tsx scripts/review-20261007-t5-residual-extended.ts",
     "review:late-money": "tsx scripts/review-20261007-late-money.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts",
-    "export:odds-timeseries": "tsx scripts/export-odds-timeseries.ts"
+    "export:odds-timeseries": "tsx scripts/export-odds-timeseries.ts",
+    "export:records": "tsx scripts/export-records.ts"
   },
   "engines": {
     "node": ">=24.0.0"

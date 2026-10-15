@@ -14,7 +14,7 @@ type Row = { race_id: string; date: string; selection: string; trifecta: string 
 export type BuyLedgers = {
   month: BuyLedgerSummary;
   total: BuyLedgerSummary;
-  sinceFix: { from: string; ledger: BuyLedgerSummary; notified: number };
+  sinceFix: { from: string; ledger: BuyLedgerSummary; notified: number; notifiedLedger: BuyLedgerSummary };
   /** 通算のうち、締切前に通知できた BUY だけ（実際に行動できた分の収支）。 */
   notifiedTotal: BuyLedgerSummary;
   lastSettledDay: { date: string; ledger: BuyLedgerSummary } | null;
@@ -94,7 +94,7 @@ WHERE dh.row_num = 1
   return {
     month: summarizeBuyLedger(rows.filter((row) => row.date.startsWith(month)).map(outcome)),
     total: summarizeBuyLedger(rows.map(outcome)),
-    sinceFix: { from: LIVE_RECORD_FIX_DATE, ledger: summarizeBuyLedger(sinceFixRows.map(outcome)), notified },
+    sinceFix: { from: LIVE_RECORD_FIX_DATE, ledger: summarizeBuyLedger(sinceFixRows.map(outcome)), notified, notifiedLedger: summarizeBuyLedger(sinceFixRows.filter(isNotified).map(outcome)) },
     notifiedTotal: summarizeBuyLedger(rows.filter(isNotified).map(outcome)),
     lastSettledDay,
   };

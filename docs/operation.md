@@ -49,7 +49,9 @@ npx tsx scripts/notify-line.ts daily --date YYYY-MM-DD --preview   # 日次ま�
 ## バックアップ
 
 - **締切前のオッズの時系列**（後から取り直せない）: 毎晩 21:30 の daily-notify が、1日1ファイル（gzip、1日 130〜300 KB）で `data/exports/odds-timeseries/YYYY/YYYY-MM-DD.jsonl.gz` に書き出し、DB の行数と突き合わせる（`npm run export:odds-timeseries -- --from <日> --to <日> --verify`）。環境変数 `BOAT_PON_EXPORT_MIRROR_DIR`（例: Google Drive のフォルダ）を `.env` に書くと、そこにも複製する。**複製先はユーザーが決める。**
-- **DB 全体**: `npm run backup:safe` で `backups/<日時>/` に VACUUM INTO（約 16 GB）。同じディスクなので、月1回は外付けディスクにコピーする。`backups/` の古い世代は自動では消さない（ユーザーが判断する）。
+- **取り直せない記録**（paper-live の判定・LINE の通知の記録・設定）: 毎晩 `data/exports/records/latest.jsonl.gz`（約 2 MB）に書き出し、月の最初の回は `YYYY-MM.jsonl.gz` の控えも残す。複製先は同じ（`npm run export:records`）。
+- **DB 全体**: `npm run backup:safe` で `backups/<日時>/` に VACUUM INTO（約 16 GB）。取り直せないものは上の2つで毎晩 Google Drive に複製しているので、外付けディスクへのコピーは任意（番組・結果・払戻は公式から取り直せる）。`backups/` の古い世代は自動では消さない（ユーザーが判断する）。
+- 複製先は 2026-10-15 に Google Drive（マイドライブ/boat-pon-backup）に設定した（ユーザーの許可）。
 - スコアカードが「DB のバックアップが 14 日より古い」「オッズの書き出しが 3 日止まっている」を注意に出す。
 
 ## LINE の設定

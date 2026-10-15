@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { summarizeBuyLedger } from "./accuracyScorecard";
-import { formatBuyAlert, formatDailySummary, formatWeeklySummary } from "./lineMessages";
+import { formatBuyAlert, formatBuyReview, formatDailySummary, formatWeeklySummary } from "./lineMessages";
 
 test("BUY の通知は 🔔 で始まり、オッズ・当たる確率・期待回収を平易に出す", () => {
   const { title, body } = formatBuyAlert({
@@ -118,4 +118,14 @@ test("BUY の通知は、買い方（場・R・券種・買い目・金額・締
   });
   assert.match(body, /^買い方: 芦屋 6R・3連単 1-2-3・100円（締切 11:00 まで）/);
   assert.match(body, /① このレースの公式ページ（ログインして「投票」から）: https:\/\/www\.boatrace\.jp\/owpc\/pc\/race\/odds3t\?rno=6&jcd=21&hd=20261015\n② 投票サイト: https:\/\/bu\.tbbr\.jp\//);
+});
+
+test("判断の日に、BUY と本命予想の比較とおすすめを出す", () => {
+  const buy = ledger([["2026-10-12", false, null], ["2026-10-13", false, null]]);
+  const fav = ledger([["2026-10-12", true, 700], ["2026-10-12", false, null], ["2026-10-13", false, null]]);
+  const lines = formatBuyReview({ from: "2026-10-10", buy, favorite: fav });
+  assert.equal(lines[0], "📌 判断の日: BUY の通知を続けるか（10/10 以降で比べる）");
+  assert.match(lines.at(-1)!, /BUY の回収率（0%）は本命予想（233%）より低い。通知を本命予想に置き換えることをおすすめします/);
+  assert.match(formatBuyReview({ from: "2026-10-10", buy: ledger([]), favorite: fav }).at(-1)!, /まだ比べられない/);
+  assert.match(formatBuyReview({ from: "2026-10-10", buy: ledger([["2026-10-12", true, 9_000]]), favorite: fav }).at(-1)!, /偶然の差の可能性が大きい/);
 });

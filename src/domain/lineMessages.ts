@@ -74,6 +74,8 @@ export type DailySummaryInput = {
   sinceFix?: { from: string; ledger: BuyLedgerSummary; notified: number };
   /** 通算のうち、締切前に通知できた BUY だけ（実際に行動できた分）。 */
   notifiedTotal?: BuyLedgerSummary;
+  /** 判断の日（BUY_REVIEW_DATE）に載せる、BUY と本命予想の比較とおすすめ。 */
+  decision?: { from: string; buy: BuyLedgerSummary; favorite: BuyLedgerSummary };
   /** 本命予想（各レース1点）の成績。BUY と並べて比べる。 */
   favorite?: { lastSettledDay: { date: string; ledger: BuyLedgerSummary } | null; month: BuyLedgerSummary; total: BuyLedgerSummary; from: string };
   alerts: string[];
@@ -111,6 +113,7 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   if (input.lastSettledDay && input.lastSettledDay.date !== input.date && input.lastSettledDay.ledger.settled > 0) {
     lines.push(`${md(input.lastSettledDay.date)} の結果: ${formatTally(input.lastSettledDay.ledger)}`);
   }
+  if (input.decision) lines.push("", ...formatBuyReview(input.decision));
   lines.push(
     "",
     "💰 収支（100円ずつ買った場合・公式の払戻）",
@@ -143,6 +146,30 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   }
   lines.push(PAPER_NOTE);
   return { title, body: lines.join("\n") };
+}
+
+/**
+ * BUY の通知を続けるかを決める日（2026-10-15 にユーザーと決めた）。この日の日次まとめに、比較とおすすめを自動で載せる。
+ * 比べるのは、判定を締め切りで固定した後（10/10〜）に締切前に通知できた BUY と、同じ期間の本命予想。
+ */
+export const BUY_REVIEW_DATE = "2026-11-15";
+
+export function formatBuyReview(input: { from: string; buy: BuyLedgerSummary; favorite: BuyLedgerSummary }): string[] {
+  const roi = (l: BuyLedgerSummary) => (l.settled ? Math.round((l.officialRoi ?? 0) * 100) : null);
+  const b = roi(input.buy), f = roi(input.favorite);
+  const lines = [
+    `📌 判断の日: BUY の通知を続けるか（${md(input.from)} 以降で比べる）`,
+    `BUY（締切前に通知できた分）: ${formatTallyMoney(input.buy)}`,
+    `本命予想（参考）: ${formatTallyMoney(input.favorite)}`,
+  ];
+  if (b == null || f == null) {
+    lines.push("→ 精算された件数が足りず、まだ比べられない。");
+  } else if (b < f) {
+    lines.push(`→ BUY の回収率（${b}%）は本命予想（${f}%）より低い。通知を本命予想に置き換えることをおすすめします。決めるのはあなたです（Claude に「置き換えて」と伝えれば、判定の変更として進めます）。`);
+  } else {
+    lines.push(`→ BUY の回収率（${b}%）は本命予想（${f}%）以上。ただし BUY は件数が少なく、偶然の差の可能性が大きいので、いまのまま続けて様子を見ます。`);
+  }
+  return lines;
 }
 
 export type WeeklyWindow = {
