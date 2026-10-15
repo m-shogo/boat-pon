@@ -73,6 +73,24 @@ function place(path: string, data: Buffer, exclusive: boolean): "written" | "exi
   }
 }
 
+// 前の晩の書き出しより行が減っていたら、書き出しを上書きしない（DB から行が消えたときに、バックアップと複製まで減らさないため。
+// Codex のレビュー 14回目）。判定・通知・設定の行は、ふつうは増えるだけ。
+const previous = new Map<string, number>();
+try {
+  if (existsSync(join(ROOT, "latest.jsonl.gz"))) {
+    for (const line of gunzipSync(readFileSync(join(ROOT, "latest.jsonl.gz"))).toString("utf8").split("\n")) {
+      if (!line) continue;
+      const { table } = JSON.parse(line) as { table: string };
+      previous.set(table, (previous.get(table) ?? 0) + 1);
+    }
+  }
+} catch { previous.clear(); }
+const shrunk = [...previous].filter(([table, n]) => (counts.get(table) ?? 0) < n);
+if (shrunk.length) {
+  console.error(`export-records: DB の行が前の書き出しより少ない（${shrunk.map(([t, n]) => `${t} ${counts.get(t) ?? 0} < ${n}`).join(" / ")}）。行が消えた疑いがあるので、書き出しも複製も上書きしない`);
+  process.exit(1);
+}
+
 const month = todayJst().slice(0, 7);
 const results: string[] = [];
 let failed = 0;

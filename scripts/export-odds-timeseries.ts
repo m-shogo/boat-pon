@@ -52,6 +52,15 @@ function matchesDb(gz: Buffer, expected: string): boolean {
   }
 }
 
+/** 書き出しの行数（読めなければ 0）。 */
+function fileRowCount(gz: Buffer): number {
+  try {
+    return gunzipSync(gz).toString("utf8").split("\n").filter(Boolean).reduce((sum, line) => sum + ((JSON.parse(line) as OddsTimeseriesCapture).rows?.length ?? 0), 0);
+  } catch {
+    return 0;
+  }
+}
+
 /** 一時ファイルに書き、確かめてから正式な名前にする（途中で止まっても、確かめていないファイルは正式な名前にならない）。 */
 function writeVerified(path: string, content: Buffer, check: (written: Buffer) => boolean): boolean {
   mkdirSync(dirname(path), { recursive: true });
@@ -81,6 +90,12 @@ try {
     const exists = existsSync(path);
     // 既にあるファイルは、--verify のときだけ中身を確かめ、DB と違えば（古い形式を含む）書き直す。
     const needsWrite = !exists || FORCE || (VERIFY && !matchesDb(readFileSync(path), expected));
+    // DB の行が書き出しより少ないときは書き直さない。DB から行が消えたときに、バックアップまで減らさないため（Codex のレビュー 14回目）
+    if (needsWrite && exists && rows.length < fileRowCount(readFileSync(path))) {
+      failed += 1;
+      console.error(`export-odds-timeseries: ${date} は DB（${rows.length} 行）が書き出しより少ない。行が消えた疑い（書き出しは書き直さない）`);
+      continue;
+    }
     if (needsWrite) {
       const content = gzipSync(`${groupOddsTimeseriesRows(rows).map((capture) => JSON.stringify(capture)).join("\n")}\n`);
       if (!writeVerified(path, content, (gz) => matchesDb(gz, expected))) {

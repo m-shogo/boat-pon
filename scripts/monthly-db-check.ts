@@ -27,6 +27,12 @@ const RECORDS = "data/exports/records/latest.jsonl.gz";
 const ODDS_ROOT = "data/exports/odds-timeseries";
 const RECORD_TABLES: Record<string, string> = { decision_history: "run_kind = 'paper-live'", notification_log: "1 = 1", app_settings: "1 = 1" };
 
+// 前回の点検で数えた本番の行数（月をまたいで行が減っていないかを見る。書き出しは毎晩新しくなるので、それとは別に持つ）
+let previousProduction: Record<string, number> = {};
+try {
+  if (existsSync(OUTPUT)) previousProduction = (JSON.parse(readFileSync(OUTPUT, "utf8")) as { production?: Record<string, number> }).production ?? {};
+} catch { previousProduction = {}; }
+
 if (process.argv.includes("--if-due") && existsSync(OUTPUT)) {
   try {
     const last = JSON.parse(readFileSync(OUTPUT, "utf8")) as { checkedAt?: string; ok?: boolean };
@@ -81,6 +87,7 @@ try {
       }
       const production = (prod.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${where}`).get() as { n: number }).n;
       records[table] = { exported: rows.length, restored, production };
+      if (previousProduction[table] != null && production < previousProduction[table]) problems.push(`${table}: 本番の DB（${production} 行）が前回の点検（${previousProduction[table]} 行）より少ない`);
       if (restored !== rows.length) problems.push(`${table}: 書き出し ${rows.length} 行のうち ${restored} 行しか戻せない`);
       if (production < rows.length) problems.push(`${table}: 本番の DB（${production} 行）が前の書き出し（${rows.length} 行）より少ない`);
     }
@@ -142,6 +149,7 @@ const result = {
   quickCheckSeconds,
   totalSeconds: Math.round((Date.now() - started) / 1000),
   restore: { records, odds },
+  production: Object.fromEntries(Object.entries(records).map(([table, r]) => [table, r.production])),
   mirror,
 };
 writeFileSync(`${OUTPUT}.tmp`, `${JSON.stringify(result, null, 2)}\n`);
