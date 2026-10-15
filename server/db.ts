@@ -739,11 +739,17 @@ function loadRacerProfilesMap(db: DatabaseSync): Map<string, { flyingCount: numb
 
 /** exhibition_data を全件ロードして Map<"race_id-course", start_timing> を返す
  *  有効な ST値（0.05〜0.4s）のみ保持。0 や null は欠損とみなす。 */
-function loadExhibitionStMap(db: DatabaseSync): Map<string, number> {
-  const rows = db.prepare(`
+function loadExhibitionStMap(db: DatabaseSync, date?: string): Map<string, number> {
+  // date を渡すと、その日のレースだけを読む（auto-odds の判定は当日のレースしか見ない。2026-10-15 の監査）
+  const rows = (date
+    ? db.prepare(`
+    SELECT race_id, course, start_timing FROM exhibition_data
+    WHERE race_id >= ? AND race_id < ? AND start_timing > 0.05 AND start_timing < 0.4
+  `).all(...raceIdRangeForDate(date))
+    : db.prepare(`
     SELECT race_id, course, start_timing FROM exhibition_data
     WHERE start_timing > 0.05 AND start_timing < 0.4
-  `).all() as Array<Record<string, unknown>>;
+  `).all()) as Array<Record<string, unknown>>;
   const map = new Map<string, number>();
   for (const row of rows) {
     map.set(`${row.race_id}-${row.course}`, Number(row.start_timing));
@@ -752,11 +758,16 @@ function loadExhibitionStMap(db: DatabaseSync): Map<string, number> {
 }
 
 /** motor_boat_stats を race_id 別にロードして Map<"race_id-course", {motorTop2Rate, boatTop2Rate}> を返す */
-function loadMotorBoatStatsMap(db: DatabaseSync): Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }> {
-  const rows = db.prepare(`
+function loadMotorBoatStatsMap(db: DatabaseSync, date?: string): Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }> {
+  const rows = (date
+    ? db.prepare(`
+    SELECT race_id, course, motor_top2_rate, boat_top2_rate FROM motor_boat_stats
+    WHERE race_id >= ? AND race_id < ? AND (motor_top2_rate IS NOT NULL OR boat_top2_rate IS NOT NULL)
+  `).all(...raceIdRangeForDate(date))
+    : db.prepare(`
     SELECT race_id, course, motor_top2_rate, boat_top2_rate FROM motor_boat_stats
     WHERE motor_top2_rate IS NOT NULL OR boat_top2_rate IS NOT NULL
-  `).all() as Array<Record<string, unknown>>;
+  `).all()) as Array<Record<string, unknown>>;
   const map = new Map<string, { motorTop2Rate: number | null; boatTop2Rate: number | null }>();
   for (const row of rows) {
     map.set(`${row.race_id}-${row.course}`, {
@@ -840,9 +851,9 @@ ORDER BY date DESC, venue ASC, race_no ASC
 `).all(...params) as Array<Record<string, unknown>>;
   const courseStatsMap = loadCourseStatsMap(db);
   const profilesMap = loadRacerProfilesMap(db);
-  const exhibitionStMap = loadExhibitionStMap(db);
-  const motorBoatStatsMap = loadMotorBoatStatsMap(db);
-  const beforeInfoCompleteRaceIds = loadBeforeInfoCompleteRaceIds(db);
+  const exhibitionStMap = loadExhibitionStMap(db, date);
+  const motorBoatStatsMap = loadMotorBoatStatsMap(db, date);
+  const beforeInfoCompleteRaceIds = loadBeforeInfoCompleteRaceIds(db, date);
   return rows.map((row) => {
     const raceId = String(row.race_id);
     return {
@@ -1547,13 +1558,21 @@ LIMIT 1
   return row != null;
 }
 
-function loadBeforeInfoCompleteRaceIds(db: DatabaseSync): Set<string> {
-  const rows = db.prepare(`
+function loadBeforeInfoCompleteRaceIds(db: DatabaseSync, date?: string): Set<string> {
+  const rows = (date
+    ? db.prepare(`
+SELECT DISTINCT e.race_id
+FROM exhibition_data e
+WHERE e.race_id >= ? AND e.race_id < ?
+  AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = e.race_id)
+  AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = e.race_id)
+`).all(...raceIdRangeForDate(date))
+    : db.prepare(`
 SELECT DISTINCT e.race_id
 FROM exhibition_data e
 WHERE EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = e.race_id)
   AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = e.race_id)
-`).all() as Array<{ race_id: string }>;
+`).all()) as Array<{ race_id: string }>;
   return new Set(rows.map((row) => String(row.race_id)));
 }
 
@@ -1619,11 +1638,17 @@ ON CONFLICT(race_id) DO UPDATE SET
   );
 }
 
-export function loadRaceWeatherMap(db: DatabaseSync): Map<string, RaceEnvironment> {
-  const rows = db.prepare(`
+export function loadRaceWeatherMap(db: DatabaseSync, date?: string): Map<string, RaceEnvironment> {
+  const rows = (date
+    ? db.prepare(`
 SELECT race_id, weather, wind_speed_mps, wave_height_cm, temperature_c, water_temperature_c, stable_plate, shortened_laps
 FROM race_weather
-`).all() as Array<Record<string, unknown>>;
+WHERE race_id >= ? AND race_id < ?
+`).all(...raceIdRangeForDate(date))
+    : db.prepare(`
+SELECT race_id, weather, wind_speed_mps, wave_height_cm, temperature_c, water_temperature_c, stable_plate, shortened_laps
+FROM race_weather
+`).all()) as Array<Record<string, unknown>>;
   return new Map(rows.map((row) => [
     String(row.race_id),
     {

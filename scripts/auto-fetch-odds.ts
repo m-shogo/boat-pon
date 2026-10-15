@@ -325,7 +325,7 @@ try {
       modelResults,
       listEarlyOddsSnapshots(db, today),
       freshAllOdds,
-      loadRaceWeatherMap(db),
+      loadRaceWeatherMap(db, today),
     );
     const candidatesBuiltAt = Date.now();
     const persistHistory = today >= LIVE_MONITOR_FROM;
