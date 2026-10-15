@@ -52,8 +52,8 @@ if (db) {
   }
 }
 
-// --- package.json scripts ---
-for (const name of ["catchup", "daily", "health"]) {
+// --- package.json scripts（2026-10-15 の最小構成で残した、運用に要るもの） ---
+for (const name of ["health", "report:accuracy-scorecard", "notify:line:daily"]) {
   if (name in scripts) ok(`script:${name}`);
   else error(`script:${name}`, "missing from package.json");
 }
@@ -64,14 +64,8 @@ const cliMap: Record<string, string> = {
   "fetch:official-results":   "結果取得",
   "auto:odds":                "オッズ取得",
   "auto:beforeinfo":          "直前情報取得",
-  "backfill:beforeinfo":      "直前情報バックフィル",
-  "backfill:motor-boat-stats":"モーター/ボート成績バックフィル",
-  "report:daily":             "日次レポート",
-  "report:weekly":            "週次レポート",
-  "report:data-coverage":     "データカバレッジ確認",
-  "status:brief":             "簡易ステータス",
-  "validate:data":            "データ整合性チェック",
-  "decision:dry-run":         "期待値判定dry-run",
+  "report:growth":            "成長レポート",
+  "audit:data-integrity":     "過去データの監査",
 };
 
 for (const [scriptName, label] of Object.entries(cliMap)) {

@@ -194,3 +194,11 @@ test("auto-odds のログから判定までの遅れと読み込みの中央値�
   // 回数が少ないとき（朝いちばん・スリープ明け）は判断しない
   assert.deepEqual(evaluateSystemHealth({ runTiming: summarizeRunTiming([line(600_000, 50_000)]), diskFreeBytes: null, unsentNotifications: 0 }), []);
 });
+
+test("DB のバックアップが古い・無いときは注意にする（省略したら見ない）", () => {
+  const runTiming = { runs: 0, medianLagMs: null, medianBuildMs: null };
+  assert.deepEqual(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0 }), []);
+  assert.deepEqual(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 3 }), []);
+  assert.match(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 125.4 })[0], /いちばん新しいバックアップが 125 日前/);
+  assert.match(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: null })[0], /バックアップが1つも無い/);
+});

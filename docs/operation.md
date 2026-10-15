@@ -1,103 +1,63 @@
-# 運用手順
+# 運用手順（2026-10-15 改訂・最小構成）
 
-## 基本方針
+ふだんは launchd が全部を自動で回す。人がやるのは、LINE の「⚠️ 注意」を見て、出たら下の「困ったとき」に従うことだけ。
 
-- **本番 decision ロジックは変更しない**
-- **app_settings は変更しない**
-- **自動投票・ログイン保存・投票サイト操作は禁止**
-- BUY は購入指示ではなく検証候補
-- ROI は `current_odds` 基準
-- `*.sqlite` は git add しない
-- `.env` や秘密情報は git add しない
+## 守ること
 
----
+- 自動投票・自動購入・ログイン情報の保存・投票サイトの操作はしない。BUY は検証の候補で、購入指示ではない。
+- 判定ロジック（`judgeCandidate`）と `app_settings` は、ユーザーの承認なしに変えない。
+- ROI は**公式の払戻**（`race_results.payout_yen`）で出す。表示オッズ（`current_odds`）は確定払戻より楽観的なので根拠にしない。
+- `data/` と `backups/` は消さない。`.env`・`*.sqlite`・秘密情報は Git に入れない。
 
-## 日次運用
+## 自動で動くもの
 
-```bash
-pnpm daily
-pnpm catchup
-pnpm backup
+[`README.md`](../README.md) の表のとおり。plist の控えは [`docs/launchd/`](launchd/)。
+
+毎日の確認は LINE だけでよい:
+
+- 🔔 BUY（締切の5分以上前）→ ✅/❌（21:30 までに）→ 📊 日次まとめ（21:30、収支と注意つき）
+- 📈 週次まとめ（月曜 09:00、先週との比較）
+- 日次まとめに「⚠️ 注意」が出たら、下の表で対応する。注意は「対応が要るもの」だけが出る（変わらない事実はスコアカードの「既知の状態」）
+
+詳しい数字は `data/reports/scorecard/latest.md`（毎晩更新）。
+
+## 困ったとき
+
+| 注意・症状 | 原因の候補 | 対応 |
+|---|---|---|
+| T-5 のカバー率が低い・記録できたレースが少ない | ノートPCのスリープ（蓋を閉じた） | 8〜21時は AC 電源につないで開けておく。根本対策は常時起動の機械（方針の文書） |
+| ジョブ ○○ が動いていない | launchd の登録が外れた・スリープ | `launchctl list \| grep boatpon` で確認し、`docs/launchd/` の plist で登録し直す |
+| 判定までの遅れ・読み込みが目安を超えた | 全期間を読む処理が混ざった、DB の肥大 | `data/logs/auto-odds.log` の `decision-phase:` の `phaseMs` で、どの区間が長いかを見る |
+| 送れていない LINE 通知がある | トークンの期限切れ・通信の失敗 | `npx tsx scripts/notify-line.ts test --dry-run` で設定を確認し、`.env` のトークンを更新する |
+| 結果・払戻・番組表の最終日が遅れている | 公式アーカイブの公開遅れ・取得の失敗 | 翌日の自動の取り直しを待つ。続くなら `npm run fetch:official-results -- <開始日> <終了日>` |
+| ディスクの空きが少ない | DB・ログ・バックアップの増加 | `backups/` の古い世代を、ユーザーが判断して外部ディスクへ移す（自動では消さない） |
+| DB のバックアップが古い | バックアップの仕組みが止まっている | 方針の文書の「バックアップ」を見て、ユーザーが保存先と頻度を決める |
+
+## コマンド
+
+```sh
+npm run verify                      # 型チェック・テスト・画面のビルド
+npm run health                      # DB・ジョブ・バックアップの点検
+npm run report:accuracy-scorecard   # 当たり外れ・精度・収集・見張り
+npm run report:growth               # 1週間前・1か月前・半年前との比較
+npm run audit:data-integrity        # 過去データの監査
+npm run backup:safe                 # DB のバックアップ（VACUUM INTO で backups/ に保存）
+npx tsx scripts/notify-line.ts daily --date YYYY-MM-DD --preview   # 日次まとめの文面の確認（送らない）
 ```
 
-結果取得LaunchAgentは、公式結果アーカイブから昨日までの14日間を毎晩確認する。
-既に公式結果がある日はスキップし、DNS/HTTP/parse失敗が1日でもあれば非0終了して
-readinessの結果カバレッジとログに残す。kyotei24は日次結果の主経路には使わない。
-番組表取得LaunchAgentも今日までの15日間を確認し、一時障害で欠けた日を同様に補完する。
+## LINE の設定
 
----
+LINE Messaging API の push message を使う。秘密情報は repo 直下の `.env`（Git に入れない）。項目は `.env.example` を参照:
 
-## LINE通知
+- `BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN` / `BOAT_PON_LINE_TO`
+- `BOAT_PON_LINE_DRY_RUN`（任意）/ `BOAT_PON_LINE_ENDPOINT`（任意）
 
-BUY候補や日次サマリをLINEへ送る。通知は**購入指示ではなくpaper検証候補の確認用**。
-LINE Notify は提供終了済みのため、LINE Messaging API の push message を使う。
+文面は `src/domain/lineMessages.ts`（BUY・日次・週次）と `src/domain/buyResultNotification.ts`（結果）。送信に失敗したものは `notification_log` に `FAILED` で残り、次の回に送り直す。BUY 通知の「投票」は BOAT RACE のシンプル投票サイト `https://bu.tbbr.jp/` に固定している（購入はしない）。
 
-### envファイル
+## 変更を本番に入れるとき
 
-実運用の秘密情報は、repo直下の `.env` に置く。`.env` は `.gitignore` 対象なのでgitに入れない。
-`.env.example` は項目名確認用の見本としてだけ使う。
+[`CLAUDE.md`](../CLAUDE.md) の「6. 作業コピーと反映」に従う。worktree で開発し、テストを通して、ライブ経路の変更はレースの無い 21:05〜07:30 にだけ反映する。
 
-`.env` に設定する項目:
+## 外したものを戻すとき
 
-- `BOAT_PON_LINE_CHANNEL_ACCESS_TOKEN`
-- `BOAT_PON_LINE_TO`
-- `BOAT_PON_LINE_DRY_RUN`（任意）
-- `BOAT_PON_LINE_ENDPOINT`（任意）
-
-読み込み優先順位:
-
-1. シェル環境変数
-2. `.env`
-
-### テスト
-
-```bash
-pnpm notify:line:test -- --dry-run
-pnpm notify:line:test -- --message "Boat Pon LINE 通知テスト"
-pnpm notify:line:daily -- --date 2026-06-29
-pnpm notify:line:results -- --date 2026-06-29 --dry-run
-```
-
-送信内容（2026-10-14 時点。文面は `src/domain/lineMessages.ts` と `src/domain/buyResultNotification.ts`）:
-
-- 🔔 BUY（auto-odds、8:00〜21:05 の5分ごと）: T-10 か T-5 で BUY になり、締切まで5分以上あるレースだけ、その場で送る。送ったら判定はそこで固定する。送らなかった BUY は理由をログに出す（`LINE realtime not-sent:`）
-- ✅ 的中 / ❌ はずれ / ↩️ 返還（速報）: `scripts/notify-buy-results-fast.ts`。10分ごとの登録はユーザー作業。未登録でも、21:30 の日次まとめの前に `--catch-up` で、その日の BUY の結果を公式の結果ページで確かめて送る
-- 📊 日次まとめ（21:30、`scripts/daily-line-summary.sh`）: 今日の BUY と当たり外れ・前日の結果・今月と通算・記録できたレース（番組数に対する判定と T-5 のオッズ）・スコアカードの注意
-- 確定結果（21:30、`scripts/daily-results.sh` の K ファイル取り込み後）: 速報と同じ結果なら送らない
-- 📈 週次まとめ（月曜 09:00、`scripts/weekly-forward-notify.sh`）: 先週とその前の週の比較
-- 公式リンクと「※paper検証（実際の購入なし）」の注記
-
-送信に失敗して `PENDING` に残った直近3日分は、次回の LINE 通知ジョブで再送する。`ENOTFOUND` / `EAI_AGAIN` の DNS 失敗は、5秒・15秒・30秒待って自動再試行する。
-
-launchd用の通知・番組・結果補完スクリプトは、Corepack/pnpmの外部メタデータ取得を避け、ローカルの`node --import tsx`を`mise`経由で実行する。これによりnpmレジストリのDNS障害をLINE/API障害と混同しない。
-
-BUY通知の「投票サイト」は、公開仕様のないレース別deep linkを組み立てず、BOAT RACEが案内するシンプル投票サイト`https://bu.tbbr.jp/`へ固定する。別行の「公式」は対象レースの3連単オッズページを維持する。
-
-リアルタイムBUY通知は、途中オッズで一時的にBUYとなる誤通知を減らすため、対象買い目の最新時系列checkpointが`T-10`か`T-5`で、締切5分以上前の場合だけ送る（2026-10-14 までは T-5 のみ。T-10 で BUY になったレースの次の実行が締切5分前を過ぎ、通知できない例が続いたため T-10 を足した）。収集自体は締切1分前まで続けるが、5分未満では購入余裕がないため通知しない。判定ロジック自体は変更しない。
-
----
-
-## ROI 分析
-
-```bash
-pnpm analyze:roi-decision-lab
-pnpm paper:forward
-```
-
-`paper:forward` は paper 追跡用で、本番 BUY/NO_BUY 判定には影響しない。
-本番反映は forward n、roiExMaxHit、対象月の分散を確認してから行う。
-
----
-
-## 分析スクリプト一覧
-
-| コマンド | 説明 |
-|---|---|
-| `pnpm analyze:roi-decision-lab` | ROI全条件ラボ |
-| `pnpm paper:forward` | Paper forward test 記録・レポート更新 |
-| `pnpm backup` | DB バックアップ |
-| `pnpm daily` | 日次処理 |
-| `pnpm notify:line:daily` | LINE日次サマリ + BUY個別通知 |
-| `pnpm notify:line:results` | 結果確定済みpaper-live BUYの的中/外れ・公式払戻・100円仮想損益 |
-| `pnpm notify:line:test` | LINE疎通テスト |
-| `pnpm catchup` | 過去分取り込み |
+撤退前の研究コード・研究計画・旧レポートは、2026-10-15 に main から外した。タグ `archive/before-minimal-20261015` から1ファイルずつ戻せる（`git checkout archive/before-minimal-20261015 -- <path>`）。

@@ -13,7 +13,7 @@
  * --no-record を足すと、状態は読むが履歴とイベントには書かない（記録は毎晩の日次まとめの前の1回だけにする）。
  * DB は読み取り専用で開く。BOAT_PON_DB_URI で接続先を変えられる。DB にもリポジトリの追跡ファイルにも書かない。
  */
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync, statfsSync, writeFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, statfsSync, writeFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import {
   BUY_TIMING_LABEL, binaryMetrics, describeCalibration, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, evaluateSystemHealth, normalizedMarketProbabilities, summarizeBuyLedger, summarizeRunTiming,
@@ -170,7 +170,14 @@ let diskFreeBytes: number | null = null;
 try { const fsStats = statfsSync("."); diskFreeBytes = Number(fsStats.bavail) * Number(fsStats.bsize); } catch { diskFreeBytes = null; }
 let dbBytes: number | null = null;
 try { dbBytes = statSync("data/boat.sqlite").size; } catch { dbBytes = null; }
-const systemAlerts = evaluateSystemHealth({ runTiming, diskFreeBytes, unsentNotifications });
+// DB のバックアップ（backups/<日時>/ に backup-db-safe.ts が作る）の、いちばん新しいものの経過日数
+let backupAgeDays: number | null = null;
+try {
+  const stamps = readdirSync("backups").filter((name) => /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$/.test(name)).sort();
+  const latest = stamps.at(-1);
+  if (latest) backupAgeDays = (Date.now() - statSync(`backups/${latest}`).mtimeMs) / 86_400_000;
+} catch { backupAgeDays = null; }
+const systemAlerts = evaluateSystemHealth({ runTiming, diskFreeBytes, unsentNotifications, backupAgeDays });
 
 // ─── 注意（対応が要るものだけ）と、既知の状態 ───
 // 2026-10-14: 毎日同じ既知の事実（v3 の不正確さ・止めた private capture の期限切れなど）が日次の LINE の先頭に出続け、
@@ -204,7 +211,7 @@ const report = {
   ledgerSinceFix: { from: LIVE_RECORD_FIX_DATE, ...ledgerSinceFix, notifiedBeforeClose: notifiedSinceFix },
   recentBuys: PUBLIC ? undefined : recentBuys,
   accuracy: { comparedRaces: scored.length, calibration: champion, all: accuracyAll, buyOnly: accuracyBuy, buyEv },
-  health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows, runTiming, diskFreeBytes, dbBytes, unsentNotifications },
+  health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows, runTiming, diskFreeBytes, dbBytes, unsentNotifications, backupAgeDays },
   growth: { champion, lastEvaluation: lastGrowth, evaluations: growthLedger.length, promotions: growthLedger.filter((g) => g.promote).length },
   alerts,
   knownFacts,
@@ -304,7 +311,7 @@ function renderMarkdown() {
     "",
     `- データの最終日: 結果 ${maxDates.results ?? "-"} / 全券種の払戻 ${maxDates.payouts ?? "-"} / 番組表 ${maxDates.programs ?? "-"}`,
     `- auto-odds（直近 ${runTiming.runs} 回の中央値）: 判定までの遅れ ${runTiming.medianLagMs == null ? "-" : `${Math.round(runTiming.medianLagMs / 1000)} 秒`}・判定の前の読み込み ${runTiming.medianBuildMs == null ? "-" : `${(runTiming.medianBuildMs / 1000).toFixed(1)} 秒`}`,
-    `- ディスクの空き ${diskFreeBytes == null ? "-" : `${(diskFreeBytes / 1024 ** 3).toFixed(0)} GB`} / DB ${dbBytes == null ? "-" : `${(dbBytes / 1024 ** 3).toFixed(1)} GB`} / 直近3日に送れていない LINE 通知 ${unsentNotifications} 件`,
+    `- ディスクの空き ${diskFreeBytes == null ? "-" : `${(diskFreeBytes / 1024 ** 3).toFixed(0)} GB`} / DB ${dbBytes == null ? "-" : `${(dbBytes / 1024 ** 3).toFixed(1)} GB`} / 直近3日に送れていない LINE 通知 ${unsentNotifications} 件 / DB のバックアップ ${backupAgeDays == null ? "なし" : `${Math.floor(backupAgeDays)} 日前`}`,
     "",
     "## 定期ジョブの稼働（ログの最終更新）",
     "",

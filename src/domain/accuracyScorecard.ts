@@ -390,11 +390,14 @@ export const SYSTEM_HEALTH_LIMITS = {
   medianLagMs: 90_000,
   medianBuildMs: 20_000,
   diskFreeBytes: 20 * 1024 ** 3,
+  backupAgeDays: 14,
 };
 
 export type SystemHealthInput = {
   runTiming: RunTimingSummary;
   diskFreeBytes: number | null;
+  /** いちばん新しい DB のバックアップから何日たったか（バックアップが無ければ null）。省略したら見ない。 */
+  backupAgeDays?: number | null;
   /** 直近3日に作られて、送れていない LINE 通知の数。 */
   unsentNotifications: number;
 };
@@ -411,6 +414,10 @@ export function evaluateSystemHealth(input: SystemHealthInput): string[] {
   }
   if (input.diskFreeBytes != null && input.diskFreeBytes < SYSTEM_HEALTH_LIMITS.diskFreeBytes) {
     alerts.push(`ディスクの空きが ${(input.diskFreeBytes / 1024 ** 3).toFixed(1)} GB（目安 20 GB 以上）。DB とログが書けなくなる前に整理する`);
+  }
+  if (input.backupAgeDays !== undefined) {
+    if (input.backupAgeDays == null) alerts.push("DB のバックアップが1つも無い（締切前のオッズの時系列は後から取り直せない）");
+    else if (input.backupAgeDays > SYSTEM_HEALTH_LIMITS.backupAgeDays) alerts.push(`DB のいちばん新しいバックアップが ${Math.floor(input.backupAgeDays)} 日前（目安 ${SYSTEM_HEALTH_LIMITS.backupAgeDays} 日以内。締切前のオッズの時系列は後から取り直せない）`);
   }
   if (input.unsentNotifications > 0) {
     alerts.push(`直近3日に送れていない LINE 通知が ${input.unsentNotifications} 件（トークンの期限切れ・通信の失敗を確認）`);
