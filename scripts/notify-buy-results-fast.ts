@@ -24,6 +24,7 @@ import { officialResultUrl } from "../src/domain/officialLinks";
 import { parseRaceResultTrifecta } from "../src/domain/officialRaceResultPage";
 import { venueCodes } from "./fetch-official-odds";
 import { loadBuyLedgers, loadFastOutcomes } from "./lib/buyLedger";
+import { formatBankrollLine } from "../src/domain/bankroll";
 
 const MIN_MINUTES_AFTER_CLOSE = 8;
 const MAX_MINUTES_AFTER_CLOSE = 120;
@@ -98,9 +99,9 @@ ORDER BY p.close_at
       returned: false,
       currentOdds: buy.current_odds,
       // 速報の時点では確定結果（race_results）が無いので、このレースの結果を足して今月・通算を出す。
-      tally: (() => {
+      ...(() => {
         const ledgers = loadBuyLedgers(db, buy.date, new Map([...loadFastOutcomes(db), [buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null, selection: buy.selection }]]));
-        return { month: ledgers.month, total: ledgers.total };
+        return { tally: { month: ledgers.month, total: ledgers.total }, bankrollLine: formatBankrollLine(ledgers.bankroll) };
       })(),
     });
     const title = `${message.title}（速報）`;

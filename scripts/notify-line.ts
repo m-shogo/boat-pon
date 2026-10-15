@@ -8,6 +8,7 @@ import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { BUY_REVIEW_DATE, formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
+import { formatBankrollLine } from "../src/domain/bankroll";
 import { ensureFavoritePicks, FAVORITE_FROM, loadFavoriteLedgers } from "./lib/favoriteLedger";
 import { claimNotification, recoverStuckNotifications, releaseNotification, upsertPendingRow } from "./lib/notificationLog";
 
@@ -249,6 +250,7 @@ ORDER BY p.close_at, dh.venue, dh.race_no
     sinceFix: ledgers.sinceFix,
     notifiedTotal: ledgers.notifiedTotal,
     favorite,
+    bankroll: ledgers.bankroll,
     // 判断の日（11/15）だけ、BUY と本命予想の比較とおすすめを載せる（ユーザーの要望「自動化して」）
     decision: date === BUY_REVIEW_DATE && favorite
       ? { from: ledgers.sinceFix.from, buy: ledgers.sinceFix.notifiedLedger, favorite: favorite.between(ledgers.sinceFix.from, date) }
@@ -381,6 +383,7 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
       returned: row.returned !== 0,
       currentOdds: row.current_odds,
       tally: { month: ledgers.month, total: ledgers.total },
+      bankrollLine: formatBankrollLine(ledgers.bankroll),
     });
     // 締切前にリアルタイム通知できなかった BUY は、行動できなかったことを結果の末尾に書いておく。
     const timing = db.prepare(`SELECT p.close_at,
@@ -427,6 +430,7 @@ function buildWeeklyNotifications(db: DatabaseSync, growthPath: string, dryRun: 
   const message = formatWeeklySummary({
     thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now), total: loadBuyLedgers(db, todayJst()).total,
     favorite: fav ? { thisWeek: fav.between(thisWeek.from, thisWeek.to), lastWeek: fav.between(lastWeek.from, lastWeek.to) } : undefined,
+    bankroll: (() => { const b = loadBuyLedgers(db, todayJst()).bankroll; return { now: b, lastWeekEndYen: b.balanceAt(lastWeek.to) }; })(),
   });
   const notification = upsertPendingNotification(db, {
     raceId: `line-weekly-growth-${thisWeek.to}`,

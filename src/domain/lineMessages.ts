@@ -4,6 +4,7 @@
  * 専門用語（EV・logloss・モデル名）は LINE に出さず、スコアカードに寄せる。
  */
 import type { BuyLedgerSummary } from "./accuracyScorecard";
+import { formatBankrollLine, type Bankroll } from "./bankroll";
 import { formatNet, formatTally, formatTallyMoney } from "./buyResultNotification";
 
 const PAPER_NOTE = "※paper検証（実際の購入なし）";
@@ -27,6 +28,8 @@ export type BuyAlertInput = {
   stakeYen?: number;
   /** このレースの公式ページ（ログインすると、ページの「投票」から買える）。 */
   officialRaceUrl?: string;
+  /** 仮想の財布のいまの資産（この BUY を買う前）。 */
+  bankrollYen?: number;
 };
 
 export function formatBuyAlert(input: BuyAlertInput): { title: string; body: string } {
@@ -46,6 +49,9 @@ export function formatBuyAlert(input: BuyAlertInput): { title: string; body: str
   }
   if (input.total && input.total.settled > 0) {
     lines.push(`これまでの BUY: ${formatTally(input.total)}・回収率 ${Math.round((input.total.officialRoi ?? 0) * 100)}%`);
+  }
+  if (input.bankrollYen != null) {
+    lines.push(`💴 資産 ${yen(input.bankrollYen)} → この BUY に ${yen(input.stakeYen ?? 100)}（当たれば ${input.quoteOdds != null ? yen(input.bankrollYen - (input.stakeYen ?? 100) + Math.round(input.quoteOdds * (input.stakeYen ?? 100))) : "-"} 前後）`);
   }
   lines.push("");
   if (input.officialRaceUrl) lines.push(`① このレースの公式ページ（ログインして「投票」から）: ${input.officialRaceUrl}`);
@@ -74,6 +80,8 @@ export type DailySummaryInput = {
   sinceFix?: { from: string; ledger: BuyLedgerSummary; notified: number };
   /** 通算のうち、締切前に通知できた BUY だけ（実際に行動できた分）。 */
   notifiedTotal?: BuyLedgerSummary;
+  /** 仮想の財布（1万円から、締切前に届いた BUY を毎回100円）。 */
+  bankroll?: Bankroll;
   /** 判断の日（BUY_REVIEW_DATE）に載せる、BUY と本命予想の比較とおすすめ。 */
   decision?: { from: string; buy: BuyLedgerSummary; favorite: BuyLedgerSummary };
   /** 本命予想（各レース1点）の成績。BUY と並べて比べる。 */
@@ -98,7 +106,7 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   const hits = settledToday.filter((b) => b.result === "hit").length;
   const misses = settledToday.filter((b) => b.result === "miss").length;
   const titleResult = settledToday.length ? ` → ✅${hits} ❌${misses}` : "";
-  const title = `📊 ${md(input.date)} のまとめ: BUY ${input.todayBuys.length}件${titleResult}｜通算 ${formatNet(input.total)}`;
+  const title = `📊 ${md(input.date)} のまとめ: BUY ${input.todayBuys.length}件${titleResult}｜${input.bankroll ? `資産 ${yen(input.bankroll.balanceYen)}` : `通算 ${formatNet(input.total)}`}`;
 
   const lines: string[] = [];
   if (input.todayBuys.length === 0) {
@@ -114,6 +122,7 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
     lines.push(`${md(input.lastSettledDay.date)} の結果: ${formatTally(input.lastSettledDay.ledger)}`);
   }
   if (input.decision) lines.push("", ...formatBuyReview(input.decision));
+  if (input.bankroll) lines.push("", formatBankrollLine(input.bankroll));
   lines.push(
     "",
     "💰 収支（100円ずつ買った場合・公式の払戻）",
@@ -187,6 +196,8 @@ export type WeeklySummaryInput = {
   lastWeek: WeeklyWindow;
   /** 本命予想（各レース1点）の今週と先週の成績。 */
   favorite?: { thisWeek: BuyLedgerSummary; lastWeek: BuyLedgerSummary };
+  /** 仮想の財布（いまと、先週末の資産）。 */
+  bankroll?: { now: Bankroll; lastWeekEndYen: number };
   /** 通算の成績（収支と回収率を出す）。 */
   total?: BuyLedgerSummary;
   knowledgeAdded: number;
@@ -207,6 +218,7 @@ export function formatWeeklySummary(input: WeeklySummaryInput): { title: string;
   const lines = [
     `成績: BUY ${t.buys.buys}件 → ${formatTally(t.buys)}`,
     `　先週: BUY ${l.buys.buys}件 → ${formatTally(l.buys)}`,
+    ...(input.bankroll ? [`${formatBankrollLine(input.bankroll.now)}`, `　先週末: ${yen(input.bankroll.lastWeekEndYen)}`] : []),
     ...(input.total ? [`通算: ${formatTallyMoney(input.total)}`] : []),
     ...(input.favorite && input.favorite.thisWeek.settled > 0
       ? [`⭐ 本命予想（各レース1点）: ${formatTallyMoney(input.favorite.thisWeek)}`, `　先週: ${formatTallyMoney(input.favorite.lastWeek)}`]

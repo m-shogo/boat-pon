@@ -129,3 +129,22 @@ test("判断の日に、BUY と本命予想の比較とおすすめを出す", (
   assert.match(formatBuyReview({ from: "2026-10-10", buy: ledger([]), favorite: fav }).at(-1)!, /まだ比べられない/);
   assert.match(formatBuyReview({ from: "2026-10-10", buy: ledger([["2026-10-12", true, 9_000]]), favorite: fav }).at(-1)!, /偶然の差の可能性が大きい/);
 });
+
+test("仮想の財布（1万円スタート）を、日次まとめの見出しと本文、BUY の通知に出す", async () => {
+  const { computeBankroll } = await import("./bankroll");
+  const bankroll = computeBankroll([
+    { order: "2026-10-10 11:00", date: "2026-10-10", hit: false, payoutYen: null },
+    { order: "2026-10-15 16:48", date: "2026-10-15", hit: null, payoutYen: null },
+  ], { id: 1, from: "2026-10-10", startYen: 10_000, stakeYen: 100, note: "t" });
+  const { title, body } = formatDailySummary({
+    date: "2026-10-15", todayBuys: [], lastSettledDay: null, month: ledger([]), total: ledger([]), alerts: [],
+    counts: { buy: 0, watch: 0, skip: 0, oddsPresent: 0, total: 0 }, bankroll,
+  });
+  assert.equal(title, "📊 10/15 のまとめ: BUY 0件｜資産 9,800円");
+  assert.match(body, /💴 資産 9,800円（第1期 10,000円スタートから -200円・最高 10,000円・最低 9,800円・2回 0的中・結果待ち 1件）/);
+  const alert = formatBuyAlert({
+    venue: "芦屋", raceNo: 6, selection: "1-2-3", closeAt: "11:00", quoteOdds: 75.4, calibratedProbability: 0.01, v3Probability: 0.061,
+    voteUrl: "https://bu.tbbr.jp/", stakeYen: 100, bankrollYen: 9_800,
+  });
+  assert.match(alert.body, /💴 資産 9,800円 → この BUY に 100円（当たれば 17,240円 前後）/);
+});

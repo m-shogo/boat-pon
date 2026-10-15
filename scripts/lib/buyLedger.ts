@@ -5,6 +5,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { classifyBuyTiming, summarizeBuyLedger, type BuyLedgerSummary, type BuyOutcome } from "../../src/domain/accuracyScorecard";
 import { LIVE_MONITOR_MODEL_VERSION } from "../../src/domain/liveMonitor";
+import { computeBankroll, currentSeason, type Bankroll } from "../../src/domain/bankroll";
 
 /** auto-odds が行動の締め切りで判定を固定するようになった後、丸1日を新しい判定で回した最初の日。 */
 export const LIVE_RECORD_FIX_DATE = "2026-10-10";
@@ -17,6 +18,8 @@ export type BuyLedgers = {
   sinceFix: { from: string; ledger: BuyLedgerSummary; notified: number; notifiedLedger: BuyLedgerSummary };
   /** 通算のうち、締切前に通知できた BUY だけ（実際に行動できた分の収支）。 */
   notifiedTotal: BuyLedgerSummary;
+  /** 仮想の財布（1万円から、締切前に届いた BUY を毎回100円）。src/domain/bankroll.ts */
+  bankroll: Bankroll;
   lastSettledDay: { date: string; ledger: BuyLedgerSummary } | null;
 };
 
@@ -96,6 +99,13 @@ WHERE dh.row_num = 1
     total: summarizeBuyLedger(rows.map(outcome)),
     sinceFix: { from: LIVE_RECORD_FIX_DATE, ledger: summarizeBuyLedger(sinceFixRows.map(outcome)), notified, notifiedLedger: summarizeBuyLedger(sinceFixRows.filter(isNotified).map(outcome)) },
     notifiedTotal: summarizeBuyLedger(rows.filter(isNotified).map(outcome)),
+    bankroll: computeBankroll(
+      rows.filter(isNotified).map((row) => {
+        const o = outcome(row);
+        return { order: `${row.date} ${row.close_at ?? "99:99"} ${row.race_id}`, date: row.date, hit: o.hit, payoutYen: o.payoutYen };
+      }),
+      currentSeason(today),
+    ),
     lastSettledDay,
   };
 }
