@@ -4,6 +4,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { parseOfficialResultsText } from "../src/domain/officialResultParser";
+import { isResultDayComplete } from "../src/domain/resultIngest";
 import { insertResult, openDb, saveResultDetail } from "../server/db";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import type { RaceResult } from "../src/domain/types";
@@ -49,12 +50,20 @@ async function main() {
   let detailFailedDays = 0;
   let totalPayouts = 0;
 
-  // SKIP_EXISTING: SQLiteに既に取り込み済みの日付を事前に取得（高速チェック用）
+  // SKIP_EXISTING: 結果がそろっている日だけを飛ばす（高速チェック用）。
+  // 以前は、その日の行が1つでもあれば飛ばしていたため、取り込みが途中で止まった日（スリープ・失敗）が自動では直らなかった
+  // （2026-10-15 の監査）。番組の数だけ結果があれば「そろっている」とする。番組が無い日は、行があれば飛ばす。
+  // 取り直しは手元の K ファイルから読み直すだけで、上書き（INSERT OR REPLACE）なので何度やっても同じ結果になる。
   const existingDates = new Set<string>();
   if (SKIP_EXISTING) {
-    const rows = db.prepare("SELECT DISTINCT date FROM race_results WHERE source='official'").all() as Array<{ date: string }>;
-    for (const row of rows) existingDates.add(row.date);
-    console.log(`SKIP_EXISTING: ${existingDates.size}日分は既に取り込み済みのためスキップします`);
+    const rows = db.prepare(`SELECT r.date, COUNT(*) AS results, (SELECT COUNT(*) FROM official_programs p WHERE p.date = r.date) AS programs
+      FROM race_results r WHERE r.source = 'official' GROUP BY r.date`).all() as Array<{ date: string; results: number; programs: number }>;
+    let incomplete = 0;
+    for (const row of rows) {
+      if (isResultDayComplete(row)) existingDates.add(row.date);
+      else incomplete += 1;
+    }
+    console.log(`SKIP_EXISTING: ${existingDates.size}日分は結果がそろっているためスキップ（そろっていない ${incomplete}日は取り直す）`);
   }
 
   try {
