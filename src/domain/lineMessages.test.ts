@@ -73,8 +73,10 @@ test("週次まとめは、先週と比べた良し悪しを各行に付ける",
     lastWeek: { ...week([["2026-10-01", false, null], ["2026-10-02", false, null]], 0, 0.6, 0.0121), from: "2026-09-30", to: "2026-10-06" },
     knowledgeAdded: 4,
     alerts: [],
+    total: ledger([["2026-08-01", true, 4_270], ["2026-10-13", false, null]]),
   });
   assert.equal(title, "📈 週次まとめ（10/7〜10/13）");
+  assert.match(body, /通算: 1勝 1敗（\+4,070円）\n　払戻 4,270円 \/ 買った額 200円 = 収支 \+4,070円（回収率 2135%）/);
   assert.match(body, /^成績: BUY 2件 → 0勝 2敗（-200円）\n　先週: BUY 2件 → 0勝 2敗（-200円）/);
   assert.match(body, /締切前に通知できた BUY: 2\/2（先週 0\/2） ↑/);
   assert.match(body, /オッズの収集（締切5分前の全120通り）: 72%（先週 60%） ↑/);

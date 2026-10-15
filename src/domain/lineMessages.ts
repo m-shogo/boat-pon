@@ -137,6 +137,8 @@ export type WeeklyWindow = {
 export type WeeklySummaryInput = {
   thisWeek: WeeklyWindow;
   lastWeek: WeeklyWindow;
+  /** 通算の成績（収支と回収率を出す）。 */
+  total?: BuyLedgerSummary;
   knowledgeAdded: number;
   alerts: string[];
 };
@@ -155,6 +157,7 @@ export function formatWeeklySummary(input: WeeklySummaryInput): { title: string;
   const lines = [
     `成績: BUY ${t.buys.buys}件 → ${formatTally(t.buys)}`,
     `　先週: BUY ${l.buys.buys}件 → ${formatTally(l.buys)}`,
+    ...(input.total ? [`通算: ${formatTally(input.total)}`, `　${formatMoney(input.total)}`] : []),
     `締切前に通知できた BUY: ${t.buys.buys ? `${t.notified}/${t.buys.buys}` : "-"}（先週 ${l.buys.buys ? `${l.notified}/${l.buys.buys}` : "-"}）${trend(share(t), share(l), true, 0.05)}`,
     `オッズの収集（締切5分前の全120通り）: ${pct0(t.t5Coverage)}（先週 ${pct0(l.t5Coverage)}）${trend(t.t5Coverage, l.t5Coverage, true, 0.05)}`,
     `判定の記録: 番組の ${pct0(t.decisionCoverage)}（先週 ${pct0(l.decisionCoverage)}）${trend(t.decisionCoverage, l.decisionCoverage, true, 0.05)}`,

@@ -396,7 +396,7 @@ function buildWeeklyNotifications(db: DatabaseSync, growthPath: string, dryRun: 
   };
   const thisWeek = pick("w0"), lastWeek = pick("w1");
   if (!thisWeek || !lastWeek) return [];
-  const message = formatWeeklySummary({ thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now) });
+  const message = formatWeeklySummary({ thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now), total: loadBuyLedgers(db, todayJst()).total });
   const notification = upsertPendingNotification(db, {
     raceId: `line-weekly-growth-${thisWeek.to}`,
     title: message.title,
