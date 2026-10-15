@@ -8,6 +8,7 @@ import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
+import { ensureFavoritePicks, FAVORITE_FROM, loadFavoriteLedgers } from "./lib/favoriteLedger";
 import { claimNotification, recoverStuckNotifications, releaseNotification, upsertPendingRow } from "./lib/notificationLog";
 
 type Mode = "daily" | "test" | "results" | "weekly" | "errors";
@@ -169,6 +170,21 @@ SELECT COUNT(DISTINCT race_id) AS n FROM (
 
 // スコアカードが無い・壊れている・古いときに「注意なし」と区別がつかないと、見張りが止まったことに気づけない（2026-10-15 の監査）。
 const SCORECARD_UNAVAILABLE = "スコアカード（data/reports/scorecard/latest.json）を読めない・古い。見張りが止まっている（daily-notify.log を確認）";
+/** 本命予想の成績（記録が無い日は作る。プレビューでは作らずに読むだけ）。失敗しても日次まとめは送る。 */
+function loadFavoriteForSummary(db: DatabaseSync, date: string) {
+  try {
+    if (!PREVIEW) {
+      const created = ensureFavoritePicks(db, date);
+      if (created > 0) console.log(`favorite picks created: ${created} day(s)`);
+    }
+    const ledgers = loadFavoriteLedgers(db, date);
+    return { lastSettledDay: ledgers.lastSettledDay, month: ledgers.month, total: ledgers.total, from: FAVORITE_FROM, between: ledgers.between };
+  } catch (err) {
+    console.error("favorite picks skipped:", err instanceof Error ? err.message : err);
+    return undefined;
+  }
+}
+
 function scorecardAlerts(now: Date): string[] {
   try {
     const path = "data/reports/scorecard/latest.json";
@@ -223,6 +239,7 @@ ORDER BY p.close_at, dh.venue, dh.race_no
     };
   });
   const ledgers = loadBuyLedgers(db, date);
+  const favorite = loadFavoriteForSummary(db, date);
   const message = formatDailySummary({
     date,
     todayBuys,
@@ -231,6 +248,7 @@ ORDER BY p.close_at, dh.venue, dh.race_no
     total: ledgers.total,
     sinceFix: ledgers.sinceFix,
     notifiedTotal: ledgers.notifiedTotal,
+    favorite,
     alerts: scorecardAlerts(new Date()),
     counts,
     coverage: dailyCoverage(db, date),
@@ -401,7 +419,11 @@ function buildWeeklyNotifications(db: DatabaseSync, growthPath: string, dryRun: 
   };
   const thisWeek = pick("w0"), lastWeek = pick("w1");
   if (!thisWeek || !lastWeek) return [];
-  const message = formatWeeklySummary({ thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now), total: loadBuyLedgers(db, todayJst()).total });
+  const fav = loadFavoriteForSummary(db, todayJst());
+  const message = formatWeeklySummary({
+    thisWeek, lastWeek, knowledgeAdded: growth.knowledgeAdded?.w0 ?? 0, alerts: scorecardAlerts(now), total: loadBuyLedgers(db, todayJst()).total,
+    favorite: fav ? { thisWeek: fav.between(thisWeek.from, thisWeek.to), lastWeek: fav.between(lastWeek.from, lastWeek.to) } : undefined,
+  });
   const notification = upsertPendingNotification(db, {
     raceId: `line-weekly-growth-${thisWeek.to}`,
     title: message.title,

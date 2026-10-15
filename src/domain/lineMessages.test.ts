@@ -93,3 +93,19 @@ test("BUY の通知に、これまでの BUY の通算成績（勝敗・収支�
   });
   assert.match(body, /これまでの BUY: 1勝 1敗（\+4,070円）・回収率 2135%\n\n投票:/);
 });
+
+test("日次まとめに本命予想の欄と、BUY との比較を出す", () => {
+  const fav = (n: number, hits: number, payout: number) => ledger([
+    ...Array.from({ length: hits }, (): [string, boolean, number] => ["2026-10-14", true, payout]),
+    ...Array.from({ length: n - hits }, (): [string, boolean | null, number | null] => ["2026-10-14", false, null]),
+  ]);
+  const { body } = formatDailySummary({
+    date: "2026-10-15", todayBuys: [], lastSettledDay: null,
+    month: ledger([["2026-10-13", false, null]]), total: ledger([["2026-08-01", true, 4_270], ["2026-10-13", false, null]]),
+    alerts: [], counts: { buy: 0, watch: 3, skip: 150, oddsPresent: 100, total: 156 },
+    favorite: { lastSettledDay: { date: "2026-10-14", ledger: fav(10, 1, 700) }, month: fav(10, 1, 700), total: fav(20, 2, 700), from: "2026-07-01" },
+  });
+  assert.match(body, /⭐ 本命予想（各レース1点。締切5分前にいちばん当たりやすい買い目。購入の推奨ではない）\n10\/14: 1勝 9敗・収支 -300円（払戻 700円 \/ 買った額 1,000円・回収率 70%）/);
+  assert.match(body, /7\/1 から: 2勝 18敗・収支 -600円/);
+  assert.match(body, /比べると（通算）: 的中率 BUY 50\.0% \/ 本命予想 10\.0%・回収率 BUY 2135% \/ 本命予想 70%/);
+});

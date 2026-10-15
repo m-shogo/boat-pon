@@ -66,6 +66,8 @@ export type DailySummaryInput = {
   sinceFix?: { from: string; ledger: BuyLedgerSummary; notified: number };
   /** 通算のうち、締切前に通知できた BUY だけ（実際に行動できた分）。 */
   notifiedTotal?: BuyLedgerSummary;
+  /** 本命予想（各レース1点）の成績。BUY と並べて比べる。 */
+  favorite?: { lastSettledDay: { date: string; ledger: BuyLedgerSummary } | null; month: BuyLedgerSummary; total: BuyLedgerSummary; from: string };
   alerts: string[];
   counts: { buy: number; watch: number; skip: number; oddsPresent: number; total: number };
   /** その日の番組数と、締切5分前の全120通りのオッズを取れたレース数。欠けを番組数に対して見せる。 */
@@ -110,6 +112,17 @@ export function formatDailySummary(input: DailySummaryInput): { title: string; b
   if (input.notifiedTotal) {
     lines.push(`うち締切前に通知できた分（実際に買えた分）: ${formatTallyMoney(input.notifiedTotal)}`);
   }
+  const fav = input.favorite;
+  if (fav && fav.total.settled > 0) {
+    lines.push("", "⭐ 本命予想（各レース1点。締切5分前にいちばん当たりやすい買い目。購入の推奨ではない）");
+    if (fav.lastSettledDay) lines.push(`${md(fav.lastSettledDay.date)}: ${formatTallyMoney(fav.lastSettledDay.ledger)}`);
+    lines.push(`今月: ${formatTallyMoney(fav.month)}`, `${md(fav.from)} から: ${formatTallyMoney(fav.total)}`);
+    if (input.total.settled > 0) {
+      const pct = (l: BuyLedgerSummary) => `${Math.round((l.officialRoi ?? 0) * 100)}%`;
+      const hitRate = (l: BuyLedgerSummary) => `${((l.hits / l.settled) * 100).toFixed(1)}%`;
+      lines.push(`比べると（通算）: 的中率 BUY ${hitRate(input.total)} / 本命予想 ${hitRate(fav.total)}・回収率 BUY ${pct(input.total)} / 本命予想 ${pct(fav.total)}`);
+    }
+  }
   if (input.alerts.length) lines.push("", `⚠️ 注意 ${input.alerts.length} 件: ${input.alerts[0]}${input.alerts.length > 1 ? "（ほかはスコアカード）" : ""}`);
   const c = input.counts;
   lines.push("", `判定の内訳: BUY ${c.buy} / 様子見 ${c.watch} / 見送り ${c.skip}`);
@@ -137,6 +150,8 @@ export type WeeklyWindow = {
 export type WeeklySummaryInput = {
   thisWeek: WeeklyWindow;
   lastWeek: WeeklyWindow;
+  /** 本命予想（各レース1点）の今週と先週の成績。 */
+  favorite?: { thisWeek: BuyLedgerSummary; lastWeek: BuyLedgerSummary };
   /** 通算の成績（収支と回収率を出す）。 */
   total?: BuyLedgerSummary;
   knowledgeAdded: number;
@@ -158,6 +173,9 @@ export function formatWeeklySummary(input: WeeklySummaryInput): { title: string;
     `成績: BUY ${t.buys.buys}件 → ${formatTally(t.buys)}`,
     `　先週: BUY ${l.buys.buys}件 → ${formatTally(l.buys)}`,
     ...(input.total ? [`通算: ${formatTallyMoney(input.total)}`] : []),
+    ...(input.favorite && input.favorite.thisWeek.settled > 0
+      ? [`⭐ 本命予想（各レース1点）: ${formatTallyMoney(input.favorite.thisWeek)}`, `　先週: ${formatTallyMoney(input.favorite.lastWeek)}`]
+      : []),
     `締切前に通知できた BUY: ${t.buys.buys ? `${t.notified}/${t.buys.buys}` : "-"}（先週 ${l.buys.buys ? `${l.notified}/${l.buys.buys}` : "-"}）${trend(share(t), share(l), true, 0.05)}`,
     `オッズの収集（締切5分前の全120通り）: ${pct0(t.t5Coverage)}（先週 ${pct0(l.t5Coverage)}）${trend(t.t5Coverage, l.t5Coverage, true, 0.05)}`,
     `判定の記録: 番組の ${pct0(t.decisionCoverage)}（先週 ${pct0(l.decisionCoverage)}）${trend(t.decisionCoverage, l.decisionCoverage, true, 0.05)}`,
