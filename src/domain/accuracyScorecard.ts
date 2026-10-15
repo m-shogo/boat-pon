@@ -330,6 +330,22 @@ export function evaluateJobLiveness(jobs: JobLivenessInput[]) {
   return { rows, alerts };
 }
 
+/**
+ * 決まった時間帯だけ動くジョブ（auto-odds は 08:00〜21:05 JST）の、時間帯の中で見たログの古さ（分）。
+ * 時間帯の外では、時間帯の終わり（21:05）を基準にする。2026-10-15 は PC のスリープで 21:30 のスコアカードが 22:09 に動き、
+ * 正常に 20:45 まで動いていた auto-odds を「1.4 時間動いていない」と誤って注意にした。
+ */
+export function windowedAgeMinutes(lastMs: number | null, nowMs: number, window = { startMinute: 8 * 60, endMinute: 21 * 60 + 5 }): number | null {
+  if (lastMs == null) return null;
+  const JST = 9 * 3_600_000;
+  const dayStart = Math.floor((nowMs + JST) / 86_400_000) * 86_400_000 - JST;
+  const minuteOfDay = (nowMs - dayStart) / 60_000;
+  const reference = minuteOfDay < window.startMinute
+    ? dayStart - 86_400_000 + window.endMinute * 60_000 // 時間帯の前: 前の日の終わり
+    : minuteOfDay > window.endMinute ? dayStart + window.endMinute * 60_000 : nowMs;
+  return Math.max(0, (reference - lastMs) / 60_000);
+}
+
 // ─── BUY を「実際に知らせられたか」で分ける ───
 // 2026-10-08 の調査: BUY 178件のうち締切前に通知できたのは 32件（0的中）。
 // 直前情報が締切後に届くと、締切後の再評価で BUY のラベルだけが付く（94件）。行動できた記録と区別して数える。
@@ -419,7 +435,11 @@ export function evaluateSystemHealth(input: SystemHealthInput): string[] {
   if (input.diskFreeBytes != null && input.diskFreeBytes < SYSTEM_HEALTH_LIMITS.diskFreeBytes) {
     alerts.push(`ディスクの空きが ${(input.diskFreeBytes / 1024 ** 3).toFixed(1)} GB（目安 20 GB 以上）。DB とログが書けなくなる前に整理する`);
   }
-  if (input.backupAgeDays !== undefined) {
+  // DB 全体のバックアップの古さは、取り直せないもの（締切前のオッズの時系列）の書き出しが止まっているときだけ注意にする。
+  // 番組・結果・払戻は公式から取り直せ、オッズの時系列と判定・通知の記録は毎晩書き出して Google Drive に複製している（2026-10-15〜）。
+  // 書き出しが動いている間も毎日「バックアップが古い」と出すと、注意が読まれなくなる（2026-10-15 の夜は注意がこの1件だけだった）。
+  const exportsCovering = input.oddsExportAgeDays != null && input.oddsExportAgeDays <= 3;
+  if (input.backupAgeDays !== undefined && !exportsCovering) {
     if (input.backupAgeDays == null) alerts.push("DB のバックアップが1つも無い（締切前のオッズの時系列は後から取り直せない）");
     else if (input.backupAgeDays > SYSTEM_HEALTH_LIMITS.backupAgeDays) alerts.push(`DB のいちばん新しいバックアップが ${Math.floor(input.backupAgeDays)} 日前（目安 ${SYSTEM_HEALTH_LIMITS.backupAgeDays} 日以内。締切前のオッズの時系列は後から取り直せない）`);
   }

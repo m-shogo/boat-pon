@@ -17,7 +17,7 @@ import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync
 import { DatabaseSync } from "node:sqlite";
 import { loadEnvFiles } from "../src/domain/envFile";
 import {
-  BUY_TIMING_LABEL, binaryMetrics, describeCalibration, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, evaluateSystemHealth, normalizedMarketProbabilities, summarizeBuyLedger, summarizeRunTiming,
+  BUY_TIMING_LABEL, binaryMetrics, describeCalibration, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, evaluateSystemHealth, normalizedMarketProbabilities, summarizeBuyLedger, summarizeRunTiming, windowedAgeMinutes,
   type BinaryMetrics, type BinaryPrediction, type BuyTimingKind,
 } from "../src/domain/accuracyScorecard";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
@@ -141,8 +141,10 @@ const lastGrowth = growthLedger.at(-1) ?? null;
 // ─── 監視: データの鮮度とジョブの生存確認（「成功」の表示ではなく中身で見る） ───
 const freshnessAlerts = evaluateDataFreshness({ today: todayJst(), resultsMaxDate: maxDates.results, payoutsMaxDate: maxDates.payouts, programsMaxDate: maxDates.programs });
 const logAge = (path: string) => (existsSync(path) ? (Date.now() - statSync(path).mtimeMs) / 60_000 : null);
+const logMtime = (path: string) => (existsSync(path) ? statSync(path).mtimeMs : null);
 const liveness = evaluateJobLiveness([
-  { job: "auto-odds", ageMinutes: logAge("data/logs/auto-odds.log"), maxAgeMinutes: 30 },
+  // auto-odds は 08:00〜21:05 だけ動く。時間帯の外では 21:05 を基準に見る（スリープで遅れて動いた夜の誤った注意を出さない）
+  { job: "auto-odds", ageMinutes: windowedAgeMinutes(logMtime("data/logs/auto-odds.log"), Date.now()), maxAgeMinutes: 30 },
   { job: "auto-exhibition", ageMinutes: logAge("data/logs/auto-exhibition.log"), maxAgeMinutes: 90 },
   { job: "daily-programs", ageMinutes: logAge("data/logs/daily-programs.log"), maxAgeMinutes: 26 * 60 },
   { job: "daily-results", ageMinutes: logAge("data/logs/daily-results.log"), maxAgeMinutes: 26 * 60 },

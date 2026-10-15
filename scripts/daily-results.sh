@@ -22,6 +22,10 @@ run_tsx() {
   fi
 }
 
+# スリープ明けは名前解決を待ってから取りに行く
+source scripts/lib/wait-for-network.sh
+wait_for_network www1.mbrace.or.jp
+
 echo "${LOG_PREFIX} fetch:official-results ${FROM}..${TO}"
 export BOAT_PON_SKIP_EXISTING=1
 # 公式アーカイブの公開が遅れた日があると取り込みは終了コード 1 になる。

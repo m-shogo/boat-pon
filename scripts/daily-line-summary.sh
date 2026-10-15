@@ -27,6 +27,11 @@ run_tsx scripts/export-odds-timeseries.ts --from "$(TZ=Asia/Tokyo date -v-7d +%Y
 # 取り直せない記録（判定・通知・設定）も、毎晩書き出して複製する（月の最初の回は月の控えも残す）。
 run_tsx scripts/export-records.ts || echo "${LOG_PREFIX} records export skipped or failed"
 
+# スリープ明けは名前解決を待ってから、公式の結果ページと LINE に繋ぐ
+source scripts/lib/wait-for-network.sh
+wait_for_network www.boatrace.jp
+wait_for_network api.line.me
+
 # 今日の BUY の当たり外れ（公式の結果ページ。1日最大5件）。10分ごとの速報が未登録でも、結果を当日中に届けて日次まとめに載せる。
 run_tsx scripts/notify-buy-results-fast.ts --catch-up || echo "${LOG_PREFIX} buy results catch-up skipped or failed"
 

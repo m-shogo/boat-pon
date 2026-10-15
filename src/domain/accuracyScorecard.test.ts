@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  windowedAgeMinutes,
   accuracySnapshotFromReport, binaryMetrics, calibratedMarketProbabilities, describeBuyProbability, evaluateChallenger, evaluateDataFreshness, evaluateJobLiveness, fitMarketCalibration,
   classifyBuyTiming, describeCalibration, evaluateSystemHealth, fitChallengers, fitOddsBandWeights, formatLedgerAndAccuracyLines, multiclassLogLoss, oddsBandIndex, normalizedMarketProbabilities, parseDbTimestamp, summarizeBuyLedger, summarizeRunTiming, type MarketRace,
 } from "./accuracyScorecard";
@@ -201,6 +202,9 @@ test("DB のバックアップが古い・無いときは注意にする（省�
   assert.deepEqual(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 3 }), []);
   assert.match(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 125.4 })[0], /いちばん新しいバックアップが 125 日前/);
   assert.match(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: null })[0], /バックアップが1つも無い/);
+  // 取り直せないオッズの時系列を毎晩書き出せている間は、DB 全体のバックアップの古さを注意にしない
+  assert.deepEqual(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 126, oddsExportAgeDays: 1 }), []);
+  assert.equal(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 126, oddsExportAgeDays: 5 }).length, 2);
 });
 
 test("締切前のオッズの書き出しが止まったら注意にする", () => {
@@ -217,4 +221,17 @@ test("LINE の今月の送信が上限の8割を超えたら注意にする", ()
   assert.deepEqual(evaluateSystemHealth({ ...base, lineQuota: { limit: null, used: 500 } }), []);
   assert.deepEqual(evaluateSystemHealth({ ...base, lineQuota: null }), []);
   assert.match(evaluateSystemHealth({ ...base, lineQuota: { limit: 200, used: 165 } })[0], /LINE の今月の送信が 165\/200 通/);
+});
+
+test("auto-odds の古さは、動く時間帯（08:00〜21:05 JST）の中で見る（2026-10-15 のスリープ明けの誤った注意）", () => {
+  const jst = (s: string) => Date.parse(`${s}+09:00`);
+  // 22:09 に見ても、20:45 まで動いていれば 21:05 基準で 20 分
+  assert.equal(windowedAgeMinutes(jst("2026-10-15T20:45:00"), jst("2026-10-15T22:09:00")), 20);
+  // 時間帯の中ではいまを基準にする
+  assert.equal(windowedAgeMinutes(jst("2026-10-15T12:00:00"), jst("2026-10-15T13:30:00")), 90);
+  // 朝の 07:00 は前の日の 21:05 を基準にする
+  assert.equal(windowedAgeMinutes(jst("2026-10-15T21:05:00"), jst("2026-10-16T07:00:00")), 0);
+  // 昼に止まっていれば、夜に見ても注意になる長さ
+  assert.equal(windowedAgeMinutes(jst("2026-10-15T15:05:00"), jst("2026-10-15T22:00:00")), 360);
+  assert.equal(windowedAgeMinutes(null, jst("2026-10-15T22:00:00")), null);
 });
