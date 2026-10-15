@@ -34,31 +34,32 @@
 - T-5 のカバー率: 72% → 70% 以上を保つ
 - logloss の差（v3 − 市場補正）: 0.015 前後のまま（v3 は変えていないので動かないのが正しい）。市場補正の王者が入れ替わったら、スコアカードのイベントに出る
 
-## ユーザーがやること（コマンドつき・優先順。2026-10-15 時点）
+## ユーザーがやること（コマンドつき・優先順。2026-10-15 22:40 に実物で確認）
 
-自動の安全判定で、私（エージェント）からは実行できなかったもの・ユーザーが決めるもの。上から順に効く。
+自動の安全判定で、私（エージェント）からは実行できなかったもの・ユーザーが決めるもの。
 
-1. **取り直せないデータの複製先を決める**（数分）。`.env` に1行足すと、毎晩の書き出し（1日 数百 KB）が自動で複製される。例（Google Drive の場合。フォルダ名は自由）:
+済んだもの（10/15）: 書き出しの複製先（Google Drive、`.env` の `BOAT_PON_EXPORT_MIRROR_DIR`）・研究用ジョブ3つの停止（`launchctl list` に無い）・速報ジョブの登録（`npm run health` で OK）・リモートの研究用ブランチ 2,438 本の削除（残り 5 本）。
+
+残り（上から順に効く）:
+
+1. **ノートPCの蓋**: 8〜21時は AC 電源につないで開けておく。閉じるとスリープし、その時間のレースは記録ごと欠ける（10/14・10/15 の朝、10/15 の 20:52〜22:02 に実際に止まった。`pmset -g log` で確認）。
+2. **研究用ジョブを再起動の後も止めたままにする**: 3つとも `~/Library/LaunchAgents/` に設定ファイルが残っていて、ログインし直すと読み込まれる。`disable` は取り消せる（`enable` で戻る）:
    ```sh
-   echo 'BOAT_PON_EXPORT_MIRROR_DIR="$HOME/Library/CloudStorage/GoogleDrive-<アカウント>/マイドライブ/boat-pon-backup"' >> .env
+   launchctl disable gui/$(id -u)/com.boatpon.trifecta-private-capture
+   launchctl disable gui/$(id -u)/com.shogo.boat-pon.weekly-review
+   launchctl disable gui/$(id -u)/actions.runner.m-shogo-boat-pon.boat-pon-mac-local
    ```
-   DB 全体（約 16 GB）は、月1回 `npm run backup:safe` のあと、外付けディスクへ `backups/` の最新フォルダをコピーする。
-2. **研究用のジョブを止める**（launchd の登録解除）:
+3. **main をいまの状態にそろえる**: GitHub の main（2342494f、研究工場のころ）は、いま動いているブランチの祖先なので、そのまま進められる（fast-forward）。そろえた後、本番の作業コピーで `git switch main`（中身は同じなので、動いているジョブには影響しない）:
    ```sh
-   launchctl bootout gui/$(id -u)/com.boatpon.trifecta-private-capture
-   launchctl bootout gui/$(id -u)/com.shogo.boat-pon.weekly-review
-   launchctl bootout gui/$(id -u)/actions.runner.m-shogo-boat-pon.boat-pon-mac-local
+   git -C ~/Developer/personal/boat-pon push origin docs/strict-review-20261008:main
    ```
-3. **当たり外れの速報を登録する**（締切の 8 分後から 10 分ごと。登録しなくても 21:30 には届く。はずれも1通ずつ届くので、LINE の通数は月 +60 前後。月 200 通の枠に近づいたらスコアカードが注意を出す）:
+4. **（任意）公開版スコアカードの登録**: ChatGPT の定期タスクに毎日の報告をさせ続けるときだけ。22:15 に、スコアカードを GitHub の `automation/scorecard` ブランチへ置く:
    ```sh
-   cp docs/launchd/com.boatpon.buy-results-fast.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boatpon.buy-results-fast.plist
+   cp docs/launchd/com.boatpon.scorecard-publish.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.boatpon.scorecard-publish.plist
    ```
-4. **GitHub の後片付け**: `gh auth login -h github.com` のあと、研究用のリモートブランチ 2,438 本を消す（10/8 のバンドル `backups/git-archive-20261008/all-branches-before-cleanup.bundle` で全部戻せることを 10/15 に確認済み）:
-   ```sh
-   xargs -n 100 git push origin --delete < backups/git-archive-20261008/remote-branches-to-delete.txt
-   ```
-5. **main を今の状態にそろえる**（私から push できなかった場合）: `git push origin docs/strict-review-20261008:main` のあと、本番の作業コピーで `git switch main`（中身は同じなので、動いているジョブには影響しない）。
-6. **ノートPCの蓋**: 8〜21時は AC 電源につないで開けておく。閉じると、その時間のレースは記録ごと欠ける（10/14・10/15 の朝に実際に欠けた）。
+   ChatGPT のタスクをやめるなら、登録せず、ChatGPT の画面でタスクを止める（LINE の日次まとめに同じ注意が載るので、無くても困らない）。
+5. **（任意）残りのリモートブランチ**: `automation/boat-pon-research`・`research/forward-vault-atomic-readback` は研究工場のころのもの。消すなら `git push origin --delete automation/boat-pon-research research/forward-vault-atomic-readback`（10/8 のバンドルで戻せる）。
+6. **DB 全体のバックアップ**: 取り直せないもの（オッズの時系列・判定と通知の記録）は毎晩書き出して Google Drive に複製しているので、必須ではない。PC を買い替えるときなどに、`npm run backup:safe` のあと `backups/` の最新フォルダを外付けディスクへ。
 
 ## 長く動かすための課題（Codex の監査 2026-10-15。未対応のもの）
 
