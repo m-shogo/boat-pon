@@ -269,7 +269,7 @@ async function deliverNotifications(db: DatabaseSync | null, notifications: Noti
 
     if (!envConfig.enabled) continue;
     if (db && notification.id > 0 && !claimNotification(db, notification.id)) {
-      console.log(`LINE notify skipped (already sent or being sent): ${notification.raceId}`);
+      console.log(`LINE notify skipped (already sent, being sent, or older than 23h): ${notification.raceId}`);
       continue;
     }
     try {

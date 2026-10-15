@@ -6,8 +6,11 @@ import type { DatabaseSync } from "node:sqlite";
 // 21:30 は日次まとめ（daily-notify）と確定通知（daily-results）の2つのジョブが同時に notify-line を動かす。
 // どちらも未送信（PENDING）の通知を拾うので、送る前に「送信中（SENDING）」で押さえ、押さえられた方だけが送る
 // （Codex のレビューで二重送信を再現。LINE は月 200 通の枠がある）。押さえた時刻は sent_at に入れる。
+// 作られてから23時間を過ぎた通知は送らない。LINE の再試行キーは24時間で切れるので、前の回で届いていた場合に二重になる
+// （作られた通知は、その実行ですぐに送るので、23時間より古い未送信の通知は、すでに1回は送ろうとしている）。内容は日次まとめに載る。
 export function claimNotification(db: DatabaseSync, id: number): boolean {
-  return db.prepare("UPDATE notification_log SET status = 'SENDING', sent_at = CURRENT_TIMESTAMP WHERE id = ? AND status IN ('PENDING', 'FAILED')").run(id).changes === 1;
+  return db.prepare(`UPDATE notification_log SET status = 'SENDING', sent_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND status IN ('PENDING', 'FAILED') AND created_at >= datetime('now', '-23 hours')`).run(id).changes === 1;
 }
 
 export function releaseNotification(db: DatabaseSync, id: number) {

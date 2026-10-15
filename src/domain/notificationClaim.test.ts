@@ -53,3 +53,11 @@ test("A が読んだ後に B が送信中にしても、A の作り直しは送�
   d.prepare("UPDATE notification_log SET status = 'FAILED' WHERE id = 1").run();
   assert.equal(upsertPendingRow(d, args)?.status, "PENDING");
 });
+
+test("作られてから23時間を過ぎた通知は、作り直しても送らない（LINE の再試行キーは24時間で切れる）", () => {
+  const d = db();
+  d.prepare("UPDATE notification_log SET created_at = datetime('now', '-48 hours') WHERE id = 1").run();
+  assert.equal(upsertPendingRow(d, { raceId: "line-daily-2026-10-15", title: "t", body: "b", officialUrl: "u" })?.status, "PENDING");
+  assert.equal(claimNotification(d, 1), false);
+  assert.equal(status(d), "PENDING");
+});

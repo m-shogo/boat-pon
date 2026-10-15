@@ -428,7 +428,8 @@ try {
           let totalLedger: ReturnType<typeof loadBuyLedgers>["total"] | undefined;
           try { totalLedger = loadBuyLedgers(db, today).total; } catch (err) { console.error("LINE realtime ledger skipped:", err instanceof Error ? err.message : err); }
           for (const buy of pendingBuys) {
-            const actualMinutesBeforeClose = buy.close_at == null ? null : minutesUntilRaceClose(buy.date, buy.close_at, new Date());
+            const measuredAt = Date.now();
+            const actualMinutesBeforeClose = buy.close_at == null ? null : minutesUntilRaceClose(buy.date, buy.close_at, new Date(measuredAt));
             if (actualMinutesBeforeClose == null || actualMinutesBeforeClose < 5) {
               console.log(`LINE realtime skipped-late: ${buy.race_id} minutes=${actualMinutesBeforeClose?.toFixed(1) ?? "-"}`);
               continue;
@@ -473,7 +474,8 @@ try {
                 // 買い目ごとのキー（同じレースで買い目が変わったら別の通知として送る。Codex のレビュー）。
                 retryKeyBase: `buy-alert:${buy.race_id}:${buy.selection}`,
                 // 送り直しを含め、締切の5分前を過ぎたら新しい送信を始めない。
-                deadlineMs: Date.now() + (actualMinutesBeforeClose - 5) * 60_000,
+                // 測った時刻を基準にする（＝締切の5分前ちょうど）。後の Date.now() を使うと、確率の計算などにかかった時間だけ期限が延びる（Codex のレビュー）。
+                deadlineMs: measuredAt + (actualMinutesBeforeClose - 5) * 60_000,
               });
             } catch (err) {
               // 送れなかったことを記録に残す（スコアカードが「送れていない LINE 通知」として数える）。
