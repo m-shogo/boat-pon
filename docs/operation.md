@@ -42,8 +42,15 @@ npm run report:accuracy-scorecard   # 当たり外れ・精度・収集・見張
 npm run report:growth               # 1週間前・1か月前・半年前との比較
 npm run audit:data-integrity        # 過去データの監査
 npm run backup:safe                 # DB のバックアップ（VACUUM INTO で backups/ に保存）
+npm run export:odds-timeseries -- --from YYYY-MM-DD --to YYYY-MM-DD --verify   # 締切前のオッズの時系列を書き出す
 npx tsx scripts/notify-line.ts daily --date YYYY-MM-DD --preview   # 日次まとめの文面の確認（送らない）
 ```
+
+## バックアップ
+
+- **締切前のオッズの時系列**（後から取り直せない）: 毎晩 21:30 の daily-notify が、1日1ファイル（gzip、1日 130〜300 KB）で `data/exports/odds-timeseries/YYYY/YYYY-MM-DD.jsonl.gz` に書き出し、DB の行数と突き合わせる（`npm run export:odds-timeseries -- --from <日> --to <日> --verify`）。環境変数 `BOAT_PON_EXPORT_MIRROR_DIR`（例: Google Drive のフォルダ）を `.env` に書くと、そこにも複製する。**複製先はユーザーが決める。**
+- **DB 全体**: `npm run backup:safe` で `backups/<日時>/` に VACUUM INTO（約 16 GB）。同じディスクなので、月1回は外付けディスクにコピーする。`backups/` の古い世代は自動では消さない（ユーザーが判断する）。
+- スコアカードが「DB のバックアップが 14 日より古い」「オッズの書き出しが 3 日止まっている」を注意に出す。
 
 ## LINE の設定
 

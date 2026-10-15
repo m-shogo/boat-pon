@@ -398,6 +398,8 @@ export type SystemHealthInput = {
   diskFreeBytes: number | null;
   /** いちばん新しい DB のバックアップから何日たったか（バックアップが無ければ null）。省略したら見ない。 */
   backupAgeDays?: number | null;
+  /** 締切前のオッズの時系列の、いちばん新しい書き出しから何日たったか（書き出しが無ければ null）。省略したら見ない。 */
+  oddsExportAgeDays?: number | null;
   /** 直近3日に作られて、送れていない LINE 通知の数。 */
   unsentNotifications: number;
 };
@@ -418,6 +420,10 @@ export function evaluateSystemHealth(input: SystemHealthInput): string[] {
   if (input.backupAgeDays !== undefined) {
     if (input.backupAgeDays == null) alerts.push("DB のバックアップが1つも無い（締切前のオッズの時系列は後から取り直せない）");
     else if (input.backupAgeDays > SYSTEM_HEALTH_LIMITS.backupAgeDays) alerts.push(`DB のいちばん新しいバックアップが ${Math.floor(input.backupAgeDays)} 日前（目安 ${SYSTEM_HEALTH_LIMITS.backupAgeDays} 日以内。締切前のオッズの時系列は後から取り直せない）`);
+  }
+  if (input.oddsExportAgeDays !== undefined) {
+    if (input.oddsExportAgeDays == null) alerts.push("締切前のオッズの時系列の書き出しが無い（scripts/export-odds-timeseries.ts）");
+    else if (input.oddsExportAgeDays > 3) alerts.push(`締切前のオッズの時系列の書き出しが ${Math.floor(input.oddsExportAgeDays)} 日止まっている（毎晩の daily-notify で書き出す）`);
   }
   if (input.unsentNotifications > 0) {
     alerts.push(`直近3日に送れていない LINE 通知が ${input.unsentNotifications} 件（トークンの期限切れ・通信の失敗を確認）`);

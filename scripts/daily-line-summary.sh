@@ -22,6 +22,9 @@ mkdir -p data/reports/scorecard
 run_tsx scripts/run-accuracy-growth.ts --state-dir data/reports/scorecard || echo "${LOG_PREFIX} accuracy growth skipped or failed"
 run_tsx scripts/report-accuracy-scorecard.ts --state-dir data/reports/scorecard --output data/reports/scorecard/latest.md --json-output data/reports/scorecard/latest.json || echo "${LOG_PREFIX} accuracy scorecard skipped or failed"
 
+# 後から取り直せない締切前のオッズの時系列を、1日1ファイルで書き出す（直近7日の抜けも埋める。保存先の複製は BOAT_PON_EXPORT_MIRROR_DIR）。
+run_tsx scripts/export-odds-timeseries.ts --from "$(TZ=Asia/Tokyo date -v-7d +%Y-%m-%d)" --to "$TODAY" --verify || echo "${LOG_PREFIX} odds timeseries export skipped or failed"
+
 # 今日の BUY の当たり外れ（公式の結果ページ。1日最大5件）。10分ごとの速報が未登録でも、結果を当日中に届けて日次まとめに載せる。
 run_tsx scripts/notify-buy-results-fast.ts --catch-up || echo "${LOG_PREFIX} buy results catch-up skipped or failed"
 

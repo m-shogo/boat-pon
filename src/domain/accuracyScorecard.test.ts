@@ -202,3 +202,11 @@ test("DB のバックアップが古い・無いときは注意にする（省�
   assert.match(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: 125.4 })[0], /いちばん新しいバックアップが 125 日前/);
   assert.match(evaluateSystemHealth({ runTiming, diskFreeBytes: null, unsentNotifications: 0, backupAgeDays: null })[0], /バックアップが1つも無い/);
 });
+
+test("締切前のオッズの書き出しが止まったら注意にする", () => {
+  const runTiming = { runs: 0, medianLagMs: null, medianBuildMs: null };
+  const base = { runTiming, diskFreeBytes: null, unsentNotifications: 0 };
+  assert.deepEqual(evaluateSystemHealth({ ...base, oddsExportAgeDays: 1 }), []);
+  assert.match(evaluateSystemHealth({ ...base, oddsExportAgeDays: 5.2 })[0], /書き出しが 5 日止まっている/);
+  assert.match(evaluateSystemHealth({ ...base, oddsExportAgeDays: null })[0], /書き出しが無い/);
+});
