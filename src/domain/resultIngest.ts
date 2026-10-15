@@ -7,3 +7,10 @@ export function isResultDayComplete(day: { results: number; programs: number }):
   if (day.programs <= 0) return day.results > 0;
   return day.results >= day.programs;
 }
+
+/** LZH の先頭: [ヘッダの長さ][チェックサム]-lh5- のように、2〜6 バイト目が圧縮方式（-lh?- / -lz?-）。エラーページや途中で切れた応答を弾く。 */
+export function isLzhArchive(buf: Uint8Array): boolean {
+  if (buf.length <= 21) return false;
+  const method = String.fromCharCode(...buf.subarray(2, 7));
+  return /^-l[hz][0-9a-z ]-$/.test(method);
+}

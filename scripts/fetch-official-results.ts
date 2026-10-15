@@ -1,10 +1,10 @@
 import { execFile as execFileCb } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { parseOfficialResultsText } from "../src/domain/officialResultParser";
-import { isResultDayComplete } from "../src/domain/resultIngest";
+import { isLzhArchive, isResultDayComplete } from "../src/domain/resultIngest";
 import { insertResult, openDb, saveResultDetail } from "../server/db";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import type { RaceResult } from "../src/domain/types";
@@ -99,7 +99,18 @@ async function main() {
         continue;
       }
       try {
-        const text = await extractAndDecode(lzhPath, yymmdd);
+        let text: string;
+        try {
+          text = await extractAndDecode(lzhPath, yymmdd);
+        } catch (err) {
+          // 手元のファイルが壊れている（展開できない）ときは、消さずに名前を変えて隔離し、1回だけ取り直す。
+          if (!cached) throw err;
+          const quarantined = `${lzhPath}.bad-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+          await rename(lzhPath, quarantined);
+          console.warn(`cached archive broken ${date}: ${err instanceof Error ? err.message : err} → ${quarantined}、取り直す`);
+          await downloadFileWithRetry(url, lzhPath);
+          text = await extractAndDecode(lzhPath, yymmdd);
+        }
         const results = parseOfficialResultsText(text, { date, fetchedAt });
         for (const row of results) insertResult(db, row);
         totalRaces += results.length;
@@ -156,7 +167,10 @@ async function downloadFile(url: string, dest: string) {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} ${url}`);
   const buf = Buffer.from(await res.arrayBuffer());
-  await writeFile(dest, buf);
+  // LZH でない応答（エラーページなど）や途中で切れたものを、正式な名前で残さない（残すと毎晩同じファイルで失敗する。2026-10-15 の監査）。
+  if (!isLzhArchive(buf)) throw new Error(`not an LZH archive (${buf.length} bytes) ${url}`);
+  await writeFile(`${dest}.part`, buf);
+  await rename(`${dest}.part`, dest);
 }
 
 async function extractAndDecode(lzhPath: string, yymmdd: string): Promise<string> {
