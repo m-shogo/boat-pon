@@ -38,6 +38,7 @@
     "review:t5-residual": "tsx scripts/review-20261007-t5-residual-extended.ts",
     "review:late-money": "tsx scripts/review-20261007-late-money.ts",
     "review:crosspool": "tsx scripts/review-20261015-crosspool.ts",
+    "review:benter": "tsx scripts/review-20261016-benter.ts",
     "generate:vapid": "tsx scripts/generate-vapid-keys.ts",
     "export:odds-timeseries": "tsx scripts/export-odds-timeseries.ts",
     "export:records": "tsx scripts/export-records.ts"
