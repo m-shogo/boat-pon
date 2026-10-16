@@ -288,6 +288,20 @@ export function runExecutorLifecycle(spec: ExecutorSpec, ctx: SdkContext): SdkOu
     return failed(base, "FAILED", ["PIT_EVIDENCE_VALIDATOR_EXCEPTION"], artifact.summary);
   }
   if (!pitEvidence) return failed(base, "BLOCKED", ["PIT_EVIDENCE_MISSING_OR_INVALID"], artifact.summary);
+  // PIT evidence callbacks are untrusted runtime values; NaN and negative counts
+  // can bypass a comparison-only leakage guard.
+  const pitCounts = [
+    pitEvidence.checkedRecordCount, pitEvidence.sameRaceViolationCount,
+    pitEvidence.futureViolationCount, pitEvidence.ambiguousTimingCount,
+  ];
+  if (
+    (pitEvidence.status !== "PASS" && pitEvidence.status !== "NOT_APPLICABLE") ||
+    typeof pitEvidence.validatorId !== "string" || !pitEvidence.validatorId.trim() ||
+    typeof pitEvidence.validatorVersion !== "string" || !pitEvidence.validatorVersion.trim() ||
+    !pitCounts.every((count) => Number.isSafeInteger(count) && count >= 0) ||
+    (pitEvidence.status === "NOT_APPLICABLE" &&
+      (typeof pitEvidence.notApplicableReason !== "string" || !pitEvidence.notApplicableReason.trim()))
+  ) return failed(base, "BLOCKED", ["PIT_EVIDENCE_MISSING_OR_INVALID"], artifact.summary);
   if (pitEvidence.sameRaceViolationCount > 0 || pitEvidence.futureViolationCount > 0 || pitEvidence.ambiguousTimingCount > 0) {
     return failed(base, "BLOCKED", ["PIT_OR_LEAKAGE_VIOLATION"], { ...artifact.summary, pitEvidence });
   }
