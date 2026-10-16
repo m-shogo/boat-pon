@@ -280,7 +280,13 @@ export function runExecutorLifecycle(spec: ExecutorSpec, ctx: SdkContext): SdkOu
   base.summary = artifact.summary;
 
   lifecycle.push("validatePitEvidence");
-  const pitEvidence = normalizePitEvidence(spec, ctx, artifact);
+  let pitEvidence: PitEvidence | null;
+  try {
+    pitEvidence = normalizePitEvidence(spec, ctx, artifact);
+  } catch {
+    // Callback failures are untrusted: never leak exception text into a research result.
+    return failed(base, "FAILED", ["PIT_EVIDENCE_VALIDATOR_EXCEPTION"], artifact.summary);
+  }
   if (!pitEvidence) return failed(base, "BLOCKED", ["PIT_EVIDENCE_MISSING_OR_INVALID"], artifact.summary);
   if (pitEvidence.sameRaceViolationCount > 0 || pitEvidence.futureViolationCount > 0 || pitEvidence.ambiguousTimingCount > 0) {
     return failed(base, "BLOCKED", ["PIT_OR_LEAKAGE_VIOLATION"], { ...artifact.summary, pitEvidence });
