@@ -40,7 +40,7 @@ const str=(v:unknown)=>typeof v==="string"&&v.trim().length>0;
 const instant=(v:unknown)=>{
   if(typeof v!=="string")return false;
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(v);
-  if(!m)return false;
+  if(!m||v.endsWith("-00:00"))return false;
   const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
   const hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
   if(year===0||hour>23||minute>59||second>59)return false;
