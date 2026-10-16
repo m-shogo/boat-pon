@@ -35,7 +35,20 @@ const obj=(v:unknown):v is Record<string,unknown>=>{
   } catch { return false; }
 };
 const str=(v:unknown)=>typeof v==="string"&&v.trim().length>0;
-const instant=(v:unknown)=>str(v)&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(v as string)&&Number.isFinite(Date.parse(v as string));
+// Validate literal Gregorian dates and RFC3339 clock bounds before Date.parse,
+// which otherwise normalizes impossible days and 24:00 to another instant.
+const instant=(v:unknown)=>{
+  if(typeof v!=="string")return false;
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(v);
+  if(!m)return false;
+  const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
+  const hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
+  if(year===0||hour>23||minute>59||second>59)return false;
+  const leap=year%4===0&&(year%100!==0||year%400===0);
+  const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
+  if(month<1||month>12||day<1||day>days[month-1])return false;
+  return Number.isFinite(Date.parse(v));
+};
 const strings=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(str)&&new Set(v).size===v.length;
 const digests=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(x=>typeof x==="string"&&SHA.test(x))&&new Set(v).size===v.length;
 const canonical=(v:unknown):unknown=>{
