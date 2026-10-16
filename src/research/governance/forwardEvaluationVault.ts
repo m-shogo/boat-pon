@@ -79,7 +79,22 @@ export function validateForwardVaultRecord(v:unknown):Validation {
 }
 
 export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; if(!existing)return "APPEND"; if(existing.recordId!==next.recordId)return "CONFLICT"; return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; }
-export function canPoolStages(stages:EvidenceStage[]):boolean { return new Set(stages).size<=1; }
+// Stage pooling is a runtime admission boundary, not only a TypeScript hint.
+// Read only own data descriptors: never invoke untrusted array accessors.
+export function canPoolStages(stages:EvidenceStage[]):boolean {
+  try {
+    if(!Array.isArray(stages)||Object.getPrototypeOf(stages)!==Array.prototype)return false;
+    if(Reflect.ownKeys(stages).length!==stages.length+1)return false;
+    let first:EvidenceStage|undefined;
+    for(let i=0;i<stages.length;i++){
+      const descriptor=Object.getOwnPropertyDescriptor(stages,String(i));
+      if(!descriptor||!("value" in descriptor)||!descriptor.enumerable||!STAGES.has(descriptor.value))return false;
+      if(i>0&&descriptor.value!==first)return false;
+      if(i===0)first=descriptor.value;
+    }
+    return true;
+  } catch { return false; }
+}
 export function resultMatchesProtocol(result:EvaluationResult,protocol:EvaluationProtocol):boolean {
   try {
     // Runtime inputs must be valid records of the intended kinds; a matching
