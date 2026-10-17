@@ -49,6 +49,17 @@ const instant=(v:unknown)=>{
   if(month<1||month>12||day<1||day>days[month-1])return false;
   return Number.isFinite(Date.parse(v));
 };
+// Compare validated RFC3339 instants without losing sub-millisecond ordering.
+const compareInstants=(a:string,b:string):number=>{
+  const fraction=/\.(\d+)(?=Z$|[+-]\d{2}:\d{2}$)/u;
+  const seconds=(s:string)=>Date.parse(s.replace(fraction,""));
+  const sa=seconds(a),sb=seconds(b);
+  if(sa!==sb)return sa<sb?-1:1;
+  const fa=fraction.exec(a)?.[1]??"",fb=fraction.exec(b)?.[1]??"";
+  const width=Math.max(fa.length,fb.length);
+  const pa=fa.padEnd(width,"0"),pb=fb.padEnd(width,"0");
+  return pa<pb?-1:pa>pb?1:0;
+};
 const strings=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(str)&&new Set(v).size===v.length;
 const digests=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(x=>typeof x==="string"&&SHA.test(x))&&new Set(v).size===v.length;
 const canonical=(v:unknown):unknown=>{
@@ -69,7 +80,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))e.push(`unknown field is not allowed: ${k}`);
   const req=(...ks:string[])=>ks.forEach(k=>{if(!str(v[k]))e.push(`${k} must be non-empty`)}); const dg=(...ks:string[])=>ks.forEach(k=>{if(typeof v[k]!=="string"||!SHA.test(v[k] as string))e.push(`${k} must be SHA-256`)});
   switch(v.kind){
-    case "ENROLLMENT_PROTOCOL": req("enrollmentProtocolId","decisionSystem","protocolVersion"); if(!strings(v.eligibilityRules)||!strings(v.ticketUniverse))e.push("protocol rule arrays must be non-empty unique strings"); if(!instant(v.startAt)||(v.endAt!==null&&!instant(v.endAt)))e.push("protocol boundaries must be exact timestamps"); break;
+    case "ENROLLMENT_PROTOCOL": req("enrollmentProtocolId","decisionSystem","protocolVersion"); if(!strings(v.eligibilityRules)||!strings(v.ticketUniverse))e.push("protocol rule arrays must be non-empty unique strings"); if(!instant(v.startAt)||(v.endAt!==null&&!instant(v.endAt)))e.push("protocol boundaries must be exact timestamps"); if(instant(v.startAt)&&v.endAt!==null&&instant(v.endAt)&&compareInstants(v.endAt as string,v.startAt as string)<0)e.push("protocol endAt precedes startAt"); break;
     case "MEMBERSHIP": req("cohortId","enrollmentProtocolId","canonicalRaceId","decisionRecordId","reason"); dg("enrollmentProtocolDigest","decisionRecordDigest"); if(!instant(v.enrolledAt))e.push("enrolledAt must be exact"); if(typeof v.included!=="boolean")e.push("included must be boolean"); break;
     case "ANALYSIS_SNAPSHOT": req("analysisSnapshotId","cohortId"); if(!instant(v.cutoffAt))e.push("cutoffAt must be exact"); if(!digests(v.membershipDigests))e.push("membershipDigests must be unique SHA-256 digests"); break;
     case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")e.push("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))e.push("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))e.push("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")e.push("unresolvedPolicy must fail closed"); break;
@@ -101,7 +112,7 @@ export function resultMatchesProtocol(result:EvaluationResult,protocol:Evaluatio
     // digest alone does not make a retrospectively authored protocol prospective.
     if(!validateForwardVaultRecord(result).valid||!validateForwardVaultRecord(protocol).valid)return false;
     if(result.kind!=="RESULT"||protocol.kind!=="EVALUATION_PROTOCOL")return false;
-    if(Date.parse(protocol.createdAt)>=Date.parse(result.createdAt))return false;
+    if(compareInstants(protocol.createdAt,result.createdAt)>=0)return false;
     return result.evidenceStage===protocol.evidenceStage&&result.evaluationProtocolId===protocol.evaluationProtocolId&&result.evaluationProtocolDigest===forwardVaultDigest(protocol)&&result.comparisonMode===protocol.comparisonMode&&result.oddsBasis===protocol.oddsBasis&&protocol.metricFamilies.includes(result.metricFamily);
   } catch {
     // Fail closed even if a getter or ambient JSON serializer throws.
