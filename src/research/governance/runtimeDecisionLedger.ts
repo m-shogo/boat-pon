@@ -167,28 +167,76 @@ function validateProbability(value: unknown, field: string, errors: string[]): v
   if (value != null && (value < 0 || value > 1)) errors.push(`${field} must be between 0 and 1`);
 }
 
+// Validate the same own enumerable data fields that JSON persistence will observe.
+function isOwnSerializableDataObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  try {
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) return false;
+    if ("toJSON" in value) return false;
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== "string") return false;
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+
+function isDenseSerializableStringArray(value: unknown): value is string[] {
+  if (!Array.isArray(value)) return false;
+  try {
+    if (Object.getPrototypeOf(value) !== Array.prototype || "toJSON" in value) return false;
+    if (Reflect.ownKeys(value).length !== value.length + 1) return false;
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor) || !isNonEmptyString(descriptor.value)) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+
 function validateStringArray(value: unknown, field: string, errors: string[]): void {
-  if (!Array.isArray(value) || value.some((entry) => !isNonEmptyString(entry))) {
+  if (!isDenseSerializableStringArray(value)) {
     errors.push(`${field} must be an array of non-empty strings`);
   }
 }
 
 function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (!isRecord(value)) return value;
-  return Object.fromEntries(
-    Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]),
-  );
+  if (Array.isArray(value)) {
+    if (!isDenseSerializableStringArray(value)) throw new TypeError("non-JSON array in Runtime Decision Ledger");
+    return Array.from({ length: value.length }, (_, index) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !("value" in descriptor)) throw new TypeError("non-JSON array in Runtime Decision Ledger");
+      return canonicalize(descriptor.value);
+    });
+  }
+  if (value !== null && typeof value === "object") {
+    if (!isOwnSerializableDataObject(value)) throw new TypeError("non-JSON object in Runtime Decision Ledger");
+    return Object.fromEntries(Object.keys(value).sort().map((key) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !("value" in descriptor)) throw new TypeError("non-JSON object in Runtime Decision Ledger");
+      return [key, canonicalize(descriptor.value)];
+    }));
+  }
+  return value;
 }
 
 export function runtimeDecisionLedgerDigest(record: RuntimeDecisionLedgerRecord): string {
-  const canonical = JSON.stringify(canonicalize(record));
+    if (!validateRuntimeDecisionLedgerRecord(record).valid) throw new TypeError("invalid Runtime Decision Ledger record");
+const canonical = JSON.stringify(canonicalize(record));
   return createHash("sha256").update(canonical).digest("hex");
 }
 
 export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDecisionLedgerValidation {
   const errors: string[] = [];
   if (!isRecord(value)) return { valid: false, errors: ["record must be an object"] };
+  if (!isOwnSerializableDataObject(value)) return { valid: false, errors: ["record fields must be enumerable own data properties"] };
+  for (const field of ALLOWED_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(value, field)) {
+      return { valid: false, errors: [`missing own field: ${field}`] };
+    }
+  }
 
   for (const field of Object.keys(value)) {
     if (!ALLOWED_FIELDS.has(field as keyof RuntimeDecisionLedgerRecord)) {
