@@ -1,0 +1,27 @@
+{
+  "learningId": "LEARN-k1-digest-test-expectation-drift-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.k1-digest-invalid-test-expectation-drift",
+  "subsystem": "research-governance-runtime-decision-ledger",
+  "operation": "check-k1-successor-digest-test",
+  "symptom": "The existing negative test compares digests of valid and invalid records. The successor digest API now rejects invalid records, so that assertion throws.",
+  "rootCauseClass": "TEST_EXPECTATION_DRIFT_AFTER_VALIDATION_HARDENING",
+  "attemptSignature": "k1-successor-uppercase-invalid-digest-not-equal",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/research-governance",
+    "materialStateKey": "runtime-6f8d5550/test-874d4262"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerCanonicalDigest.test.ts"
+  ],
+  "lesson": "A fail-closed digest API requires negative tests to assert rejection rather than hash inequality.",
+  "guardrail": "Assert a digest for valid records and TypeError for invalid records; verify on repository CI before merge.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-19T16:03:59.000Z",
+  "productionConnection": false,
+  "_digest": "586aaaad9e01185b3b9cc6ad63b9ed8d1ceb3f813669ff54079516e515802b95",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T16:03:59.000Z"
+}
