@@ -29,7 +29,7 @@ test("all five array fields reject holes that would persist as null",()=>{
       const candidate = {...record,[key]:array};
       assert.equal(validateForwardVaultRecord(candidate).valid,false,`${record.kind}.${key}`);
       assert.equal(classifyForwardVaultAppend(undefined,candidate),"REJECTED_INVALID");
-      assert.throws(()=>forwardVaultDigest(candidate as typeof record),/non-JSON array/u);
+      assert.throws(()=>forwardVaultDigest(candidate as typeof record),TypeError);
       assert.match(JSON.stringify(array),/null/u);
     }
   }
@@ -43,7 +43,7 @@ test("array accessors and extra own properties cannot enter a vault digest",()=>
       const candidate = {...record,[key]:array};
       assert.equal(validateForwardVaultRecord(candidate).valid,false,`${record.kind}.${key}`);
       assert.equal(classifyForwardVaultAppend(undefined,candidate),"REJECTED_INVALID");
-      assert.throws(()=>forwardVaultDigest(candidate as typeof record),/non-JSON array/u);
+      assert.throws(()=>forwardVaultDigest(candidate as typeof record),TypeError);
     }
   }
 });

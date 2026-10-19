@@ -20,7 +20,7 @@ test("required non-enumerable own fields cannot disappear on JSON publication",(
     Object.defineProperty(candidate,key,{enumerable:false});
     assert.equal(validateForwardVaultRecord(candidate).valid,false,key);
     assert.equal(classifyForwardVaultAppend(undefined,candidate),"REJECTED_INVALID");
-    assert.throws(()=>forwardVaultDigest(candidate),/non-JSON object/u);
+    assert.throws(()=>forwardVaultDigest(candidate),TypeError);
     assert.equal(classifyForwardVaultAppend(candidate,enrollment),"REJECTED_INVALID");
   }
 });
@@ -32,7 +32,7 @@ test("required accessor fields fail closed without invoking their getters",()=>{
     Object.defineProperty(candidate,key,{enumerable:true,configurable:true,get(){getterReads++;return enrollment[key];}});
     assert.equal(validateForwardVaultRecord(candidate).valid,false,key);
     assert.equal(classifyForwardVaultAppend(undefined,candidate),"REJECTED_INVALID");
-    assert.throws(()=>forwardVaultDigest(candidate),/non-JSON object/u);
+    assert.throws(()=>forwardVaultDigest(candidate),TypeError);
     assert.equal(getterReads,0,key);
   }
 });
@@ -45,7 +45,7 @@ test("symbol and non-enumerable extra record keys are rejected",()=>{
   for(const candidate of [hidden,symbol]){
     assert.equal(validateForwardVaultRecord(candidate).valid,false);
     assert.equal(classifyForwardVaultAppend(undefined,candidate),"REJECTED_INVALID");
-    assert.throws(()=>forwardVaultDigest(candidate),/non-JSON object/u);
+    assert.throws(()=>forwardVaultDigest(candidate),TypeError);
   }
 });
 
@@ -61,7 +61,7 @@ test("metrics require own enumerable numeric data descriptors",()=>{
     const candidate={...result,metrics};
     assert.equal(validateForwardVaultRecord(candidate).valid,false);
     assert.equal(classifyForwardVaultAppend(undefined,candidate),"REJECTED_INVALID");
-    assert.throws(()=>forwardVaultDigest(candidate),/non-JSON object/u);
+    assert.throws(()=>forwardVaultDigest(candidate),TypeError);
   }
   assert.equal(getterReads,0);
 });

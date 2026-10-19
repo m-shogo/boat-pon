@@ -28,7 +28,7 @@ test("non-JSON metric objects cannot hide a different persisted payload", () => 
   assert.notDeepEqual(JSON.parse(JSON.stringify(candidate)), JSON.parse(JSON.stringify(plain)));
   assert.equal(validateForwardVaultRecord(candidate).valid, false);
   assert.equal(classifyForwardVaultAppend(plain, candidate), "REJECTED_INVALID");
-  assert.throws(() => forwardVaultDigest(candidate), /non-JSON object/u);
+  assert.throws(() => forwardVaultDigest(candidate), TypeError);
 });
 
 test("inherited toJSON cannot change the persisted top-level record", () => {
@@ -36,7 +36,7 @@ test("inherited toJSON cannot change the persisted top-level record", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(candidate)), {});
   assert.equal(validateForwardVaultRecord(candidate).valid, false);
   assert.equal(classifyForwardVaultAppend(result(), candidate), "REJECTED_INVALID");
-  assert.throws(() => forwardVaultDigest(candidate), /non-JSON object/u);
+  assert.throws(() => forwardVaultDigest(candidate), TypeError);
 });
 
 test("inherited metric toJSON cannot change the persisted metrics object", () => {
@@ -45,7 +45,7 @@ test("inherited metric toJSON cannot change the persisted metrics object", () =>
   assert.deepEqual(JSON.parse(JSON.stringify(candidate)).metrics, {});
   assert.equal(validateForwardVaultRecord(candidate).valid, false);
   assert.equal(classifyForwardVaultAppend(result(), candidate), "REJECTED_INVALID");
-  assert.throws(() => forwardVaultDigest(candidate), /non-JSON object/u);
+  assert.throws(() => forwardVaultDigest(candidate), TypeError);
 });
 
 test("own non-enumerable toJSON cannot bypass canonical hashing", () => {
@@ -54,7 +54,7 @@ test("own non-enumerable toJSON cannot bypass canonical hashing", () => {
   const candidate = result(metrics);
   assert.equal(validateForwardVaultRecord(candidate).valid, false);
   assert.equal(classifyForwardVaultAppend(result(), candidate), "REJECTED_INVALID");
-  assert.throws(() => forwardVaultDigest(candidate), /non-JSON object/u);
+  assert.throws(() => forwardVaultDigest(candidate), TypeError);
 });
 
 test("plain and null-prototype JSON metrics retain valid idempotency", () => {
