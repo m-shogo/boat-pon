@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-schema-unicode-trim-parity-20261019",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.schema-unicode-trim-cross-engine-parity",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-schema-nonblank-strings",
+  "symptom": "JSON Schema minLength:1 accepts whitespace-only values that the JavaScript runtime rejects. A generic regex \\S also differs between Python and ECMAScript on U+FEFF and U+0085.",
+  "rootCauseClass": "SCHEMA_RUNTIME_CROSS_ENGINE_UNICODE_WHITESPACE_DIVERGENCE",
+  "attemptSignature": "node-trim-vs-python-jsonschema-unicode-42-probe-parity",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/python-jsonschema4.26.0/research-governance-pr2286",
+    "materialStateKey": "forward-evaluation-vault.schema.json@9a14ffc6f9cbac2f9016eb159a60f5f43716acf3/nonblank-minLength-only"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/forward-evaluation-vault.schema.json",
+    "src/research/governance/forwardEvaluationVault.ts"
+  ],
+  "lesson": "Portable JSON Schema nonblank checks must match ECMAScript trim explicitly; generic \\S has engine-dependent semantics. U+FEFF is trim-whitespace in JavaScript while U+0085 is not.",
+  "guardrail": "Use an explicit ECMAScript trim whitespace character class for all 23 nonblank schema constraints, and regression-test the same 42 Unicode probes in Node and a Draft 2020-12 schema validator before publishing.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-19T07:21:32.000Z",
+  "productionConnection": false,
+  "_digest": "c66139dd2c606a5365447903cc93c374645564b2296851b9b4bd34a09cf0ed38",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T07:21:32.000Z"
+}
