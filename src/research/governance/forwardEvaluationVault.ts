@@ -34,6 +34,19 @@ const obj=(v:unknown):v is Record<string,unknown>=>{
     return (proto===Object.prototype||proto===null)&&!("toJSON" in v);
   } catch { return false; }
 };
+// Only own, enumerable data descriptors can participate in JSON persistence.
+// Inspect descriptors rather than reading values, so accessors never execute.
+const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolean=>{
+  try {
+    const keys=Reflect.ownKeys(v);
+    if(keys.some(k=>typeof k!=="string"))return false;
+    for(const key of keys){
+      const d=Object.getOwnPropertyDescriptor(v,key);
+      if(!d||!d.enumerable||!("value" in d))return false;
+    }
+    return !required||(keys.length===required.length&&required.every(k=>Object.prototype.hasOwnProperty.call(v,k)));
+  } catch { return false; }
+};
 const str=(v:unknown)=>typeof v==="string"&&v.trim().length>0;
 // Validate literal Gregorian dates and RFC3339 clock bounds before Date.parse,
 // which otherwise normalizes impossible days and 24:00 to another instant.
@@ -87,8 +100,12 @@ const canonical=(v:unknown):unknown=>{
     });
   }
   if(v!==null&&typeof v==="object"){
-    if(!obj(v))throw new TypeError("non-JSON object in Forward Evaluation Vault");
-    return Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]));
+    if(!obj(v)||!ownDataShape(v))throw new TypeError("non-JSON object in Forward Evaluation Vault");
+    return Object.fromEntries(Object.keys(v).sort().map(k=>{
+      const descriptor=Object.getOwnPropertyDescriptor(v,k);
+      if(!descriptor||!("value" in descriptor))throw new TypeError("non-JSON object in Forward Evaluation Vault");
+      return [k,canonical(descriptor.value)];
+    }));
   }
   return v;
 };
@@ -96,9 +113,11 @@ export const forwardVaultDigest=(r:ForwardVaultRecord)=>createHash("sha256").upd
 
 export function validateForwardVaultRecord(v:unknown):Validation {
   const e:string[]=[]; if(!obj(v)) return {valid:false,errors:["record must be an object"]};
+  if(!ownDataShape(v))return {valid:false,errors:["record fields must be enumerable own data properties"]};
   if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)e.push("invalid schemaVersion");
   if(!str(v.recordId))e.push("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))e.push("invalid evidenceStage"); if(!instant(v.createdAt))e.push("createdAt must be timezone-bound ISO timestamp");
   if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return {valid:false,errors:[...e,"invalid kind"]};
+  if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))e.push("record fields must exactly match kind");
   for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))e.push(`unknown field is not allowed: ${k}`);
   const req=(...ks:string[])=>ks.forEach(k=>{if(!str(v[k]))e.push(`${k} must be non-empty`)}); const dg=(...ks:string[])=>ks.forEach(k=>{if(typeof v[k]!=="string"||!SHA.test(v[k] as string))e.push(`${k} must be SHA-256`)});
   switch(v.kind){
@@ -106,12 +125,12 @@ export function validateForwardVaultRecord(v:unknown):Validation {
     case "MEMBERSHIP": req("cohortId","enrollmentProtocolId","canonicalRaceId","decisionRecordId","reason"); dg("enrollmentProtocolDigest","decisionRecordDigest"); if(!instant(v.enrolledAt))e.push("enrolledAt must be exact"); if(typeof v.included!=="boolean")e.push("included must be boolean"); break;
     case "ANALYSIS_SNAPSHOT": req("analysisSnapshotId","cohortId"); if(!instant(v.cutoffAt))e.push("cutoffAt must be exact"); if(!digests(v.membershipDigests))e.push("membershipDigests must be unique SHA-256 digests"); break;
     case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")e.push("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))e.push("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))e.push("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")e.push("unresolvedPolicy must fail closed"); break;
-    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")e.push("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))e.push("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0)e.push(`${k} must be non-negative safe integer`); if(!obj(v.metrics)||Object.keys(v.metrics).length===0||Object.values(v.metrics).some(x=>typeof x!=="number"||!Number.isFinite(x)))e.push("metrics must contain finite numbers"); break;
+    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")e.push("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))e.push("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0)e.push(`${k} must be non-negative safe integer`); if(!obj(v.metrics)||!ownDataShape(v.metrics)||Object.keys(v.metrics).length===0||Object.values(v.metrics).some(x=>typeof x!=="number"||!Number.isFinite(x)))e.push("metrics must contain finite numbers"); break;
   }
   return {valid:e.length===0,errors:e};
 }
 
-export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; if(!existing)return "APPEND"; if(existing.recordId!==next.recordId)return "CONFLICT"; return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; }
+export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; if(!existing)return "APPEND"; if(!validateForwardVaultRecord(existing).valid)return "REJECTED_INVALID"; if(existing.recordId!==next.recordId)return "CONFLICT"; try { return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; } catch { return "REJECTED_INVALID"; } }
 // Stage pooling is a runtime admission boundary, not only a TypeScript hint.
 // Read only own data descriptors: never invoke untrusted array accessors.
 export function canPoolStages(stages:EvidenceStage[]):boolean {
