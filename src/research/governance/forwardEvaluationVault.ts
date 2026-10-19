@@ -109,7 +109,12 @@ const canonical=(v:unknown):unknown=>{
   }
   return v;
 };
-export const forwardVaultDigest=(r:ForwardVaultRecord)=>createHash("sha256").update(JSON.stringify(canonical(r))).digest("hex");
+export const forwardVaultDigest=(r:ForwardVaultRecord)=>{
+  // The exported digest must enforce the same admission contract as append.
+  // Invalid NaN and null values otherwise alias under JSON.stringify.
+  if(!validateForwardVaultRecord(r).valid)throw new TypeError("invalid Forward Evaluation Vault record");
+  return createHash("sha256").update(JSON.stringify(canonical(r))).digest("hex");
+};
 
 export function validateForwardVaultRecord(v:unknown):Validation {
   const e:string[]=[]; if(!obj(v)) return {valid:false,errors:["record must be an object"]};
