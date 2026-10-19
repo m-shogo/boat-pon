@@ -60,10 +60,32 @@ const compareInstants=(a:string,b:string):number=>{
   const pa=fa.padEnd(width,"0"),pb=fb.padEnd(width,"0");
   return pa<pb?-1:pa>pb?1:0;
 };
-const strings=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(str)&&new Set(v).size===v.length;
-const digests=(v:unknown)=>Array.isArray(v)&&v.length>0&&v.every(x=>typeof x==="string"&&SHA.test(x))&&new Set(v).size===v.length;
+// Array.every skips holes, while JSON.stringify persists them as null.
+// Inspect own indexed data descriptors to keep validation and hashing aligned.
+const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
+  if(!Array.isArray(v)||v.length===0)return false;
+  try {
+    if(Object.getPrototypeOf(v)!==Array.prototype||Reflect.ownKeys(v).length!==v.length+1)return false;
+    const seen=new Set<unknown>();
+    for(let i=0;i<v.length;i++){
+      const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
+      if(!descriptor||!descriptor.enumerable||!("value" in descriptor)||!accept(descriptor.value)||seen.has(descriptor.value))return false;
+      seen.add(descriptor.value);
+    }
+    return true;
+  } catch { return false; }
+};
+const strings=(v:unknown)=>denseUniqueArray(v,str);
+const digests=(v:unknown)=>denseUniqueArray(v,x=>typeof x==="string"&&SHA.test(x));
 const canonical=(v:unknown):unknown=>{
-  if(Array.isArray(v))return v.map(canonical);
+  if(Array.isArray(v)){
+    if(Object.getPrototypeOf(v)!==Array.prototype||Reflect.ownKeys(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
+    return Array.from({length:v.length},(_,i)=>{
+      const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
+      if(!descriptor||!descriptor.enumerable||!("value" in descriptor))throw new TypeError("non-JSON array in Forward Evaluation Vault");
+      return canonical(descriptor.value);
+    });
+  }
   if(v!==null&&typeof v==="object"){
     if(!obj(v))throw new TypeError("non-JSON object in Forward Evaluation Vault");
     return Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]));
