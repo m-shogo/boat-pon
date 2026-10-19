@@ -14,7 +14,7 @@
   },
   "evidenceRefs": [
     "pull/2286",
-    "compare/921a0c590642...7302f114e1ae",
+    "commits/921a0c590642-to-7302f114e1ae",
     "actions/runs/39315929361",
     "docs/architecture/research-learning-loop.md"
   ],
@@ -23,7 +23,7 @@
   "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
   "createdAt": "2026-10-19T20:03:40.540Z",
   "productionConnection": false,
-  "_digest": "e994d96be8661bd0605d96358d37ad7867922d740157aa7f17110724748b8503",
+  "_digest": "c6c35f11eb2364d629f197174b9d81b2938c9118b3bd812333663d2450fbf29a",
   "_digestVersion": "canonical-v2",
   "_recordedAt": "2026-10-19T20:03:40.540Z"
 }
