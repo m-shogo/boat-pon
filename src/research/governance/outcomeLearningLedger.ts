@@ -133,11 +133,30 @@ export function classifyOutcomeReconciliation(input: {
   refundOrInvalidationExact: boolean;
   finalityExact: boolean;
 }): OutcomeReconciliationState {
-  if (!input.decisionExact) return "UNRESOLVED_DECISION";
-  if (!input.settlementIdentityExact) return "UNRESOLVED_SETTLEMENT_IDENTITY";
-  if (!input.ticketLinkExact) return "UNRESOLVED_TICKET_LINK";
-  if (!input.refundOrInvalidationExact) return "UNRESOLVED_REFUND_OR_INVALIDATION";
-  if (!input.finalityExact) return "UNRESOLVED_FINALITY";
+  // TypeScript annotations do not validate evidence supplied at runtime.
+  // Read own data descriptors so malformed accessors cannot manufacture EXACT.
+  const fields = [
+    "decisionExact", "settlementIdentityExact", "ticketLinkExact",
+    "refundOrInvalidationExact", "finalityExact",
+  ] as const;
+  const flags: boolean[] = [];
+  try {
+    if (!isRecord(input) || Reflect.ownKeys(input).length !== fields.length) return "REJECTED_INVALID";
+    for (const field of fields) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, field);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor) || typeof descriptor.value !== "boolean") {
+        return "REJECTED_INVALID";
+      }
+      flags.push(descriptor.value);
+    }
+  } catch {
+    return "REJECTED_INVALID";
+  }
+  if (!flags[0]) return "UNRESOLVED_DECISION";
+  if (!flags[1]) return "UNRESOLVED_SETTLEMENT_IDENTITY";
+  if (!flags[2]) return "UNRESOLVED_TICKET_LINK";
+  if (!flags[3]) return "UNRESOLVED_REFUND_OR_INVALIDATION";
+  if (!flags[4]) return "UNRESOLVED_FINALITY";
   return "EXACT";
 }
 
