@@ -91,10 +91,10 @@ function isLeapYear(year: number): boolean {
 }
 function isExactInstant(value: string): boolean {
   const match = EXACT_INSTANT_RE.exec(value);
-  if (!match) return false;
+  if (!match || value.endsWith("-00:00")) return false;
   const [, y, mo, d, h, mi, s, oh, om] = match;
   const year = Number(y), month = Number(mo), day = Number(d);
-  if (month < 1 || month > 12 || Number(h) > 23 || Number(mi) > 59 || Number(s) > 59) return false;
+  if (year === 0 || month < 1 || month > 12 || Number(h) > 23 || Number(mi) > 59 || Number(s) > 59) return false;
   const days = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
   if (day < 1 || day > days) return false;
   return oh === undefined || (Number(oh) <= 23 && Number(om) <= 59);
