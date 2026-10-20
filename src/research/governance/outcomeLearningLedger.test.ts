@@ -121,3 +121,32 @@ test("direct Outcome Ledger digest rejects invalid JSON aliases and malformed ex
   assert.equal(classifyOutcomeLedgerAppend(undefined, valid), "APPEND");
   assert.match(outcomeLearningLedgerDigest(valid), /^[0-9a-f]{64}$/u);
 });
+
+test("Outcome Ledger JSON admission rejects inherited, exotic, hidden, accessor and sparse evidence", () => {
+  const valid = validSettled();
+  const inherited = Object.create(valid) as OutcomeLearningLedgerRecord;
+  const exotic = Object.assign(new Date("2026-08-05T06:00:00Z"), valid) as unknown as OutcomeLearningLedgerRecord;
+  const hidden = { ...valid };
+  Object.defineProperty(hidden, "payoutYen", { value: 640, enumerable: false, configurable: true });
+  const withSymbol = { ...valid, [Symbol("hidden")]: "not serialized" };
+  let getterReads = 0;
+  const accessor = { ...valid };
+  Object.defineProperty(accessor, "payoutYen", {
+    enumerable: true, configurable: true,
+    get() { getterReads++; return 640; },
+  });
+  const sparse = { ...valid, sourceEvidenceDigests: new Array<string>(1) };
+  const alteredArray = { ...valid, sourceEvidenceDigests: ["a".repeat(64)] };
+  Object.defineProperty(alteredArray.sourceEvidenceDigests, "toJSON", {
+    value() { return ["b".repeat(64)]; }, configurable: true,
+  });
+  for (const malformed of [inherited, exotic, hidden, withSymbol, accessor, sparse, alteredArray]) {
+    assert.equal(validateOutcomeLearningLedgerRecord(malformed).valid, false);
+    assert.throws(() => outcomeLearningLedgerDigest(malformed), TypeError);
+    assert.equal(classifyOutcomeLedgerAppend(malformed, valid), "REJECTED_INVALID");
+    assert.equal(classifyOutcomeLedgerAppend(valid, malformed), "REJECTED_INVALID");
+  }
+  assert.equal(getterReads, 0);
+  assert.equal(validateOutcomeLearningLedgerRecord(valid).valid, true);
+  assert.equal(outcomeLearningLedgerDigest(valid), outcomeLearningLedgerDigest({ ...valid }));
+});

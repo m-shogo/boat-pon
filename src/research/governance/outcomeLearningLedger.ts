@@ -50,7 +50,35 @@ const SHA256_RE = /^[0-9a-f]{64}$/u;
 const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  try {
+    const proto = Object.getPrototypeOf(value);
+    return (proto === Object.prototype || proto === null) && !("toJSON" in value);
+  } catch { return false; }
+}
+// JSON persistence and canonical digest must observe exactly the same own data fields.
+function hasOwnEnumerableDataFields(value: Record<string, unknown>): boolean {
+  try {
+    const keys = Reflect.ownKeys(value);
+    if (keys.some((key) => typeof key !== "string")) return false;
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
+    }
+    return [...ALLOWED_FIELDS].every((key) => Object.prototype.hasOwnProperty.call(value, key));
+  } catch { return false; }
+}
+function hasDenseDigestArray(value: unknown): value is string[] {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  try {
+    if (Object.getPrototypeOf(value) !== Array.prototype || Reflect.ownKeys(value).length !== value.length + 1) return false;
+    for (let i = 0; i < value.length; i++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor) ||
+          typeof descriptor.value !== "string" || !SHA256_RE.test(descriptor.value)) return false;
+    }
+    return true;
+  } catch { return false; }
 }
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -116,6 +144,7 @@ export function classifyOutcomeReconciliation(input: {
 export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLearningLedgerValidation {
   const errors: string[] = [];
   if (!isRecord(value)) return { valid: false, errors: ["record must be an object"] };
+  if (!hasOwnEnumerableDataFields(value)) return { valid: false, errors: ["record fields must be enumerable own data properties"] };
   for (const field of Object.keys(value)) {
     if (!ALLOWED_FIELDS.has(field as keyof OutcomeLearningLedgerRecord)) errors.push(`unknown field is not allowed: ${field}`);
   }
@@ -134,7 +163,7 @@ export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLear
   }
   if (value.refundReason !== null && !isNonEmptyString(value.refundReason)) errors.push("refundReason must be a non-empty string or null");
   if (value.popularity !== null && (!Number.isSafeInteger(value.popularity) || (value.popularity as number) <= 0)) errors.push("popularity must be a positive safe integer or null");
-  if (!Array.isArray(value.sourceEvidenceDigests) || value.sourceEvidenceDigests.length === 0 || value.sourceEvidenceDigests.some((digest) => typeof digest !== "string" || !SHA256_RE.test(digest))) {
+  if (!hasDenseDigestArray(value.sourceEvidenceDigests)) {
     errors.push("sourceEvidenceDigests must contain one or more lowercase SHA-256 digests");
   } else if (new Set(value.sourceEvidenceDigests).size !== value.sourceEvidenceDigests.length) {
     errors.push("sourceEvidenceDigests must not contain duplicates");
