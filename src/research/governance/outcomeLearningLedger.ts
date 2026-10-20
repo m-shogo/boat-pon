@@ -78,6 +78,8 @@ function canonicalize(value: unknown): unknown {
 }
 
 export function outcomeLearningLedgerDigest(record: OutcomeLearningLedgerRecord): string {
+  // Direct hashing must enforce the same admission contract as append classification.
+  if (!validateOutcomeLearningLedgerRecord(record).valid) throw new TypeError("invalid Outcome Learning Ledger record");
   return createHash("sha256").update(JSON.stringify(canonicalize(record))).digest("hex");
 }
 
@@ -89,6 +91,7 @@ export function classifyOutcomeLedgerAppend(
   if (!validation.valid) return "REJECTED_INVALID";
   const next = candidate as OutcomeLearningLedgerRecord;
   if (existing === undefined) return "APPEND";
+  if (!validateOutcomeLearningLedgerRecord(existing).valid) return "REJECTED_INVALID";
   if (existing.outcomeRecordId !== next.outcomeRecordId) return "CONFLICT";
   return outcomeLearningLedgerDigest(existing) === outcomeLearningLedgerDigest(next)
     ? "IDEMPOTENT_NOOP"

@@ -100,3 +100,24 @@ test("Outcome Learning Ledger rejects unsafe monetary integers and duplicate evi
   assert.ok(result.errors.includes("stakeYen must be a non-negative safe integer"));
   assert.ok(result.errors.includes("sourceEvidenceDigests must not contain duplicates"));
 });
+
+test("direct Outcome Ledger digest rejects invalid JSON aliases and malformed existing state", () => {
+  const valid = validSettled();
+  const invalidPayouts: unknown[] = [Number.NaN, Infinity, -Infinity, null, undefined, -1, Number.MAX_SAFE_INTEGER + 1, "640"];
+  const nullRecord = { ...valid, payoutYen: null };
+  for (const invalid of invalidPayouts) {
+    const malformed = { ...valid, payoutYen: invalid } as unknown as OutcomeLearningLedgerRecord;
+    assert.equal(validateOutcomeLearningLedgerRecord(malformed).valid, false);
+    assert.throws(() => outcomeLearningLedgerDigest(malformed), TypeError);
+    assert.equal(classifyOutcomeLedgerAppend(valid, malformed), "REJECTED_INVALID");
+    assert.equal(classifyOutcomeLedgerAppend(malformed, valid), "REJECTED_INVALID");
+    if (typeof invalid === "number" && !Number.isFinite(invalid)) {
+      assert.equal(JSON.stringify(malformed), JSON.stringify(nullRecord));
+    }
+  }
+  const missingPayout = { ...valid } as Record<string, unknown>;
+  delete missingPayout.payoutYen;
+  assert.equal(JSON.stringify({ ...valid, payoutYen: undefined }), JSON.stringify(missingPayout));
+  assert.equal(classifyOutcomeLedgerAppend(undefined, valid), "APPEND");
+  assert.match(outcomeLearningLedgerDigest(valid), /^[0-9a-f]{64}$/u);
+});
