@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-required-field-foreach-bypass-20261021",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.required-fields-array-foreach-bypass",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-record-and-direct-digest-admission",
+  "symptom": "Under a synthetic no-op Array.prototype.forEach, the v230 offline candidate still skips req/dg required-value checks, admitting an empty evaluationProtocolId or a non-SHA sourceManifestDigest. The exported digest can then hash invalid records. The current PR retains the same source-level forEach helpers; no live research incident was observed.",
+  "rootCauseClass": "MUTABLE_ARRAY_FOREACH_REQUIRED_VALUE_ADMISSION_BYPASS",
+  "attemptSignature": "v230-offline-candidate-noop-array-foreach-nonblank-sha-negative-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/offline-source-equivalent+github-readonly",
+    "materialStateKey": "pr2286-b7d9151/forward-vault-d5b4718+v230-unmerged-req-dg-forEach"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "research/registries/learnings/LEARN-forward-vault-prototype-serialization-divergence-20261009.json"
+  ],
+  "lesson": "Removing iterator, map, sort, some and includes dependencies is insufficient when required-field validators still delegate to mutable Array.prototype.forEach. Admission and direct digest must fail closed for invalid nonblank/SHA fields even under hostile ambient methods.",
+  "guardrail": "Use indexed traversal for req/dg required-field validation; exercise synthetic no-op forEach with invalid required string and SHA-256 values, normal-record parity, and direct digest rejection in the canonical TypeScript test runner before integrating the patch.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-21T10:02:22.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-21T10:02:22.000Z",
+  "_digest": "c4ebd227d8aa355c0aed8db1fc1b229119fd65b0847fa2a59ba3d65c6a37c072"
+}
