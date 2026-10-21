@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-outcome-ledger-array-iterator-admission-bypass-20261021",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.array-iterator-admission-bypass",
+  "subsystem": "research-governance-outcome-ledger",
+  "operation": "validate-outcome-ledger-record-and-direct-digest-admission",
+  "symptom": "Synthetic no-op Array.prototype[Symbol.iterator] skips remaining for-of required-field, monetary and unknown-field checks in the v224 Outcome Ledger candidate; regex match destructuring also loses captures, admitting an impossible Gregorian day after Date.parse normalization. No real research evidence corruption was observed.",
+  "rootCauseClass": "MUTABLE_ARRAY_ITERATOR_ADMISSION_AND_DATE_CAPTURE_BYPASS",
+  "attemptSignature": "v224-offline-candidate-empty-array-iterator-required-unknown-monetary-and-date-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/offline-source-equivalent+github-readonly",
+    "materialStateKey": "pr2286-b7d9151/outcome-ledger-fc847bc+v224-unmerged-iterator-loops"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "research/registries/learnings/LEARN-outcome-ledger-json-shape-validation-bypass-20261020.json"
+  ],
+  "lesson": "Iterator-independent canonical hashing alone is insufficient when record admission and RFC3339 capture extraction still depend on mutable Array.prototype[Symbol.iterator]. An invalid record can pass the pre-digest gate, and an impossible date can be normalized by Date.parse.",
+  "guardrail": "Use indexed loops for unknown/required/monetary/reconciliation fields and indexed RegExp captures. Regression-test empty iterators with invalid required fields, negative monetary values, unknown fields and impossible calendar dates under the canonical test runner.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-21T13:05:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-21T13:05:00.000Z",
+  "_digest": "b019d3b2493c732a4ded5f0d7b3720d351d3d6dfd350741240c1cb33eb5bd168"
+}
