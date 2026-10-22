@@ -187,7 +187,7 @@ export function classifyOutcomeReconciliation(input: {
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor) || typeof descriptor.value !== "boolean") {
         return "REJECTED_INVALID";
       }
-      flags.push(descriptor.value);
+      flags[index] = descriptor.value;
     }
   } catch {
     return "REJECTED_INVALID";
@@ -202,40 +202,41 @@ export function classifyOutcomeReconciliation(input: {
 
 export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLearningLedgerValidation {
   const errors: string[] = [];
+  const appendError = (message: string): void => { errors[errors.length] = message; };
   if (!isRecord(value)) return { valid: false, errors: ["record must be an object"] };
   if (!hasOwnEnumerableDataFields(value)) return { valid: false, errors: ["record fields must be enumerable own data properties"] };
   const actualFields = Object.keys(value);
   for (let index = 0; index < actualFields.length; index++) {
     const field = actualFields[index]!;
-    if (!ALLOWED_FIELDS.has(field as keyof OutcomeLearningLedgerRecord)) errors.push(`unknown field is not allowed: ${field}`);
+    if (!ALLOWED_FIELDS.has(field as keyof OutcomeLearningLedgerRecord)) appendError(`unknown field is not allowed: ${field}`);
   }
-  if (value.schemaVersion !== OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION) errors.push(`schemaVersion must be ${OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION}`);
+  if (value.schemaVersion !== OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION) appendError(`schemaVersion must be ${OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION}`);
   const requiredStrings = ["outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId", "ticketType", "selection", "settlementId", "provenanceVersion"] as const;
   for (let index = 0; index < requiredStrings.length; index++) {
     const field = requiredStrings[index]!;
-    if (!isNonEmptyString(value[field])) errors.push(`${field} must be a non-empty string`);
+    if (!isNonEmptyString(value[field])) appendError(`${field} must be a non-empty string`);
   }
   if (!isNonEmptyString(value.settledAt) || !isExactInstant(value.settledAt) || !Number.isFinite(Date.parse(value.settledAt))) {
-    errors.push("settledAt must be a valid timezone-bound ISO timestamp");
+    appendError("settledAt must be a valid timezone-bound ISO timestamp");
   }
-  if (value.finality !== "FINAL" && value.finality !== "VOID") errors.push("finality must be FINAL or VOID");
-  if (value.disposition !== "SETTLED" && value.disposition !== "REFUNDED" && value.disposition !== "VOID") errors.push("disposition is invalid");
-  if (typeof value.evaluable !== "boolean") errors.push("evaluable must be boolean");
+  if (value.finality !== "FINAL" && value.finality !== "VOID") appendError("finality must be FINAL or VOID");
+  if (value.disposition !== "SETTLED" && value.disposition !== "REFUNDED" && value.disposition !== "VOID") appendError("disposition is invalid");
+  if (typeof value.evaluable !== "boolean") appendError("evaluable must be boolean");
   const monetaryFields = ["stakeYen", "payoutYen", "refundYen"] as const;
   for (let index = 0; index < monetaryFields.length; index++) {
     const field = monetaryFields[index]!;
-    if (!isSafeNonNegativeInteger(value[field])) errors.push(`${field} must be a non-negative safe integer`);
+    if (!isSafeNonNegativeInteger(value[field])) appendError(`${field} must be a non-negative safe integer`);
   }
-  if (value.refundReason !== null && !isNonEmptyString(value.refundReason)) errors.push("refundReason must be a non-empty string or null");
-  if (value.popularity !== null && (!Number.isSafeInteger(value.popularity) || (value.popularity as number) <= 0)) errors.push("popularity must be a positive safe integer or null");
+  if (value.refundReason !== null && !isNonEmptyString(value.refundReason)) appendError("refundReason must be a non-empty string or null");
+  if (value.popularity !== null && (!Number.isSafeInteger(value.popularity) || (value.popularity as number) <= 0)) appendError("popularity must be a positive safe integer or null");
   if (!hasDenseDigestArray(value.sourceEvidenceDigests)) {
-    errors.push("sourceEvidenceDigests must contain one or more lowercase SHA-256 digests");
+    appendError("sourceEvidenceDigests must contain one or more lowercase SHA-256 digests");
   } else {
     const seen = new Set<string>();
     for (let index = 0; index < value.sourceEvidenceDigests.length; index++) {
       const descriptor = Object.getOwnPropertyDescriptor(value.sourceEvidenceDigests, String(index));
       if (!descriptor || seen.has(descriptor.value as string)) {
-        errors.push("sourceEvidenceDigests must not contain duplicates");
+        appendError("sourceEvidenceDigests must not contain duplicates");
         break;
       }
       seen.add(descriptor.value as string);
@@ -243,21 +244,21 @@ export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLear
   }
 
   if (value.disposition === "SETTLED") {
-    if (value.finality !== "FINAL") errors.push("SETTLED requires finality=FINAL");
-    if (value.refundYen !== 0) errors.push("SETTLED requires refundYen=0");
-    if (value.refundReason !== null) errors.push("SETTLED requires refundReason=null");
+    if (value.finality !== "FINAL") appendError("SETTLED requires finality=FINAL");
+    if (value.refundYen !== 0) appendError("SETTLED requires refundYen=0");
+    if (value.refundReason !== null) appendError("SETTLED requires refundReason=null");
   }
   if (value.disposition === "REFUNDED") {
-    if (value.finality !== "FINAL") errors.push("REFUNDED requires finality=FINAL");
-    if (!isSafeNonNegativeInteger(value.refundYen) || value.refundYen === 0) errors.push("REFUNDED requires refundYen greater than 0");
-    if (!isNonEmptyString(value.refundReason)) errors.push("REFUNDED requires refundReason");
-    if (value.evaluable !== false) errors.push("REFUNDED must not be evaluable by default");
+    if (value.finality !== "FINAL") appendError("REFUNDED requires finality=FINAL");
+    if (!isSafeNonNegativeInteger(value.refundYen) || value.refundYen === 0) appendError("REFUNDED requires refundYen greater than 0");
+    if (!isNonEmptyString(value.refundReason)) appendError("REFUNDED requires refundReason");
+    if (value.evaluable !== false) appendError("REFUNDED must not be evaluable by default");
   }
   if (value.disposition === "VOID") {
-    if (value.finality !== "VOID") errors.push("VOID disposition requires finality=VOID");
-    if (value.evaluable !== false) errors.push("VOID must not be evaluable");
-    if (!isNonEmptyString(value.refundReason)) errors.push("VOID requires an explicit reason");
+    if (value.finality !== "VOID") appendError("VOID disposition requires finality=VOID");
+    if (value.evaluable !== false) appendError("VOID must not be evaluable");
+    if (!isNonEmptyString(value.refundReason)) appendError("VOID requires an explicit reason");
   }
-  if (value.evaluable === true && value.finality !== "FINAL") errors.push("evaluable outcome requires finality=FINAL");
+  if (value.evaluable === true && value.finality !== "FINAL") appendError("evaluable outcome requires finality=FINAL");
   return { valid: errors.length === 0, errors };
 }

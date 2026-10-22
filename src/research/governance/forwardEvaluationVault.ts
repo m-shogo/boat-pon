@@ -118,30 +118,31 @@ export const forwardVaultDigest=(r:ForwardVaultRecord)=>{
 
 export function validateForwardVaultRecord(v:unknown):Validation {
   const e:string[]=[]; if(!obj(v)) return {valid:false,errors:["record must be an object"]};
+  const appendError=(message:string):void=>{ e[e.length]=message; };
   if(!ownDataShape(v))return {valid:false,errors:["record fields must be enumerable own data properties"]};
-  if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)e.push("invalid schemaVersion");
-  if(!str(v.recordId))e.push("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))e.push("invalid evidenceStage"); if(!instant(v.createdAt))e.push("createdAt must be timezone-bound ISO timestamp");
+  if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)appendError("invalid schemaVersion");
+  if(!str(v.recordId))appendError("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
   if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return {valid:false,errors:[...e,"invalid kind"]};
-  if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))e.push("record fields must exactly match kind");
-  for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))e.push(`unknown field is not allowed: ${k}`);
+  if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))appendError("record fields must exactly match kind");
+  for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))appendError(`unknown field is not allowed: ${k}`);
   const req=(...ks:string[])=>{
     for(let i=0;i<ks.length;i++){
       const k=ks[i];
-      if(!str(v[k]))e.push(`${k} must be non-empty`);
+      if(!str(v[k]))appendError(`${k} must be non-empty`);
     }
   };
   const dg=(...ks:string[])=>{
     for(let i=0;i<ks.length;i++){
       const k=ks[i];
-      if(typeof v[k]!=="string"||!SHA.test(v[k] as string))e.push(`${k} must be SHA-256`);
+      if(typeof v[k]!=="string"||!SHA.test(v[k] as string))appendError(`${k} must be SHA-256`);
     }
   };
   switch(v.kind){
-    case "ENROLLMENT_PROTOCOL": req("enrollmentProtocolId","decisionSystem","protocolVersion"); if(!strings(v.eligibilityRules)||!strings(v.ticketUniverse))e.push("protocol rule arrays must be non-empty unique strings"); if(!instant(v.startAt)||(v.endAt!==null&&!instant(v.endAt)))e.push("protocol boundaries must be exact timestamps"); if(instant(v.startAt)&&v.endAt!==null&&instant(v.endAt)&&compareInstants(v.endAt as string,v.startAt as string)<0)e.push("protocol endAt precedes startAt"); break;
-    case "MEMBERSHIP": req("cohortId","enrollmentProtocolId","canonicalRaceId","decisionRecordId","reason"); dg("enrollmentProtocolDigest","decisionRecordDigest"); if(!instant(v.enrolledAt))e.push("enrolledAt must be exact"); if(typeof v.included!=="boolean")e.push("included must be boolean"); break;
-    case "ANALYSIS_SNAPSHOT": req("analysisSnapshotId","cohortId"); if(!instant(v.cutoffAt))e.push("cutoffAt must be exact"); if(!digests(v.membershipDigests))e.push("membershipDigests must be unique SHA-256 digests"); break;
-    case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")e.push("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))e.push("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))e.push("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")e.push("unresolvedPolicy must fail closed"); break;
-    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")e.push("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))e.push("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0)e.push(`${k} must be non-negative safe integer`); if(!obj(v.metrics)||!ownDataShape(v.metrics)||Object.keys(v.metrics).length===0||Object.values(v.metrics).some(x=>typeof x!=="number"||!Number.isFinite(x)))e.push("metrics must contain finite numbers"); break;
+    case "ENROLLMENT_PROTOCOL": req("enrollmentProtocolId","decisionSystem","protocolVersion"); if(!strings(v.eligibilityRules)||!strings(v.ticketUniverse))appendError("protocol rule arrays must be non-empty unique strings"); if(!instant(v.startAt)||(v.endAt!==null&&!instant(v.endAt)))appendError("protocol boundaries must be exact timestamps"); if(instant(v.startAt)&&v.endAt!==null&&instant(v.endAt)&&compareInstants(v.endAt as string,v.startAt as string)<0)appendError("protocol endAt precedes startAt"); break;
+    case "MEMBERSHIP": req("cohortId","enrollmentProtocolId","canonicalRaceId","decisionRecordId","reason"); dg("enrollmentProtocolDigest","decisionRecordDigest"); if(!instant(v.enrolledAt))appendError("enrolledAt must be exact"); if(typeof v.included!=="boolean")appendError("included must be boolean"); break;
+    case "ANALYSIS_SNAPSHOT": req("analysisSnapshotId","cohortId"); if(!instant(v.cutoffAt))appendError("cutoffAt must be exact"); if(!digests(v.membershipDigests))appendError("membershipDigests must be unique SHA-256 digests"); break;
+    case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))appendError("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))appendError("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")appendError("unresolvedPolicy must fail closed"); break;
+    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))appendError("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0)appendError(`${k} must be non-negative safe integer`); if(!obj(v.metrics)||!ownDataShape(v.metrics)||Object.keys(v.metrics).length===0||Object.values(v.metrics).some(x=>typeof x!=="number"||!Number.isFinite(x)))appendError("metrics must contain finite numbers"); break;
   }
   return {valid:e.length===0,errors:e};
 }
