@@ -124,7 +124,18 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return {valid:false,errors:[...e,"invalid kind"]};
   if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))e.push("record fields must exactly match kind");
   for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))e.push(`unknown field is not allowed: ${k}`);
-  const req=(...ks:string[])=>ks.forEach(k=>{if(!str(v[k]))e.push(`${k} must be non-empty`)}); const dg=(...ks:string[])=>ks.forEach(k=>{if(typeof v[k]!=="string"||!SHA.test(v[k] as string))e.push(`${k} must be SHA-256`)});
+  const req=(...ks:string[])=>{
+    for(let i=0;i<ks.length;i++){
+      const k=ks[i];
+      if(!str(v[k]))e.push(`${k} must be non-empty`);
+    }
+  };
+  const dg=(...ks:string[])=>{
+    for(let i=0;i<ks.length;i++){
+      const k=ks[i];
+      if(typeof v[k]!=="string"||!SHA.test(v[k] as string))e.push(`${k} must be SHA-256`);
+    }
+  };
   switch(v.kind){
     case "ENROLLMENT_PROTOCOL": req("enrollmentProtocolId","decisionSystem","protocolVersion"); if(!strings(v.eligibilityRules)||!strings(v.ticketUniverse))e.push("protocol rule arrays must be non-empty unique strings"); if(!instant(v.startAt)||(v.endAt!==null&&!instant(v.endAt)))e.push("protocol boundaries must be exact timestamps"); if(instant(v.startAt)&&v.endAt!==null&&instant(v.endAt)&&compareInstants(v.endAt as string,v.startAt as string)<0)e.push("protocol endAt precedes startAt"); break;
     case "MEMBERSHIP": req("cohortId","enrollmentProtocolId","canonicalRaceId","decisionRecordId","reason"); dg("enrollmentProtocolDigest","decisionRecordDigest"); if(!instant(v.enrolledAt))e.push("enrolledAt must be exact"); if(typeof v.included!=="boolean")e.push("included must be boolean"); break;
