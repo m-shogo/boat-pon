@@ -40,12 +40,13 @@ export type OutcomeReconciliationState =
 export type OutcomeLedgerAppendDecision = "APPEND" | "IDEMPOTENT_NOOP" | "CONFLICT" | "REJECTED_INVALID";
 export type OutcomeLearningLedgerValidation = { valid: boolean; errors: string[] };
 
-const ALLOWED_FIELDS = new Set<keyof OutcomeLearningLedgerRecord>([
+const REQUIRED_FIELDS: ReadonlyArray<keyof OutcomeLearningLedgerRecord> = [
   "schemaVersion", "outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId",
   "ticketType", "selection", "settlementId", "settledAt", "finality", "disposition",
   "evaluable", "stakeYen", "payoutYen", "refundYen", "refundReason", "popularity",
   "sourceEvidenceDigests", "provenanceVersion",
-]);
+];
+const ALLOWED_FIELDS = new Set<keyof OutcomeLearningLedgerRecord>(REQUIRED_FIELDS);
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
@@ -60,18 +61,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function hasOwnEnumerableDataFields(value: Record<string, unknown>): boolean {
   try {
     const keys = Reflect.ownKeys(value);
-    if (keys.some((key) => typeof key !== "string")) return false;
-    for (const key of keys) {
+    for (let index = 0; index < keys.length; index++) {
+      const key = keys[index];
+      if (typeof key !== "string") return false;
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
     }
-    return [...ALLOWED_FIELDS].every((key) => Object.prototype.hasOwnProperty.call(value, key));
+    for (let index = 0; index < REQUIRED_FIELDS.length; index++) {
+      if (!Object.prototype.hasOwnProperty.call(value, REQUIRED_FIELDS[index]!)) return false;
+    }
+    return true;
   } catch { return false; }
 }
 function hasDenseDigestArray(value: unknown): value is string[] {
   if (!Array.isArray(value) || value.length === 0) return false;
   try {
-    if (Object.getPrototypeOf(value) !== Array.prototype || Reflect.ownKeys(value).length !== value.length + 1) return false;
+    if (Object.getPrototypeOf(value) !== Array.prototype || "toJSON" in value ||
+        Reflect.ownKeys(value).length !== value.length + 1) return false;
     for (let i = 0; i < value.length; i++) {
       const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor) ||
@@ -92,7 +98,10 @@ function isLeapYear(year: number): boolean {
 function isExactInstant(value: string): boolean {
   const match = EXACT_INSTANT_RE.exec(value);
   if (!match || value.endsWith("-00:00")) return false;
-  const [, y, mo, d, h, mi, s, oh, om] = match;
+  // RegExp captures are indexed: destructuring would use a mutable array iterator.
+  const y = match[1], mo = match[2], d = match[3];
+  const h = match[4], mi = match[5], s = match[6];
+  const oh = match[7], om = match[8];
   const year = Number(y), month = Number(mo), day = Number(d);
   if (year === 0 || month < 1 || month > 12 || Number(h) > 23 || Number(mi) > 59 || Number(s) > 59) return false;
   const days = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
@@ -100,9 +109,39 @@ function isExactInstant(value: string): boolean {
   return oh === undefined || (Number(oh) <= 23 && Number(om) <= 59);
 }
 function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
+  if (Array.isArray(value)) {
+    const result: unknown[] = [];
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+        throw new TypeError("invalid canonical array data");
+      }
+      result[index] = canonicalize(descriptor.value);
+    }
+    return result;
+  }
   if (!isRecord(value)) return value;
-  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+  const keys = Object.keys(value);
+  // Avoid mutable Array.prototype.map/sort and inherited array iterators.
+  for (let index = 1; index < keys.length; index++) {
+    const key = keys[index]!;
+    let previous = index - 1;
+    while (previous >= 0 && keys[previous]! > key) {
+      keys[previous + 1] = keys[previous]!;
+      previous--;
+    }
+    keys[previous + 1] = key;
+  }
+  const result: Record<string, unknown> = Object.create(null);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      throw new TypeError("invalid canonical object data");
+    }
+    result[key] = canonicalize(descriptor.value);
+  }
+  return result;
 }
 
 export function outcomeLearningLedgerDigest(record: OutcomeLearningLedgerRecord): string {
@@ -142,7 +181,8 @@ export function classifyOutcomeReconciliation(input: {
   const flags: boolean[] = [];
   try {
     if (!isRecord(input) || Reflect.ownKeys(input).length !== fields.length) return "REJECTED_INVALID";
-    for (const field of fields) {
+    for (let index = 0; index < fields.length; index++) {
+      const field = fields[index]!;
       const descriptor = Object.getOwnPropertyDescriptor(input, field);
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor) || typeof descriptor.value !== "boolean") {
         return "REJECTED_INVALID";
@@ -164,11 +204,15 @@ export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLear
   const errors: string[] = [];
   if (!isRecord(value)) return { valid: false, errors: ["record must be an object"] };
   if (!hasOwnEnumerableDataFields(value)) return { valid: false, errors: ["record fields must be enumerable own data properties"] };
-  for (const field of Object.keys(value)) {
+  const actualFields = Object.keys(value);
+  for (let index = 0; index < actualFields.length; index++) {
+    const field = actualFields[index]!;
     if (!ALLOWED_FIELDS.has(field as keyof OutcomeLearningLedgerRecord)) errors.push(`unknown field is not allowed: ${field}`);
   }
   if (value.schemaVersion !== OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION) errors.push(`schemaVersion must be ${OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION}`);
-  for (const field of ["outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId", "ticketType", "selection", "settlementId", "provenanceVersion"] as const) {
+  const requiredStrings = ["outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId", "ticketType", "selection", "settlementId", "provenanceVersion"] as const;
+  for (let index = 0; index < requiredStrings.length; index++) {
+    const field = requiredStrings[index]!;
     if (!isNonEmptyString(value[field])) errors.push(`${field} must be a non-empty string`);
   }
   if (!isNonEmptyString(value.settledAt) || !isExactInstant(value.settledAt) || !Number.isFinite(Date.parse(value.settledAt))) {
@@ -177,15 +221,25 @@ export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLear
   if (value.finality !== "FINAL" && value.finality !== "VOID") errors.push("finality must be FINAL or VOID");
   if (value.disposition !== "SETTLED" && value.disposition !== "REFUNDED" && value.disposition !== "VOID") errors.push("disposition is invalid");
   if (typeof value.evaluable !== "boolean") errors.push("evaluable must be boolean");
-  for (const field of ["stakeYen", "payoutYen", "refundYen"] as const) {
+  const monetaryFields = ["stakeYen", "payoutYen", "refundYen"] as const;
+  for (let index = 0; index < monetaryFields.length; index++) {
+    const field = monetaryFields[index]!;
     if (!isSafeNonNegativeInteger(value[field])) errors.push(`${field} must be a non-negative safe integer`);
   }
   if (value.refundReason !== null && !isNonEmptyString(value.refundReason)) errors.push("refundReason must be a non-empty string or null");
   if (value.popularity !== null && (!Number.isSafeInteger(value.popularity) || (value.popularity as number) <= 0)) errors.push("popularity must be a positive safe integer or null");
   if (!hasDenseDigestArray(value.sourceEvidenceDigests)) {
     errors.push("sourceEvidenceDigests must contain one or more lowercase SHA-256 digests");
-  } else if (new Set(value.sourceEvidenceDigests).size !== value.sourceEvidenceDigests.length) {
-    errors.push("sourceEvidenceDigests must not contain duplicates");
+  } else {
+    const seen = new Set<string>();
+    for (let index = 0; index < value.sourceEvidenceDigests.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value.sourceEvidenceDigests, String(index));
+      if (!descriptor || seen.has(descriptor.value as string)) {
+        errors.push("sourceEvidenceDigests must not contain duplicates");
+        break;
+      }
+      seen.add(descriptor.value as string);
+    }
   }
 
   if (value.disposition === "SETTLED") {
