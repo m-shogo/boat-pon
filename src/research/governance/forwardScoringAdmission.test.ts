@@ -184,3 +184,30 @@ test("result cannot predate authoritative settlement or cohort snapshot cutoff",
   const reboundResult = { ...x.result, analysisSnapshotDigest: forwardVaultDigest(earlySnapshot) };
   assert.equal(reason({ ...x, snapshot: earlySnapshot, result: reboundResult }), "DENY_CHRONOLOGY");
 });
+
+test("enrollment system and ticket universe are bound to the exact decision", () => {
+  const x = fixture();
+  for (const enrollment of [
+    { ...x.enrollment, decisionSystem: "different-system" },
+    { ...x.enrollment, ticketUniverse: ["other-ticket"] },
+  ]) {
+    const membership = { ...x.membership, enrollmentProtocolDigest: forwardVaultDigest(enrollment) };
+    const snapshot = { ...x.snapshot, membershipDigests: [forwardVaultDigest(membership)] };
+    const result = { ...x.result, analysisSnapshotDigest: forwardVaultDigest(snapshot) };
+    assert.equal(reason({ ...x, enrollment, membership, snapshot, result }), "DENY_IDENTITY_OR_DIGEST");
+  }
+});
+
+test("backdated membership creation and late snapshot authoring cannot be prospective", () => {
+  const x = fixture();
+  const lateMembership = { ...x.membership, createdAt: "2026-09-24T09:31:00Z" };
+  const snapshot = { ...x.snapshot, membershipDigests: [forwardVaultDigest(lateMembership)] };
+  const result = { ...x.result, analysisSnapshotDigest: forwardVaultDigest(snapshot) };
+  assert.equal(reason({ ...x, membership: lateMembership, snapshot, result }), "DENY_CHRONOLOGY");
+  const lateSnapshot = { ...x.snapshot, createdAt: "2026-09-24T11:01:00Z" };
+  const reboundResult = { ...x.result, analysisSnapshotDigest: forwardVaultDigest(lateSnapshot) };
+  assert.equal(reason({ ...x, snapshot: lateSnapshot, result: reboundResult }), "DENY_CHRONOLOGY");
+  const backdatedCutoff = { ...x.snapshot, cutoffAt: "2026-09-24T10:31:00Z" };
+  const reboundResult2 = { ...x.result, analysisSnapshotDigest: forwardVaultDigest(backdatedCutoff) };
+  assert.equal(reason({ ...x, snapshot: backdatedCutoff, result: reboundResult2 }), "DENY_CHRONOLOGY");
+});

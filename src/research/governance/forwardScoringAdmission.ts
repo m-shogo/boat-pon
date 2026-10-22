@@ -79,6 +79,18 @@ function compareExactInstants(a: string, b: string): number {
   return aa < bb ? -1 : aa > bb ? 1 : 0;
 }
 
+// Avoid delegating identity checks to mutable Array.prototype methods.
+// Canonical validators already require dense arrays; inspect own data entries.
+function hasExactEntry(values: readonly string[], expected: string): boolean {
+  try {
+    for (let index = 0; index < values.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(values, String(index));
+      if (descriptor && descriptor.enumerable && "value" in descriptor && descriptor.value === expected) return true;
+    }
+  } catch { return false; }
+  return false;
+}
+
 function decisionModeMatchesStage(mode: string, stage: EvidenceStage): boolean {
   switch (stage) {
     case "SHADOW_FORWARD": return mode === "shadow_forward";
@@ -116,7 +128,9 @@ export function assessForwardScoringAdmission(input: unknown): ForwardScoringPre
       return DENY("DENY_STAGE");
     }
 
-    if (membership.enrollmentProtocolId !== enrollment.enrollmentProtocolId ||
+    if (enrollment.decisionSystem !== decision.decisionSystem ||
+        !hasExactEntry(enrollment.ticketUniverse, decision.ticketType) ||
+        membership.enrollmentProtocolId !== enrollment.enrollmentProtocolId ||
         membership.enrollmentProtocolDigest !== forwardVaultDigest(enrollment) ||
         membership.decisionRecordId !== decision.recordId ||
         membership.decisionRecordDigest !== runtimeDecisionLedgerDigest(decision) ||
@@ -128,7 +142,7 @@ export function assessForwardScoringAdmission(input: unknown): ForwardScoringPre
         outcome.ticketType !== decision.ticketType ||
         outcome.selection !== decision.selection ||
         snapshot.cohortId !== membership.cohortId ||
-        !snapshot.membershipDigests.includes(forwardVaultDigest(membership)) ||
+        !hasExactEntry(snapshot.membershipDigests, forwardVaultDigest(membership)) ||
         result.analysisSnapshotId !== snapshot.analysisSnapshotId ||
         result.analysisSnapshotDigest !== forwardVaultDigest(snapshot) ||
         !resultMatchesProtocol(result, protocol) ||
@@ -142,10 +156,14 @@ export function assessForwardScoringAdmission(input: unknown): ForwardScoringPre
         compareExactInstants(enrollment.startAt, decision.decisionAt) > 0 ||
         (enrollment.endAt !== null && compareExactInstants(decision.decisionAt, enrollment.endAt) > 0) ||
         compareExactInstants(enrollment.createdAt, membership.enrolledAt) > 0 ||
+        compareExactInstants(enrollment.createdAt, membership.createdAt) > 0 ||
+        compareExactInstants(membership.createdAt, decision.decisionAt) > 0 ||
         compareExactInstants(membership.enrolledAt, decision.decisionAt) > 0 ||
         compareExactInstants(decision.decisionAt, outcome.settledAt) >= 0 ||
         compareExactInstants(outcome.settledAt, result.createdAt) >= 0 ||
         compareExactInstants(membership.enrolledAt, snapshot.cutoffAt) > 0 ||
+        compareExactInstants(snapshot.cutoffAt, snapshot.createdAt) > 0 ||
+        compareExactInstants(snapshot.createdAt, result.createdAt) > 0 ||
         compareExactInstants(snapshot.cutoffAt, result.createdAt) > 0) {
       return DENY("DENY_CHRONOLOGY");
     }
