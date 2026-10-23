@@ -124,17 +124,29 @@ const exactOwnArrayEntry=(values:readonly string[],expected:string):boolean=>{
 const canonical=(v:unknown):unknown=>{
   if(Array.isArray(v)){
     if(Object.getPrototypeOf(v)!==Array.prototype||Reflect.ownKeys(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
-    return Array.from({length:v.length},(_,i)=>{
+    // Do not delegate canonical array traversal to mutable Array.from.
+    // A replaced Array.from can erase elements and alias distinct digests.
+    const output:unknown[]=[];
+    for(let i=0;i<v.length;i++){
       const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor))throw new TypeError("non-JSON array in Forward Evaluation Vault");
-      return canonical(descriptor.value);
-    });
+      output[i]=canonical(descriptor.value);
+    }
+    return output;
   }
   if(v!==null&&typeof v==="object"){
     if(!obj(v)||!ownDataShape(v))throw new TypeError("non-JSON object in Forward Evaluation Vault");
     // A mutable Array.prototype.map can collapse every valid record into {},
     // making different append-only payloads share the same digest.
-    const keys=Object.keys(v).sort();
+    // Sort keys by UTF-16 lexical order without mutable Array.prototype.sort.
+    // This preserves the canonical digest across object insertion orders.
+    const keys=Object.keys(v);
+    for(let i=1;i<keys.length;i++){
+      const key=keys[i];
+      let j=i-1;
+      while(j>=0&&keys[j]>key){keys[j+1]=keys[j];j--;}
+      keys[j+1]=key;
+    }
     const output:Record<string,unknown>=Object.create(null) as Record<string,unknown>;
     for(let i=0;i<keys.length;i++){
       const key=keys[i];
