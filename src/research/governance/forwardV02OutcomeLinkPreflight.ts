@@ -134,6 +134,13 @@ export function assessForwardV02OutcomeLinkPreflight(
         excluded = true;
       }
     }
+    // The manifest can be internally self-consistent while silently omitting
+    // an entire decision's settlement. Never call partial ledger coverage
+    // fully linked: a missing decision must be retained as an explicit
+    // exclusion under a future frozen policy, not dropped from the denominator.
+    if (linkedDecisionIds.size !== decisionByRecordId.size) {
+      return blocked("UNMATCHED_DECISION_RECORDS");
+    }
     return {
       outcomeReferencesLinked: true,
       excludedOutcomePresent: excluded,
