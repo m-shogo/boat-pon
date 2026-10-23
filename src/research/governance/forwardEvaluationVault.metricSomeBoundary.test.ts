@@ -24,9 +24,14 @@ function result(): EvaluationResult {
   };
 }
 
-test("finite metric admission ignores no-op Array.prototype.some", () => {
+test("metric values and symbol shape reject no-op Array.prototype.some", () => {
   const good = result();
+  const symbolMetrics = { roi: 0.25 };
+  Object.defineProperty(symbolMetrics, Symbol("synthetic-hidden-metric"), {
+    enumerable: true, value: 1,
+  });
   const invalid = [
+    { ...good, metrics: symbolMetrics },
     { ...good, metrics: { roi: Number.NaN } },
     { ...good, metrics: { roi: Number.POSITIVE_INFINITY } },
     { ...good, metrics: { roi: Number.NEGATIVE_INFINITY } },
