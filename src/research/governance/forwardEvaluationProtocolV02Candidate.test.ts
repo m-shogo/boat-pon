@@ -126,8 +126,7 @@ test("all exclusion reasons must be present exactly once", () => {
   x.exclusionReasons.pop();
   assert.deepEqual(blockers(x), ["INCOMPLETE_EXCLUSION_TAXONOMY"]);
   x.exclusionReasons.push("REFUNDED");
-  assert.deepEqual(blockers(x), ["INVALID_CANDIDATE_SHAPE"].includes("unused")
-    ? ["INVALID_CANDIDATE_SHAPE"] : ["INCOMPLETE_EXCLUSION_TAXONOMY"]);
+  assert.deepEqual(blockers(x), ["INCOMPLETE_EXCLUSION_TAXONOMY"]);
   const y = candidate();
   y.exclusionReasons[0] = "SILENT_DROP";
   assert.deepEqual(blockers(y), ["INCOMPLETE_EXCLUSION_TAXONOMY"]);
@@ -167,4 +166,19 @@ test("calendar, stage, and source-manifest requirements cannot be inferred", () 
   const x = candidate();
   x.evidenceRequirements.stagePooling = "ALLOWED";
   assert.deepEqual(blockers(x), ["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
+});
+
+test("prior mutable Array.prototype.includes guardrail is reused", () => {
+  const original = Array.prototype.includes;
+  try {
+    Array.prototype.includes = function () { return false; };
+    const result = assessForwardV02Candidate(candidate());
+    assert.equal(result.candidateComplete, true);
+    assert.equal(result.scoringAuthorized, false);
+    const x = candidate();
+    x.exclusionReasons[0] = "SILENT_DROP";
+    assert.equal(assessForwardV02Candidate(x).candidateComplete, false);
+  } finally {
+    Array.prototype.includes = original;
+  }
 });
