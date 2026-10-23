@@ -132,11 +132,17 @@ const canonical=(v:unknown):unknown=>{
   }
   if(v!==null&&typeof v==="object"){
     if(!obj(v)||!ownDataShape(v))throw new TypeError("non-JSON object in Forward Evaluation Vault");
-    return Object.fromEntries(Object.keys(v).sort().map(k=>{
-      const descriptor=Object.getOwnPropertyDescriptor(v,k);
+    // A mutable Array.prototype.map can collapse every valid record into {},
+    // making different append-only payloads share the same digest.
+    const keys=Object.keys(v).sort();
+    const output:Record<string,unknown>=Object.create(null) as Record<string,unknown>;
+    for(let i=0;i<keys.length;i++){
+      const key=keys[i];
+      const descriptor=Object.getOwnPropertyDescriptor(v,key);
       if(!descriptor||!("value" in descriptor))throw new TypeError("non-JSON object in Forward Evaluation Vault");
-      return [k,canonical(descriptor.value)];
-    }));
+      output[key]=canonical(descriptor.value);
+    }
+    return output;
   }
   return v;
 };
