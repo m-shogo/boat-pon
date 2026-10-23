@@ -85,7 +85,9 @@ const compareInstants=(a:string,b:string):number=>{
 const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
   if(!Array.isArray(v)||v.length===0)return false;
   try {
-    if(Object.getPrototypeOf(v)!==Array.prototype||Reflect.ownKeys(v).length!==v.length+1)return false;
+    // Array.prototype.toJSON can replace persisted array contents after validation.
+    // Reject inherited/own hooks rather than hashing evidence that serializes differently.
+    if(Object.getPrototypeOf(v)!==Array.prototype||"toJSON" in v||Reflect.ownKeys(v).length!==v.length+1)return false;
     const seen=new Set<unknown>();
     for(let i=0;i<v.length;i++){
       const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
