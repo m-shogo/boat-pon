@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-metrics-some-admission-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.mutable-some-metrics-and-own-shape-bypass",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-result-finite-metrics-and-own-json-shape",
+  "symptom": "A synthetic no-op Array.prototype.some allows nonfinite or nonnumeric RESULT metrics and enumerable symbol-key metric properties through the v0.1 validator. NaN/Infinity serialize as null, while symbol-key evidence is silently omitted. No real evaluation data or scoring authority was involved.",
+  "rootCauseClass": "MUTABLE_ARRAY_SOME_FINITE_METRIC_AND_OWN_SHAPE_ADMISSION_BYPASS",
+  "attemptSignature": "pr2286-v275-noop-array-some-nonfinite-and-symbol-metrics-negative-fixture",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/research-governance-github-pr",
+    "materialStateKey": "forward-vault.0.1/pre-v275-metrics-object-values-some-and-ownshape-8286a615"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.metricSomeBoundary.test.ts",
+    "pull/2286",
+    "research/registries/learnings/LEARN-forward-vault-prototype-includes-admission-20261023.json"
+  ],
+  "lesson": "Strict record admission and canonical digesting must not delegate finite metric checks or own-key shape checks to mutable Array.prototype.some/every; an overridden method can admit evidence that JSON serialization changes or omits.",
+  "guardrail": "Validate every metric and every own property descriptor with indexed loops; reject symbol keys, nonfinite and nonnumber values before hashing or append. Keep a synthetic no-op Array.some regression and do not infer scoring authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-23T16:02:49.320Z",
+  "productionConnection": false,
+  "_digest": "a947aa2522959e7c8482e04e39a8bdd9203086c3b60633d4a9581286f7bbb7f7",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-23T16:02:49.320Z"
+}
