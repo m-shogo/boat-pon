@@ -91,6 +91,21 @@ function exactInstant(value: unknown): boolean {
   return day >= 1 && day <= days[month - 1]! && Number.isFinite(Date.parse(value));
 }
 
+function validStage(value: unknown): boolean {
+  return value === "HISTORICAL" || value === "VALIDATION" ||
+    value === "UNTOUCHED_HOLDOUT" || value === "SHADOW_FORWARD" ||
+    value === "FUTURE_ONLY";
+}
+
+function hasOwnArrayEntry(values: readonly string[], expected: string): boolean {
+  for (let i = 0; i < values.length; i++) {
+    const descriptor = Object.getOwnPropertyDescriptor(values, String(i));
+    if (descriptor && descriptor.enumerable && "value" in descriptor &&
+        descriptor.value === expected) return true;
+  }
+  return false;
+}
+
 const deny = (blockers: string[]): ForwardV02CandidateAssessment =>
   ({ candidateComplete: false, scoringAuthorized: false, blockers });
 
@@ -106,7 +121,7 @@ export function assessForwardV02Candidate(input: unknown): ForwardV02CandidateAs
         c.kind !== "EVALUATION_PROTOCOL" || c.protocolVersion !== "0.2-candidate" ||
         c.status !== "UNAPPROVED" || typeof c.protocolId !== "string" || !c.protocolId.trim() ||
         !exactInstant(c.createdAt) ||
-        !["HISTORICAL", "VALIDATION", "UNTOUCHED_HOLDOUT", "SHADOW_FORWARD", "FUTURE_ONLY"].includes(c.evidenceStage as string) ||
+        !validStage(c.evidenceStage) ||
         (c.comparisonMode !== "SELECTED_RACE" && c.comparisonMode !== "COMMON_COHORT") ||
         (c.oddsBasis !== "BUY_TIME" && c.oddsBasis !== "CLOSING" && c.oddsBasis !== "NONE") ||
         c.metricFormulaId !== "NET_ROI_ON_STAKE_V1" ||
@@ -154,7 +169,7 @@ export function assessForwardV02Candidate(input: unknown): ForwardV02CandidateAs
       return deny(["INCOMPLETE_EXCLUSION_TAXONOMY"]);
     }
     for (let i = 0; i < EXCLUSIONS.length; i++) {
-      if (!c.exclusionReasons.includes(EXCLUSIONS[i]!)) return deny(["INCOMPLETE_EXCLUSION_TAXONOMY"]);
+      if (!hasOwnArrayEntry(c.exclusionReasons, EXCLUSIONS[i]!)) return deny(["INCOMPLETE_EXCLUSION_TAXONOMY"]);
     }
     if (!stringArray(c.benchmarkDecisionSystems)) return deny(["INVALID_BENCHMARK_SET"]);
 
