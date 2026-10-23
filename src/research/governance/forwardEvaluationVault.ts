@@ -90,6 +90,17 @@ const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
 };
 const strings=(v:unknown)=>denseUniqueArray(v,str);
 const digests=(v:unknown)=>denseUniqueArray(v,x=>typeof x==="string"&&SHA.test(x));
+// Match an already-validated frozen protocol array without trusting a mutable
+// Array.prototype.includes implementation (ambient prototype pollution).
+const exactOwnArrayEntry=(values:readonly string[],expected:string):boolean=>{
+  try {
+    for(let i=0;i<values.length;i++){
+      const d=Object.getOwnPropertyDescriptor(values,String(i));
+      if(d&&d.enumerable&&"value" in d&&d.value===expected)return true;
+    }
+  } catch { return false; }
+  return false;
+};
 const canonical=(v:unknown):unknown=>{
   if(Array.isArray(v)){
     if(Object.getPrototypeOf(v)!==Array.prototype||Reflect.ownKeys(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
@@ -141,8 +152,8 @@ export function validateForwardVaultRecord(v:unknown):Validation {
     case "ENROLLMENT_PROTOCOL": req("enrollmentProtocolId","decisionSystem","protocolVersion"); if(!strings(v.eligibilityRules)||!strings(v.ticketUniverse))appendError("protocol rule arrays must be non-empty unique strings"); if(!instant(v.startAt)||(v.endAt!==null&&!instant(v.endAt)))appendError("protocol boundaries must be exact timestamps"); if(instant(v.startAt)&&v.endAt!==null&&instant(v.endAt)&&compareInstants(v.endAt as string,v.startAt as string)<0)appendError("protocol endAt precedes startAt"); break;
     case "MEMBERSHIP": req("cohortId","enrollmentProtocolId","canonicalRaceId","decisionRecordId","reason"); dg("enrollmentProtocolDigest","decisionRecordDigest"); if(!instant(v.enrolledAt))appendError("enrolledAt must be exact"); if(typeof v.included!=="boolean")appendError("included must be boolean"); break;
     case "ANALYSIS_SNAPSHOT": req("analysisSnapshotId","cohortId"); if(!instant(v.cutoffAt))appendError("cutoffAt must be exact"); if(!digests(v.membershipDigests))appendError("membershipDigests must be unique SHA-256 digests"); break;
-    case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))appendError("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))appendError("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")appendError("unresolvedPolicy must fail closed"); break;
-    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(!["BUY_TIME","CLOSING","NONE"].includes(v.oddsBasis as string))appendError("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0)appendError(`${k} must be non-negative safe integer`); if(!obj(v.metrics)||!ownDataShape(v.metrics)||Object.keys(v.metrics).length===0||Object.values(v.metrics).some(x=>typeof x!=="number"||!Number.isFinite(x)))appendError("metrics must contain finite numbers"); break;
+    case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(v.oddsBasis!=="BUY_TIME"&&v.oddsBasis!=="CLOSING"&&v.oddsBasis!=="NONE")appendError("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))appendError("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")appendError("unresolvedPolicy must fail closed"); break;
+    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(v.oddsBasis!=="BUY_TIME"&&v.oddsBasis!=="CLOSING"&&v.oddsBasis!=="NONE")appendError("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0)appendError(`${k} must be non-negative safe integer`); if(!obj(v.metrics)||!ownDataShape(v.metrics)||Object.keys(v.metrics).length===0||Object.values(v.metrics).some(x=>typeof x!=="number"||!Number.isFinite(x)))appendError("metrics must contain finite numbers"); break;
   }
   return {valid:e.length===0,errors:e};
 }
@@ -171,7 +182,7 @@ export function resultMatchesProtocol(result:EvaluationResult,protocol:Evaluatio
     if(!validateForwardVaultRecord(result).valid||!validateForwardVaultRecord(protocol).valid)return false;
     if(result.kind!=="RESULT"||protocol.kind!=="EVALUATION_PROTOCOL")return false;
     if(compareInstants(protocol.createdAt,result.createdAt)>=0)return false;
-    return result.evidenceStage===protocol.evidenceStage&&result.evaluationProtocolId===protocol.evaluationProtocolId&&result.evaluationProtocolDigest===forwardVaultDigest(protocol)&&result.comparisonMode===protocol.comparisonMode&&result.oddsBasis===protocol.oddsBasis&&protocol.metricFamilies.includes(result.metricFamily);
+    return result.evidenceStage===protocol.evidenceStage&&result.evaluationProtocolId===protocol.evaluationProtocolId&&result.evaluationProtocolDigest===forwardVaultDigest(protocol)&&result.comparisonMode===protocol.comparisonMode&&result.oddsBasis===protocol.oddsBasis&&exactOwnArrayEntry(protocol.metricFamilies,result.metricFamily);
   } catch {
     // Fail closed even if a getter or ambient JSON serializer throws.
     return false;
