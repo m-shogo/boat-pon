@@ -225,3 +225,34 @@ test("a candidate that asserts production scoring is rejected", () => {
   const b = bundle(); b.c.scoringAuthorized = true;
   assert.deepEqual(blocked(b), ["REFERENCE_CONTEXT_NOT_RECONCILED"]);
 });
+
+test("a manifest may hash a partial outcome set but must not call every decision linked", () => {
+  const second: RuntimeDecisionLedgerRecord = {
+    ...decision(), recordId: "synthetic-decision-record-2",
+    decisionId: "synthetic-decision-2", canonicalRaceId: "synthetic-race-2",
+  };
+  const b = bundle([decision(), second], [outcome()]);
+  assert.deepEqual(blocked(b), ["UNMATCHED_DECISION_RECORDS"]);
+  assert.equal(check(b).outcomeReferencesLinked, false);
+  assert.equal(check(b).scoringAuthorized, false);
+});
+
+test("complete two-decision/two-outcome synthetic linkage stays research-only", () => {
+  const second: RuntimeDecisionLedgerRecord = {
+    ...decision(), recordId: "synthetic-decision-record-2",
+    decisionId: "synthetic-decision-2", canonicalRaceId: "synthetic-race-2",
+  };
+  const secondOutcome: OutcomeLearningLedgerRecord = {
+    ...outcome(), outcomeRecordId: "synthetic-outcome-record-2",
+    decisionRecordId: second.recordId, decisionId: second.decisionId,
+    canonicalRaceId: second.canonicalRaceId, settlementId: "synthetic-settlement-2",
+  };
+  const assessment = check(bundle([decision(), second], [outcome(), secondOutcome]));
+  assert.equal(assessment.outcomeReferencesLinked, true);
+  assert.equal(assessment.excludedOutcomePresent, false);
+  assert.equal(assessment.scoringAuthorized, false);
+  assert.deepEqual(assessment.blockers, [
+    "UNAPPROVED_PROTOCOL", "INDEPENDENT_EXACT_SETTLEMENT_NOT_ATTESTED",
+    "PROSPECTIVE_ENROLLMENT_NOT_ATTESTED",
+  ]);
+});
