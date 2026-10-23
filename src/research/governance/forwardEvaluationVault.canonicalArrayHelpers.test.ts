@@ -100,3 +100,16 @@ test("ordinary valid arrays and property order remain digest-stable", () => {
   assert.equal(forwardVaultDigest(a), forwardVaultDigest(b));
   assert.equal(classifyForwardVaultAppend(a, b), "IDEMPOTENT_NOOP");
 });
+
+test("frozen pre-hardening digest vectors remain byte-for-byte stable", () => {
+  // Values generated from the v276 canonical implementation before hardening.
+  // A digest migration would violate append-only identity even if comparisons pass.
+  assert.equal(
+    forwardVaultDigest(membership()),
+    "7792fa7591b7de2be2fd9edb45945dbcf17d16e59645c9cf8d7a1d7f84fca8ad",
+  );
+  assert.equal(
+    forwardVaultDigest(protocol("ROI")),
+    "c2137a8e1badb50bbfa07ea9c36241f5aeeb259f65171d28f9f1781df9d31b0d",
+  );
+});
