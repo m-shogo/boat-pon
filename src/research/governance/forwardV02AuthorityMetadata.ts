@@ -165,6 +165,11 @@ export function assessForwardV02AuthorityMetadata(input: unknown): ForwardV02Aut
           !instant(r.observedAt) ||
           (r.sourceFinality !== "PROVISIONAL" && r.sourceFinality !== "FINAL" &&
            r.sourceFinality !== "REVOKED")) return result(good, "INVALID_EVIDENCE_SHAPE");
+      // Even a provisional settlement revision cannot predate its decision.
+      // A later FINAL label must not launder a predecision result into a valid chain.
+      if (compareInstants(r.observedAt, f.firstDecisionAt) <= 0) {
+        return result(good, "UNRESOLVED_FINALITY");
+      }
       if (ids.has(r.revisionId) || digests.has(r.contentDigest)) return result(good, "CONFLICT");
       if (r.predecessorDigest !== predecessor) return result(good, "INCOMPLETE_REVISION_CHAIN");
       if (previousAt !== null && compareInstants(r.observedAt, previousAt) <= 0) {
