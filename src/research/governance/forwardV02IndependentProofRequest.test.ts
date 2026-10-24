@@ -76,8 +76,9 @@ test("request copies only proof metadata and never caller policy keys or raw evi
   const s = JSON.stringify(r.request);
   assert.ok(s.includes("synthetic-receipt"));
   assert.ok(s.includes("synthetic-revision"));
+  assert.equal(Object.hasOwn(r.request ?? {}, "trusted"), false);
   for (const forbidden of ["publicKeyDigest", "signatureDigest", "anchors", "reviewState",
-    "expectedTicketKey", "ticketKey", "odds", "stake", "privatePath", "trusted"]) {
+    "expectedTicketKey", "ticketKey", "odds", "stake", "privatePath"]) {
     assert.equal(s.includes(forbidden), false, forbidden);
   }
 });
