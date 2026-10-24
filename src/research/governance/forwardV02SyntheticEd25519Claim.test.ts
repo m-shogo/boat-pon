@@ -530,3 +530,55 @@ test("synthetic reference cannot borrow a post-verification swapped claim key", 
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("claimed policy anchor cannot be swapped after signature math", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  // Preflight sees a valid but nonmatching key digest. Previously a third
+  // descriptor read could replace it with the signing key after math passed.
+  let anchorReads = 0;
+  const changingPolicy = new Proxy(f.policy, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "anchors" && ++anchorReads === 3) {
+        target.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticClaimedAnchorBinding(
+    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS",
+  );
+  assert.equal(anchorReads, 1, "the caller policy must be snapshotted only once");
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_ANCHOR_KEY_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("synthetic reference cannot borrow a later caller policy key swap", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  // The reference matches the signing key, but the policy presented to
+  // preflight does not. A later policy reread must not repair that mismatch.
+  f.policy.anchors[0]!.publicKeyDigest = h("f");
+  let anchorReads = 0;
+  const changingPolicy = new Proxy(f.policy, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "anchors" && ++anchorReads === 3) {
+        target.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticReferenceAnchorConflict(
+    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS", ref,
+  );
+  assert.equal(anchorReads, 1, "reference phase must reuse the pinned caller policy");
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_ANCHOR_NOT_BOUND"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
