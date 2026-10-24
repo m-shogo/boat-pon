@@ -140,7 +140,8 @@ export function assessForwardV02TrustPolicyPreflight(
       const key = anchor.role + ":" + anchor.anchorId;
       if (ids.has(key)) return deny("DUPLICATE_POLICY_ANCHOR");
       ids.add(key);
-      anchors.push(anchor);
+      // Preserve the exact validated anchor even if ambient Array.prototype.push is patched.
+      anchors[i] = anchor;
     }
     if (!exact(proofRefsInput, REFS_KEYS) ||
         proofRefsInput.schemaVersion !== "forward-v02-proof-refs.0.1-untrusted" ||
