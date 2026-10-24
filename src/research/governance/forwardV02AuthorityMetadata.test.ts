@@ -212,3 +212,33 @@ test("no-op Array.prototype iterator cannot bypass frozen membership coverage", 
     Object.defineProperty(Array.prototype, Symbol.iterator, descriptor);
   }
 });
+
+test("frozen-excluded decision cannot be relabeled as evaluable SETTLED", () => {
+  const e = envelope();
+  e.settlement.expectedDecisionId = "synthetic-decision-2";
+  e.settlement.decisionId = "synthetic-decision-2";
+  assert.equal(check(e).freezeStatus, "STRUCTURALLY_VALID_UNATTESTED");
+  assert.equal(check(e).settlementStatus, "CONFLICT");
+  assert.equal(check(e).metadataConsistent, false);
+  assert.equal(check(e).scoringAuthorized, false);
+});
+
+test("excluded decision may retain non-evaluable refund evidence without scoring", () => {
+  const e = envelope();
+  e.settlement.expectedDecisionId = "synthetic-decision-2";
+  e.settlement.decisionId = "synthetic-decision-2";
+  e.settlement.disposition = "REFUNDED";
+  e.settlement.evaluable = false;
+  assert.equal(check(e).metadataConsistent, true);
+  assert.equal(check(e).independentAuthorityVerified, false);
+  assert.equal(check(e).scoringAuthorized, false);
+});
+
+test("all-excluded frozen cohort cannot admit an evaluable terminal result", () => {
+  const e = envelope();
+  e.freeze.includedMembership = [];
+  e.freeze.excludedMembership = ["synthetic-decision-1", "synthetic-decision-2"];
+  assert.equal(check(e).freezeStatus, "STRUCTURALLY_VALID_UNATTESTED");
+  assert.equal(check(e).settlementStatus, "CONFLICT");
+  assert.equal(check(e).scoringAuthorized, false);
+});
