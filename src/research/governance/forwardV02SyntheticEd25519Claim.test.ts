@@ -369,3 +369,41 @@ test("reference clock traversal does not depend on mutable Array.prototype.map",
     Array.prototype.map = originalMap;
   }
 });
+
+test("synthetic reference checks every settlement correction timestamp, not just terminal", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "SETTLEMENT");
+  f.envelope.settlement.revisions[0]!.observedAt = "2026-10-24T00:00:00.500Z";
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  f.envelope.settlement.revisions[1] = {
+    revisionId: "synthetic-revision-2", contentDigest: h("e"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  };
+  // The proof ref must track the terminal correction, not the provisional record.
+  f.refs.settlementRevisionId = "synthetic-revision-2";
+  // Caller policy covers the full chain. The separate reference starts later:
+  // terminal-only checks would incorrectly accept the earlier provisional row.
+  ref.validFrom = "2026-10-24T00:00:01Z";
+  const predecessorOutside = referenceCheck(f, "SETTLEMENT", ref);
+  assert.equal(predecessorOutside.signatureMathConsistent, true);
+  assert.equal(predecessorOutside.referenceCorrelationConsistent, false);
+  assert.deepEqual(predecessorOutside.blockers, ["SYNTHETIC_REFERENCE_OUT_OF_WINDOW"]);
+  assert.equal(predecessorOutside.scoringAuthorized, false);
+
+  // After widening the reference window, every correction is correlated,
+  // but the synthetic reference remains untrusted and never admits scoring.
+  ref.validFrom = "2026-10-24T00:00:00Z";
+  const bothInside = referenceCheck(f, "SETTLEMENT", ref);
+  assert.equal(bothInside.referenceCorrelationConsistent, true);
+  assert.equal(bothInside.independentAuthorityVerified, false);
+  assert.equal(bothInside.scoringAuthorized, false);
+  assert.deepEqual(bothInside.blockers, ["SYNTHETIC_REFERENCE_NOT_INDEPENDENT_AUTHORITY"]);
+
+  // Exclusive upper bound must also apply to the terminal revision.
+  ref.validUntil = "2026-10-24T00:00:02Z";
+  const terminalAtBoundary = referenceCheck(f, "SETTLEMENT", ref);
+  assert.equal(terminalAtBoundary.referenceCorrelationConsistent, false);
+  assert.deepEqual(terminalAtBoundary.blockers, ["SYNTHETIC_REFERENCE_OUT_OF_WINDOW"]);
+  assert.equal(terminalAtBoundary.scoringAuthorized, false);
+});
