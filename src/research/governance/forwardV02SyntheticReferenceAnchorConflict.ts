@@ -130,11 +130,12 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   if (ref.state !== "ACTIVE") {
     return result(true, true, false, "SYNTHETIC_REFERENCE_REVOKED");
   }
-  const times = roleInput === "WITNESS"
-    ? [request.freeze.claimedReceiptAt]
-    : request.settlement.revisions.map(r => r.claimedObservedAt);
-  for (let i = 0; i < times.length; i++) {
-    const ms = Date.parse(times[i]!);
+  const count = roleInput === "WITNESS" ? 1 : request.settlement.revisions.length;
+  for (let i = 0; i < count; i++) {
+    // Do not use ambient Array.prototype.map for a validated correction chain.
+    const at = roleInput === "WITNESS"
+      ? request.freeze.claimedReceiptAt : request.settlement.revisions[i]!.claimedObservedAt;
+    const ms = Date.parse(at);
     if (!Number.isFinite(ms) || ms < Date.parse(ref.validFrom) ||
         ms >= Date.parse(ref.validUntil)) {
       return result(true, true, false, "SYNTHETIC_REFERENCE_OUT_OF_WINDOW");
