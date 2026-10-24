@@ -421,13 +421,13 @@ test("synthetic reference checks every settlement correction timestamp, not just
 test("caller mutation between signature math and synthetic reference comparison cannot reuse stale binding", () => {
   const f = fixture();
   const ref = syntheticReference(f, "WITNESS");
-  let policyAnchorDescriptorReads = 0;
-  // Claim descriptors are now intentionally read once and pinned. Use the
-  // separate policy preflight phases to trigger a change only when the
-  // reference helper rebuilds the request after signature/anchor checks.
-  const changingPolicy = new Proxy(f.policy, {
+  let freezeDescriptorReads = 0;
+  // The request builder now snapshots the envelope before it reads policy.
+  // Mutate at the start of the *third* envelope snapshot (reference phase),
+  // not after that snapshot was already pinned.
+  const changingEnvelope = new Proxy(f.envelope, {
     getOwnPropertyDescriptor(target, key) {
-      if (key === "anchors" && ++policyAnchorDescriptorReads === 4) {
+      if (key === "freeze" && ++freezeDescriptorReads === 3) {
         f.envelope.freeze.protocolDigest = h("f");
         f.envelope.freeze.witness.protocolDigest = h("f");
       }
@@ -435,9 +435,9 @@ test("caller mutation between signature math and synthetic reference comparison 
     },
   });
   const r = assessForwardV02SyntheticReferenceAnchorConflict(
-    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS", ref,
+    changingEnvelope, f.policy, f.refs, f.claim, "WITNESS", ref,
   );
-  assert.equal(policyAnchorDescriptorReads >= 4, true);
+  assert.equal(freezeDescriptorReads >= 3, true);
   assert.equal(r.signatureMathConsistent, true);
   assert.equal(r.claimedAnchorKeyDigestMatches, true);
   assert.equal(r.referenceCorrelationConsistent, false);
@@ -450,10 +450,13 @@ test("claimed anchor cannot correlate a request rebuilt after caller policy desc
   const f = fixture();
   f.claim.claimedSignerId = "synthetic-witness-issuer";
   f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
-  let anchorDescriptorReads = 0;
-  const changingPolicy = new Proxy(f.policy, {
+  let freezeDescriptorReads = 0;
+  // Change the original envelope before the *second* request snapshot.
+  // A policy descriptor trigger now fires after the envelope is already
+  // detached, and cannot model request drift across these phases.
+  const changingEnvelope = new Proxy(f.envelope, {
     getOwnPropertyDescriptor(target, key) {
-      if (key === "anchors" && ++anchorDescriptorReads === 2) {
+      if (key === "freeze" && ++freezeDescriptorReads === 2) {
         f.envelope.freeze.protocolDigest = h("f");
         f.envelope.freeze.witness.protocolDigest = h("f");
       }
@@ -461,9 +464,9 @@ test("claimed anchor cannot correlate a request rebuilt after caller policy desc
     },
   });
   const r = assessForwardV02SyntheticClaimedAnchorBinding(
-    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS",
+    changingEnvelope, f.policy, f.refs, f.claim, "WITNESS",
   );
-  assert.equal(anchorDescriptorReads >= 2, true);
+  assert.equal(freezeDescriptorReads >= 2, true);
   assert.equal(r.signatureMathConsistent, true);
   assert.equal(r.claimedAnchorKeyDigestMatches, false);
   assert.deepEqual(r.blockers, ["CLAIMED_REQUEST_CHANGED"]);
