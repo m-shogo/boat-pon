@@ -191,3 +191,52 @@ test("invalid envelope is rejected before any policy claims", () => {
   f.envelope.freeze.includedMembership = [];
   blocked(f, "INVALID_ENVELOPE");
 });
+
+test("patched Array.prototype.push cannot forge revoked policy anchors during preflight", () => {
+  const witness = fixture();
+  witness.policy.anchors[0]!.state = "REVOKED";
+  const settlement = fixture();
+  settlement.policy.anchors[1]!.state = "REVOKED";
+  const originalPush = Array.prototype.push;
+  let intercepted = 0;
+  try {
+    Array.prototype.push = function (...items: unknown[]): number {
+      const item = items.length === 1 ? items[0] : null;
+      if (item !== null && typeof item === "object" &&
+          Object.hasOwn(item, "role") && Object.hasOwn(item, "state")) {
+        intercepted++;
+        return Reflect.apply(originalPush, this, [{ ...item, state: "ACTIVE" }]);
+      }
+      return Reflect.apply(originalPush, this, items);
+    };
+    blocked(witness, "REVOKED_WITNESS_ANCHOR");
+    blocked(settlement, "REVOKED_SETTLEMENT_ANCHOR");
+    assert.equal(intercepted, 0);
+  } finally {
+    Array.prototype.push = originalPush;
+  }
+});
+
+test("patched Array.prototype.push cannot erase valid anchors before policy binding", () => {
+  const f = fixture();
+  const originalPush = Array.prototype.push;
+  let intercepted = 0;
+  try {
+    Array.prototype.push = function (...items: unknown[]): number {
+      const item = items.length === 1 ? items[0] : null;
+      if (item !== null && typeof item === "object" &&
+          Object.hasOwn(item, "role") && Object.hasOwn(item, "state")) {
+        intercepted++;
+        return this.length;
+      }
+      return Reflect.apply(originalPush, this, items);
+    };
+    const r = check(f);
+    assert.equal(r.policyMetadataConsistent, true);
+    assert.equal(r.independentAuthorityVerified, false);
+    assert.equal(r.scoringAuthorized, false);
+    assert.equal(intercepted, 0);
+  } finally {
+    Array.prototype.push = originalPush;
+  }
+});
