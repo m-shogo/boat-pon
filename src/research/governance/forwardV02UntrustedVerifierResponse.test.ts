@@ -263,3 +263,52 @@ test("malformed or missing request transcript is denied", () => {
   delete (missing.response as Record<string, unknown>).requestBindingDigest;
   assert.deepEqual(check(missing).blockers, ["INVALID_VERIFIER_RESPONSE"]);
 });
+
+test("untrusted verifier response cannot borrow a binding corrected during request preflight", () => {
+  const f = fixture();
+  const originalBinding = f.response.requestBindingDigest;
+  f.response.requestBindingDigest = h("0");
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        f.response.requestBindingDigest = originalBinding;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02UntrustedVerifierResponse(
+    changingEnvelope, f.policy, f.refs, f.response,
+  );
+  assert.equal(mutated, true, "preflight mutation must execute");
+  assert.equal(r.requestMetadataConsistent, true);
+  assert.equal(r.responseMetadataConsistent, false);
+  assert.deepEqual(r.blockers, ["UNBOUND_VERIFIER_RESPONSE"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("untrusted verifier response cannot borrow revision digests corrected during preflight", () => {
+  const f = fixture();
+  f.response.revisionContentDigests[0] = h("0");
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        f.response.revisionContentDigests[0] = h("d");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02UntrustedVerifierResponse(
+    changingEnvelope, f.policy, f.refs, f.response,
+  );
+  assert.equal(mutated, true, "nested revision mutation must execute");
+  assert.equal(r.requestMetadataConsistent, true);
+  assert.equal(r.responseMetadataConsistent, false);
+  assert.deepEqual(r.blockers, ["UNBOUND_VERIFIER_RESPONSE"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
