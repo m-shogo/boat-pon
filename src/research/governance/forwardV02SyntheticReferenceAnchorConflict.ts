@@ -10,6 +10,7 @@
 import { createHash, createPublicKey } from "node:crypto";
 import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
 import { assessForwardV02SyntheticClaimedAnchorBinding } from "./forwardV02SyntheticClaimedAnchorBinding";
+import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 
 const REFERENCE_KEYS = [
   "schemaVersion", "role", "authorityId", "anchorId",
@@ -78,6 +79,16 @@ function claimedKeyDigest(claim: unknown): string | null {
   } catch { return null; }
 }
 
+/** Read a signed request binding without invoking caller-controlled accessors. */
+function claimedBindingDigest(claim: unknown): string | null {
+  if (claim === null || typeof claim !== "object") return null;
+  try {
+    const d = Object.getOwnPropertyDescriptor(claim, "claimedRequestBindingDigest");
+    return d && d.enumerable && "value" in d && typeof d.value === "string"
+      ? d.value : null;
+  } catch { return null; }
+}
+
 /**
  * Deny-only comparison against a separate SYNTHETIC reference fixture.
  * It intentionally accepts no privileged store or trusted reference provider.
@@ -101,6 +112,13 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   );
   if (!built.metadataConsistent || built.request === null) {
     return result(true, true, false, "REQUEST_NOT_READY");
+  }
+  // The claimed signature was checked against an earlier request build.
+  // Re-bind this second snapshot: caller-owned proxies may change fields
+  // between the mathematical check and this reference comparison.
+  if (claimedBindingDigest(claimInput) !==
+      digestForwardV02UntrustedRequest(built.request)) {
+    return result(true, true, false, "SYNTHETIC_REFERENCE_REQUEST_CHANGED");
   }
   if (referenceInput === null || referenceInput === undefined) {
     return result(true, true, false, "SYNTHETIC_REFERENCE_MISSING");
