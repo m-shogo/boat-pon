@@ -71,7 +71,7 @@ function fixture() {
     claimedRequestBindingDigest: digest,
     claimedSignatureHex: sign(null, Buffer.from(digest, "hex"), privateKey).toString("hex"),
   };
-  return { envelope, policy, refs, claim };
+  return { envelope, policy, refs, claim, privateKey };
 }
 const check = (f: ReturnType<typeof fixture>) =>
   assessForwardV02SyntheticEd25519Claim(f.envelope, f.policy, f.refs, f.claim);
@@ -133,4 +133,22 @@ test("invalid request and getter-bearing claim cannot reach signature verificati
   });
   assert.deepEqual(check(accessor).blockers, ["INVALID_SIGNATURE_CLAIM"]);
   assert.equal(calls, 0);
+});
+
+test("self-re-signing a changed request remains mathematical only, never independent evidence", () => {
+  const f = fixture();
+  f.envelope.freeze.protocolDigest = h("f");
+  f.envelope.freeze.witness.protocolDigest = h("f");
+  const rebuilt = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(rebuilt.request);
+  const digest = digestForwardV02UntrustedRequest(rebuilt.request);
+  // The same caller controls both the key and the replacement signature.
+  f.claim.claimedRequestBindingDigest = digest;
+  f.claim.claimedSignatureHex = sign(null, Buffer.from(digest, "hex"), f.privateKey).toString("hex");
+  const result = check(f);
+  assert.equal(result.requestMetadataConsistent, true);
+  assert.equal(result.signatureMathConsistent, true);
+  assert.equal(result.independentAuthorityVerified, false);
+  assert.equal(result.scoringAuthorized, false);
+  assert.deepEqual(result.blockers, ["CALLER_SUPPLIED_KEY_NOT_AUTHORITY"]);
 });
