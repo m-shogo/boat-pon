@@ -421,12 +421,13 @@ test("synthetic reference checks every settlement correction timestamp, not just
 test("caller mutation between signature math and synthetic reference comparison cannot reuse stale binding", () => {
   const f = fixture();
   const ref = syntheticReference(f, "WITNESS");
-  let signerDescriptorReads = 0;
-  // A caller-controlled descriptor proxy changes the frozen protocol only
-  // after signature math and claimed-anchor checks built their snapshots.
-  const changingClaim = new Proxy(f.claim, {
+  let policyAnchorDescriptorReads = 0;
+  // Claim descriptors are now intentionally read once and pinned. Use the
+  // separate policy preflight phases to trigger a change only when the
+  // reference helper rebuilds the request after signature/anchor checks.
+  const changingPolicy = new Proxy(f.policy, {
     getOwnPropertyDescriptor(target, key) {
-      if (key === "claimedSignerId" && ++signerDescriptorReads === 2) {
+      if (key === "anchors" && ++policyAnchorDescriptorReads === 4) {
         f.envelope.freeze.protocolDigest = h("f");
         f.envelope.freeze.witness.protocolDigest = h("f");
       }
@@ -434,9 +435,9 @@ test("caller mutation between signature math and synthetic reference comparison 
     },
   });
   const r = assessForwardV02SyntheticReferenceAnchorConflict(
-    f.envelope, f.policy, f.refs, changingClaim, "WITNESS", ref,
+    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS", ref,
   );
-  assert.equal(signerDescriptorReads >= 2, true);
+  assert.equal(policyAnchorDescriptorReads >= 4, true);
   assert.equal(r.signatureMathConsistent, true);
   assert.equal(r.claimedAnchorKeyDigestMatches, true);
   assert.equal(r.referenceCorrelationConsistent, false);
