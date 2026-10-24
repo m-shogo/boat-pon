@@ -229,3 +229,48 @@ test("request cannot be rewritten through a patched Array.prototype.push", () =>
     Array.prototype.push = originalPush;
   }
 });
+
+test("descriptor-only snapshot pins a witness receipt before preflight and request copy", () => {
+  const f = fixture();
+  const original = f.envelope.freeze.witness;
+  let directReads = 0;
+  f.envelope.freeze.witness = new Proxy(original, {
+    get(target, key, receiver) {
+      if (key === "receiptId") {
+        directReads++;
+        // The old implementation read this directly in both preflight and
+        // handoff, allowing a later read to expose a different receipt.
+        return directReads <= 2 ? "synthetic-receipt" : "forged-receipt";
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const r = check(f);
+  assert.equal(r.metadataConsistent, true);
+  assert.equal(r.request?.freeze.receiptId, "synthetic-receipt");
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+  assert.equal(directReads, 0, "caller get traps must not run after descriptor snapshot");
+});
+
+test("descriptor-only snapshot retains validated correction content across the handoff", () => {
+  const f = fixture();
+  const original = f.envelope.settlement.revisions[0]!;
+  let directReads = 0;
+  f.envelope.settlement.revisions[0] = new Proxy(original, {
+    get(target, key, receiver) {
+      if (key === "contentDigest") {
+        directReads++;
+        return directReads <= 3 ? h("d") : h("f");
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const r = check(f);
+  assert.equal(r.metadataConsistent, true);
+  assert.equal(r.request?.settlement.revisions[0]?.contentDigest, h("d"));
+  assert.equal(r.request?.settlement.revisions[0]?.predecessorDigest, null);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+  assert.equal(directReads, 0, "caller revision get traps must not run during validation or copy");
+});
