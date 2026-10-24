@@ -112,14 +112,16 @@ export function buildForwardV02IndependentProofRequest(
   const revisions: ForwardV02ClaimedRevision[] = [];
   for (let i = 0; i < settlement.revisions.length; i++) {
     const r = settlement.revisions[i]!;
-    revisions.push(Object.freeze({
+    // Preserve the complete revision chain even if ambient Array.prototype.push
+    // has been replaced (the metadata preflight already uses indexed checks).
+    revisions[i] = Object.freeze({
       revisionId: r.revisionId,
       contentDigest: r.contentDigest,
       predecessorDigest: r.predecessorDigest,
       sequence: r.sequence,
       claimedObservedAt: r.observedAt,
       claimedSourceFinality: r.sourceFinality,
-    }));
+    });
   }
   const request: ForwardV02IndependentProofRequest = Object.freeze({
     schemaVersion: "forward-v02-independent-proof-request.0.1-untrusted",
