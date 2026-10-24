@@ -469,3 +469,60 @@ test("claimed anchor cannot correlate a request rebuilt after caller policy desc
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("claimed anchor cannot borrow a different public key after valid signature math", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  const { publicKey } = generateKeyPairSync("ed25519");
+  const substitutedPem = publicKey.export({ format: "pem", type: "spki" }).toString();
+  // The policy claims the substituted key, but the original signature was
+  // created with the fixture key. The key must be pinned before math verification.
+  f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(substitutedPem);
+  let pemDescriptorReads = 0;
+  const changingClaim = new Proxy(f.claim, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "claimedPublicKeySpkiPem" && ++pemDescriptorReads === 2) {
+        target.claimedPublicKeySpkiPem = substitutedPem;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticClaimedAnchorBinding(
+    f.envelope, f.policy, f.refs, changingClaim, "WITNESS",
+  );
+  assert.equal(pemDescriptorReads >= 1, true);
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_ANCHOR_KEY_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("synthetic reference cannot borrow a post-verification swapped claim key", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  const { publicKey } = generateKeyPairSync("ed25519");
+  const substitutedPem = publicKey.export({ format: "pem", type: "spki" }).toString();
+  // The policy is bound to the original signed key. The synthetic reference
+  // claims a different key that may only appear on a later descriptor read.
+  ref.publicKeyDigest = claimedKeyDigest(substitutedPem);
+  let pemDescriptorReads = 0;
+  const changingClaim = new Proxy(f.claim, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "claimedPublicKeySpkiPem" && ++pemDescriptorReads === 3) {
+        target.claimedPublicKeySpkiPem = substitutedPem;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticReferenceAnchorConflict(
+    f.envelope, f.policy, f.refs, changingClaim, "WITNESS", ref,
+  );
+  assert.equal(pemDescriptorReads >= 1, true);
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, true);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_KEY_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
