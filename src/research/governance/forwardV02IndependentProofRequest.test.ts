@@ -168,3 +168,64 @@ test("a self-selected matching issuer and key digest cannot authorize scoring", 
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("request preserves the entire chain when ambient Array.prototype.push drops revision copies", () => {
+  const f = fixture();
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  f.envelope.settlement.revisions.push({
+    revisionId: "synthetic-revision-2", contentDigest: h("e"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  });
+  f.refs.settlementRevisionId = "synthetic-revision-2";
+  const originalPush = Array.prototype.push;
+  let attemptedRevisionPushes = 0;
+  try {
+    Array.prototype.push = function (...items: unknown[]): number {
+      if (items.length === 1 && items[0] !== null &&
+          typeof items[0] === "object" && Object.hasOwn(items[0], "claimedSourceFinality")) {
+        attemptedRevisionPushes++;
+        return this.length;
+      }
+      return Reflect.apply(originalPush, this, items);
+    };
+    const r = check(f);
+    assert.equal(r.metadataConsistent, true);
+    assert.equal(r.independentAuthorityVerified, false);
+    assert.equal(r.scoringAuthorized, false);
+    assert.equal(r.request?.settlement.revisions.length, 2);
+    assert.equal(r.request?.settlement.revisions[0]?.revisionId, "synthetic-revision");
+    assert.equal(r.request?.settlement.revisions[1]?.revisionId, "synthetic-revision-2");
+    assert.equal(Object.isFrozen(r.request?.settlement.revisions), true);
+    assert.equal(attemptedRevisionPushes, 0);
+  } finally {
+    Array.prototype.push = originalPush;
+  }
+});
+
+test("request cannot be rewritten through a patched Array.prototype.push", () => {
+  const f = fixture();
+  const originalPush = Array.prototype.push;
+  try {
+    Array.prototype.push = function (...items: unknown[]): number {
+      if (items.length === 1 && items[0] !== null &&
+          typeof items[0] === "object" && Object.hasOwn(items[0], "claimedSourceFinality")) {
+        return Reflect.apply(originalPush, this, [{
+          revisionId: "forged-revision", contentDigest: h("f"),
+          predecessorDigest: null, sequence: 1,
+          claimedObservedAt: "2026-10-24T00:00:01Z", claimedSourceFinality: "FINAL",
+        }]);
+      }
+      return Reflect.apply(originalPush, this, items);
+    };
+    const r = check(f);
+    assert.equal(r.metadataConsistent, true);
+    assert.equal(r.request?.settlement.revisions.length, 1);
+    assert.equal(r.request?.settlement.revisions[0]?.revisionId, "synthetic-revision");
+    assert.equal(r.request?.settlement.revisions[0]?.contentDigest, h("d"));
+    assert.equal(r.independentAuthorityVerified, false);
+    assert.equal(r.scoringAuthorized, false);
+  } finally {
+    Array.prototype.push = originalPush;
+  }
+});
