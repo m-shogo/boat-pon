@@ -1,0 +1,107 @@
+/**
+ * Synthetic, caller-claimed anchor/key correlation for Forward Vault v0.2.
+ *
+ * This compares an Ed25519 claim with the role/issuer/anchor/key digest in a
+ * CALLER-SUPPLIED policy. A matching digest is not an independently provisioned
+ * trust root. It cannot establish source authenticity, trusted time, finality,
+ * revocation evidence, evaluation eligibility, or scoring permission.
+ *
+ * Offline metadata and ephemeral synthetic keys only. Never production/admission.
+ */
+import { createHash, createPublicKey } from "node:crypto";
+import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
+import { assessForwardV02SyntheticEd25519Claim } from "./forwardV02SyntheticEd25519Claim";
+
+export type ForwardV02ClaimedAnchorRole = "WITNESS" | "SETTLEMENT";
+export type ForwardV02SyntheticClaimedAnchorAssessment = Readonly<{
+  signatureMathConsistent: boolean;
+  claimedAnchorKeyDigestMatches: boolean;
+  independentAuthorityVerified: false;
+  scoringAuthorized: false;
+  blockers: readonly string[];
+}>;
+
+function result(
+  signatureMathConsistent: boolean,
+  claimedAnchorKeyDigestMatches: boolean,
+  blocker: string,
+): ForwardV02SyntheticClaimedAnchorAssessment {
+  return Object.freeze({
+    signatureMathConsistent,
+    claimedAnchorKeyDigestMatches,
+    independentAuthorityVerified: false,
+    scoringAuthorized: false,
+    blockers: Object.freeze([blocker]),
+  });
+}
+
+/** Read own data descriptors only; never invoke caller getters or iterators. */
+function value(input: unknown, key: string): unknown {
+  if (input === null || typeof input !== "object") return undefined;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(input, key);
+    return descriptor && descriptor.enumerable && "value" in descriptor
+      ? descriptor.value : undefined;
+  } catch { return undefined; }
+}
+
+/**
+ * Checks whether a mathematically valid caller signature also matches the
+ * *claimed* role-specific policy key. All policy/key material remains UNTRUSTED.
+ * The policy is never used as independent authority or as a scoring gate.
+ */
+export function assessForwardV02SyntheticClaimedAnchorBinding(
+  envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
+  claimInput: unknown, roleInput: unknown,
+): ForwardV02SyntheticClaimedAnchorAssessment {
+  if (roleInput !== "WITNESS" && roleInput !== "SETTLEMENT") {
+    return result(false, false, "INVALID_CLAIMED_ROLE");
+  }
+  const math = assessForwardV02SyntheticEd25519Claim(
+    envelopeInput, policyInput, proofRefsInput, claimInput,
+  );
+  if (!math.signatureMathConsistent) {
+    return result(false, false, "SIGNATURE_NOT_CONSISTENT");
+  }
+  const built = buildForwardV02IndependentProofRequest(
+    envelopeInput, policyInput, proofRefsInput,
+  );
+  if (!built.metadataConsistent || built.request === null) {
+    return result(false, false, "REQUEST_NOT_READY");
+  }
+  const claimedSignerId = value(claimInput, "claimedSignerId");
+  const claimedPem = value(claimInput, "claimedPublicKeySpkiPem");
+  const expectedAuthority = roleInput === "WITNESS"
+    ? built.request.freeze.issuerId : built.request.settlement.sourceId;
+  const expectedAnchor = roleInput === "WITNESS"
+    ? built.request.freeze.claimedAnchorId : built.request.settlement.claimedAnchorId;
+  if (claimedSignerId !== expectedAuthority) {
+    return result(true, false, "CLAIMED_SIGNER_MISMATCH");
+  }
+  const anchors = value(policyInput, "anchors");
+  if (!Array.isArray(anchors) || typeof claimedPem !== "string") {
+    return result(true, false, "INVALID_CLAIMED_POLICY");
+  }
+  try {
+    const key = createPublicKey(claimedPem);
+    if (key.asymmetricKeyType !== "ed25519") {
+      return result(true, false, "UNSUPPORTED_CLAIMED_KEY");
+    }
+    const keyDigest = createHash("sha256")
+      .update(key.export({ format: "der", type: "spki" })).digest("hex");
+    let match = false;
+    for (let i = 0; i < anchors.length; i++) {
+      const anchor = value(anchors, String(i));
+      if (value(anchor, "role") === roleInput &&
+          value(anchor, "anchorId") === expectedAnchor &&
+          value(anchor, "authorityId") === expectedAuthority) {
+        match = value(anchor, "publicKeyDigest") === keyDigest;
+        break;
+      }
+    }
+    if (!match) return result(true, false, "CLAIMED_ANCHOR_KEY_MISMATCH");
+    return result(true, true, "CALLER_CLAIMED_ANCHOR_NOT_AUTHORITY");
+  } catch {
+    return result(true, false, "INVALID_CLAIMED_KEY");
+  }
+}

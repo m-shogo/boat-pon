@@ -52,9 +52,10 @@ test("Runtime Decision Ledger requires lowercase canonical SHA-256 source digest
   assert.equal(validation.valid, false);
   assert.ok(validation.errors.includes("sourceRowDigest must be a SHA-256 hex digest"));
 
-  assert.notEqual(
-    runtimeDecisionLedgerDigest(canonical),
-    runtimeDecisionLedgerDigest(uppercase),
-    "case-only source digest aliases would otherwise create distinct ledger identities",
+  assert.match(runtimeDecisionLedgerDigest(canonical), /^[0-9a-f]{64}$/);
+  assert.throws(
+    () => runtimeDecisionLedgerDigest(uppercase),
+    TypeError,
+    "invalid uppercase source digests must fail before canonical hashing",
   );
 });

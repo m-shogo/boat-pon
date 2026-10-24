@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-array-test-import-tsconfig-20261014",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.offline-test-import-extension-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "replay-array-boundary-tests-against-canonical-tsconfig",
+  "symptom": "The v64 offline array-boundary test imports ./forwardEvaluationVault.ts; canonical tsconfig uses moduleResolution Bundler with no allowImportingTsExtensions, so scoped typecheck fails TS5097 even though the isolated v64 replay previously reported PASS.",
+  "rootCauseClass": "OFFLINE_TYPECHECK_CONFIGURATION_DRIFT",
+  "attemptSignature": "v64-array-boundary-test-ts-extension-under-canonical-tsconfig",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/typescript5-bundler-repo-tsconfig",
+    "materialStateKey": "v64-array-boundary-test-import-ts-without-allowImportingTsExtensions"
+  },
+  "evidenceRefs": [
+    "tsconfig.json",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "pull/2286"
+  ],
+  "lesson": "A green offline TypeScript check using a custom compiler configuration does not establish compatibility with the repository typecheck. Test imports must follow the repository module-resolution contract.",
+  "guardrail": "Before publishing an offline TypeScript regression patch, run a scoped compiler invocation with the canonical moduleResolution Bundler/noEmit/strict settings and Node types, and prefer the existing .js import convention. Confirm the negative TS5097 case and the corrected compilation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-14T10:06:12.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-14T10:06:12.000Z",
+  "_digest": "3d09eed6f2b79349edb24ed93f781c7207d1d6bbfbf8085ac62e8d0cadc83643"
+}

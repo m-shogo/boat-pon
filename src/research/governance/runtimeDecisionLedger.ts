@@ -116,7 +116,7 @@ function isLeapYear(year: number): boolean {
 
 function isExactInstant(value: string): boolean {
   const match = EXACT_INSTANT_RE.exec(value);
-  if (!match) return false;
+  if (!match || value.endsWith("-00:00")) return false;
   const [, yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText, offsetMinuteText] = match;
   const year = Number(yearText);
   const month = Number(monthText);
@@ -124,7 +124,7 @@ function isExactInstant(value: string): boolean {
   const hour = Number(hourText);
   const minute = Number(minuteText);
   const second = Number(secondText);
-  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
+  if (year === 0 || month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
   const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
   if (day < 1 || day > daysInMonth) return false;
   if (offsetHourText !== undefined && (Number(offsetHourText) > 23 || Number(offsetMinuteText) > 59)) return false;
@@ -144,6 +144,21 @@ function parseInstant(value: unknown, field: string, errors: string[]): number |
   return parsed;
 }
 
+// Preserve sub-millisecond PIT chronology across equivalent UTC offsets.
+function compareExactInstants(a: string, b: string): number {
+  const fraction = /\.(\d+)(?=Z$|[+-]\d{2}:\d{2}$)/u;
+  const wholeSecond = (instant: string) => Date.parse(instant.replace(fraction, ""));
+  const aSecond = wholeSecond(a);
+  const bSecond = wholeSecond(b);
+  if (aSecond !== bSecond) return aSecond < bSecond ? -1 : 1;
+  const aFraction = fraction.exec(a)?.[1] ?? "";
+  const bFraction = fraction.exec(b)?.[1] ?? "";
+  const width = Math.max(aFraction.length, bFraction.length);
+  const left = aFraction.padEnd(width, "0");
+  const right = bFraction.padEnd(width, "0");
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function validateProbability(value: unknown, field: string, errors: string[]): void {
   if (!isNullableFiniteNumber(value)) {
     errors.push(`${field} must be finite or null`);
@@ -152,28 +167,76 @@ function validateProbability(value: unknown, field: string, errors: string[]): v
   if (value != null && (value < 0 || value > 1)) errors.push(`${field} must be between 0 and 1`);
 }
 
+// Validate the same own enumerable data fields that JSON persistence will observe.
+function isOwnSerializableDataObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  try {
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) return false;
+    if ("toJSON" in value) return false;
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== "string") return false;
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+
+function isDenseSerializableStringArray(value: unknown): value is string[] {
+  if (!Array.isArray(value)) return false;
+  try {
+    if (Object.getPrototypeOf(value) !== Array.prototype || "toJSON" in value) return false;
+    if (Reflect.ownKeys(value).length !== value.length + 1) return false;
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor) || !isNonEmptyString(descriptor.value)) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+
 function validateStringArray(value: unknown, field: string, errors: string[]): void {
-  if (!Array.isArray(value) || value.some((entry) => !isNonEmptyString(entry))) {
+  if (!isDenseSerializableStringArray(value)) {
     errors.push(`${field} must be an array of non-empty strings`);
   }
 }
 
 function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (!isRecord(value)) return value;
-  return Object.fromEntries(
-    Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]),
-  );
+  if (Array.isArray(value)) {
+    if (!isDenseSerializableStringArray(value)) throw new TypeError("non-JSON array in Runtime Decision Ledger");
+    return Array.from({ length: value.length }, (_, index) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !("value" in descriptor)) throw new TypeError("non-JSON array in Runtime Decision Ledger");
+      return canonicalize(descriptor.value);
+    });
+  }
+  if (value !== null && typeof value === "object") {
+    if (!isOwnSerializableDataObject(value)) throw new TypeError("non-JSON object in Runtime Decision Ledger");
+    return Object.fromEntries(Object.keys(value).sort().map((key) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !("value" in descriptor)) throw new TypeError("non-JSON object in Runtime Decision Ledger");
+      return [key, canonicalize(descriptor.value)];
+    }));
+  }
+  return value;
 }
 
 export function runtimeDecisionLedgerDigest(record: RuntimeDecisionLedgerRecord): string {
-  const canonical = JSON.stringify(canonicalize(record));
+    if (!validateRuntimeDecisionLedgerRecord(record).valid) throw new TypeError("invalid Runtime Decision Ledger record");
+const canonical = JSON.stringify(canonicalize(record));
   return createHash("sha256").update(canonical).digest("hex");
 }
 
 export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDecisionLedgerValidation {
   const errors: string[] = [];
   if (!isRecord(value)) return { valid: false, errors: ["record must be an object"] };
+  if (!isOwnSerializableDataObject(value)) return { valid: false, errors: ["record fields must be enumerable own data properties"] };
+  for (const field of ALLOWED_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(value, field)) {
+      return { valid: false, errors: [`missing own field: ${field}`] };
+    }
+  }
 
   for (const field of Object.keys(value)) {
     if (!ALLOWED_FIELDS.has(field as keyof RuntimeDecisionLedgerRecord)) {
@@ -218,10 +281,10 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
   let oddsObservedAt: number | null = null;
   if (value.oddsObservedAt !== null) oddsObservedAt = parseInstant(value.oddsObservedAt, "oddsObservedAt", errors);
 
-  if (decisionAt != null && scheduledCloseAtSeen != null && decisionAt > scheduledCloseAtSeen) {
+  if (decisionAt != null && scheduledCloseAtSeen != null && compareExactInstants(value.decisionAt as string, value.scheduledCloseAtSeen as string) > 0) {
     errors.push("decisionAt must not be after scheduledCloseAtSeen");
   }
-  if (decisionAt != null && oddsObservedAt != null && oddsObservedAt > decisionAt) {
+  if (decisionAt != null && oddsObservedAt != null && compareExactInstants(value.oddsObservedAt as string, value.decisionAt as string) > 0) {
     errors.push("oddsObservedAt must not be after decisionAt");
   }
 

@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-k1-successor-cas-fast-forward-20261020",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.github-pr-successor-attachment",
+  "subsystem": "research-automation-git",
+  "operation": "attach-existing-successor-to-open-research-pr",
+  "symptom": "A verified descendant research branch existed while the sole open PR still referenced its older ancestor; earlier create-ref and unverified write routes had not attached the successor.",
+  "rootCauseClass": "EXISTING_REF_REQUIRES_CONDITIONAL_NONFORCE_UPDATE",
+  "attemptSignature": "nonforce-update-ref-with-expected-head-and-verified-descendant",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/rest-git-refs",
+    "materialStateKey": "existing-pr-ref-921a0c/descendant-7302f114/fast-forward-6"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commits/921a0c590642-to-7302f114e1ae",
+    "actions/runs/39315929361",
+    "docs/architecture/research-learning-loop.md"
+  ],
+  "lesson": "Creating an already-existing PR branch cannot attach a descendant commit. With confirmed repository push authority, an existing non-protected PR ref can be advanced by a non-force compare-and-swap update only after verifying ancestry and the exact current head.",
+  "guardrail": "Before updating an existing PR ref, read canonical main, PR head, current ref and candidate descendant; verify behind_by=0 and ahead_by>0; call update_ref with force=false and expected_sha equal to the observed PR head; read back both PR and ref before claiming attachment. Do not interpret attachment as CI or merge readiness.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-19T20:03:40.540Z",
+  "productionConnection": false,
+  "_digest": "c6c35f11eb2364d629f197174b9d81b2938c9118b3bd812333663d2450fbf29a",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T20:03:40.540Z"
+}

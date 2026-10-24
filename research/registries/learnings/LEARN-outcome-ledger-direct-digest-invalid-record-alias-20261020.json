@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-outcome-ledger-direct-digest-invalid-record-alias-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.direct-digest-unvalidated-record-alias",
+  "subsystem": "research-governance-outcome-ledger",
+  "operation": "outcome-ledger-direct-digest-and-existing-append-admission",
+  "symptom": "The exported outcomeLearningLedgerDigest hashes malformed outcome records without validation. Non-finite payoutYen and null serialize identically, and classifyOutcomeLedgerAppend did not validate the existing record before digest comparison.",
+  "rootCauseClass": "DIRECT_DIGEST_API_VALIDATION_BYPASS",
+  "attemptSignature": "cross-ledger-direct-digest-nan-null-negative-fixture",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-main-readonly+github-pr-research-ci",
+    "materialStateKey": "outcomeLearningLedger.ts@7db3f947/direct-digest-unvalidated"
+  },
+  "evidenceRefs": [
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedger.test.ts",
+    "pull/2286",
+    "research/registries/learnings/LEARN-forward-vault-direct-digest-invalid-record-alias-20261020.json"
+  ],
+  "lesson": "A direct outcome digest is an admission boundary, not a substitute for record validation. Validate both the candidate and existing append state before comparing canonical digests; otherwise malformed values can alias under JSON serialization.",
+  "guardrail": "Reuse the Forward Vault direct-digest validation pattern: reject invalid outcome records with TypeError before hashing, reject invalid existing append records, and lock NaN/null alias regression without changing valid-record digests. Do not connect to production or score unresolved/refunded outcomes.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-19T22:57:06.000Z",
+  "productionConnection": false,
+  "_digest": "a7d1288d71a0ce74b0e38881df7da6ccfc9976ddbd283177e2822a075851e9cc",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T22:57:06.000Z"
+}

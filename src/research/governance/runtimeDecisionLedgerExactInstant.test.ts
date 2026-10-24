@@ -64,3 +64,38 @@ test("Runtime Decision Ledger accepts explicit UTC offsets as exact instants", (
   candidate.scheduledCloseAtSeen = "2026-08-05T14:32:00+09:00";
   assert.deepEqual(validateRuntimeDecisionLedgerRecord(candidate), { valid: true, errors: [] });
 });
+
+// Exact chronology cannot be established from millisecond-truncated Date.parse alone.
+test("Runtime Decision Ledger compares submillisecond PIT timestamps", () => {
+  const candidate = record();
+  candidate.decisionAt = "2026-10-19T01:00:00.0001000Z";
+  candidate.oddsObservedAt = "2026-10-19T10:00:00.0000999+09:00";
+  candidate.scheduledCloseAtSeen = "2026-10-19T01:00:00.0001001Z";
+  assert.equal(validateRuntimeDecisionLedgerRecord(candidate).valid, true);
+  candidate.oddsObservedAt = "2026-10-19T01:00:00.0001001Z";
+  assert.ok(validateRuntimeDecisionLedgerRecord(candidate).errors.includes("oddsObservedAt must not be after decisionAt"));
+  candidate.oddsObservedAt = "2026-10-19T01:00:00.0000999Z";
+  candidate.scheduledCloseAtSeen = "2026-10-19T01:00:00.0000999Z";
+  assert.ok(validateRuntimeDecisionLedgerRecord(candidate).errors.includes("decisionAt must not be after scheduledCloseAtSeen"));
+});
+
+test("Runtime Decision Ledger rejects unknown UTC offsets and year zero", () => {
+  for (const field of ["decisionAt", "oddsObservedAt", "scheduledCloseAtSeen"] as const) {
+    const candidate = record();
+    candidate[field] = "2026-10-19T01:00:00-00:00";
+    assert.equal(validateRuntimeDecisionLedgerRecord(candidate).valid, false, field);
+  }
+  const candidate = record();
+  candidate.decisionAt = "0000-01-01T00:00:01Z";
+  candidate.oddsObservedAt = "0000-01-01T00:00:00Z";
+  candidate.scheduledCloseAtSeen = "0000-01-01T00:00:02Z";
+  assert.equal(validateRuntimeDecisionLedgerRecord(candidate).valid, false);
+});
+
+test("Runtime Decision Ledger preserves known UTC offsets and equal submillisecond instants", () => {
+  const candidate = record();
+  candidate.oddsObservedAt = "2026-10-19T10:00:00.0001+09:00";
+  candidate.decisionAt = "2026-10-19T01:00:00.0001000Z";
+  candidate.scheduledCloseAtSeen = "2026-10-19T01:00:00.0001001+00:00";
+  assert.deepEqual(validateRuntimeDecisionLedgerRecord(candidate), { valid: true, errors: [] });
+});

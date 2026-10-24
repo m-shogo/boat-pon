@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-array-prototype-tojson-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.array-prototype-tojson-digest-persistence-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-record-and-canonical-append-digest",
+  "symptom": "A synthetic Array.prototype.toJSON hook replaces every protocol array during JSON.stringify. Pre-fix Forward Vault array admission accepts the inherited hook, so distinct valid metric-family arrays serialize identically and may alias append-only persisted evidence. No real evidence or production path was affected.",
+  "rootCauseClass": "INHERITED_ARRAY_TOJSON_ALTERS_PERSISTED_PROTOCOL_CONTENT",
+  "attemptSignature": "pr2286-v279-synthetic-array-prototype-tojson-collapsing-protocol-arrays",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22-local-synthetic+github-pr-ci",
+    "materialStateKey": "forward-vault.0.1/pr2286-1b44d438/dense-unique-array-no-tojson-guard"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.arrayToJsonBoundary.test.ts",
+    "research/registries/learnings/LEARN-forward-vault-prototype-serialization-divergence-20261009.json",
+    "pull/2286"
+  ],
+  "lesson": "Checking only array density and own data descriptors is insufficient for JSON persistence parity: inherited Array.prototype.toJSON can rewrite an otherwise valid array when the actual record is serialized. This differs from exotic object toJSON admission already covered by the earlier learning.",
+  "guardrail": "Reject arrays with own or inherited toJSON during Forward Vault record validation, before hashing or append classification. Lock a synthetic inherited-hook negative test, restore ambient prototype state after each test, and retain unchanged valid digest vectors. Do not infer scoring authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-23T19:02:09.000Z",
+  "productionConnection": false,
+  "_digest": "5c4e25920a2d4e9d9f8b9b28cb685da49f206d66e062737dfbf99ad913f1216a",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-23T19:02:09.000Z"
+}
