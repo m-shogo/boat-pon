@@ -70,7 +70,7 @@ function denseArray(value: unknown): value is unknown[] {
 const nonblank = (x: unknown): x is string => typeof x === "string" && x.trim().length > 0;
 const digest = (x: unknown): x is string => typeof x === "string" && DIGEST.test(x);
 function utcSeconds(x: unknown): x is string {
-  if (typeof x !== "string" || !UTC_SECONDS.test(x)) return false;
+  if (typeof x !== "string" || !UTC_SECONDS.test(x) || x.startsWith("0000-")) return false;
   const ms = Date.parse(x);
   return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 19) + "Z" === x;
 }
