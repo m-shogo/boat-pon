@@ -534,20 +534,30 @@ test("synthetic reference cannot borrow a post-verification swapped claim key", 
 test("claimed policy anchor cannot be swapped after signature math", () => {
   const f = fixture();
   f.claim.claimedSignerId = "synthetic-witness-issuer";
-  // Preflight sees a valid but nonmatching key digest. Previously a third
-  // descriptor read could replace it with the signing key after math passed.
+  // The caller policy starts with a valid but nonmatching key digest. The
+  // envelope proxy changes the original policy AFTER the policy snapshot,
+  // during mathematical verification. The mutation must actually fire.
   let anchorReads = 0;
   const changingPolicy = new Proxy(f.policy, {
     getOwnPropertyDescriptor(target, key) {
-      if (key === "anchors" && ++anchorReads === 3) {
-        target.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+      if (key === "anchors") anchorReads++;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
       }
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
   });
   const r = assessForwardV02SyntheticClaimedAnchorBinding(
-    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS",
+    changingEnvelope, changingPolicy, f.refs, f.claim, "WITNESS",
   );
+  assert.equal(mutated, true, "post-snapshot policy mutation must execute");
   assert.equal(anchorReads, 1, "the caller policy must be snapshotted only once");
   assert.equal(r.signatureMathConsistent, true);
   assert.equal(r.claimedAnchorKeyDigestMatches, false);
@@ -559,21 +569,30 @@ test("claimed policy anchor cannot be swapped after signature math", () => {
 test("synthetic reference cannot borrow a later caller policy key swap", () => {
   const f = fixture();
   const ref = syntheticReference(f, "WITNESS");
-  // The reference matches the signing key, but the policy presented to
-  // preflight does not. A later policy reread must not repair that mismatch.
+  // The reference matches the signing key, but the initial policy does not.
+  // Mutate the caller policy during math, after the reference phase pinned it.
   f.policy.anchors[0]!.publicKeyDigest = h("f");
   let anchorReads = 0;
   const changingPolicy = new Proxy(f.policy, {
     getOwnPropertyDescriptor(target, key) {
-      if (key === "anchors" && ++anchorReads === 3) {
-        target.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+      if (key === "anchors") anchorReads++;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
       }
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
   });
   const r = assessForwardV02SyntheticReferenceAnchorConflict(
-    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS", ref,
+    changingEnvelope, changingPolicy, f.refs, f.claim, "WITNESS", ref,
   );
+  assert.equal(mutated, true, "post-snapshot reference policy mutation must execute");
   assert.equal(anchorReads, 1, "reference phase must reuse the pinned caller policy");
   assert.equal(r.signatureMathConsistent, true);
   assert.equal(r.claimedAnchorKeyDigestMatches, false);
