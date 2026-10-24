@@ -25,8 +25,8 @@ function exact(value: unknown, keys: readonly string[]): value is Record<string,
   try {
     const p = Object.getPrototypeOf(value);
     if ((p !== Object.prototype && p !== null) || "toJSON" in value || Reflect.ownKeys(value).length !== keys.length) return false;
-    for (const key of keys) {
-      const d = Object.getOwnPropertyDescriptor(value, key);
+    for (let i = 0; i < keys.length; i++) {
+      const d = Object.getOwnPropertyDescriptor(value, keys[i]!);
       if (!d || !d.enumerable || !("value" in d)) return false;
     }
     return true;
@@ -125,13 +125,17 @@ export function assessForwardV02AuthorityMetadata(input: unknown): ForwardV02Aut
       return result("CONFLICT", good);
     }
     if (compareInstants(w.receiptAt, f.firstDecisionAt) >= 0) return result("AFTER_DECISION", good);
-    const expected = new Set(f.expectedMembership);
+    // Never consume caller arrays via mutable Array.prototype[Symbol.iterator].
+    const expected = new Set<string>();
+    for (let i = 0; i < f.expectedMembership.length; i++) expected.add(f.expectedMembership[i]!);
     const covered = new Set<string>();
-    for (const id of f.includedMembership) {
+    for (let i = 0; i < f.includedMembership.length; i++) {
+      const id = f.includedMembership[i]!;
       if (!expected.has(id) || covered.has(id)) return result("CONFLICT", good);
       covered.add(id);
     }
-    for (const id of f.excludedMembership) {
+    for (let i = 0; i < f.excludedMembership.length; i++) {
+      const id = f.excludedMembership[i]!;
       if (!expected.has(id) || covered.has(id)) return result("CONFLICT", good);
       covered.add(id);
     }
