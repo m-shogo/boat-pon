@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-signature-claim-late-snapshot-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-signature-claim-post-preflight-swap",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-synthetic-ed25519-claim",
+  "symptom": "The standalone deny-only Ed25519 mathematics probe built the untrusted proof request before snapshotting the caller-owned signature claim. A descriptor-triggered mutation during envelope preflight could replace an initially wrong public key or signature with the matching value before the late claim snapshot, reporting signatureMathConsistent=true for a different entry-time claim. No independent authority or scoring was granted.",
+  "rootCauseClass": "UNTRUSTED_SIGNATURE_CLAIM_SNAPSHOT_AFTER_REQUEST_PREFLIGHT",
+  "attemptSignature": "pr2286-v308-pin-standalone-claim-before-proof-request-preflight-key-signature-negative-proxy-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticEd25519Claim.0.1-untrusted/pr2286-bbcfe28d/claim-snapshot-after-request-build"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/f1b882007767350e87aca970f0aaa3a5068e4f44",
+    "commit/8a919b91f70d42565b3dccd999f245ee8a410d87",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-claim-key-swap-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json"
+  ],
+  "lesson": "Even a mathematical-consistency flag can be laundered when caller-owned signature data is first captured after an unrelated request builder invokes descriptor traps. A later valid key or signature is not the caller claim present before preflight.",
+  "guardrail": "Snapshot the complete strict own-data-descriptor Ed25519 claim before building the request; use that pinned claim for all signature fields and retain existing request-not-ready precedence. Add phase-triggered negative tests for both key and signature swaps, assert the mutation really executed, and keep independentAuthorityVerified=false and scoringAuthorized=false on every path.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T23:07:40.700Z",
+  "productionConnection": false,
+  "_digest": "31dc553c573c791d7f50f20a05a37fa869d25556673f44042e97330e314d4bd0",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T23:07:40.700Z"
+}
