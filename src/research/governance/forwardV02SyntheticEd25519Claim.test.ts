@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { generateKeyPairSync, sign } from "node:crypto";
+import { createHash, createPublicKey, generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 import { assessForwardV02SyntheticEd25519Claim } from "./forwardV02SyntheticEd25519Claim";
+import { assessForwardV02SyntheticClaimedAnchorBinding } from "./forwardV02SyntheticClaimedAnchorBinding";
 
 const h = (c: string) => c.repeat(64);
 
@@ -151,4 +152,97 @@ test("self-re-signing a changed request remains mathematical only, never indepen
   assert.equal(result.independentAuthorityVerified, false);
   assert.equal(result.scoringAuthorized, false);
   assert.deepEqual(result.blockers, ["CALLER_SUPPLIED_KEY_NOT_AUTHORITY"]);
+});
+
+function claimedKeyDigest(pem: string): string {
+  return createHash("sha256")
+    .update(createPublicKey(pem).export({ format: "der", type: "spki" }))
+    .digest("hex");
+}
+const anchorCheck = (f: ReturnType<typeof fixture>, role: unknown) =>
+  assessForwardV02SyntheticClaimedAnchorBinding(
+    f.envelope, f.policy, f.refs, f.claim, role,
+  );
+
+test("matching caller-claimed witness and settlement keys never grant authority", () => {
+  const f = fixture();
+  const digest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  f.policy.anchors[0]!.publicKeyDigest = digest;
+  f.policy.anchors[1]!.publicKeyDigest = digest;
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  const witness = anchorCheck(f, "WITNESS");
+  assert.equal(witness.signatureMathConsistent, true);
+  assert.equal(witness.claimedAnchorKeyDigestMatches, true);
+  assert.equal(witness.independentAuthorityVerified, false);
+  assert.equal(witness.scoringAuthorized, false);
+  assert.deepEqual(witness.blockers, ["CALLER_CLAIMED_ANCHOR_NOT_AUTHORITY"]);
+  assert.equal(Object.isFrozen(witness), true);
+  assert.equal(Object.isFrozen(witness.blockers), true);
+  f.claim.claimedSignerId = "synthetic-settlement-source";
+  const settlement = anchorCheck(f, "SETTLEMENT");
+  assert.equal(settlement.claimedAnchorKeyDigestMatches, true);
+  assert.equal(settlement.independentAuthorityVerified, false);
+  assert.equal(settlement.scoringAuthorized, false);
+});
+
+test("mathematically valid signature with unrelated claimed anchor digest is rejected", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  assert.equal(check(f).signatureMathConsistent, true);
+  const bound = anchorCheck(f, "WITNESS");
+  assert.equal(bound.signatureMathConsistent, true);
+  assert.equal(bound.claimedAnchorKeyDigestMatches, false);
+  assert.deepEqual(bound.blockers, ["CLAIMED_ANCHOR_KEY_MISMATCH"]);
+  assert.equal(bound.scoringAuthorized, false);
+});
+
+test("claimed signer and role are bound to their distinct untrusted policy anchors", () => {
+  const f = fixture();
+  const digest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  f.policy.anchors[0]!.publicKeyDigest = digest;
+  assert.deepEqual(anchorCheck(f, "WITNESS").blockers, ["CLAIMED_SIGNER_MISMATCH"]);
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  assert.deepEqual(anchorCheck(f, "SETTLEMENT").blockers, ["CLAIMED_SIGNER_MISMATCH"]);
+  assert.deepEqual(anchorCheck(f, "other").blockers, ["INVALID_CLAIMED_ROLE"]);
+  // The settlement key digest must not satisfy the witness role.
+  f.policy.anchors[0]!.publicKeyDigest = h("f");
+  f.policy.anchors[1]!.publicKeyDigest = digest;
+  assert.deepEqual(anchorCheck(f, "WITNESS").blockers, ["CLAIMED_ANCHOR_KEY_MISMATCH"]);
+});
+
+test("self-issued claimed anchor and matching signature remain untrusted", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  f.envelope.freeze.protocolDigest = h("f");
+  f.envelope.freeze.witness.protocolDigest = h("f");
+  const rebuilt = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(rebuilt.request);
+  const digest = digestForwardV02UntrustedRequest(rebuilt.request);
+  f.claim.claimedRequestBindingDigest = digest;
+  f.claim.claimedSignatureHex = sign(null, Buffer.from(digest, "hex"), f.privateKey).toString("hex");
+  const bound = anchorCheck(f, "WITNESS");
+  assert.equal(bound.claimedAnchorKeyDigestMatches, true);
+  assert.equal(bound.independentAuthorityVerified, false);
+  assert.equal(bound.scoringAuthorized, false);
+  assert.deepEqual(bound.blockers, ["CALLER_CLAIMED_ANCHOR_NOT_AUTHORITY"]);
+});
+
+test("bad signatures, revoked policy and accessor claims fail before claimed anchor correlation", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  f.claim.claimedSignatureHex = "0".repeat(128);
+  assert.deepEqual(anchorCheck(f, "WITNESS").blockers, ["SIGNATURE_NOT_CONSISTENT"]);
+  const revoked = fixture();
+  revoked.policy.anchors[0]!.state = "REVOKED";
+  assert.deepEqual(anchorCheck(revoked, "WITNESS").blockers, ["SIGNATURE_NOT_CONSISTENT"]);
+  const accessor = fixture();
+  let getterCalls = 0;
+  Object.defineProperty(accessor.claim, "claimedSignerId", {
+    enumerable: true, configurable: true,
+    get() { getterCalls++; return "synthetic-witness-issuer"; },
+  });
+  assert.deepEqual(anchorCheck(accessor, "WITNESS").blockers, ["SIGNATURE_NOT_CONSISTENT"]);
+  assert.equal(getterCalls, 0);
 });
