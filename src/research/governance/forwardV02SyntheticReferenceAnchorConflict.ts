@@ -102,6 +102,12 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   if (roleInput !== "WITNESS" && roleInput !== "SETTLEMENT") {
     return result(false, false, false, "INVALID_REFERENCE_ROLE");
   }
+  // Pin the separate caller-owned reference BEFORE signature math and policy
+  // correlation. A callback-free descriptor proxy can otherwise mutate the
+  // original reference during those phases and make a previously mismatching
+  // key/identity appear consistent at the final lookup. Still UNTRUSTED.
+  const referenceSnapshot = referenceInput === null || referenceInput === undefined
+    ? null : snapshot(referenceInput);
   // A later reference-key lookup must use the same claim snapshot that
   // passed signature math and claimed-anchor correlation, not a mutable proxy.
   const claim = snapshotForwardV02SyntheticClaim(claimInput);
@@ -132,7 +138,7 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   if (referenceInput === null || referenceInput === undefined) {
     return result(true, true, false, "SYNTHETIC_REFERENCE_MISSING");
   }
-  const ref = snapshot(referenceInput);
+  const ref = referenceSnapshot;
   if (!ref || ref.schemaVersion !== REFERENCE_VERSION ||
       (ref.role !== "WITNESS" && ref.role !== "SETTLEMENT") ||
       typeof ref.authorityId !== "string" || !ID.test(ref.authorityId) ||
