@@ -5,6 +5,8 @@ import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentP
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 import { assessForwardV02SyntheticEd25519Claim } from "./forwardV02SyntheticEd25519Claim";
 import { assessForwardV02SyntheticClaimedAnchorBinding } from "./forwardV02SyntheticClaimedAnchorBinding";
+import { assessForwardV02SyntheticReferenceAnchorConflict } from "./forwardV02SyntheticReferenceAnchorConflict";
+
 
 const h = (c: string) => c.repeat(64);
 
@@ -245,4 +247,125 @@ test("bad signatures, revoked policy and accessor claims fail before claimed anc
   });
   assert.deepEqual(anchorCheck(accessor, "WITNESS").blockers, ["SIGNATURE_NOT_CONSISTENT"]);
   assert.equal(getterCalls, 0);
+});
+
+function syntheticReference(f: ReturnType<typeof fixture>, role: "WITNESS" | "SETTLEMENT") {
+  const digest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  f.policy.anchors[0]!.publicKeyDigest = digest;
+  f.policy.anchors[1]!.publicKeyDigest = digest;
+  f.claim.claimedSignerId = role === "WITNESS"
+    ? "synthetic-witness-issuer" : "synthetic-settlement-source";
+  return {
+    schemaVersion: "forward-v02-synthetic-reference-anchor.0.1-untrusted",
+    role, authorityId: f.claim.claimedSignerId,
+    anchorId: role === "WITNESS" ? "synthetic-witness-anchor" : "synthetic-settlement-anchor",
+    publicKeyDigest: digest, state: "ACTIVE",
+    validFrom: "2026-10-23T00:00:00Z", validUntil: "2026-10-25T00:00:00Z",
+  };
+}
+const referenceCheck = (f: ReturnType<typeof fixture>, role: unknown, ref: unknown) =>
+  assessForwardV02SyntheticReferenceAnchorConflict(
+    f.envelope, f.policy, f.refs, f.claim, role, ref,
+  );
+
+test("matching synthetic reference for both roles remains untrusted and unscorable", () => {
+  for (const role of ["WITNESS", "SETTLEMENT"] as const) {
+    const f = fixture();
+    const ref = syntheticReference(f, role);
+    const r = referenceCheck(f, role, ref);
+    assert.equal(r.signatureMathConsistent, true);
+    assert.equal(r.claimedAnchorKeyDigestMatches, true);
+    assert.equal(r.referenceCorrelationConsistent, true);
+    assert.equal(r.independentAuthorityVerified, false);
+    assert.equal(r.scoringAuthorized, false);
+    assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_NOT_INDEPENDENT_AUTHORITY"]);
+    assert.equal(Object.isFrozen(r), true);
+    assert.equal(Object.isFrozen(r.blockers), true);
+  }
+});
+
+test("self-forged matching reference does not become a trust root", () => {
+  const f = fixture();
+  const forgedBySameCaller = syntheticReference(f, "WITNESS");
+  assert.equal(referenceCheck(f, "WITNESS", forgedBySameCaller).independentAuthorityVerified, false);
+  assert.equal(referenceCheck(f, "WITNESS", forgedBySameCaller).scoringAuthorized, false);
+  assert.deepEqual(referenceCheck(f, "WITNESS", null).blockers, ["SYNTHETIC_REFERENCE_MISSING"]);
+});
+
+test("synthetic key rotation, revoked reference and role substitution fail closed", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  ref.publicKeyDigest = h("0");
+  assert.deepEqual(referenceCheck(f, "WITNESS", ref).blockers, ["SYNTHETIC_REFERENCE_KEY_MISMATCH"]);
+  ref.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  ref.state = "REVOKED";
+  assert.deepEqual(referenceCheck(f, "WITNESS", ref).blockers, ["SYNTHETIC_REFERENCE_REVOKED"]);
+  ref.state = "ACTIVE";
+  ref.role = "SETTLEMENT";
+  assert.deepEqual(referenceCheck(f, "WITNESS", ref).blockers, ["SYNTHETIC_REFERENCE_IDENTITY_MISMATCH"]);
+  assert.equal(referenceCheck(f, "WITNESS", ref).scoringAuthorized, false);
+});
+
+test("synthetic issuer and anchor substitutions fail independently of caller policy", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "SETTLEMENT");
+  ref.authorityId = "synthetic-impostor";
+  assert.deepEqual(referenceCheck(f, "SETTLEMENT", ref).blockers, ["SYNTHETIC_REFERENCE_IDENTITY_MISMATCH"]);
+  ref.authorityId = "synthetic-settlement-source";
+  ref.anchorId = "synthetic-other-anchor";
+  assert.deepEqual(referenceCheck(f, "SETTLEMENT", ref).blockers, ["SYNTHETIC_REFERENCE_IDENTITY_MISMATCH"]);
+});
+
+test("synthetic reference key window must cover claimed witness or settlement clock", () => {
+  const witness = fixture();
+  const wref = syntheticReference(witness, "WITNESS");
+  wref.validFrom = "2026-10-24T00:00:01Z";
+  assert.deepEqual(referenceCheck(witness, "WITNESS", wref).blockers, ["SYNTHETIC_REFERENCE_OUT_OF_WINDOW"]);
+  const settlement = fixture();
+  const sref = syntheticReference(settlement, "SETTLEMENT");
+  sref.validUntil = "2026-10-24T00:00:01Z";
+  assert.deepEqual(referenceCheck(settlement, "SETTLEMENT", sref).blockers, ["SYNTHETIC_REFERENCE_OUT_OF_WINDOW"]);
+});
+
+test("invalid or accessor-bearing synthetic references never execute getters", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  let getterCalls = 0;
+  Object.defineProperty(ref, "publicKeyDigest", {
+    enumerable: true, configurable: true,
+    get() { getterCalls++; return h("f"); },
+  });
+  assert.deepEqual(referenceCheck(f, "WITNESS", ref).blockers, ["INVALID_SYNTHETIC_REFERENCE"]);
+  assert.equal(getterCalls, 0);
+  const bad = syntheticReference(fixture(), "WITNESS");
+  (bad as unknown as Record<string, unknown>).scoringAuthorized = true;
+  const f2 = fixture();
+  syntheticReference(f2, "WITNESS");
+  assert.deepEqual(referenceCheck(f2, "WITNESS", bad).blockers, ["INVALID_SYNTHETIC_REFERENCE"]);
+});
+
+test("invalid claimed signature cannot borrow a matching synthetic reference", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  f.claim.claimedSignatureHex = "0".repeat(128);
+  const r = referenceCheck(f, "WITNESS", ref);
+  assert.equal(r.signatureMathConsistent, false);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_ANCHOR_NOT_BOUND"]);
+});
+
+test("reference clock traversal does not depend on mutable Array.prototype.map", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "SETTLEMENT");
+  const originalMap = Array.prototype.map;
+  try {
+    Array.prototype.map = function (): never { throw new Error("ambient map forbidden"); };
+    const r = referenceCheck(f, "SETTLEMENT", ref);
+    assert.equal(r.referenceCorrelationConsistent, true);
+    assert.equal(r.scoringAuthorized, false);
+  } finally {
+    Array.prototype.map = originalMap;
+  }
 });
