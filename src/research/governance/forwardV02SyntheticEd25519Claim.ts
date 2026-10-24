@@ -70,13 +70,17 @@ export function assessForwardV02SyntheticEd25519Claim(
   envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
   claimInput: unknown,
 ): ForwardV02SyntheticSignatureAssessment {
+  // Pin the caller-owned claim before building the request. A descriptor
+  // proxy in the envelope/policy/refs can otherwise replace a mismatching
+  // key or signature during preflight, laundering a later claim into a
+  // mathematical match. This remains a deny-only, untrusted probe.
+  const c = snapshotForwardV02SyntheticClaim(claimInput);
   const built = buildForwardV02IndependentProofRequest(
     envelopeInput, policyInput, proofRefsInput,
   );
   if (!built.metadataConsistent || built.request === null) {
     return assessment(false, false, "REQUEST_NOT_READY");
   }
-  const c = snapshotForwardV02SyntheticClaim(claimInput);
   if (!c || c.schemaVersion !== CLAIM_VERSION ||
       typeof c.claimedSignerId !== "string" || !ID.test(c.claimedSignerId) ||
       typeof c.claimedPublicKeySpkiPem !== "string" ||
