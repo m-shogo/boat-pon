@@ -119,6 +119,8 @@ test("later FINAL cannot launder an earlier revision outside the settlement anch
     predecessorDigest: h("d"), sequence: 2,
     observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
   });
+  // Proof references bind the terminal revision, not its predecessor.
+  f.refs.settlementRevisionId = "synthetic-revision-2";
   f.policy.anchors[1]!.validFrom = "2026-10-24T00:00:01Z";
   // The final revision is in-window, but the provisional predecessor is not.
   blocked(f, "OUT_OF_WINDOW_SETTLEMENT_ANCHOR");
@@ -133,6 +135,8 @@ test("every revision inside one settlement anchor window remains consistent but 
     predecessorDigest: h("d"), sequence: 2,
     observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
   });
+  // Proof references bind the terminal revision, not its predecessor.
+  f.refs.settlementRevisionId = "synthetic-revision-2";
   f.policy.anchors[1]!.validFrom = "2026-10-24T00:00:00Z";
   assert.deepEqual(check(f), {
     policyMetadataConsistent: true, independentAuthorityVerified: false,
