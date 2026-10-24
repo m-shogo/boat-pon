@@ -9,7 +9,7 @@
  * Offline metadata and ephemeral synthetic keys only. Never production/admission.
  */
 import { createHash, createPublicKey } from "node:crypto";
-import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
+import { buildForwardV02IndependentProofRequest, snapshotForwardV02UntrustedPolicy } from "./forwardV02IndependentProofRequest";
 import { assessForwardV02SyntheticEd25519Claim, snapshotForwardV02SyntheticClaim } from "./forwardV02SyntheticEd25519Claim";
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 
@@ -63,14 +63,18 @@ export function assessForwardV02SyntheticClaimedAnchorBinding(
   // claimed policy-key comparison.
   const claim = snapshotForwardV02SyntheticClaim(claimInput);
   if (claim === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
+  // Pin caller policy before math: later key-digest comparison must not
+  // borrow a different anchor graph than the one preflight validated.
+  const policy = snapshotForwardV02UntrustedPolicy(policyInput);
+  if (policy === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
   const math = assessForwardV02SyntheticEd25519Claim(
-    envelopeInput, policyInput, proofRefsInput, claim,
+    envelopeInput, policy, proofRefsInput, claim,
   );
   if (!math.signatureMathConsistent) {
     return result(false, false, "SIGNATURE_NOT_CONSISTENT");
   }
   const built = buildForwardV02IndependentProofRequest(
-    envelopeInput, policyInput, proofRefsInput,
+    envelopeInput, policy, proofRefsInput,
   );
   if (!built.metadataConsistent || built.request === null) {
     return result(false, false, "REQUEST_NOT_READY");
@@ -90,7 +94,7 @@ export function assessForwardV02SyntheticClaimedAnchorBinding(
   if (claimedSignerId !== expectedAuthority) {
     return result(true, false, "CLAIMED_SIGNER_MISMATCH");
   }
-  const anchors = value(policyInput, "anchors");
+  const anchors = value(policy, "anchors");
   if (!Array.isArray(anchors) || typeof claimedPem !== "string") {
     return result(true, false, "INVALID_CLAIMED_POLICY");
   }
