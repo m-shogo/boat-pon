@@ -133,13 +133,19 @@ export function assessForwardV02UntrustedVerifierResponse(
   envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
   responseInput: unknown,
 ): ForwardV02UntrustedResponseAssessment {
+  // Pin the entire caller-owned response before request preflight. An
+  // envelope/policy/refs descriptor proxy can otherwise replace a mismatching
+  // response field during the builder and launder a later claim into a match.
+  // Revision digests are a nested caller-owned array and must be pinned here
+  // too, not after the request is built. Both remain untrusted metadata.
+  const r = snapshotExact(responseInput, RESPONSE_KEYS);
+  const revisions = r ? snapshotDigests(r.revisionContentDigests) : null;
   const built = buildForwardV02IndependentProofRequest(
     envelopeInput, policyInput, proofRefsInput,
   );
   if (!built.metadataConsistent || built.request === null) {
     return result(false, false, ["REQUEST_NOT_READY"]);
   }
-  const r = snapshotExact(responseInput, RESPONSE_KEYS);
   if (!r || r.schemaVersion !== RESPONSE_VERSION ||
       r.requestSchemaVersion !== REQUEST_VERSION ||
       typeof r.requestBindingDigest !== "string" || !DIGEST.test(r.requestBindingDigest) ||
@@ -152,7 +158,6 @@ export function assessForwardV02UntrustedVerifierResponse(
        r.claimedSettlementStatus !== "UNKNOWN")) {
     return result(true, false, ["INVALID_VERIFIER_RESPONSE"]);
   }
-  const revisions = snapshotDigests(r.revisionContentDigests);
   if (revisions === null) return result(true, false, ["INVALID_VERIFIER_RESPONSE"]);
   const request = built.request;
   if (r.requestBindingDigest !== digestForwardV02UntrustedRequest(request) ||
