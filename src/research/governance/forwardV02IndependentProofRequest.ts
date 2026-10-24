@@ -138,6 +138,20 @@ function snapshotUntrusted(input: unknown): unknown {
   return copy(input, 0);
 }
 
+/**
+ * Pin a caller-owned, UNTRUSTED policy graph before a multi-stage synthetic
+ * signature/anchor comparison. This snapshot is not a trust root or authority.
+ * Invalid shapes remain subject to the normal strict policy preflight.
+ */
+export function snapshotForwardV02UntrustedPolicy(input: unknown): Record<string, unknown> | null {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) return null;
+  try {
+    const pinned = snapshotUntrusted(input);
+    return pinned !== null && typeof pinned === "object" && !Array.isArray(pinned)
+      ? pinned as Record<string, unknown> : null;
+  } catch { return null; }
+}
+
 function snapshotRejected(reason: string): ForwardV02ProofRequestAssessment {
   return Object.freeze({
     metadataConsistent: false,
