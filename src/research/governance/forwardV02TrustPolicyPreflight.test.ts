@@ -123,6 +123,8 @@ test("unsupported algorithm, invalid calendar, unknown state and duplicate role 
   blocked(algorithm, "INVALID_POLICY");
   const date = fixture(); date.policy.anchors[0]!.validFrom = "2026-02-30T00:00:00Z";
   blocked(date, "INVALID_POLICY");
+  const yearZero = fixture(); yearZero.policy.anchors[0]!.validFrom = "0000-01-01T00:00:00Z";
+  blocked(yearZero, "INVALID_POLICY");
   const state = fixture(); state.policy.anchors[1]!.state = "UNKNOWN";
   blocked(state, "INVALID_POLICY");
   const duplicate = fixture(); duplicate.policy.anchors[1]!.role = "WITNESS";
