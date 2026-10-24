@@ -10,7 +10,7 @@
  */
 import { createHash, createPublicKey } from "node:crypto";
 import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
-import { assessForwardV02SyntheticEd25519Claim } from "./forwardV02SyntheticEd25519Claim";
+import { assessForwardV02SyntheticEd25519Claim, snapshotForwardV02SyntheticClaim } from "./forwardV02SyntheticEd25519Claim";
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 
 export type ForwardV02ClaimedAnchorRole = "WITNESS" | "SETTLEMENT";
@@ -58,8 +58,13 @@ export function assessForwardV02SyntheticClaimedAnchorBinding(
   if (roleInput !== "WITNESS" && roleInput !== "SETTLEMENT") {
     return result(false, false, "INVALID_CLAIMED_ROLE");
   }
+  // Pin every claim field once: a caller-controlled descriptor proxy could
+  // otherwise swap the public key after Ed25519 verification but before the
+  // claimed policy-key comparison.
+  const claim = snapshotForwardV02SyntheticClaim(claimInput);
+  if (claim === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
   const math = assessForwardV02SyntheticEd25519Claim(
-    envelopeInput, policyInput, proofRefsInput, claimInput,
+    envelopeInput, policyInput, proofRefsInput, claim,
   );
   if (!math.signatureMathConsistent) {
     return result(false, false, "SIGNATURE_NOT_CONSISTENT");
@@ -72,12 +77,12 @@ export function assessForwardV02SyntheticClaimedAnchorBinding(
   }
   // The signature math checked an earlier request snapshot. Caller-owned
   // metadata may change during this separate build, so correlate it again.
-  if (value(claimInput, "claimedRequestBindingDigest") !==
+  if (value(claim, "claimedRequestBindingDigest") !==
       digestForwardV02UntrustedRequest(built.request)) {
     return result(true, false, "CLAIMED_REQUEST_CHANGED");
   }
-  const claimedSignerId = value(claimInput, "claimedSignerId");
-  const claimedPem = value(claimInput, "claimedPublicKeySpkiPem");
+  const claimedSignerId = value(claim, "claimedSignerId");
+  const claimedPem = value(claim, "claimedPublicKeySpkiPem");
   const expectedAuthority = roleInput === "WITNESS"
     ? built.request.freeze.issuerId : built.request.settlement.sourceId;
   const expectedAnchor = roleInput === "WITNESS"
