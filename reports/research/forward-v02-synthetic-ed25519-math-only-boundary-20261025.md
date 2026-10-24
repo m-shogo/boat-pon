@@ -39,14 +39,17 @@ and explicitly returns `independentAuthorityVerified=false` and
 files, private paths, odds or credentials; it performs no network calls.
 
 Added `src/research/governance/forwardV02SyntheticEd25519Claim.test.ts`
-(commit `2bb737cea41e653f2000dc390a13fa9235d781c6`).
-Five synthetic tests generate ephemeral in-process keys and check:
+(commits `2bb737cea41e653f2000dc390a13fa9235d781c6` and
+`50d4094777b00fabd7b0373e8820255880f3723c`).
+Six synthetic tests generate ephemeral in-process keys and check:
 
 1. valid signature mathematics still denies independent authority and scoring;
 2. wrong key or changed signature is rejected;
 3. changed request metadata cannot reuse an earlier signature;
 4. unsupported algorithm, malformed encoding and injected authority flags fail closed;
-5. revoked caller policy and getter-bearing claims fail closed.
+5. revoked caller policy and getter-bearing claims fail closed;
+6. a caller can re-sign a changed request with its own key, producing valid
+   signature mathematics **without** independent authority or scoring.
 
 These tests do **not** establish an independently provisioned signer, trusted
 clock, source-finality proof, complete correction history, revocation evidence,
