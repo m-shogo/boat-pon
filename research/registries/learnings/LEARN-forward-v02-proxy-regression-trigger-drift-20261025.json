@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-proxy-regression-trigger-drift-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-proxy-regression-descriptor-trigger-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "test-forward-v02-synthetic-reference-request-drift",
+  "symptom": "After the synthetic signature claim was snapshotted once, an older request-drift regression still waited for a second claimedSignerId descriptor read. The intended mutation never fired, so the test failed on its read-count assertion even though both new public-key-swap regressions passed. The failure was a test trigger coupled to an obsolete call sequence, not an evidence-verifier or runner failure.",
+  "rootCauseClass": "ADVERSARIAL_TEST_TRIGGER_COUPLED_TO_OBSOLETE_DESCRIPTOR_READ_COUNT",
+  "attemptSignature": "pr2286-v304-retarget-request-drift-proxy-to-reference-policy-preflight-phase",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticEd25519Claim.test/pr2286-272d9b04/obsolete-second-signer-descriptor-trigger"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/259e47fc35645ad7cd944d1336f0077bb4c5fa27",
+    "commit/272d9b04a86635076f9a1573d3109fd470aae29e",
+    "github-actions/run-40123140795",
+    "commit/4bdaede94bca8d7882c34d1baa00499bd8b130f5",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-reference-request-rebuild-drift-20261025.json"
+  ],
+  "lesson": "A successful hardening that eliminates repeated reads can invalidate adversarial tests that inject mutation on the removed read. This is fixture drift, not proof that the original request-drift guardrail regressed. The CI log identifies the failed descriptor-read-count assertion while both new key-swap negative tests passed.",
+  "guardrail": "When a test models mutation between validation phases, bind its trigger to a phase boundary that still exists after the refactor (here the later policy-anchor preflight), assert that the mutation actually fired, and separately assert the intended fail-closed blocker. Never weaken or remove the negative security assertion merely to restore green CI.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T19:03:26.108Z",
+  "productionConnection": false,
+  "_digest": "b8c8ad388c932da0bb0f616a75cccab68af07a7cc65a7537b1b663d6fe75bc54",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T19:03:26.108Z"
+}
