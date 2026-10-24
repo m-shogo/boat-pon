@@ -15,8 +15,8 @@ Relevant authorities: `docs/architecture/research-learning-loop.md`, `docs/archi
 ## Implementation and synthetic verification
 
 - `src/research/governance/forwardV02AuthorityMetadata.ts`: new isolated `assessForwardV02AuthorityMetadata(unknown)` helper. No I/O, secrets, imported production modules, scoring, or mutable authority state.
-- `src/research/governance/forwardV02AuthorityMetadata.test.ts`: 18 synthetic tests, executed locally using Node 22 experimental type stripping with **18/18 PASS** before the GitHub commit. Official CI is separately authoritative for integration.
-- Strict own-data shape checks reject unknown keys, getters, sparse/extra array properties, duplicate membership, `toJSON`, invalid timestamps, and unsupported stage relabeling.
+- `src/research/governance/forwardV02AuthorityMetadata.test.ts`: 19 synthetic tests, executed locally using Node 22 experimental type stripping with **19/19 PASS** before the GitHub commit. Official CI is separately authoritative for integration.
+- Strict own-data shape checks reject unknown keys, getters, sparse/extra array properties, duplicate membership, `toJSON`, invalid timestamps, and unsupported stage relabeling. Indexed loops also prevent a mutated Array.prototype[Symbol.iterator] from bypassing membership coverage.
 - Prospective metadata checks compare receipt and decision chronology at submillisecond precision, receipt commitment to caller-supplied protocol/membership digests, and membership coverage *within the caller-supplied universe*.
 - Settlement metadata checks reject decision/ticket identity mismatch, refund/void/cancelled evaluability mismatch, duplicate revision identities, missing predecessor links, ambiguous revision ordering, and a latest nonterminal/revoked revision.
 - A perfectly self-consistent synthetic receipt and terminal chain yields only `STRUCTURALLY_VALID_UNATTESTED`; `independentAuthorityVerified: false` and `scoringAuthorized: false` are literal return types, including on this path.
@@ -32,11 +32,11 @@ Still blocked: reviewed independent predecision witness/trust model; canonical f
 ## Learning and repeat gate
 
 - `fingerprintKey`: `research-k3.forward-vault.v02-untrusted-authority-metadata-boundary`
-- `attemptSignature`: `pr2286-v287-strict-untrusted-witness-and-revision-metadata-deny-only-18-synthetic-fixtures`
+- `attemptSignature`: `pr2286-v287-strict-untrusted-witness-and-revision-metadata-deny-only-19-synthetic-fixtures`
 - `environmentKey`: `github-connector/research-pr-node24-ci+node22-offline-fixtures`
 - `materialStateKey`: `forward-v02-candidate/pr2286-b21a8f4c/authority-spec-without-metadata-preflight`
 - Gate: `PROCEED_DISTINCT_SYNTHETIC_IMPLEMENTATION / REUSE_VERIFIED_GUARDRAILS`. The prior v286 step was a specification, not an unchanged failed implementation attempt.
-- Reused: `LEARN-forward-v02-unmatched-decision-coverage-20261024`, `LEARN-forward-vault-refund-evaluability-contract-drift-20261018`, `LEARN-github-write-readback-20260918`, and prior runner-failure classification.
+- Reused: `LEARN-forward-v02-unmatched-decision-coverage-20261024`, `LEARN-outcome-ledger-array-iterator-admission-bypass-20261021`, `LEARN-forward-vault-refund-evaluability-contract-drift-20261018`, `LEARN-github-write-readback-20260918`, and prior runner-failure classification.
 - Classification: **REUSED_LEARNING / NO_NEW_LEARNING**. The implementation exercises already documented deny-first rules; routine green tests alone do not establish a new non-obvious reusable success or new root-cause class. No new LEARN record is warranted.
 
 **Next safe action:** independently review a versioned trust-anchor and witness/source-verification API, add a strict envelope schema and negative fixtures, and keep the scoring gate closed until an actual independent proof and protocol approval exist. Do not merge this PR based solely on CI.
