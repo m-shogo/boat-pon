@@ -601,3 +601,56 @@ test("synthetic reference cannot borrow a later caller policy key swap", () => {
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("synthetic reference key cannot be laundered by a mutation during signature math", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  ref.publicKeyDigest = h("0"); // Original reference does not match signing key.
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        // This happens after the reference must already be snapshotted.
+        ref.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticReferenceAnchorConflict(
+    changingEnvelope, f.policy, f.refs, f.claim, "WITNESS", ref,
+  );
+  assert.equal(mutated, true, "the late reference mutation must actually fire");
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, true);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_KEY_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("synthetic reference anchor identity cannot be corrected after snapshot", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  ref.anchorId = "synthetic-unrelated-anchor";
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        ref.anchorId = "synthetic-witness-anchor";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticReferenceAnchorConflict(
+    changingEnvelope, f.policy, f.refs, f.claim, "WITNESS", ref,
+  );
+  assert.equal(mutated, true, "the late identity mutation must actually fire");
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, true);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_IDENTITY_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
