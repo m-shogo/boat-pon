@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-untrusted-label-substring-fixture-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-untrusted-label-substring-fixture-false-positive",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "test-independent-proof-request-allowlisted-fields",
+  "symptom": "Official PR CI #40084683828 failed one new synthetic proof-request allowlist test: a forbidden substring check for 'trusted' matched the permitted schema version suffix 'untrusted'. The request contained no trusted flag. This was an assertion design error, not a verifier or research runtime failure.",
+  "rootCauseClass": "SUBSTRING_FORBIDDEN_FIELD_ASSERTION_MATCHED_ALLOWED_SCHEMA_VALUE",
+  "attemptSignature": "pr2286-v294-synthetic-allowlist-substring-trusted-vs-untrusted",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions/node24/pr2286",
+    "materialStateKey": "forwardV02IndependentProofRequest.test/pr2286-c98f2d8e/substring-forbidden-token"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "github-actions/run-40084683828/job-120845077448",
+    "src/research/governance/forwardV02IndependentProofRequest.test.ts",
+    "commit/c98f2d8e45daaf08c111970c1961f9317bf668af",
+    "commit/90a3614baa72ae2bae57c34f9ef63d4a8d735646"
+  ],
+  "lesson": "Searching the serialized JSON for a forbidden bare substring does not prove a forbidden field exists: an allowed literal such as 'untrusted' contains the token 'trusted'. A negative security fixture must test structural key identity separately from permitted value text.",
+  "guardrail": "When asserting that trust-granting fields are absent, inspect exact own property names or quoted JSON keys instead of bare substring matches. Keep allowlist tests for sensitive raw fields and prove self-reported metadata still returns independentAuthorityVerified=false and scoringAuthorized=false. Inspect full CI job logs before attributing the failure.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T10:12:31.000Z",
+  "productionConnection": false,
+  "_digest": "c32bdaaee169145bbc0ebc8b5f5e6962a7f270c4f714f1a8eee86424d798e520",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T10:12:31.000Z"
+}
