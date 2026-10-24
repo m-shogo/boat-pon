@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assessForwardV02UntrustedVerifierResponse } from "./forwardV02UntrustedVerifierResponse";
+import { assessForwardV02UntrustedVerifierResponse, digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
+import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
 
 const h = (c: string) => c.repeat(64);
 function fixture() {
@@ -56,8 +57,9 @@ function fixture() {
     settlementProofDigest: h("c"),
   };
   const response = {
-    schemaVersion: "forward-v02-independent-proof-response.0.1-untrusted",
+    schemaVersion: "forward-v02-independent-proof-response.0.2-untrusted",
     requestSchemaVersion: "forward-v02-independent-proof-request.0.1-untrusted",
+    requestBindingDigest: "",
     policySnapshotDigest: h("e"), cohortId: "synthetic-cohort",
     witnessReceiptId: "synthetic-receipt", witnessProofDigest: h("b"),
     terminalRevisionId: "synthetic-revision", settlementProofDigest: h("c"),
@@ -65,6 +67,9 @@ function fixture() {
     claimedVerifierId: "synthetic-verifier",
     claimedWitnessStatus: "VERIFIED", claimedSettlementStatus: "VERIFIED",
   };
+  const built = buildForwardV02IndependentProofRequest(envelope, policy, refs);
+  assert.ok(built.request);
+  response.requestBindingDigest = digestForwardV02UntrustedRequest(built.request);
   return { envelope, policy, refs, response };
 }
 const check = (f: ReturnType<typeof fixture>) =>
@@ -124,6 +129,9 @@ test("all correction revisions must be bound in order, not just terminal revisio
   f.refs.settlementRevisionId = "synthetic-revision-2";
   f.response.terminalRevisionId = "synthetic-revision-2";
   f.response.revisionContentDigests = [h("d"), h("f")];
+  const rebuilt = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(rebuilt.request);
+  f.response.requestBindingDigest = digestForwardV02UntrustedRequest(rebuilt.request);
   assert.equal(check(f).responseMetadataConsistent, true);
   f.response.revisionContentDigests = [h("f"), h("d")];
   assert.deepEqual(check(f).blockers, ["UNBOUND_VERIFIER_RESPONSE"]);
@@ -183,4 +191,75 @@ test("a patched array iterator cannot omit predecessor digests", () => {
   } finally {
     Array.prototype[Symbol.iterator] = original;
   }
+});
+
+
+test("whole-request transcript rejects previously unbound metadata changes", () => {
+  const mutations: Array<{ name: string; mutate: (f: ReturnType<typeof fixture>) => void }> = [
+    { name: "protocol", mutate: f => {
+      f.envelope.freeze.protocolDigest = h("f");
+      f.envelope.freeze.witness.protocolDigest = h("f");
+    } },
+    { name: "membership", mutate: f => {
+      f.envelope.freeze.membershipDigest = h("f");
+      f.envelope.freeze.witness.membershipDigest = h("f");
+    } },
+    { name: "decision clock", mutate: f => {
+      f.envelope.freeze.firstDecisionAt = "2026-10-24T00:00:00.0003Z";
+    } },
+    { name: "witness issuer", mutate: f => {
+      f.envelope.freeze.witness.issuerId = "synthetic-other-issuer";
+      f.policy.anchors[0]!.authorityId = "synthetic-other-issuer";
+    } },
+    { name: "witness clock", mutate: f => {
+      f.envelope.freeze.witness.receiptAt = "2026-10-24T00:00:00.00015Z";
+    } },
+    { name: "settlement source", mutate: f => {
+      f.envelope.settlement.sourceId = "synthetic-other-source";
+      f.policy.anchors[1]!.authorityId = "synthetic-other-source";
+    } },
+    { name: "revision clock", mutate: f => {
+      f.envelope.settlement.revisions[0]!.observedAt = "2026-10-24T00:00:02Z";
+    } },
+    { name: "revision identity", mutate: f => {
+      f.envelope.settlement.revisions[0]!.revisionId = "synthetic-revision-renamed";
+      f.refs.settlementRevisionId = "synthetic-revision-renamed";
+      f.response.terminalRevisionId = "synthetic-revision-renamed";
+    } },
+  ];
+  for (const { name, mutate } of mutations) {
+    const f = fixture();
+    mutate(f);
+    const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+    assert.equal(built.metadataConsistent, true, name);
+    assert.ok(built.request, name);
+    assert.notEqual(digestForwardV02UntrustedRequest(built.request), f.response.requestBindingDigest, name);
+    const assessed = check(f);
+    assert.equal(assessed.requestMetadataConsistent, true, name);
+    assert.equal(assessed.responseMetadataConsistent, false, name);
+    assert.deepEqual(assessed.blockers, ["UNBOUND_VERIFIER_RESPONSE"], name);
+    assert.equal(assessed.scoringAuthorized, false, name);
+  }
+});
+
+test("self-recomputed complete transcript remains a claim, never independent authority", () => {
+  const f = fixture();
+  f.envelope.freeze.protocolDigest = h("f");
+  f.envelope.freeze.witness.protocolDigest = h("f");
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  f.response.requestBindingDigest = digestForwardV02UntrustedRequest(built.request);
+  const assessed = check(f);
+  assert.equal(assessed.responseMetadataConsistent, true);
+  assert.equal(assessed.independentAuthorityVerified, false);
+  assert.equal(assessed.scoringAuthorized, false);
+});
+
+test("malformed or missing request transcript is denied", () => {
+  const malformed = fixture();
+  malformed.response.requestBindingDigest = "not-a-digest";
+  assert.deepEqual(check(malformed).blockers, ["INVALID_VERIFIER_RESPONSE"]);
+  const missing = fixture();
+  delete (missing.response as Record<string, unknown>).requestBindingDigest;
+  assert.deepEqual(check(missing).blockers, ["INVALID_VERIFIER_RESPONSE"]);
 });
