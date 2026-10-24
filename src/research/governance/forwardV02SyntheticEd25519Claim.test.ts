@@ -654,3 +654,55 @@ test("synthetic reference anchor identity cannot be corrected after snapshot", (
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("standalone signature math cannot borrow a key corrected during request preflight", () => {
+  const f = fixture();
+  const matchingPem = f.claim.claimedPublicKeySpkiPem;
+  const { publicKey } = generateKeyPairSync("ed25519");
+  f.claim.claimedPublicKeySpkiPem =
+    publicKey.export({ format: "pem", type: "spki" }).toString();
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        f.claim.claimedPublicKeySpkiPem = matchingPem;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticEd25519Claim(
+    changingEnvelope, f.policy, f.refs, f.claim,
+  );
+  assert.equal(mutated, true, "preflight mutation must actually execute");
+  assert.equal(r.requestMetadataConsistent, true);
+  assert.equal(r.signatureMathConsistent, false);
+  assert.deepEqual(r.blockers, ["SIGNATURE_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("standalone signature math cannot borrow a signature corrected during request preflight", () => {
+  const f = fixture();
+  const matchingSignature = f.claim.claimedSignatureHex;
+  f.claim.claimedSignatureHex = "0".repeat(128);
+  let mutated = false;
+  const changingEnvelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "freeze" && !mutated) {
+        mutated = true;
+        f.claim.claimedSignatureHex = matchingSignature;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticEd25519Claim(
+    changingEnvelope, f.policy, f.refs, f.claim,
+  );
+  assert.equal(mutated, true, "preflight mutation must actually execute");
+  assert.equal(r.requestMetadataConsistent, true);
+  assert.equal(r.signatureMathConsistent, false);
+  assert.deepEqual(r.blockers, ["SIGNATURE_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
