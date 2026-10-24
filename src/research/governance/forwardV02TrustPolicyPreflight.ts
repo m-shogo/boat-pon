@@ -162,10 +162,17 @@ export function assessForwardV02TrustPolicyPreflight(
     );
     if (witnessBlocker) return deny(witnessBlocker);
     const settlement = envelope.settlement;
-    const settlementBlocker = boundAnchor(
-      anchors, "SETTLEMENT", settlement.trustAnchorId, settlement.sourceId, last.observedAt,
-    );
-    if (settlementBlocker) return deny(settlementBlocker);
+    // The envelope supplies one settlement trust anchor for its entire
+    // correction chain. Checking only the terminal revision would let an
+    // out-of-window provisional predecessor borrow the later FINAL revision's
+    // valid key window. These are untrusted consistency checks, not proofs.
+    for (let i = 0; i < settlement.revisions.length; i++) {
+      const revision = settlement.revisions[i]!;
+      const settlementBlocker = boundAnchor(
+        anchors, "SETTLEMENT", settlement.trustAnchorId, settlement.sourceId, revision.observedAt,
+      );
+      if (settlementBlocker) return deny(settlementBlocker);
+    }
     return unverified();
   } catch { return deny("INVALID_POLICY_OR_PROOF_REFS"); }
 }
