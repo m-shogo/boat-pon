@@ -417,3 +417,30 @@ test("synthetic reference checks every settlement correction timestamp, not just
   assert.deepEqual(terminalAtBoundary.blockers, ["SYNTHETIC_REFERENCE_OUT_OF_WINDOW"]);
   assert.equal(terminalAtBoundary.scoringAuthorized, false);
 });
+
+test("caller mutation between signature math and synthetic reference comparison cannot reuse stale binding", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  let signerDescriptorReads = 0;
+  // A caller-controlled descriptor proxy changes the frozen protocol only
+  // after signature math and claimed-anchor checks built their snapshots.
+  const changingClaim = new Proxy(f.claim, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "claimedSignerId" && ++signerDescriptorReads === 2) {
+        f.envelope.freeze.protocolDigest = h("f");
+        f.envelope.freeze.witness.protocolDigest = h("f");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticReferenceAnchorConflict(
+    f.envelope, f.policy, f.refs, changingClaim, "WITNESS", ref,
+  );
+  assert.equal(signerDescriptorReads >= 2, true);
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, true);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_REQUEST_CHANGED"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
