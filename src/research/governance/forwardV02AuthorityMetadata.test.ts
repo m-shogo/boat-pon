@@ -117,6 +117,38 @@ test("terminal revisions with ambiguous order fail closed", () => {
   });
   assert.equal(check(e).settlementStatus, "CONFLICT");
 });
+test("a later FINAL cannot launder predecision provisional settlement revisions", () => {
+  for (const at of [
+    "2026-10-23T23:59:59Z",
+    "2026-10-24T00:00:00.0001Z",
+    "2026-10-24T00:00:00.0002Z",
+  ]) {
+    const e = envelope();
+    e.settlement.revisions[0]!.observedAt = at;
+    e.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+    e.settlement.revisions.push({
+      revisionId: "synthetic-revision-2", contentDigest: h("e"),
+      predecessorDigest: h("d"), sequence: 2,
+      observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+    });
+    assert.equal(check(e).settlementStatus, "UNRESOLVED_FINALITY");
+    assert.equal(check(e).scoringAuthorized, false);
+  }
+});
+test("postdecision provisional-to-final correction chain remains structurally valid but unverified", () => {
+  const e = envelope();
+  e.settlement.revisions[0]!.observedAt = "2026-10-24T00:00:00.00021Z";
+  e.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  e.settlement.revisions.push({
+    revisionId: "synthetic-revision-2", contentDigest: h("e"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  });
+  assert.equal(check(e).metadataConsistent, true);
+  assert.equal(check(e).independentAuthorityVerified, false);
+  assert.equal(check(e).scoringAuthorized, false);
+});
+
 test("decision and ticket mismatch are unresolved identity", () => {
   for (const field of ["decisionId", "ticketKey"] as const) {
     const e = envelope(); e.settlement[field] = "synthetic-other";
