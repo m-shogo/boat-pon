@@ -72,6 +72,14 @@ type Refs = {
   settlementRevisionId: string; settlementProofDigest: string;
 };
 
+function frozenBlockers(input: readonly string[]): readonly string[] {
+  // Do not depend on a mutable Array.prototype iterator when copying even
+  // internally generated blockers (reuse the canonical iterator guardrail).
+  const copy: string[] = [];
+  for (let i = 0; i < input.length; i++) copy[i] = input[i]!;
+  return Object.freeze(copy);
+}
+
 /**
  * Returns only an allowlisted immutable metadata request after existing
  * structural preflight. Even a successful request remains UNVERIFIED and
@@ -91,7 +99,7 @@ export function buildForwardV02IndependentProofRequest(
       metadataConsistent: false,
       independentAuthorityVerified: false,
       scoringAuthorized: false,
-      blockers: Object.freeze([...preflight.blockers]),
+      blockers: frozenBlockers(preflight.blockers),
       request: null,
     });
   }
@@ -139,7 +147,7 @@ export function buildForwardV02IndependentProofRequest(
     metadataConsistent: true,
     independentAuthorityVerified: false,
     scoringAuthorized: false,
-    blockers: Object.freeze([...preflight.blockers]),
+    blockers: frozenBlockers(preflight.blockers),
     request,
   });
 }
