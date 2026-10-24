@@ -110,6 +110,37 @@ test("witness and settlement outside configured validity windows are denied", ()
   const settlement = fixture(); settlement.policy.anchors[1]!.validFrom = "2026-10-24T00:00:02Z";
   blocked(settlement, "OUT_OF_WINDOW_SETTLEMENT_ANCHOR");
 });
+test("later FINAL cannot launder an earlier revision outside the settlement anchor validity window", () => {
+  const f = fixture();
+  f.envelope.settlement.revisions[0]!.observedAt = "2026-10-24T00:00:00.500Z";
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  f.envelope.settlement.revisions.push({
+    revisionId: "synthetic-revision-2", contentDigest: h("e"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  });
+  f.policy.anchors[1]!.validFrom = "2026-10-24T00:00:01Z";
+  // The final revision is in-window, but the provisional predecessor is not.
+  blocked(f, "OUT_OF_WINDOW_SETTLEMENT_ANCHOR");
+});
+
+test("every revision inside one settlement anchor window remains consistent but never verified", () => {
+  const f = fixture();
+  f.envelope.settlement.revisions[0]!.observedAt = "2026-10-24T00:00:00.500Z";
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  f.envelope.settlement.revisions.push({
+    revisionId: "synthetic-revision-2", contentDigest: h("e"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  });
+  f.policy.anchors[1]!.validFrom = "2026-10-24T00:00:00Z";
+  assert.deepEqual(check(f), {
+    policyMetadataConsistent: true, independentAuthorityVerified: false,
+    scoringAuthorized: false,
+    blockers: ["UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL"],
+  });
+});
+
 test("policy snapshot and proof reference mismatch are denied", () => {
   const policy = fixture(); policy.refs.policySnapshotDigest = h("f");
   blocked(policy, "UNBOUND_PROOF_REFS");
