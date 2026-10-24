@@ -174,7 +174,7 @@ test("a patched array iterator cannot omit predecessor digests", () => {
     Array.prototype[Symbol.iterator] = function* () {
       called++;
       yield h("d");
-    } as typeof Array.prototype[Symbol.iterator];
+    } as typeof original;
     const r = check(f);
     assert.equal(r.responseMetadataConsistent, true);
     assert.equal(r.independentAuthorityVerified, false);
