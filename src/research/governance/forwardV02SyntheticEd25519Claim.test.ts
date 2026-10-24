@@ -444,3 +444,28 @@ test("caller mutation between signature math and synthetic reference comparison 
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("claimed anchor cannot correlate a request rebuilt after caller policy descriptor mutation", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  let anchorDescriptorReads = 0;
+  const changingPolicy = new Proxy(f.policy, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "anchors" && ++anchorDescriptorReads === 2) {
+        f.envelope.freeze.protocolDigest = h("f");
+        f.envelope.freeze.witness.protocolDigest = h("f");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticClaimedAnchorBinding(
+    f.envelope, changingPolicy, f.refs, f.claim, "WITNESS",
+  );
+  assert.equal(anchorDescriptorReads >= 2, true);
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_REQUEST_CHANGED"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
