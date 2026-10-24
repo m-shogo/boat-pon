@@ -11,6 +11,7 @@
 import { createHash, createPublicKey } from "node:crypto";
 import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
 import { assessForwardV02SyntheticEd25519Claim } from "./forwardV02SyntheticEd25519Claim";
+import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 
 export type ForwardV02ClaimedAnchorRole = "WITNESS" | "SETTLEMENT";
 export type ForwardV02SyntheticClaimedAnchorAssessment = Readonly<{
@@ -68,6 +69,12 @@ export function assessForwardV02SyntheticClaimedAnchorBinding(
   );
   if (!built.metadataConsistent || built.request === null) {
     return result(false, false, "REQUEST_NOT_READY");
+  }
+  // The signature math checked an earlier request snapshot. Caller-owned
+  // metadata may change during this separate build, so correlate it again.
+  if (value(claimInput, "claimedRequestBindingDigest") !==
+      digestForwardV02UntrustedRequest(built.request)) {
+    return result(true, false, "CLAIMED_REQUEST_CHANGED");
   }
   const claimedSignerId = value(claimInput, "claimedSignerId");
   const claimedPem = value(claimInput, "claimedPublicKeySpkiPem");
