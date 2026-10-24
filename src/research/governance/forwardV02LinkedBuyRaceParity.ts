@@ -89,3 +89,99 @@ export function assessForwardV02LinkedBuyRaceParity(
     return deny("INVALID_PARITY_CONTEXT");
   }
 }
+
+
+/**
+ * Additional, deny-only parity check on the *caller-supplied* outcome ledger.
+ * Linked BUY race parity alone can hide asymmetric REFUNDED/VOID/non-evaluable
+ * outcomes. Compare both locally settled/evaluable and locally excluded race
+ * sets, without dropping exclusions from the evidence universe.
+ *
+ * This does NOT verify independent EXACT settlement, prospective enrollment,
+ * ticket exposure, monetary denominators, or a frozen exclusion policy.
+ */
+export type ForwardV02LocalOutcomeRaceParityAssessment = Readonly<{
+  localOutcomeRaceSetsAligned: boolean;
+  scoringAuthorized: false;
+  blockers: readonly string[];
+}>;
+
+const denyLocal = (reason: string): ForwardV02LocalOutcomeRaceParityAssessment => ({
+  localOutcomeRaceSetsAligned: false, scoringAuthorized: false, blockers: [reason],
+});
+
+export function assessForwardV02LocalOutcomeRaceParity(
+  candidate: unknown,
+  references: unknown,
+  decisions: unknown,
+  outcomes: unknown,
+): ForwardV02LocalOutcomeRaceParityAssessment {
+  try {
+    if (!assessForwardV02LinkedBuyRaceParity(
+      candidate, references, decisions, outcomes,
+    ).linkedBuyRaceSetsAligned) return denyLocal("LINKED_BUY_RACE_PARITY_NOT_VERIFIED");
+
+    // The linked parity gate has already validated the candidate, both
+    // ledgers, their exact manifest-ordered digests and one-to-one linkage.
+    const c = candidate as { benchmarkDecisionSystems: string[] };
+    const ds = decisions as { recordId: string; decisionSystem: string; canonicalRaceId: string }[];
+    const os = outcomes as {
+      decisionRecordId: string; finality: string; disposition: string;
+      evaluable: boolean; stakeYen: number;
+    }[];
+    const systemByDecision = new Map<string, string>();
+    const raceByDecision = new Map<string, string>();
+    const settledBySystem = new Map<string, Set<string>>();
+    const excludedBySystem = new Map<string, Set<string>>();
+    for (let i = 0; i < c.benchmarkDecisionSystems.length; i++) {
+      const system = c.benchmarkDecisionSystems[i]!;
+      settledBySystem.set(system, new Set<string>());
+      excludedBySystem.set(system, new Set<string>());
+    }
+    for (let i = 0; i < ds.length; i++) {
+      const d = ds[i]!;
+      systemByDecision.set(d.recordId, d.decisionSystem);
+      raceByDecision.set(d.recordId, d.canonicalRaceId);
+    }
+    for (let i = 0; i < os.length; i++) {
+      const o = os[i]!;
+      const system = systemByDecision.get(o.decisionRecordId)!;
+      const race = raceByDecision.get(o.decisionRecordId)!;
+      if (o.finality === "FINAL" && o.disposition === "SETTLED" && o.evaluable === true) {
+        if (o.stakeYen === 0) return denyLocal("NONPOSITIVE_LOCAL_SETTLED_STAKE");
+        settledBySystem.get(system)!.add(race);
+      } else {
+        excludedBySystem.get(system)!.add(race);
+      }
+    }
+    const firstSystem = c.benchmarkDecisionSystems[0]!;
+    const referenceSettled = settledBySystem.get(firstSystem)!;
+    const referenceExcluded = excludedBySystem.get(firstSystem)!;
+    if (referenceSettled.size === 0) return denyLocal("NO_LOCALLY_SETTLED_RACES");
+    for (let i = 1; i < c.benchmarkDecisionSystems.length; i++) {
+      const system = c.benchmarkDecisionSystems[i]!;
+      const settled = settledBySystem.get(system)!;
+      if (settled.size !== referenceSettled.size) return denyLocal("UNEQUAL_LOCAL_SETTLED_RACE_SETS");
+      for (const race of referenceSettled) {
+        if (!settled.has(race)) return denyLocal("UNEQUAL_LOCAL_SETTLED_RACE_SETS");
+      }
+      const excluded = excludedBySystem.get(system)!;
+      if (excluded.size !== referenceExcluded.size) return denyLocal("UNEQUAL_LOCAL_EXCLUSION_RACE_SETS");
+      for (const race of referenceExcluded) {
+        if (!excluded.has(race)) return denyLocal("UNEQUAL_LOCAL_EXCLUSION_RACE_SETS");
+      }
+    }
+    return {
+      localOutcomeRaceSetsAligned: true,
+      scoringAuthorized: false,
+      blockers: [
+        "UNAPPROVED_PROTOCOL",
+        "PROSPECTIVE_COHORT_NOT_ATTESTED",
+        "INDEPENDENT_EXACT_SETTLEMENT_NOT_ATTESTED",
+        "TICKET_STAKE_AND_FROZEN_EXCLUSION_POLICY_NOT_VERIFIED",
+      ],
+    };
+  } catch {
+    return denyLocal("INVALID_LOCAL_OUTCOME_PARITY_CONTEXT");
+  }
+}
