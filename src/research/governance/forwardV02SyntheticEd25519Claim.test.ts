@@ -382,6 +382,16 @@ test("synthetic reference checks every settlement correction timestamp, not just
   };
   // The proof ref must track the terminal correction, not the provisional record.
   f.refs.settlementRevisionId = "synthetic-revision-2";
+  // This is a new request transcript: re-sign with the fixture's ephemeral key.
+  // Otherwise the earlier signature gate correctly rejects the changed chain
+  // before the reference-window behavior can be exercised.
+  const rebuilt = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(rebuilt.request);
+  const requestDigest = digestForwardV02UntrustedRequest(rebuilt.request);
+  f.claim.claimedRequestBindingDigest = requestDigest;
+  f.claim.claimedSignatureHex = sign(
+    null, Buffer.from(requestDigest, "hex"), f.privateKey,
+  ).toString("hex");
   // Caller policy covers the full chain. The separate reference starts later:
   // terminal-only checks would incorrectly accept the earlier provisional row.
   ref.validFrom = "2026-10-24T00:00:01Z";
