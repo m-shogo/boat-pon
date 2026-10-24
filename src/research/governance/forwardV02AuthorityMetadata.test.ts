@@ -164,3 +164,19 @@ test("invalid dates and fractional chronological inversion are rejected", () => 
   const e = envelope(); e.freeze.witness.receiptAt = "2026-10-24T00:00:00.00021Z";
   assert.equal(check(e).freezeStatus, "AFTER_DECISION");
 });
+
+test("no-op Array.prototype iterator cannot bypass frozen membership coverage", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator)!;
+  try {
+    Object.defineProperty(Array.prototype, Symbol.iterator, {
+      ...descriptor, value: function* () { /* synthetic no-op iterator */ },
+    });
+    const complete = check(envelope());
+    assert.equal(complete.metadataConsistent, true);
+    assert.equal(complete.scoringAuthorized, false);
+    const missing = envelope(); missing.freeze.excludedMembership = [];
+    assert.equal(check(missing).freezeStatus, "MISSING_MEMBERSHIP");
+  } finally {
+    Object.defineProperty(Array.prototype, Symbol.iterator, descriptor);
+  }
+});
