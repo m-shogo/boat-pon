@@ -10,7 +10,7 @@ import { FORWARD_V02_CANDIDATE_VERSION } from "./forwardEvaluationProtocolV02Can
 import {
   forwardV02FormulaReferenceDigest, forwardV02SourceManifestReferenceDigest,
 } from "./forwardV02ReferenceReconciliation";
-import { assessForwardV02LinkedBuyRaceParity } from "./forwardV02LinkedBuyRaceParity";
+import { assessForwardV02LinkedBuyRaceParity, assessForwardV02LocalOutcomeRaceParity } from "./forwardV02LinkedBuyRaceParity";
 import { assessForwardV02OutcomeLinkPreflight } from "./forwardV02OutcomeLinkPreflight";
 
 const h = (c: string) => c.repeat(64);
@@ -97,9 +97,10 @@ function candidate() {
   };
 }
 
-function bundle(ds: RuntimeDecisionLedgerRecord[]) {
+function bundle(ds: RuntimeDecisionLedgerRecord[], editOutcomes?: (rows: OutcomeLearningLedgerRecord[]) => void) {
   const c = candidate();
   const os = ds.map(outcome);
+  editOutcomes?.(os);
   const m = {
     schemaVersion: "forward-source-manifest.0.2-candidate",
     manifestId: "synthetic-source-manifest", evidenceStage: c.evidenceStage,
@@ -239,4 +240,93 @@ test("unsupported holdout stage cannot be inferred from shadow decisions", () =>
   b.r.expectedSourceManifestDigest = digest;
   b.r.resultSourceManifestDigest = digest;
   assert.deepEqual(reason(b), ["OUTCOME_LINK_NOT_VERIFIED"]);
+});
+
+
+function localReason(b: Bundle) {
+  return assessForwardV02LocalOutcomeRaceParity(b.c, b.r, b.ds, b.os).blockers;
+}
+function refund(o: OutcomeLearningLedgerRecord) {
+  o.disposition = "REFUNDED";
+  o.evaluable = false;
+  o.payoutYen = 0;
+  o.refundYen = 100;
+  o.refundReason = "synthetic-refund";
+}
+
+test("aligned locally settled and excluded race sets remain unauthorized", () => {
+  assert.deepEqual(assessForwardV02LocalOutcomeRaceParity(
+    aligned().c, aligned().r, aligned().ds, aligned().os,
+  ).blockers, [
+    "UNAPPROVED_PROTOCOL", "PROSPECTIVE_COHORT_NOT_ATTESTED",
+    "INDEPENDENT_EXACT_SETTLEMENT_NOT_ATTESTED",
+    "TICKET_STAKE_AND_FROZEN_EXCLUSION_POLICY_NOT_VERIFIED",
+  ]);
+  const b = aligned();
+  const result = assessForwardV02LocalOutcomeRaceParity(b.c, b.r, b.ds, b.os);
+  assert.equal(result.localOutcomeRaceSetsAligned, true);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("equal linked BUY races with asymmetric refund cannot pass local settlement parity", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-b", "1", "b1"),
+  ], (os) => refund(os[1]!));
+  assert.equal(check(b).linkedBuyRaceSetsAligned, true);
+  assert.deepEqual(localReason(b), ["UNEQUAL_LOCAL_SETTLED_RACE_SETS"]);
+});
+
+test("both systems entirely refunded do not produce vacuous local parity", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-b", "1", "b1"),
+  ], (os) => { refund(os[0]!); refund(os[1]!); });
+  assert.deepEqual(localReason(b), ["NO_LOCALLY_SETTLED_RACES"]);
+});
+
+test("different settled race sets with equal cardinality are rejected", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-a", "2", "a2"),
+    decision("synthetic-b", "1", "b1"), decision("synthetic-b", "2", "b2"),
+  ], (os) => { refund(os[1]!); refund(os[2]!); });
+  assert.deepEqual(localReason(b), ["UNEQUAL_LOCAL_SETTLED_RACE_SETS"]);
+});
+
+test("extra excluded ticket on a shared settled race remains visible", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1", "1-2-3"),
+    decision("synthetic-a", "1", "a2", "1-3-2"),
+    decision("synthetic-b", "1", "b1"),
+  ], (os) => refund(os[1]!));
+  assert.deepEqual(localReason(b), ["UNEQUAL_LOCAL_EXCLUSION_RACE_SETS"]);
+});
+
+test("symmetric local refund exclusions are retained, never scored", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-a", "2", "a2"),
+    decision("synthetic-b", "1", "b1"), decision("synthetic-b", "2", "b2"),
+  ], (os) => { refund(os[1]!); refund(os[3]!); });
+  const result = assessForwardV02LocalOutcomeRaceParity(b.c, b.r, b.ds, b.os);
+  assert.equal(result.localOutcomeRaceSetsAligned, true);
+  assert.equal(result.scoringAuthorized, false);
+  assert.ok(result.blockers.includes("INDEPENDENT_EXACT_SETTLEMENT_NOT_ATTESTED"));
+});
+
+test("zero-stake locally settled record is not treated as an eligible denominator", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-b", "1", "b1"),
+  ], (os) => { os[0]!.stakeYen = 0; });
+  assert.deepEqual(localReason(b), ["NONPOSITIVE_LOCAL_SETTLED_STAKE"]);
+});
+
+test("tampered outcome cannot bypass the linked-ledger preflight", () => {
+  const b = aligned();
+  b.os[0]!.payoutYen++;
+  assert.deepEqual(localReason(b), ["LINKED_BUY_RACE_PARITY_NOT_VERIFIED"]);
+});
+
+test("unequal initial BUY race sets are rejected before local outcome parity", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-b", "2", "b2"),
+  ]);
+  assert.deepEqual(localReason(b), ["LINKED_BUY_RACE_PARITY_NOT_VERIFIED"]);
 });
