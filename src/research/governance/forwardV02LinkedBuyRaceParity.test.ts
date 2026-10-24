@@ -11,6 +11,7 @@ import {
   forwardV02FormulaReferenceDigest, forwardV02SourceManifestReferenceDigest,
 } from "./forwardV02ReferenceReconciliation";
 import { assessForwardV02LinkedBuyRaceParity } from "./forwardV02LinkedBuyRaceParity";
+import { assessForwardV02OutcomeLinkPreflight } from "./forwardV02OutcomeLinkPreflight";
 
 const h = (c: string) => c.repeat(64);
 
@@ -149,6 +150,18 @@ test("equal-sized but different race sets fail closed", () => {
     decision("synthetic-a", "1", "a1"), decision("synthetic-b", "2", "b2"),
   ]);
   assert.deepEqual(reason(b), ["UNEQUAL_LINKED_BUY_RACE_SETS"]);
+});
+
+test("content-consistent ledgers do not prove cross-system race parity", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-b", "2", "b2"),
+  ]);
+  assert.equal(
+    assessForwardV02OutcomeLinkPreflight(b.c, b.r, b.ds, b.os).outcomeReferencesLinked,
+    true,
+  );
+  assert.deepEqual(reason(b), ["UNEQUAL_LINKED_BUY_RACE_SETS"]);
+  assert.equal(check(b).scoringAuthorized, false);
 });
 
 test("extra race on one system fails closed", () => {
