@@ -44,7 +44,7 @@ function assessment(
 }
 
 /** Only own enumerable data properties; do not invoke input getters/iterators. */
-function snapshot(input: unknown): Record<string, unknown> | null {
+export function snapshotForwardV02SyntheticClaim(input: unknown): Record<string, unknown> | null {
   if (input === null || typeof input !== "object" || Array.isArray(input)) return null;
   try {
     const proto = Object.getPrototypeOf(input);
@@ -76,7 +76,7 @@ export function assessForwardV02SyntheticEd25519Claim(
   if (!built.metadataConsistent || built.request === null) {
     return assessment(false, false, "REQUEST_NOT_READY");
   }
-  const c = snapshot(claimInput);
+  const c = snapshotForwardV02SyntheticClaim(claimInput);
   if (!c || c.schemaVersion !== CLAIM_VERSION ||
       typeof c.claimedSignerId !== "string" || !ID.test(c.claimedSignerId) ||
       typeof c.claimedPublicKeySpkiPem !== "string" ||
