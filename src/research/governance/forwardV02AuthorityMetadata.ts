@@ -129,10 +129,12 @@ export function assessForwardV02AuthorityMetadata(input: unknown): ForwardV02Aut
     const expected = new Set<string>();
     for (let i = 0; i < f.expectedMembership.length; i++) expected.add(f.expectedMembership[i]!);
     const covered = new Set<string>();
+    const included = new Set<string>();
     for (let i = 0; i < f.includedMembership.length; i++) {
       const id = f.includedMembership[i]!;
       if (!expected.has(id) || covered.has(id)) return result("CONFLICT", good);
       covered.add(id);
+      included.add(id);
     }
     for (let i = 0; i < f.excludedMembership.length; i++) {
       const id = f.excludedMembership[i]!;
@@ -154,6 +156,10 @@ export function assessForwardV02AuthorityMetadata(input: unknown): ForwardV02Aut
     if ((s.disposition === "SETTLED") !== s.evaluable) {
       return result(good, "UNRESOLVED_REFUND_OR_INVALIDATION");
     }
+    // A caller cannot score a terminal SETTLED result for a decision that
+    // the same frozen membership envelope explicitly excluded. Preserve
+    // non-evaluable refund/void evidence without promoting it to scoring.
+    if (s.evaluable && !included.has(s.decisionId)) return result(good, "CONFLICT");
     const ids = new Set<string>(), digests = new Set<string>();
     let predecessor: string | null = null;
     let previousAt: string | null = null;
