@@ -10,6 +10,7 @@
 import { createHash, createPublicKey } from "node:crypto";
 import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
 import { assessForwardV02SyntheticClaimedAnchorBinding } from "./forwardV02SyntheticClaimedAnchorBinding";
+import { snapshotForwardV02SyntheticClaim } from "./forwardV02SyntheticEd25519Claim";
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 
 const REFERENCE_KEYS = [
@@ -101,8 +102,12 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   if (roleInput !== "WITNESS" && roleInput !== "SETTLEMENT") {
     return result(false, false, false, "INVALID_REFERENCE_ROLE");
   }
+  // A later reference-key lookup must use the same claim snapshot that
+  // passed signature math and claimed-anchor correlation, not a mutable proxy.
+  const claim = snapshotForwardV02SyntheticClaim(claimInput);
+  if (claim === null) return result(false, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
   const claimed = assessForwardV02SyntheticClaimedAnchorBinding(
-    envelopeInput, policyInput, proofRefsInput, claimInput, roleInput,
+    envelopeInput, policyInput, proofRefsInput, claim, roleInput,
   );
   if (!claimed.signatureMathConsistent || !claimed.claimedAnchorKeyDigestMatches) {
     return result(claimed.signatureMathConsistent, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
@@ -116,7 +121,7 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   // The claimed signature was checked against an earlier request build.
   // Re-bind this second snapshot: caller-owned proxies may change fields
   // between the mathematical check and this reference comparison.
-  if (claimedBindingDigest(claimInput) !==
+  if (claimedBindingDigest(claim) !==
       digestForwardV02UntrustedRequest(built.request)) {
     return result(true, true, false, "SYNTHETIC_REFERENCE_REQUEST_CHANGED");
   }
@@ -141,7 +146,7 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   if (ref.role !== roleInput || ref.authorityId !== authority || ref.anchorId !== anchor) {
     return result(true, true, false, "SYNTHETIC_REFERENCE_IDENTITY_MISMATCH");
   }
-  const digest = claimedKeyDigest(claimInput);
+  const digest = claimedKeyDigest(claim);
   if (digest === null || ref.publicKeyDigest !== digest) {
     return result(true, true, false, "SYNTHETIC_REFERENCE_KEY_MISMATCH");
   }
