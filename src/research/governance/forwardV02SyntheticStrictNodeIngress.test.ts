@@ -251,3 +251,23 @@ test("strict synthetic reference ingress preserves missing-reference classificat
     f.envelope, f.policy, f.refs, f.claim, "WITNESS", undefined,
   ).blockers, ["SYNTHETIC_REFERENCE_MISSING"]);
 });
+
+test("strict synthetic ingress retains SETTLEMENT role and caller-only authority status", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-settlement-source";
+  f.policy.anchors[1]!.publicKeyDigest = f.reference.publicKeyDigest;
+  f.reference.role = "SETTLEMENT";
+  f.reference.authorityId = "synthetic-settlement-source";
+  f.reference.anchorId = "synthetic-settlement-anchor";
+  const c = strictClaim(f.envelope, f.policy, f.refs, f.claim, "SETTLEMENT");
+  const r = strictReference(
+    f.envelope, f.policy, f.refs, f.claim, "SETTLEMENT", f.reference,
+  );
+  assert.equal(c.signatureMathConsistent, true);
+  assert.equal(c.claimedAnchorKeyDigestMatches, true);
+  assert.deepEqual(c.blockers, ["CALLER_CLAIMED_ANCHOR_NOT_AUTHORITY"]);
+  assert.equal(r.referenceCorrelationConsistent, true);
+  assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_NOT_INDEPENDENT_AUTHORITY"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
