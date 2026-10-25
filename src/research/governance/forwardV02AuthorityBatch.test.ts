@@ -108,3 +108,45 @@ test("empty and non-array batches cannot claim authority", () => {
     assert.equal(check(value).scoringAuthorized, false);
   }
 });
+
+test("batch replay pins first cohort before later array descriptor mutates its receipt commitment", () => {
+  const first = envelope(), second = copy(first);
+  second.freeze.cohortId = "synthetic-other-cohort";
+  let secondDescriptorReads = 0;
+  const input = new Proxy([first, second], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "1" && ++secondDescriptorReads === 2) {
+        first.freeze.cohortId = "synthetic-other-cohort";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = check(input);
+  assert.ok(secondDescriptorReads >= 2, "later array descriptor mutation must execute");
+  assert.equal(first.freeze.cohortId, "synthetic-other-cohort");
+  assert.deepEqual(r.blockers, ["RECEIPT_REPLAY_CONFLICT"]);
+  assert.equal(r.metadataConsistent, false);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("batch replay pins first revision before later array descriptor rewrites its content digest", () => {
+  const first = envelope(), second = copy(first);
+  second.settlement.revisions[0]!.contentDigest = h("e");
+  let secondDescriptorReads = 0;
+  const input = new Proxy([first, second], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "1" && ++secondDescriptorReads === 2) {
+        first.settlement.revisions[0]!.contentDigest = h("e");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = check(input);
+  assert.ok(secondDescriptorReads >= 2, "later array descriptor mutation must execute");
+  assert.equal(first.settlement.revisions[0]!.contentDigest, h("e"));
+  assert.deepEqual(r.blockers, ["SOURCE_REVISION_REPLAY_CONFLICT"]);
+  assert.equal(r.metadataConsistent, false);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
