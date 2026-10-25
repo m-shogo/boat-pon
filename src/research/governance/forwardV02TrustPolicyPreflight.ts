@@ -215,7 +215,11 @@ export function assessForwardV02TrustPolicyPreflight(
       if (ids.has(key)) return deny("DUPLICATE_POLICY_ANCHOR");
       ids.add(key);
       // Preserve the exact validated anchor even if ambient Array.prototype.push is patched.
-      anchors[i] = anchor;
+      // A prototype numeric setter must not intercept the validated anchor
+      // list either (even though the input graph has already been detached).
+      Object.defineProperty(anchors, String(i), {
+        value: anchor, enumerable: true, writable: true, configurable: true,
+      });
     }
     if (!exact(proofRefsInput, REFS_KEYS) ||
         proofRefsInput.schemaVersion !== "forward-v02-proof-refs.0.1-untrusted" ||
