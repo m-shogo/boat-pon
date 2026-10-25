@@ -148,17 +148,20 @@ test("strict synthetic ingress rejects nested policy Proxy before it repairs pro
 
 test("strict synthetic ingress rejects proof refs Proxy before it repairs the claim", () => {
   const f = fixture();
+  const originalSignature = f.claim.claimedSignatureHex;
   f.claim.claimedSignatureHex = "0".repeat(128);
   let traps = 0;
   const refs = new Proxy(f.refs, {
     ownKeys(target) {
       traps++;
+      f.claim.claimedSignatureHex = originalSignature;
       return Reflect.ownKeys(target);
     },
   });
   assert.deepEqual(claimed(f, f.envelope, f.policy, refs).blockers, ["SIGNATURE_NOT_CONSISTENT"]);
   assert.deepEqual(referenced(f, f.envelope, f.policy, refs).blockers, ["CLAIMED_ANCHOR_NOT_BOUND"]);
   assert.equal(traps, 0);
+  assert.equal(f.claim.claimedSignatureHex, "0".repeat(128));
 });
 
 test("strict synthetic ingress rejects claim Proxy before it repairs an earlier envelope", () => {
