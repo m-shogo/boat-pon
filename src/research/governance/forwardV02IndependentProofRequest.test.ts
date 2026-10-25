@@ -331,3 +331,46 @@ test("proof-request builder preserves invalid-envelope precedence after snapshot
   assert.equal(r.request, null);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("request revision handoff bypasses an inherited numeric index setter", () => {
+  const f = fixture();
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  for (let i = 2; i <= 19; i++) {
+    const prior = f.envelope.settlement.revisions[i - 2]!;
+    f.envelope.settlement.revisions.push({
+      revisionId: `synthetic-revision-${i}`,
+      contentDigest: h(String(i % 10)),
+      predecessorDigest: prior.contentDigest,
+      sequence: i,
+      observedAt: `2026-10-24T00:00:${String(i).padStart(2, "0")}Z`,
+      sourceFinality: i === 19 ? "FINAL" : "PROVISIONAL",
+    });
+  }
+  f.refs.settlementRevisionId = "synthetic-revision-19";
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, "17");
+  let intercepted = 0;
+  let outcome: ReturnType<typeof check> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "17", {
+      configurable: true,
+      set: function (this: unknown[], item: unknown) {
+        intercepted++;
+        Object.defineProperty(this, "17", {
+          value: Object.freeze({ ...(item as object), contentDigest: h("f") }),
+          enumerable: true, writable: true, configurable: true,
+        });
+      },
+    });
+    outcome = check(f);
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, "17", previous);
+    else Reflect.deleteProperty(Array.prototype, "17");
+  }
+  assert.equal(intercepted, 0, "validated revisions must bypass prototype setters");
+  assert.equal(outcome?.metadataConsistent, true);
+  assert.equal(outcome?.request?.settlement.revisions.length, 19);
+  assert.equal(outcome?.request?.settlement.revisions[17]?.contentDigest, h("8"));
+  assert.equal(outcome?.request?.settlement.revisions[18]?.revisionId, "synthetic-revision-19");
+  assert.equal(outcome?.independentAuthorityVerified, false);
+  assert.equal(outcome?.scoringAuthorized, false);
+});
