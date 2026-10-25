@@ -274,3 +274,60 @@ test("descriptor-only snapshot retains validated correction content across the h
   assert.equal(r.scoringAuthorized, false);
   assert.equal(directReads, 0, "caller revision get traps must not run during validation or copy");
 });
+
+test("proof-request builder pins revoked policy before envelope Proxy can activate it", () => {
+  const f = fixture();
+  f.policy.anchors[0]!.state = "REVOKED";
+  let mutated = 0;
+  const envelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "schemaVersion") {
+        mutated++;
+        f.policy.anchors[0]!.state = "ACTIVE";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = buildForwardV02IndependentProofRequest(envelope, f.policy, f.refs);
+  assert.ok(mutated > 0, "envelope descriptor mutation must execute");
+  assert.equal(f.policy.anchors[0]!.state, "ACTIVE");
+  assert.equal(r.metadataConsistent, false);
+  assert.deepEqual(r.blockers, ["REVOKED_WITNESS_ANCHOR"]);
+  assert.equal(r.request, null);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("proof-request builder pins mismatched refs before envelope Proxy can repair them", () => {
+  const f = fixture();
+  f.refs.policySnapshotDigest = h("f");
+  let mutated = 0;
+  const envelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "schemaVersion") {
+        mutated++;
+        f.refs.policySnapshotDigest = h("e");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = buildForwardV02IndependentProofRequest(envelope, f.policy, f.refs);
+  assert.ok(mutated > 0, "envelope descriptor mutation must execute");
+  assert.equal(f.refs.policySnapshotDigest, h("e"));
+  assert.equal(r.metadataConsistent, false);
+  assert.deepEqual(r.blockers, ["UNBOUND_PROOF_REFS"]);
+  assert.equal(r.request, null);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("proof-request builder preserves invalid-envelope precedence after snapshot reordering", () => {
+  const f = fixture();
+  f.envelope.freeze.includedMembership = [];
+  f.policy.anchors[0]!.state = "REVOKED";
+  f.refs.policySnapshotDigest = h("f");
+  const r = check(f);
+  assert.deepEqual(r.blockers, ["INVALID_ENVELOPE"]);
+  assert.equal(r.request, null);
+  assert.equal(r.scoringAuthorized, false);
+});
