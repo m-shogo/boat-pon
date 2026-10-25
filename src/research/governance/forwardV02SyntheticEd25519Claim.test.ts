@@ -706,3 +706,53 @@ test("standalone signature math cannot borrow a signature corrected during reque
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+
+test("synthetic claim snapshot does not run a live toJSON has trap that repairs an invalid signature", () => {
+  const f = fixture();
+  const originalSignature = f.claim.claimedSignatureHex;
+  f.claim.claimedSignatureHex = "0".repeat(128);
+  let hasTrapCalls = 0;
+  const claim = new Proxy(f.claim, {
+    has(target, key) {
+      if (key === "toJSON") {
+        hasTrapCalls++;
+        target.claimedSignatureHex = originalSignature;
+      }
+      return Reflect.has(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticEd25519Claim(f.envelope, f.policy, f.refs, claim);
+  assert.equal(hasTrapCalls, 0, "live claim membership trap must not execute");
+  assert.equal(f.claim.claimedSignatureHex, "0".repeat(128));
+  assert.equal(r.requestMetadataConsistent, true);
+  assert.equal(r.signatureMathConsistent, false);
+  assert.deepEqual(r.blockers, ["SIGNATURE_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("synthetic reference snapshot does not run a live toJSON has trap that repairs revocation", () => {
+  const f = fixture();
+  const reference = syntheticReference(f, "WITNESS");
+  reference.state = "REVOKED";
+  let hasTrapCalls = 0;
+  const input = new Proxy(reference, {
+    has(target, key) {
+      if (key === "toJSON") {
+        hasTrapCalls++;
+        target.state = "ACTIVE";
+      }
+      return Reflect.has(target, key);
+    },
+  });
+  const r = referenceCheck(f, "WITNESS", input);
+  assert.equal(hasTrapCalls, 0, "live reference membership trap must not execute");
+  assert.equal(reference.state, "REVOKED");
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, true);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_REVOKED"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
