@@ -339,7 +339,7 @@ test("request revision handoff bypasses an inherited numeric index setter", () =
     const prior = f.envelope.settlement.revisions[i - 2]!;
     f.envelope.settlement.revisions.push({
       revisionId: `synthetic-revision-${i}`,
-      contentDigest: h(String(i % 10)),
+      contentDigest: i.toString(16).padStart(64, "0"),
       predecessorDigest: prior.contentDigest,
       sequence: i,
       observedAt: `2026-10-24T00:00:${String(i).padStart(2, "0")}Z`,
@@ -369,7 +369,7 @@ test("request revision handoff bypasses an inherited numeric index setter", () =
   assert.equal(intercepted, 0, "validated revisions must bypass prototype setters");
   assert.equal(outcome?.metadataConsistent, true);
   assert.equal(outcome?.request?.settlement.revisions.length, 19);
-  assert.equal(outcome?.request?.settlement.revisions[17]?.contentDigest, h("8"));
+  assert.equal(outcome?.request?.settlement.revisions[17]?.contentDigest, (18).toString(16).padStart(64, "0"));
   assert.equal(outcome?.request?.settlement.revisions[18]?.revisionId, "synthetic-revision-19");
   assert.equal(outcome?.independentAuthorityVerified, false);
   assert.equal(outcome?.scoringAuthorized, false);
