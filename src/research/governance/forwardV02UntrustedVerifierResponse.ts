@@ -167,19 +167,16 @@ function snapshotExact(input: unknown, keys: readonly string[]): Record<string, 
 }
 
 function snapshotDigests(input: unknown): string[] | null {
-  if (!Array.isArray(input)) return null;
   try {
-    if (Object.getPrototypeOf(input) !== Array.prototype || "toJSON" in input ||
-        Reflect.ownKeys(input).length !== input.length + 1 ||
-        input.length < 1 || input.length > 10000) return null;
-    const result: string[] = [];
-    for (let i = 0; i < input.length; i++) {
-      const d = Object.getOwnPropertyDescriptor(input, String(i));
-      if (!d || !d.enumerable || !("value" in d) ||
-          typeof d.value !== "string" || !DIGEST.test(d.value)) return null;
-      result[i] = d.value;
+    // The caller's array length is a property read, not a descriptor read.
+    // A Proxy can report a shorter length after the key-count check and hide
+    // an extra correction digest. Pin length and all dense elements together.
+    const pinned = snapshotForwardV02UntrustedGraph(input);
+    if (!Array.isArray(pinned) || pinned.length < 1 || pinned.length > 10000) return null;
+    for (let i = 0; i < pinned.length; i++) {
+      if (typeof pinned[i] !== "string" || !DIGEST.test(pinned[i])) return null;
     }
-    return result;
+    return pinned as string[];
   } catch { return null; }
 }
 
