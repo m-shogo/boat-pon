@@ -49,8 +49,13 @@ function snapshot(input: unknown): Record<string, unknown> | null {
   if (input === null || typeof input !== "object" || Array.isArray(input)) return null;
   try {
     const proto = Object.getPrototypeOf(input);
+    // Never run a caller Proxy's toJSON membership trap before snapshot:
+    // it can repair a revoked/mismatching reference prior to descriptor copy.
+    // Exact keys reject an own toJSON; check only the known prototype for
+    // inherited toJSON without invoking caller-controlled has.
     if ((proto !== Object.prototype && proto !== null) ||
-        "toJSON" in input || Reflect.ownKeys(input).length !== REFERENCE_KEYS.length) return null;
+        (proto !== null && "toJSON" in proto) ||
+        Reflect.ownKeys(input).length !== REFERENCE_KEYS.length) return null;
     const out: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
     for (let i = 0; i < REFERENCE_KEYS.length; i++) {
       const key = REFERENCE_KEYS[i]!;
