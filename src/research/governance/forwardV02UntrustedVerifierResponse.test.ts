@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assessForwardV02UntrustedVerifierResponse, digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
+import { assessForwardV02UntrustedVerifierResponse, assessForwardV02UntrustedVerifierResponseStrictNodeIngress, digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
 
 const h = (c: string) => c.repeat(64);
@@ -495,4 +495,133 @@ test("untrusted verifier blockers bypass inherited numeric index setters", () =>
   assert.equal(outcome?.responseMetadataConsistent, true);
   assert.equal(outcome?.independentAuthorityVerified, false);
   assert.equal(outcome?.scoringAuthorized, false);
+});
+
+
+const strictResponseCheck = (f: ReturnType<typeof fixture>) =>
+  assessForwardV02UntrustedVerifierResponseStrictNodeIngress(
+    f.envelope, f.policy, f.refs, f.response,
+  );
+
+test("strict Node response ingress preserves matching untrusted and mismatched semantics", () => {
+  const f = fixture();
+  assert.deepEqual(strictResponseCheck(f), check(f));
+  assert.equal(strictResponseCheck(f).independentAuthorityVerified, false);
+  assert.equal(strictResponseCheck(f).scoringAuthorized, false);
+  f.response.requestBindingDigest = h("0");
+  assert.deepEqual(strictResponseCheck(f).blockers, ["UNBOUND_VERIFIER_RESPONSE"]);
+});
+
+test("strict Node response ingress rejects root response Proxy before binding repair", () => {
+  const f = fixture();
+  f.response.requestBindingDigest = h("0");
+  let traps = 0;
+  f.response = new Proxy(f.response, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      if (key === "claimedSettlementStatus") {
+        const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+        assert.ok(built.request);
+        target.requestBindingDigest = digestForwardV02UntrustedRequest(built.request);
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = strictResponseCheck(f);
+  assert.equal(traps, 0);
+  assert.deepEqual(r.blockers, ["INVALID_VERIFIER_RESPONSE"]);
+  assert.equal(f.response.requestBindingDigest, h("0"));
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("strict Node response ingress rejects nested revision Proxy before digest repair", () => {
+  const f = fixture();
+  f.response.revisionContentDigests[0] = h("0");
+  let traps = 0;
+  f.response.revisionContentDigests = new Proxy(f.response.revisionContentDigests, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      if (key === "length") target[0] = h("d");
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = strictResponseCheck(f);
+  assert.equal(traps, 0);
+  assert.deepEqual(r.blockers, ["INVALID_VERIFIER_RESPONSE"]);
+  assert.equal(f.response.revisionContentDigests[0], h("0"));
+  assert.equal(r.independentAuthorityVerified, false);
+});
+
+test("strict Node response ingress rejects envelope Proxy before response repair", () => {
+  const f = fixture();
+  f.response.requestBindingDigest = h("0");
+  let traps = 0;
+  f.envelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      if (key === "freeze") f.response.requestBindingDigest = h("a");
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = strictResponseCheck(f);
+  assert.equal(traps, 0);
+  assert.deepEqual(r.blockers, ["REQUEST_NOT_READY"]);
+  assert.equal(f.response.requestBindingDigest, h("0"));
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("strict Node response ingress rejects nested policy Proxy before response repair", () => {
+  const f = fixture();
+  f.response.requestBindingDigest = h("0");
+  let traps = 0;
+  f.policy.anchors[0] = new Proxy(f.policy.anchors[0]!, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      if (key === "state") f.response.requestBindingDigest = h("a");
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = strictResponseCheck(f);
+  assert.equal(traps, 0);
+  assert.deepEqual(r.blockers, ["REQUEST_NOT_READY"]);
+  assert.equal(f.response.requestBindingDigest, h("0"));
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("strict Node response ingress rejects proof-reference Proxy before response repair", () => {
+  const f = fixture();
+  f.response.requestBindingDigest = h("0");
+  let traps = 0;
+  f.refs = new Proxy(f.refs, {
+    ownKeys(target) {
+      traps++;
+      f.response.requestBindingDigest = h("a");
+      return Reflect.ownKeys(target);
+    },
+  });
+  const r = strictResponseCheck(f);
+  assert.equal(traps, 0);
+  assert.deepEqual(r.blockers, ["REQUEST_NOT_READY"]);
+  assert.equal(f.response.requestBindingDigest, h("0"));
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("strict Node response ingress rejects revoked Proxy and accessor without executing getter", () => {
+  const f = fixture();
+  const revoked = Proxy.revocable(f.response, {});
+  revoked.revoke();
+  assert.deepEqual(
+    assessForwardV02UntrustedVerifierResponseStrictNodeIngress(
+      f.envelope, f.policy, f.refs, revoked.proxy,
+    ).blockers,
+    ["INVALID_VERIFIER_RESPONSE"],
+  );
+  let getterCalls = 0;
+  Object.defineProperty(f.response, "claimedVerifierId", {
+    enumerable: true, get() { getterCalls++; return "synthetic-verifier"; },
+  });
+  const r = strictResponseCheck(f);
+  assert.deepEqual(r.blockers, ["INVALID_VERIFIER_RESPONSE"]);
+  assert.equal(getterCalls, 0);
+  assert.equal(r.scoringAuthorized, false);
 });
