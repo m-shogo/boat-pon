@@ -238,3 +238,13 @@ test("strict synthetic ingress retains role priority and ordinary invalid refere
   ));
   assert.deepEqual(referenced(f).blockers, ["SYNTHETIC_REFERENCE_REVOKED"]);
 });
+
+test("strict synthetic reference ingress preserves missing-reference classification", () => {
+  const f = fixture();
+  assert.deepEqual(strictReference(
+    f.envelope, f.policy, f.refs, f.claim, "WITNESS", null,
+  ).blockers, ["SYNTHETIC_REFERENCE_MISSING"]);
+  assert.deepEqual(strictReference(
+    f.envelope, f.policy, f.refs, f.claim, "WITNESS", undefined,
+  ).blockers, ["SYNTHETIC_REFERENCE_MISSING"]);
+});
