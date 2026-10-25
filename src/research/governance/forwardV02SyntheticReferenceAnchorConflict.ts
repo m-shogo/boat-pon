@@ -8,7 +8,7 @@
  * Offline metadata only; no network, filesystem, secrets or production paths.
  */
 import { createHash, createPublicKey } from "node:crypto";
-import { buildForwardV02IndependentProofRequest, snapshotForwardV02UntrustedPolicy } from "./forwardV02IndependentProofRequest";
+import { buildForwardV02IndependentProofRequest, snapshotForwardV02UntrustedGraph, snapshotForwardV02UntrustedPolicy } from "./forwardV02IndependentProofRequest";
 import { assessForwardV02SyntheticClaimedAnchorBinding } from "./forwardV02SyntheticClaimedAnchorBinding";
 import { snapshotForwardV02SyntheticClaim } from "./forwardV02SyntheticEd25519Claim";
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
@@ -121,18 +121,24 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   // and no atomic snapshot across adversarial inputs is claimed.
   const policy = snapshotForwardV02UntrustedPolicy(policyInput);
   if (policy === null) return result(false, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
+  // Pin proof refs before the claim Proxy can repair an initially unbound
+  // digest. Both nested claimed-anchor math and the final request build must
+  // reuse these detached refs, not a later caller-owned revision.
+  let refs: unknown;
+  try { refs = snapshotForwardV02UntrustedGraph(proofRefsInput); }
+  catch { refs = undefined; }
   // A later reference-key lookup must use the same claim snapshot that
   // passed signature math and claimed-anchor correlation, not a mutable proxy.
   const claim = snapshotForwardV02SyntheticClaim(claimInput);
   if (claim === null) return result(false, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
   const claimed = assessForwardV02SyntheticClaimedAnchorBinding(
-    envelopeInput, policy, proofRefsInput, claim, roleInput,
+    envelopeInput, policy, refs, claim, roleInput,
   );
   if (!claimed.signatureMathConsistent || !claimed.claimedAnchorKeyDigestMatches) {
     return result(claimed.signatureMathConsistent, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
   }
   const built = buildForwardV02IndependentProofRequest(
-    envelopeInput, policy, proofRefsInput,
+    envelopeInput, policy, refs,
   );
   if (!built.metadataConsistent || built.request === null) {
     return result(true, true, false, "REQUEST_NOT_READY");
