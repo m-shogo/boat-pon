@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 import { assessForwardV02Candidate } from "./forwardEvaluationProtocolV02Candidate";
 import { snapshotForwardV02UntrustedGraph } from "./forwardV02IndependentProofRequest";
 
@@ -166,4 +167,22 @@ export function assessForwardV02ReferenceReconciliation(
       blockers: ["UNAPPROVED_PROTOCOL", "INDEPENDENT_AUTHORITY_NOT_ATTESTED", "SETTLEMENT_AND_ENROLLMENT_NOT_VERIFIED"],
     };
   } catch { return blocked("INVALID_REFERENCE_SHAPE"); }
+}
+
+/**
+ * Opt-in Node-only ingress for two caller-owned reference graphs.
+ * Rejects root/nested/revoked Proxies and accessors before their traps,
+ * then delegates to the unchanged, deny-only reference reconciler.
+ * Input capture is not atomic against external concurrent writers and
+ * matching references never authenticate an independent authority.
+ */
+export function assessForwardV02ReferenceReconciliationStrictNodeIngress(
+  candidate: unknown, references: unknown,
+): ForwardV02ReferenceAssessment {
+  let pinnedCandidate: unknown, pinnedReferences: unknown;
+  try { pinnedCandidate = snapshotForwardV02UntrustedGraphRejectingProxies(candidate); }
+  catch { return blocked("INVALID_V02_CANDIDATE"); }
+  try { pinnedReferences = snapshotForwardV02UntrustedGraphRejectingProxies(references); }
+  catch { return blocked("INVALID_REFERENCE_SHAPE"); }
+  return assessForwardV02ReferenceReconciliation(pinnedCandidate, pinnedReferences);
 }
