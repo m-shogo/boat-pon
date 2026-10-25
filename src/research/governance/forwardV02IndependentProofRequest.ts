@@ -119,13 +119,20 @@ function snapshotRejected(reason: string): ForwardV02ProofRequestAssessment {
 export function buildForwardV02IndependentProofRequest(
   envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
 ): ForwardV02ProofRequestAssessment {
+  // Pin policy and proof refs before traversing the caller-owned envelope.
+  // An envelope descriptor Proxy can otherwise repair a revoked anchor or
+  // mismatched proof ref before the later snapshots. Preserve INVALID_ENVELOPE
+  // precedence by deferring the other snapshot failures until after capture.
   let envelopeSnapshot: unknown, policySnapshot: unknown, refsSnapshot: unknown;
+  let policySnapshotFailed = false, refsSnapshotFailed = false;
+  try { policySnapshot = snapshotForwardV02UntrustedGraph(policyInput); }
+  catch { policySnapshotFailed = true; }
+  try { refsSnapshot = snapshotForwardV02UntrustedGraph(proofRefsInput); }
+  catch { refsSnapshotFailed = true; }
   try { envelopeSnapshot = snapshotForwardV02UntrustedGraph(envelopeInput); }
   catch { return snapshotRejected("INVALID_ENVELOPE"); }
-  try { policySnapshot = snapshotForwardV02UntrustedGraph(policyInput); }
-  catch { return snapshotRejected("INVALID_POLICY"); }
-  try { refsSnapshot = snapshotForwardV02UntrustedGraph(proofRefsInput); }
-  catch { return snapshotRejected("INVALID_PROOF_REFS"); }
+  if (policySnapshotFailed) return snapshotRejected("INVALID_POLICY");
+  if (refsSnapshotFailed) return snapshotRejected("INVALID_PROOF_REFS");
   const preflight = assessForwardV02TrustPolicyPreflight(
     envelopeSnapshot, policySnapshot, refsSnapshot,
   );
