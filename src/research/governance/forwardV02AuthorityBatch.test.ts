@@ -115,14 +115,14 @@ test("batch replay pins first cohort before later array descriptor mutates its r
   let secondDescriptorReads = 0;
   const input = new Proxy([first, second], {
     getOwnPropertyDescriptor(target, key) {
-      if (key === "1" && ++secondDescriptorReads === 2) {
+      if (key === "1" && ++secondDescriptorReads === 1) {
         first.freeze.cohortId = "synthetic-other-cohort";
       }
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
   });
   const r = check(input);
-  assert.ok(secondDescriptorReads >= 2, "later array descriptor mutation must execute");
+  assert.ok(secondDescriptorReads >= 1, "later array descriptor mutation must execute");
   assert.equal(first.freeze.cohortId, "synthetic-other-cohort");
   assert.deepEqual(r.blockers, ["RECEIPT_REPLAY_CONFLICT"]);
   assert.equal(r.metadataConsistent, false);
@@ -136,14 +136,58 @@ test("batch replay pins first revision before later array descriptor rewrites it
   let secondDescriptorReads = 0;
   const input = new Proxy([first, second], {
     getOwnPropertyDescriptor(target, key) {
-      if (key === "1" && ++secondDescriptorReads === 2) {
+      if (key === "1" && ++secondDescriptorReads === 1) {
         first.settlement.revisions[0]!.contentDigest = h("e");
       }
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
   });
   const r = check(input);
-  assert.ok(secondDescriptorReads >= 2, "later array descriptor mutation must execute");
+  assert.ok(secondDescriptorReads >= 1, "later array descriptor mutation must execute");
+  assert.equal(first.settlement.revisions[0]!.contentDigest, h("e"));
+  assert.deepEqual(r.blockers, ["SOURCE_REVISION_REPLAY_CONFLICT"]);
+  assert.equal(r.metadataConsistent, false);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("live batch length getter cannot repair a conflicting receipt before snapshot", () => {
+  const first = envelope(), second = copy(first);
+  first.freeze.cohortId = "synthetic-other-cohort";
+  let lengthGetterCalls = 0;
+  const input = new Proxy([first, second], {
+    get(target, key, receiver) {
+      if (key === "length") {
+        lengthGetterCalls++;
+        first.freeze.cohortId = "synthetic-cohort";
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const r = check(input);
+  assert.equal(lengthGetterCalls, 0, "caller-controlled length getter must not run");
+  assert.equal(first.freeze.cohortId, "synthetic-other-cohort");
+  assert.deepEqual(r.blockers, ["RECEIPT_REPLAY_CONFLICT"]);
+  assert.equal(r.metadataConsistent, false);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("live batch toJSON has trap cannot repair a conflicting source revision before snapshot", () => {
+  const first = envelope(), second = copy(first);
+  first.settlement.revisions[0]!.contentDigest = h("e");
+  let hasTrapCalls = 0;
+  const input = new Proxy([first, second], {
+    has(target, key) {
+      if (key === "toJSON") {
+        hasTrapCalls++;
+        first.settlement.revisions[0]!.contentDigest = h("d");
+      }
+      return Reflect.has(target, key);
+    },
+  });
+  const r = check(input);
+  assert.equal(hasTrapCalls, 0, "caller-controlled membership trap must not run");
   assert.equal(first.settlement.revisions[0]!.contentDigest, h("e"));
   assert.deepEqual(r.blockers, ["SOURCE_REVISION_REPLAY_CONFLICT"]);
   assert.equal(r.metadataConsistent, false);
