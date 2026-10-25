@@ -1,0 +1,36 @@
+{
+  "learningId": "LEARN-forward-v02-array-prototype-index-setter-snapshot-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-array-prototype-index-setter-snapshot-mutation",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "snapshot-forward-v02-untrusted-graph-and-trust-policy-preflight",
+  "symptom": "An ambient Array.prototype numeric-index setter intercepted ordinary out[i] assignment during bounded graph/policy snapshots and anchor accumulation. In a local synthetic 19-element reproduction, the setter changed a later caller-owned element before it was copied. For a policy with an initially invalid later anchor, the setter could repair the original anchor and install the intercepted array index, allowing a later metadata-consistent verdict. This is not independent proof or scoring authority.",
+  "rootCauseClass": "INHERITED_NUMERIC_INDEX_SETTER_MUTATES_LATER_SNAPSHOT_INPUT",
+  "attemptSignature": "pr2286-v328-define-own-array-index-in-snapshots-and-anchor-accumulation-two-negative-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedSnapshot+TrustPolicyPreflight.0.1/pr2286-6706a135/inherited-index-setter-on-array-assignment"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedSnapshot.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "commit/5c99a9ceb4048f7c9c4aa3391bde8a5b101c630b",
+    "commit/88c1182567e1700c77b7dacbd68c8cb0735adfef",
+    "commit/6f2567e7132e699b426a079a72f1bdc791c0b44a",
+    "commit/02e323eca8efa021cde00b8430891bc54aca98eb",
+    "commit/50a09a3f3f77f0308dcac494ad3a1eb0c393d1c6",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-helpers-20261024.json",
+    "research/registries/learnings/LEARN-forward-vault-array-prototype-tojson-20261024.json"
+  ],
+  "lesson": "Descriptor-only reads of caller inputs are insufficient if the detached output is populated by ordinary array index assignment: inherited setters on the output prototype can run code and mutate later source fields. The same risk exists when accumulating validated anchors after a snapshot.",
+  "guardrail": "Use Object.defineProperty with an own enumerable writable configurable numeric data property when building detached arrays and validated anchor lists. Negative tests should install a reversible high-index Array.prototype setter that repairs a later invalid field, verify the setter is never invoked, and confirm the original invalid data remains denied. Preserve untrusted/non-scoring flags; do not infer atomicity against arbitrary cross-input Proxies.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T10:02:30.000Z",
+  "productionConnection": false,
+  "_digest": "349bb281fee62ef3c18bd344504281f69cda277ccc8a49027ff0c0811a19e4f7",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T10:02:30.000Z"
+}
