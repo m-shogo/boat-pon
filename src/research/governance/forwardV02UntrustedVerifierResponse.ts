@@ -208,7 +208,15 @@ export function assessForwardV02UntrustedVerifierResponse(
   // response field during the builder and launder a later claim into a match.
   // Revision digests are a nested caller-owned array and must be pinned here
   // too, not after the request is built. Both remain untrusted metadata.
-  const r = snapshotExact(responseInput, RESPONSE_KEYS);
+  // Detach the complete response graph in one bounded descriptor-only pass.
+  // The previous split snapshot consulted the caller's `has` trap for
+  // `toJSON`, then copied nested digests later. That trap (or a later scalar
+  // descriptor trap) could repair a mismatching revision before its capture.
+  // Keep the existing exact response-shape check on the detached graph.
+  let pinnedResponse: unknown;
+  try { pinnedResponse = snapshotForwardV02UntrustedGraph(responseInput); }
+  catch { pinnedResponse = null; }
+  const r = snapshotExact(pinnedResponse, RESPONSE_KEYS);
   const revisions = r ? snapshotDigests(r.revisionContentDigests) : null;
   const built = buildForwardV02IndependentProofRequest(
     envelopeInput, policyInput, proofRefsInput,
