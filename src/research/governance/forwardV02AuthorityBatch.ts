@@ -4,6 +4,7 @@
  * authoritative source revisions, or trust anchors. Never grants scoring authority.
  */
 import { assessForwardV02AuthorityMetadata } from "./forwardV02AuthorityMetadata";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02IndependentProofRequest";
 
 export type ForwardV02AuthorityBatchAssessment = Readonly<{
   metadataConsistent: boolean;
@@ -83,10 +84,16 @@ function sameRevision(a: Settlement, ar: Revision, b: Settlement, br: Revision):
 export function assessForwardV02AuthorityBatch(input: unknown): ForwardV02AuthorityBatchAssessment {
   try {
     if (!denseOwnDataArray(input)) return deny("INVALID_BATCH");
+    // Copy the complete batch before any envelope is validated or retained
+    // in replay maps. An original array descriptor Proxy may mutate an earlier
+    // envelope while a later index is read; only detached earlier copies are
+    // eligible for replay comparison. These are still UNTRUSTED claims.
+    const pinned = snapshotForwardV02UntrustedGraph(input);
+    if (!denseOwnDataArray(pinned)) return deny("INVALID_BATCH");
     const receipts = new Map<string, Map<string, Freeze>>();
     const revisions = new Map<string, Map<string, { settlement: Settlement; revision: Revision }>>();
-    for (let i = 0; i < input.length; i++) {
-      const value = Object.getOwnPropertyDescriptor(input, String(i))?.value;
+    for (let i = 0; i < pinned.length; i++) {
+      const value = pinned[i];
       if (!assessForwardV02AuthorityMetadata(value).metadataConsistent) return deny("INVALID_ENVELOPE");
       const envelope = value as Envelope;
       const f = envelope.freeze, s = envelope.settlement, w = f.witness;
