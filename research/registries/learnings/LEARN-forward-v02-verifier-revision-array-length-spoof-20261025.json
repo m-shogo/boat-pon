@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-verifier-revision-array-length-spoof-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-verifier-revision-array-length-spoof",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-untrusted-verifier-response-revision-digests",
+  "symptom": "The nested claimed revision digest snapshot checked Reflect.ownKeys against caller-controlled array.length and reread length in the loop. A Proxy could first report the true length and then a shorter length, or hide a configurable extra index while spoofing length, causing an extra correction digest to disappear and a mismatching untrusted response to be marked metadata-consistent (never independently authenticated or scoring-authorized).",
+  "rootCauseClass": "UNTRUSTED_VERIFIER_REVISION_ARRAY_LENGTH_GETTER_RECHECK",
+  "attemptSignature": "pr2286-v319-pin-revision-array-descriptor-length-two-proxy-negative-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.0.2-untrusted/pr2286-c2905e00/revision-array-length-from-caller-getter"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "src/research/governance/forwardV02UntrustedSnapshot.ts",
+    "commit/c5a659ce35b81b3ee29c7af7190ac9aa115b6940",
+    "commit/17fd6caeeb13fa8c2b547c5e5ef5c2804faf9192",
+    "research/registries/learnings/LEARN-forward-v02-untrusted-response-preflight-late-snapshot-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-standalone-request-digest-late-repair-20261025.json"
+  ],
+  "lesson": "Capturing response fields before request preflight is insufficient when the nested array snapshot trusts a Proxy-controlled length getter. Length can change between structural checks and iteration, and ownKeys can omit configurable elements; the resulting truncated claim can falsely match a shorter correction chain.",
+  "guardrail": "Use the bounded own-data-descriptor graph snapshot for the entire nested revision array, including its nonconfigurable length descriptor and dense indexed elements, before checking digest syntax or comparing to the built request. Assert length getter is never invoked, adversarial length/ownKeys traps execute, extra revisions remain unbound or malformed, and independentAuthorityVerified/scoringAuthorized stay false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T04:05:48.000Z",
+  "productionConnection": false,
+  "_digest": "aa9057425eb68443a07aad292a6ae133d4aec65ad200b28a8049f8bf76374fbb",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T04:05:48.000Z"
+}
