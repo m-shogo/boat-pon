@@ -374,3 +374,32 @@ test("request revision handoff bypasses an inherited numeric index setter", () =
   assert.equal(outcome?.independentAuthorityVerified, false);
   assert.equal(outcome?.scoringAuthorized, false);
 });
+
+test("proof-request blockers bypass inherited numeric index setters", () => {
+  const f = fixture();
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, "2");
+  let intercepted = 0;
+  let outcome: ReturnType<typeof check> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "2", {
+      configurable: true,
+      set: function (this: unknown[], _item: unknown) {
+        intercepted++;
+        Object.defineProperty(this, "2", {
+          value: "FORGED_BLOCKER", enumerable: true, writable: true, configurable: true,
+        });
+      },
+    });
+    outcome = check(f);
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, "2", previous);
+    else Reflect.deleteProperty(Array.prototype, "2");
+  }
+  assert.equal(intercepted, 0, "blocker copies must not invoke ambient setters");
+  assert.deepEqual(outcome?.blockers, [
+    "UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL",
+  ]);
+  assert.equal(outcome?.metadataConsistent, true);
+  assert.equal(outcome?.independentAuthorityVerified, false);
+  assert.equal(outcome?.scoringAuthorized, false);
+});
