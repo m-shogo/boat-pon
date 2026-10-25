@@ -47,14 +47,10 @@ function assessment(
 export function snapshotForwardV02SyntheticClaim(input: unknown): Record<string, unknown> | null {
   if (input === null || typeof input !== "object" || Array.isArray(input)) return null;
   try {
-    const proto = Object.getPrototypeOf(input);
-    // Never query "toJSON" membership on the live claim Proxy: its has trap
-    // could repair a bad signature or key before descriptor capture. A direct
-    // own toJSON field is rejected by exact keys; inspect only the known
-    // built-in prototype for inherited toJSON without probing the caller.
-    if ((proto !== Object.prototype && proto !== null) ||
-        (proto !== null && "toJSON" in proto) ||
-        Reflect.ownKeys(input).length !== CLAIM_KEYS.length) return null;
+    // Capture expected own data descriptors before caller-controlled
+    // getPrototypeOf/ownKeys Proxy traps. Those traps can repair a bad
+    // signature before a later descriptor read; validation must use only
+    // the pre-trap copy. This is not an atomic multi-Proxy snapshot.
     const out: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
     for (let i = 0; i < CLAIM_KEYS.length; i++) {
       const key = CLAIM_KEYS[i]!;
@@ -62,6 +58,12 @@ export function snapshotForwardV02SyntheticClaim(input: unknown): Record<string,
       if (!d || !d.enumerable || !("value" in d)) return null;
       out[key] = d.value;
     }
+    const proto = Object.getPrototypeOf(input);
+    // Exact own keys reject an own toJSON; inspect only the known built-in
+    // prototype for inherited toJSON without invoking a live has trap.
+    if ((proto !== Object.prototype && proto !== null) ||
+        (proto !== null && "toJSON" in proto) ||
+        Reflect.ownKeys(input).length !== CLAIM_KEYS.length) return null;
     return out;
   } catch { return null; }
 }
