@@ -58,15 +58,16 @@ export function assessForwardV02SyntheticClaimedAnchorBinding(
   if (roleInput !== "WITNESS" && roleInput !== "SETTLEMENT") {
     return result(false, false, "INVALID_CLAIMED_ROLE");
   }
+  // Pin policy before traversing the caller claim: a claim descriptor
+  // Proxy can repair an initially mismatching policy anchor before a later
+  // policy snapshot. Both inputs remain untrusted and non-atomic.
+  const policy = snapshotForwardV02UntrustedPolicy(policyInput);
+  if (policy === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
   // Pin every claim field once: a caller-controlled descriptor proxy could
   // otherwise swap the public key after Ed25519 verification but before the
   // claimed policy-key comparison.
   const claim = snapshotForwardV02SyntheticClaim(claimInput);
   if (claim === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
-  // Pin caller policy before math: later key-digest comparison must not
-  // borrow a different anchor graph than the one preflight validated.
-  const policy = snapshotForwardV02UntrustedPolicy(policyInput);
-  if (policy === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
   const math = assessForwardV02SyntheticEd25519Claim(
     envelopeInput, policy, proofRefsInput, claim,
   );
