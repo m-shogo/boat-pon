@@ -875,3 +875,51 @@ test("synthetic reference cannot launder a mismatching policy through claim ownK
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("standalone signature math pins revoked policy before claim descriptor trap repairs it", () => {
+  const f = fixture();
+  f.policy.anchors[0]!.state = "REVOKED";
+  let mutations = 0;
+  const claim = new Proxy(f.claim, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "schemaVersion") {
+        mutations++;
+        f.policy.anchors[0]!.state = "ACTIVE";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticEd25519Claim(
+    f.envelope, f.policy, f.refs, claim,
+  );
+  assert.ok(mutations > 0, "claim descriptor trap must execute");
+  assert.equal(f.policy.anchors[0]!.state, "ACTIVE", "caller policy was repaired");
+  assert.equal(r.requestMetadataConsistent, false);
+  assert.equal(r.signatureMathConsistent, false);
+  assert.deepEqual(r.blockers, ["REQUEST_NOT_READY"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("standalone signature math pins mismatched proof refs before claim ownKeys trap repairs them", () => {
+  const f = fixture();
+  f.refs.policySnapshotDigest = h("f");
+  let mutations = 0;
+  const claim = new Proxy(f.claim, {
+    ownKeys(target) {
+      mutations++;
+      f.refs.policySnapshotDigest = h("e");
+      return Reflect.ownKeys(target);
+    },
+  });
+  const r = assessForwardV02SyntheticEd25519Claim(
+    f.envelope, f.policy, f.refs, claim,
+  );
+  assert.ok(mutations > 0, "claim ownKeys trap must execute");
+  assert.equal(f.refs.policySnapshotDigest, h("e"), "caller proof refs were repaired");
+  assert.equal(r.requestMetadataConsistent, false);
+  assert.equal(r.signatureMathConsistent, false);
+  assert.deepEqual(r.blockers, ["REQUEST_NOT_READY"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
