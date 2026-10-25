@@ -9,6 +9,7 @@ import {
   type RuntimeDecisionLedgerRecord,
 } from "./runtimeDecisionLedger";
 import { assessForwardV02ReferenceReconciliation } from "./forwardV02ReferenceReconciliation";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
 
 /**
  * Research-only cross-ledger CONTENT preflight. Caller-supplied ledgers and
@@ -76,6 +77,18 @@ export function assessForwardV02OutcomeLinkPreflight(
   outcomes: unknown,
 ): ForwardV02OutcomeLinkAssessment {
   try {
+    // Pin all caller-owned ledgers BEFORE traversing the candidate or manifest.
+    // A later reference-descriptor Proxy trap must not repair an earlier
+    // decision/outcome record between reconciliation and digest admission.
+    // This is structural isolation only, never independent attestation.
+    try {
+      decisions = snapshotForwardV02UntrustedGraph(decisions);
+      outcomes = snapshotForwardV02UntrustedGraph(outcomes);
+    } catch { return blocked("INVALID_LEDGER_COLLECTION"); }
+    try {
+      candidate = snapshotForwardV02UntrustedGraph(candidate);
+      references = snapshotForwardV02UntrustedGraph(references);
+    } catch { return blocked("REFERENCE_CONTEXT_NOT_RECONCILED"); }
     if (!assessForwardV02ReferenceReconciliation(candidate, references).referencesReconciled) {
       return blocked("REFERENCE_CONTEXT_NOT_RECONCILED");
     }

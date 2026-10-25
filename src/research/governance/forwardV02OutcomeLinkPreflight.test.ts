@@ -256,3 +256,43 @@ test("complete two-decision/two-outcome synthetic linkage stays research-only", 
     "PROSPECTIVE_ENROLLMENT_NOT_ATTESTED",
   ]);
 });
+
+test("late reference-descriptor repair cannot rewrite an earlier decision identity", () => {
+  const b = bundle();
+  b.d[0]!.decisionId = "synthetic-initially-invalid-decision";
+  let repaired = false;
+  b.r = new Proxy(b.r, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "expectedAnalysisSnapshotDigest") {
+        repaired = true;
+        b.d[0]!.decisionId = "synthetic-decision";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = check(b);
+  assert.equal(repaired, true, "reference descriptor trap must execute");
+  assert.equal(result.outcomeReferencesLinked, false);
+  assert.deepEqual(result.blockers, ["DECISION_DIGEST_MISMATCH"]);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("late reference-descriptor repair cannot rewrite an earlier outcome linkage", () => {
+  const b = bundle();
+  b.o[0]!.decisionRecordId = "synthetic-initially-invalid-record";
+  let repaired = false;
+  b.r = new Proxy(b.r, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "expectedAnalysisSnapshotDigest") {
+        repaired = true;
+        b.o[0]!.decisionRecordId = "synthetic-decision-record";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = check(b);
+  assert.equal(repaired, true, "reference descriptor trap must execute");
+  assert.equal(result.outcomeReferencesLinked, false);
+  assert.deepEqual(result.blockers, ["OUTCOME_DIGEST_MISMATCH"]);
+  assert.equal(result.scoringAuthorized, false);
+});
