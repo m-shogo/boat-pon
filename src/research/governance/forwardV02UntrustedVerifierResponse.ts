@@ -37,6 +37,9 @@ const REQUEST_FREEZE_FIELDS = [
 const REQUEST_SETTLEMENT_FIELDS = [
   "sourceId", "claimedAnchorId", "terminalRevisionId", "settlementProofDigest", "revisions",
 ] as const;
+const REQUEST_SETTLEMENT_SCALARS = [
+  "sourceId", "claimedAnchorId", "terminalRevisionId", "settlementProofDigest",
+] as const;
 const REQUEST_REVISION_FIELDS = [
   "revisionId", "contentDigest", "predecessorDigest", "sequence",
   "claimedObservedAt", "claimedSourceFinality",
@@ -77,7 +80,7 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
       !exactOwnFields(pinned.freeze, REQUEST_FREEZE_FIELDS) ||
       !nonemptyStringFields(pinned.freeze, REQUEST_FREEZE_FIELDS) ||
       !exactOwnFields(pinned.settlement, REQUEST_SETTLEMENT_FIELDS) ||
-      !nonemptyStringFields(pinned.settlement, REQUEST_SETTLEMENT_FIELDS.slice(0, 4))) {
+      !nonemptyStringFields(pinned.settlement, REQUEST_SETTLEMENT_SCALARS)) {
     throw new TypeError("INVALID_UNTRUSTED_REQUEST");
   }
   const revisions = pinned.settlement.revisions;
