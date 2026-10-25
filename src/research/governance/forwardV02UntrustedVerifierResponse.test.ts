@@ -417,3 +417,51 @@ test("verifier response rejects a proxy that hides a configurable revision index
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("verifier response cannot repair nested revision digests via a toJSON has trap", () => {
+  const f = fixture();
+  f.response.revisionContentDigests[0] = h("0");
+  let hasCalls = 0;
+  const response = new Proxy(f.response, {
+    has(target, key) {
+      if (key === "toJSON") {
+        hasCalls++;
+        target.revisionContentDigests[0] = h("d");
+      }
+      return Reflect.has(target, key);
+    },
+  });
+  const assessed = assessForwardV02UntrustedVerifierResponse(
+    f.envelope, f.policy, f.refs, response,
+  );
+  assert.equal(hasCalls, 0, "response snapshot must not invoke a caller has trap");
+  assert.equal(assessed.requestMetadataConsistent, true);
+  assert.equal(assessed.responseMetadataConsistent, false);
+  assert.deepEqual(assessed.blockers, ["UNBOUND_VERIFIER_RESPONSE"]);
+  assert.equal(assessed.independentAuthorityVerified, false);
+  assert.equal(assessed.scoringAuthorized, false);
+});
+
+test("verifier response pins nested digests before later scalar descriptor side effects", () => {
+  const f = fixture();
+  f.response.revisionContentDigests[0] = h("0");
+  let descriptorReads = 0;
+  const response = new Proxy(f.response, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "claimedVerifierId") {
+        descriptorReads++;
+        target.revisionContentDigests[0] = h("d");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const assessed = assessForwardV02UntrustedVerifierResponse(
+    f.envelope, f.policy, f.refs, response,
+  );
+  assert.ok(descriptorReads > 0, "late descriptor mutation must execute");
+  assert.equal(assessed.requestMetadataConsistent, true);
+  assert.equal(assessed.responseMetadataConsistent, false);
+  assert.deepEqual(assessed.blockers, ["UNBOUND_VERIFIER_RESPONSE"]);
+  assert.equal(assessed.independentAuthorityVerified, false);
+  assert.equal(assessed.scoringAuthorized, false);
+});
