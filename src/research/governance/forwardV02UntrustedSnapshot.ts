@@ -11,16 +11,12 @@ export function snapshotForwardV02UntrustedGraph(input: unknown): unknown {
       throw new TypeError("INVALID_SNAPSHOT");
     }
     const isArray = Array.isArray(value);
-    const proto = Object.getPrototypeOf(value);
-    if (isArray ? proto !== Array.prototype
-      : (proto !== Object.prototype && proto !== null)) {
-      throw new TypeError("INVALID_SNAPSHOT");
-    }
-    const keys = Reflect.ownKeys(value);
     if (isArray) {
+      // Arrays have a known dense-index domain. Pin its descriptors before
+      // caller-controlled getPrototypeOf/ownKeys Proxy traps can repair an
+      // initially invalid element. This is NOT atomic across malicious inputs.
       const length = Object.getOwnPropertyDescriptor(value, "length")?.value;
-      if (!Number.isSafeInteger(length) || length < 0 ||
-          length > 250_000 || keys.length !== length + 1) {
+      if (!Number.isSafeInteger(length) || length < 0 || length > 250_000) {
         throw new TypeError("INVALID_SNAPSHOT");
       }
       const out: unknown[] = [];
@@ -29,15 +25,25 @@ export function snapshotForwardV02UntrustedGraph(input: unknown): unknown {
         if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
           throw new TypeError("INVALID_SNAPSHOT");
         }
-        // Defining an own index bypasses an ambient Array.prototype numeric
-        // setter, which could mutate a later caller-owned element mid-copy.
+        // Own indices also bypass ambient Array.prototype numeric setters.
         Object.defineProperty(out, String(i), {
           value: copy(descriptor.value, depth + 1),
           enumerable: true, writable: true, configurable: true,
         });
       }
+      if (Object.getPrototypeOf(value) !== Array.prototype ||
+          Reflect.ownKeys(value).length !== length + 1) {
+        throw new TypeError("INVALID_SNAPSHOT");
+      }
       return out;
     }
+    // Generic objects have no schema-known key domain; ownKeys still marks
+    // a non-atomic caller-controlled boundary. Do not claim Proxy-proof reads.
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) {
+      throw new TypeError("INVALID_SNAPSHOT");
+    }
+    const keys = Reflect.ownKeys(value);
     const out: Record<string, unknown> = Object.create(proto);
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
