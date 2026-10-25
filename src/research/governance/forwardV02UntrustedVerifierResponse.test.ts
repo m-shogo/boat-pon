@@ -369,3 +369,51 @@ test("standalone request digest rejects an initially malformed revision rather t
   assert.ok(descriptorReads > 0, "adversarial correction descriptor must actually be inspected");
   assert.equal(getterReads, 0, "caller getter must never repair a correction digest");
 });
+
+test("verifier response cannot hide an extra revision digest by changing array length between checks", () => {
+  const f = fixture();
+  let lengthReads = 0;
+  f.response.revisionContentDigests = new Proxy([h("d"), h("f")], {
+    get(target, key, receiver) {
+      if (key === "length") {
+        lengthReads++;
+        return lengthReads === 1 ? 2 : 1;
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const r = check(f);
+  assert.equal(r.requestMetadataConsistent, true);
+  assert.equal(r.responseMetadataConsistent, false);
+  assert.deepEqual(r.blockers, ["UNBOUND_VERIFIER_RESPONSE"]);
+  assert.equal(lengthReads, 0, "untrusted length getter must never be consulted");
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("verifier response rejects a proxy that hides a configurable revision index and spoofs length", () => {
+  const f = fixture();
+  let ownKeysCalls = 0;
+  let lengthReads = 0;
+  f.response.revisionContentDigests = new Proxy([h("d"), h("f")], {
+    ownKeys() {
+      ownKeysCalls++;
+      return ["0", "length"];
+    },
+    get(target, key, receiver) {
+      if (key === "length") {
+        lengthReads++;
+        return 1;
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const r = check(f);
+  assert.ok(ownKeysCalls > 0, "adversarial ownKeys trap must actually execute");
+  assert.equal(lengthReads, 0, "descriptor length must override caller getter");
+  assert.equal(r.requestMetadataConsistent, true);
+  assert.equal(r.responseMetadataConsistent, false);
+  assert.deepEqual(r.blockers, ["INVALID_VERIFIER_RESPONSE"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
