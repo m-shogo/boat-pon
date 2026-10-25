@@ -48,8 +48,13 @@ export function snapshotForwardV02SyntheticClaim(input: unknown): Record<string,
   if (input === null || typeof input !== "object" || Array.isArray(input)) return null;
   try {
     const proto = Object.getPrototypeOf(input);
+    // Never query "toJSON" membership on the live claim Proxy: its has trap
+    // could repair a bad signature or key before descriptor capture. A direct
+    // own toJSON field is rejected by exact keys; inspect only the known
+    // built-in prototype for inherited toJSON without probing the caller.
     if ((proto !== Object.prototype && proto !== null) ||
-        "toJSON" in input || Reflect.ownKeys(input).length !== CLAIM_KEYS.length) return null;
+        (proto !== null && "toJSON" in proto) ||
+        Reflect.ownKeys(input).length !== CLAIM_KEYS.length) return null;
     const out: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
     for (let i = 0; i < CLAIM_KEYS.length; i++) {
       const key = CLAIM_KEYS[i]!;
