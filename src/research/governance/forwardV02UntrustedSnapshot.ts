@@ -19,15 +19,25 @@ export function snapshotForwardV02UntrustedGraph(input: unknown): unknown {
       if (!Number.isSafeInteger(length) || length < 0 || length > 250_000) {
         throw new TypeError("INVALID_SNAPSHOT");
       }
-      const out: unknown[] = [];
+      // Pin every immediate index descriptor before traversing a child.
+      // A nested child Proxy may replace a later sibling during recursion.
+      // This pins sibling references, not mutable fields within those objects.
+      const pinned: unknown[] = [];
       for (let i = 0; i < length; i++) {
         const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
         if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
           throw new TypeError("INVALID_SNAPSHOT");
         }
+        Object.defineProperty(pinned, String(i), {
+          value: descriptor.value,
+          enumerable: true, writable: true, configurable: true,
+        });
+      }
+      const out: unknown[] = [];
+      for (let i = 0; i < length; i++) {
         // Own indices also bypass ambient Array.prototype numeric setters.
         Object.defineProperty(out, String(i), {
-          value: copy(descriptor.value, depth + 1),
+          value: copy(pinned[i], depth + 1),
           enumerable: true, writable: true, configurable: true,
         });
       }
@@ -44,7 +54,10 @@ export function snapshotForwardV02UntrustedGraph(input: unknown): unknown {
       throw new TypeError("INVALID_SNAPSHOT");
     }
     const keys = Reflect.ownKeys(value);
-    const out: Record<string, unknown> = Object.create(proto);
+    // Once keys are enumerated, pin their immediate descriptors before
+    // recursively visiting any child. ownKeys/prototype traps remain an
+    // unavoidable non-atomic boundary for schema-unknown generic objects.
+    const pinned: unknown[] = [];
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       if (typeof key !== "string") throw new TypeError("INVALID_SNAPSHOT");
@@ -52,8 +65,15 @@ export function snapshotForwardV02UntrustedGraph(input: unknown): unknown {
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
         throw new TypeError("INVALID_SNAPSHOT");
       }
-      Object.defineProperty(out, key, {
-        value: copy(descriptor.value, depth + 1),
+      Object.defineProperty(pinned, String(i), {
+        value: descriptor.value,
+        enumerable: true, writable: true, configurable: true,
+      });
+    }
+    const out: Record<string, unknown> = Object.create(proto);
+    for (let i = 0; i < keys.length; i++) {
+      Object.defineProperty(out, keys[i] as string, {
+        value: copy(pinned[i], depth + 1),
         enumerable: true, writable: true, configurable: true,
       });
     }
