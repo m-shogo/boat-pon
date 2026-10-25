@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-reference-digest-late-descriptor-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-reference-digest-late-descriptor-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "forward-v02-standalone-formula-and-source-manifest-reference-digest",
+  "symptom": "The exported v0.2 formula and source-manifest digest helpers checked the shape of caller-owned objects before rereading their fields. A later own-descriptor Proxy trap could repair an initially invalid formula expression or evidence stage before hashing, so standalone callers could receive a digest for a later claim rather than the entry-time metadata.",
+  "rootCauseClass": "DIRECT_REFERENCE_DIGEST_UNPINNED_DESCRIPTOR_REPAIR",
+  "attemptSignature": "pr2286-v313-pin-direct-formula-and-manifest-digest-inputs-before-validation-two-proxy-negative-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02ReferenceReconciliation.0.1-untrusted/pr2286-9db68cd0/direct-digest-unpinned"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02ReferenceReconciliation.ts",
+    "src/research/governance/forwardV02ReferenceReconciliation.test.ts",
+    "commit/3bee0b03520a6148648af2c2bc6cf4bb03d7124e",
+    "commit/1726ae080bd9f638106da09218d263db966c2d5d",
+    "research/registries/learnings/LEARN-forward-v02-reference-reconciliation-late-descriptor-repair-20261025.json"
+  ],
+  "lesson": "A direct exported digest API is its own trust boundary. Fixing the reconciler does not pin standalone digest inputs: a descriptor-only shape check cannot guarantee that later property reads represent the same claim.",
+  "guardrail": "Snapshot the complete bounded own-data-descriptor input graph before any standalone formula or source-manifest digest validation/hash; return null for malformed or mutated initial claims. Regression tests must execute the late repair traps and still reject; never treat a matching digest as independent authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T01:57:38.935Z",
+  "productionConnection": false,
+  "_digest": "360f81adc973a08a9563f45ec6423f9c2ee3da152d0c8cb76b367559580271a8",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T01:57:38.935Z"
+}
