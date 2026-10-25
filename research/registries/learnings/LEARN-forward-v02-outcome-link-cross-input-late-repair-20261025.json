@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-outcome-link-cross-input-late-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-outcome-link-preflight-cross-input-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-outcome-link-preflight",
+  "symptom": "The standalone v0.2 cross-ledger preflight reconciled caller-controlled candidate/reference descriptors before checking decision/outcome ledgers. A late reference Proxy trap could repair an initially incorrect decision ID or outcome linkage before the ledger digest and identity checks, incorrectly treating the later state as linked (never authorizing scoring).",
+  "rootCauseClass": "OUTCOME_LINK_CROSS_INPUT_REFERENCE_PREFLIGHT_MUTATES_LEDGER_BEFORE_VALIDATION",
+  "attemptSignature": "pr2286-v316-pin-outcome-link-input-graphs-before-reconciliation-two-negative-cross-input-proxy-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02OutcomeLinkPreflight.0.1/pr2286-360a3177/unpinned-cross-input-reconciliation"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02OutcomeLinkPreflight.ts",
+    "src/research/governance/forwardV02OutcomeLinkPreflight.test.ts",
+    "commit/0e3596a241537165659088d9c2424cfdd7928e2b",
+    "research/registries/learnings/LEARN-forward-v02-reference-reconciliation-late-descriptor-repair-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-batch-replay-late-reference-mutation-20261025.json"
+  ],
+  "lesson": "A lower-level reference reconciler may validate its own detached copy while mutating another caller-owned ledger through a Proxy trap. A standalone higher-level preflight must pin every cross-input ledger it will use before traversing any other untrusted graph.",
+  "guardrail": "Detach bounded own-data decision and outcome ledgers before any candidate/reference reconciliation, then detach candidate and references before semantic checks. Run the entire linkage and digest comparison only on those snapshots. Negative tests must trigger cross-input repair traps and reject the original mismatches. No structural linkage implies independent source authority or scoring.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T03:07:49.000Z",
+  "productionConnection": false,
+  "_digest": "6661398f7f731bfad0c2f159562f01c0e0d2491d403b4ed896da1c93e750abdb",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T03:07:49.000Z"
+}
