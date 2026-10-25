@@ -311,7 +311,7 @@ test("shared untrusted snapshot bypasses an inherited numeric index setter", () 
   assert.equal(intercepted, 0, "snapshot must not invoke ambient index setters");
   assert.equal(input[18], "original", "later caller data must remain unchanged");
   assert.equal((snapshot as string[])[18], "original");
-  assert.equal(Object.hasOwn(snapshot, "17"), true);
+  assert.equal(Object.hasOwn(snapshot as object, "17"), true);
 });
 
 test("policy snapshot and anchor accumulation cannot launder an invalid later anchor via prototype setter", () => {
