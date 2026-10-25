@@ -81,6 +81,11 @@ function contentHash(domain: string, fields: readonly string[]): string {
 
 /** Domain-separated, length-prefixed content hash; NOT formula approval. */
 export function forwardV02FormulaReferenceDigest(value: unknown): string | null {
+  // This exported digest is also callable without reconciliation. Pin its
+  // caller-owned descriptor graph before validation or hashing: shape checks
+  // alone cannot prevent a later Proxy trap from repairing an earlier field.
+  try { value = snapshotForwardV02UntrustedGraph(value); }
+  catch { return null; }
   if (!exactDataObject(value, FORMULA_KEYS)) return null;
   if (value.formulaId !== "NET_ROI_ON_STAKE_V1" ||
       value.expression !== "(SUM_PAYOUT_MINUS_SUM_STAKE)/SUM_STAKE" ||
@@ -93,6 +98,10 @@ export function forwardV02FormulaReferenceDigest(value: unknown): string | null 
 
 /** Metadata only: never embed private odds, source bytes, or filesystem paths. */
 export function forwardV02SourceManifestReferenceDigest(value: unknown): string | null {
+  // Standalone callers receive the same detached, bounded reference semantics
+  // as the reconciler. A digest never authenticates the claimed source.
+  try { value = snapshotForwardV02UntrustedGraph(value); }
+  catch { return null; }
   if (!exactDataObject(value, MANIFEST_KEYS)) return null;
   if (value.schemaVersion !== "forward-source-manifest.0.2-candidate" ||
       typeof value.manifestId !== "string" || !value.manifestId.trim() ||
