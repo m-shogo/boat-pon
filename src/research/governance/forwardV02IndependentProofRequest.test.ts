@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
+import { buildForwardV02IndependentProofRequest, buildForwardV02IndependentProofRequestStrictNodeIngress } from "./forwardV02IndependentProofRequest";
 
 const h = (c: string) => c.repeat(64);
 function fixture() {
@@ -402,4 +402,138 @@ test("proof-request blockers bypass inherited numeric index setters", () => {
   assert.equal(outcome?.metadataConsistent, true);
   assert.equal(outcome?.independentAuthorityVerified, false);
   assert.equal(outcome?.scoringAuthorized, false);
+});
+
+test("strict proof request ingress matches the legacy detached metadata request", () => {
+  const f = fixture();
+  const strict = buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs);
+  const legacy = check(f);
+  assert.deepEqual(strict, legacy);
+  assert.equal(strict.metadataConsistent, true);
+  assert.equal(strict.independentAuthorityVerified, false);
+  assert.equal(strict.scoringAuthorized, false);
+  assert.equal(Object.isFrozen(strict.request?.settlement.revisions), true);
+});
+
+test("strict proof request ingress rejects root envelope Proxy before policy repair trap", () => {
+  const f = fixture();
+  f.policy.anchors[0]!.state = "REVOKED";
+  let traps = 0;
+  const envelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      f.policy.anchors[0]!.state = "ACTIVE";
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = buildForwardV02IndependentProofRequestStrictNodeIngress(envelope, f.policy, f.refs);
+  assert.deepEqual(result.blockers, ["INVALID_ENVELOPE"]);
+  assert.equal(traps, 0);
+  assert.equal(f.policy.anchors[0]!.state, "REVOKED");
+  assert.equal(result.request, null);
+  assert.equal(result.independentAuthorityVerified, false);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("strict proof request ingress rejects nested policy Proxy before proof-reference repair trap", () => {
+  const f = fixture();
+  f.refs.policySnapshotDigest = h("f");
+  let traps = 0;
+  const anchor = f.policy.anchors[0]!;
+  f.policy.anchors[0] = new Proxy(anchor, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      f.refs.policySnapshotDigest = h("e");
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs);
+  assert.deepEqual(result.blockers, ["INVALID_POLICY"]);
+  assert.equal(traps, 0);
+  assert.equal(f.refs.policySnapshotDigest, h("f"));
+  assert.equal(result.request, null);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("strict proof request ingress rejects root proof-refs Proxy without mutating envelope", () => {
+  const f = fixture();
+  let traps = 0;
+  const refs = new Proxy(f.refs, {
+    ownKeys(target) {
+      traps++;
+      f.envelope.freeze.witness.receiptId = "forged-receipt";
+      return Reflect.ownKeys(target);
+    },
+  });
+  const result = buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, refs);
+  assert.deepEqual(result.blockers, ["INVALID_PROOF_REFS"]);
+  assert.equal(traps, 0);
+  assert.equal(f.envelope.freeze.witness.receiptId, "synthetic-receipt");
+  assert.equal(result.request, null);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("strict proof request ingress rejects nested revision Proxy before earlier-policy mutation", () => {
+  const f = fixture();
+  f.policy.anchors[0]!.state = "REVOKED";
+  let traps = 0;
+  const revision = f.envelope.settlement.revisions[0]!;
+  f.envelope.settlement.revisions[0] = new Proxy(revision, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      f.policy.anchors[0]!.state = "ACTIVE";
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs);
+  assert.deepEqual(result.blockers, ["INVALID_ENVELOPE"]);
+  assert.equal(traps, 0);
+  assert.equal(f.policy.anchors[0]!.state, "REVOKED");
+  assert.equal(result.request, null);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("strict proof request ingress rejects revoked Proxy and never invokes policy accessor", () => {
+  const revokedFixture = fixture();
+  const revoked = Proxy.revocable(revokedFixture.refs, {});
+  revoked.revoke();
+  const denied = buildForwardV02IndependentProofRequestStrictNodeIngress(
+    revokedFixture.envelope, revokedFixture.policy, revoked.proxy,
+  );
+  assert.deepEqual(denied.blockers, ["INVALID_PROOF_REFS"]);
+  assert.equal(denied.request, null);
+
+  const f = fixture();
+  let getterCalls = 0;
+  Object.defineProperty(f.policy.anchors[0]!, "state", {
+    enumerable: true, configurable: true,
+    get() { getterCalls++; return "ACTIVE"; },
+  });
+  const accessorDenied = buildForwardV02IndependentProofRequestStrictNodeIngress(
+    f.envelope, f.policy, f.refs,
+  );
+  assert.deepEqual(accessorDenied.blockers, ["INVALID_POLICY"]);
+  assert.equal(getterCalls, 0);
+  assert.equal(accessorDenied.request, null);
+  assert.equal(accessorDenied.independentAuthorityVerified, false);
+  assert.equal(accessorDenied.scoringAuthorized, false);
+});
+
+test("strict proof request ingress preserves invalid-envelope priority for multiple rejected graphs", () => {
+  const f = fixture();
+  let traps = 0;
+  const denyProxy = <T extends object>(value: T): T => new Proxy(value, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = buildForwardV02IndependentProofRequestStrictNodeIngress(
+    denyProxy(f.envelope), denyProxy(f.policy), denyProxy(f.refs),
+  );
+  assert.deepEqual(result.blockers, ["INVALID_ENVELOPE"]);
+  assert.equal(traps, 0);
+  assert.equal(result.request, null);
+  assert.equal(result.independentAuthorityVerified, false);
+  assert.equal(result.scoringAuthorized, false);
 });
