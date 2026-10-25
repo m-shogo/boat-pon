@@ -138,6 +138,10 @@ function snapshotUntrusted(input: unknown): unknown {
   return copy(input, 0);
 }
 
+// Shared bounded descriptor-only snapshot for research metadata preflights.
+// It never authenticates evidence and throws on malformed caller-owned graphs.
+export { snapshotUntrusted as snapshotForwardV02UntrustedGraph };
+
 /**
  * Pin a caller-owned, UNTRUSTED policy graph before a multi-stage synthetic
  * signature/anchor comparison. This snapshot is not a trust root or authority.
