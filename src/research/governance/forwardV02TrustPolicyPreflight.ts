@@ -6,6 +6,7 @@
  * provisioned and authenticated. There is deliberately no ALLOW path.
  */
 import { assessForwardV02AuthorityMetadata } from "./forwardV02AuthorityMetadata";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
 
 export type ForwardV02TrustPolicyAssessment = Readonly<{
   policyMetadataConsistent: boolean;
@@ -90,55 +91,8 @@ function validAnchor(x: unknown): x is Anchor {
  * is only a stable structural comparison, not an authenticated trust root.
  * Mirror the bounded, getter-free graph admission of the proof-request builder.
  */
-function snapshotUntrustedPreflight(input: unknown): unknown {
-  let visited = 0;
-  function copy(value: unknown, depth: number): unknown {
-    if (value === null || typeof value === "string" ||
-        typeof value === "number" || typeof value === "boolean") return value;
-    if (typeof value !== "object" || depth > 16 || ++visited > 250_000) {
-      throw new TypeError("INVALID_SNAPSHOT");
-    }
-    const isArray = Array.isArray(value);
-    const proto = Object.getPrototypeOf(value);
-    if (isArray ? proto !== Array.prototype
-      : (proto !== Object.prototype && proto !== null)) {
-      throw new TypeError("INVALID_SNAPSHOT");
-    }
-    const keys = Reflect.ownKeys(value);
-    if (isArray) {
-      const length = Object.getOwnPropertyDescriptor(value, "length")?.value;
-      if (!Number.isSafeInteger(length) || length < 0 ||
-          length > 250_000 || keys.length !== length + 1) {
-        throw new TypeError("INVALID_SNAPSHOT");
-      }
-      const out: unknown[] = [];
-      for (let i = 0; i < length; i++) {
-        const d = Object.getOwnPropertyDescriptor(value, String(i));
-        if (!d || !d.enumerable || !("value" in d)) throw new TypeError("INVALID_SNAPSHOT");
-        // Never invoke an inherited numeric setter while detaching a policy
-        // anchor array: it could repair a later invalid anchor mid-snapshot.
-        Object.defineProperty(out, String(i), {
-          value: copy(d.value, depth + 1),
-          enumerable: true, writable: true, configurable: true,
-        });
-      }
-      return out;
-    }
-    const out: Record<string, unknown> = Object.create(proto);
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      if (typeof key !== "string") throw new TypeError("INVALID_SNAPSHOT");
-      const d = Object.getOwnPropertyDescriptor(value, key);
-      if (!d || !d.enumerable || !("value" in d)) throw new TypeError("INVALID_SNAPSHOT");
-      Object.defineProperty(out, key, {
-        value: copy(d.value, depth + 1),
-        enumerable: true, writable: true, configurable: true,
-      });
-    }
-    return out;
-  }
-  return copy(input, 0);
-}
+// Share the exact bounded snapshot guardrail with the request builder.
+const snapshotUntrustedPreflight = snapshotForwardV02UntrustedGraph;
 
 function deny(reason: string): ForwardV02TrustPolicyAssessment {
   return {
