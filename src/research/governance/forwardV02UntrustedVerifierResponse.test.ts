@@ -465,3 +465,34 @@ test("verifier response pins nested digests before later scalar descriptor side 
   assert.equal(assessed.independentAuthorityVerified, false);
   assert.equal(assessed.scoringAuthorized, false);
 });
+
+test("untrusted verifier blockers bypass inherited numeric index setters", () => {
+  const f = fixture();
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, "2");
+  let intercepted = 0;
+  let outcome: ReturnType<typeof check> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "2", {
+      configurable: true,
+      set: function (this: unknown[], _item: unknown) {
+        intercepted++;
+        Object.defineProperty(this, "2", {
+          value: "FORGED_BLOCKER", enumerable: true, writable: true, configurable: true,
+        });
+      },
+    });
+    outcome = check(f);
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, "2", previous);
+    else Reflect.deleteProperty(Array.prototype, "2");
+  }
+  assert.equal(intercepted, 0, "verifier blocker copies must bypass ambient setters");
+  assert.deepEqual(outcome?.blockers, [
+    "UNTRUSTED_VERIFIER_RESPONSE", "UNVERIFIED_WITNESS",
+    "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL",
+  ]);
+  assert.equal(outcome?.requestMetadataConsistent, true);
+  assert.equal(outcome?.responseMetadataConsistent, true);
+  assert.equal(outcome?.independentAuthorityVerified, false);
+  assert.equal(outcome?.scoringAuthorized, false);
+});
