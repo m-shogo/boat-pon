@@ -3,6 +3,7 @@ import test from "node:test";
 import { FORWARD_V02_CANDIDATE_VERSION } from "./forwardEvaluationProtocolV02Candidate";
 import {
   assessForwardV02ReferenceReconciliation,
+  assessForwardV02ReferenceReconciliationStrictNodeIngress,
   forwardV02FormulaReferenceDigest,
   forwardV02SourceManifestReferenceDigest,
 } from "./forwardV02ReferenceReconciliation";
@@ -188,4 +189,95 @@ test("standalone source-manifest digest cannot repair an invalid stage during la
   assert.equal(forwardV02SourceManifestReferenceDigest(unstable), null);
   assert.equal(mutationExecuted, true, "late descriptor repair must actually execute");
   assert.equal(forwardV02SourceManifestReferenceDigest(manifest()) !== null, true);
+});
+
+
+const strictCheck = (c: unknown, r: unknown) =>
+  assessForwardV02ReferenceReconciliationStrictNodeIngress(c, r);
+
+test("strict Node reconciliation preserves valid untrusted and mismatched digest semantics", () => {
+  assert.deepEqual(strictCheck(candidate(), refs()), check(candidate(), refs()));
+  const bad = candidate(); bad.metricFormulaDigest = h("e");
+  assert.deepEqual(strictCheck(bad, refs()).blockers, ["FORMULA_REFERENCE_MISMATCH"]);
+  assert.equal(strictCheck(candidate(), refs()).scoringAuthorized, false);
+});
+
+test("strict Node reconciliation rejects candidate root Proxy before its repair trap", () => {
+  const c = candidate(), r = refs();
+  c.metricFormulaDigest = h("e");
+  let traps = 0;
+  const wrapped = new Proxy(c, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      if (key === "scoringAuthorized") target.metricFormulaDigest = r.formulaDigest;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  assert.deepEqual(strictCheck(wrapped, r).blockers, ["INVALID_V02_CANDIDATE"]);
+  assert.equal(traps, 0);
+  assert.equal(c.metricFormulaDigest, h("e"));
+});
+
+test("strict Node reconciliation rejects nested candidate Proxy before repairing references", () => {
+  const c = candidate(), r = refs();
+  r.expectedAnalysisSnapshotDigest = h("e");
+  let traps = 0;
+  c.moneyPolicy = new Proxy(c.moneyPolicy, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      if (key === "zeroDenominator") r.expectedAnalysisSnapshotDigest = h("a");
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  assert.deepEqual(strictCheck(c, r).blockers, ["INVALID_V02_CANDIDATE"]);
+  assert.equal(traps, 0);
+  assert.equal(r.expectedAnalysisSnapshotDigest, h("e"));
+});
+
+test("strict Node reconciliation rejects reference root Proxy before repairing candidate", () => {
+  const c = candidate(), r = refs(), expected = c.metricFormulaDigest;
+  c.metricFormulaDigest = h("e");
+  let traps = 0;
+  const wrapped = new Proxy(r, {
+    ownKeys(target) {
+      traps++;
+      c.metricFormulaDigest = expected;
+      return Reflect.ownKeys(target);
+    },
+  });
+  assert.deepEqual(strictCheck(c, wrapped).blockers, ["INVALID_REFERENCE_SHAPE"]);
+  assert.equal(traps, 0);
+  assert.equal(c.metricFormulaDigest, h("e"));
+});
+
+test("strict Node reconciliation rejects nested manifest Proxy before repairing earlier candidate", () => {
+  const c = candidate(), r = refs(), expected = c.metricFormulaDigest;
+  c.metricFormulaDigest = h("e");
+  let traps = 0;
+  r.sourceManifest = new Proxy(r.sourceManifest, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      if (key === "productionConnection") c.metricFormulaDigest = expected;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  assert.deepEqual(strictCheck(c, r).blockers, ["INVALID_REFERENCE_SHAPE"]);
+  assert.equal(traps, 0);
+  assert.equal(c.metricFormulaDigest, h("e"));
+});
+
+test("strict Node reconciliation rejects revoked Proxies and accessors without invocation", () => {
+  const revokedCandidate = Proxy.revocable(candidate(), {});
+  revokedCandidate.revoke();
+  assert.deepEqual(strictCheck(revokedCandidate.proxy, refs()).blockers, ["INVALID_V02_CANDIDATE"]);
+  const revokedRefs = Proxy.revocable(refs(), {});
+  revokedRefs.revoke();
+  assert.deepEqual(strictCheck(candidate(), revokedRefs.proxy).blockers, ["INVALID_REFERENCE_SHAPE"]);
+  const r = refs();
+  let getterCalls = 0;
+  Object.defineProperty(r.sourceManifest, "manifestId", {
+    enumerable: true, get() { getterCalls++; return "synthetic-manifest"; },
+  });
+  assert.deepEqual(strictCheck(candidate(), r).blockers, ["INVALID_REFERENCE_SHAPE"]);
+  assert.equal(getterCalls, 0);
 });
