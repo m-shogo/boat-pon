@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-proof-request-cross-input-snapshot-order-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-proof-request-cross-input-snapshot-order",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "build-forward-v02-independent-proof-request",
+  "symptom": "The standalone proof-request builder snapshotted the caller-controlled envelope before its policy and proof references. An envelope own-descriptor Proxy could change an initially revoked witness anchor to ACTIVE or repair an initially mismatched policy digest in proof refs before those graphs were copied, yielding metadataConsistent=true for later rather than entry-time claims. This never granted independent authority or scoring.",
+  "rootCauseClass": "PROOF_REQUEST_ENVELOPE_PROXY_MUTATES_UNSNAPSHOTTED_POLICY_OR_REFS",
+  "attemptSignature": "pr2286-v323-pin-policy-and-refs-before-envelope-snapshot-three-negative-and-precedence-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02IndependentProofRequest.0.1-untrusted/pr2286-c497034f/envelope-snapshotted-before-policy-refs"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.ts",
+    "src/research/governance/forwardV02IndependentProofRequest.test.ts",
+    "commit/5f30303d6570e5e636b20a8b667afd4de02d92f1",
+    "commit/d1200cad8570959bf0dc129fe05eaa176056b0b6",
+    "research/registries/learnings/LEARN-forward-v02-standalone-policy-ref-preflight-phase-drift-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json"
+  ],
+  "lesson": "A proof-request builder that snapshots each input still has a cross-input phase boundary: traversing the envelope first can run caller descriptor traps that repair policy or proof refs before their snapshots. The standalone policy preflight already pinned those inputs first, but the builder had a different ordering.",
+  "guardrail": "For the deny-only independent proof-request builder, snapshot policy and proof refs before traversing the caller-owned envelope; preserve INVALID_ENVELOPE precedence when snapshot failures coexist. Validate and construct the request solely from the detached graphs. Regressions must trigger envelope descriptor mutations and show revoked anchors and mismatched refs remain rejected, with independentAuthorityVerified=false and scoringAuthorized=false. No atomic multi-Proxy guarantee or production authority is inferred.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T07:04:28.000Z",
+  "productionConnection": false,
+  "_digest": "393162280e6b77930e94ea4ae2f60accee31f33308abc332c25e4bccf878ac9e",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T07:04:28.000Z"
+}
