@@ -4,6 +4,7 @@
  * authoritative source revisions, or trust anchors. Never grants scoring authority.
  */
 import { assessForwardV02AuthorityMetadata } from "./forwardV02AuthorityMetadata";
+import { snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 import { snapshotForwardV02UntrustedGraph } from "./forwardV02IndependentProofRequest";
 
 export type ForwardV02AuthorityBatchAssessment = Readonly<{
@@ -116,4 +117,23 @@ export function assessForwardV02AuthorityBatch(input: unknown): ForwardV02Author
     }
     return unverified();
   } catch { return deny("INVALID_BATCH"); }
+}
+
+/**
+ * Opt-in, Node-only, research ingress for an entire caller-supplied batch.
+ * Rejects root/nested/revoked Proxies before their traps, then delegates to
+ * the unchanged batch replay comparison on detached, untrusted metadata.
+ * This is neither external attestation nor atomic capture against concurrent
+ * mutation of ordinary objects; it never grants scoring or production rights.
+ */
+export function assessForwardV02AuthorityBatchStrictNodeIngress(
+  input: unknown,
+): ForwardV02AuthorityBatchAssessment {
+  try {
+    return assessForwardV02AuthorityBatch(
+      snapshotForwardV02UntrustedGraphRejectingProxies(input),
+    );
+  } catch {
+    return deny("INVALID_BATCH");
+  }
 }
