@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-array-prototype-ownkeys-precopy-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-array-prototype-ownkeys-precopy-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "snapshot-forward-v02-untrusted-graph-and-trust-policy-preflight",
+  "symptom": "The shared and separately duplicated bounded array snapshots queried caller-controlled getPrototypeOf and ownKeys Proxy traps before copying array elements. A trap could repair an initially REVOKED synthetic policy anchor before capture and produce a metadata-consistent untrusted preflight result. This is not independent authentication or scoring authority.",
+  "rootCauseClass": "ARRAY_PRECOPY_PROTOTYPE_OWNKEYS_PROXY_REPAIRS_LATER_METADATA",
+  "attemptSignature": "pr2286-v331-array-indices-before-prototype-ownkeys-shared-policy-snapshot-four-negative-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedSnapshot+TrustPolicyPreflight.0.1/pr2286-cd0cdaa3/array-prototype-ownkeys-before-index-copy"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedSnapshot.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-prototype-ownkeys-repair-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-array-prototype-index-setter-snapshot-20261025.json"
+  ],
+  "lesson": "For bounded array snapshots with a known length and dense indices, invoking caller Proxy prototype/own-key traps before reading element descriptors allows initially invalid elements to be repaired before capture. A duplicate snapshot implementation also risks drifting from the hardened shared guardrail.",
+  "guardrail": "Read and copy every dense own array index using descriptors and Object.defineProperty before invoking getPrototypeOf or ownKeys; then enforce exact prototype and key-count checks. Reuse the shared snapshot in standalone trust-policy preflight. Exercise both Proxy traps on an initially revoked anchor and prove the source is repaired only after its rejected snapshot is pinned. This is not an atomic snapshot across multiple malicious inputs or a defense against arbitrary descriptor traps.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T10:55:07.000Z",
+  "productionConnection": false,
+  "_digest": "52abe10254f4a2179a00fef95549825ecf77bfdfca441a83e16f4428741ac06f",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T10:55:07.000Z"
+}
