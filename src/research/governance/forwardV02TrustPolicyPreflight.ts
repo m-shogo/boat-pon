@@ -6,7 +6,7 @@
  * provisioned and authenticated. There is deliberately no ALLOW path.
  */
 import { assessForwardV02AuthorityMetadata } from "./forwardV02AuthorityMetadata";
-import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
+import { snapshotForwardV02UntrustedGraph, snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 
 export type ForwardV02TrustPolicyAssessment = Readonly<{
   policyMetadataConsistent: boolean;
@@ -208,4 +208,32 @@ export function assessForwardV02TrustPolicyPreflight(
     }
     return unverified();
   } catch { return deny("INVALID_POLICY_OR_PROOF_REFS"); }
+}
+
+/**
+ * Opt-in, Node-only research ingress for caller-supplied policy preflight.
+ * Rejects root/nested/revoked Proxies without executing their traps. Capture
+ * policy and proof references before the envelope, then delegate to the
+ * unchanged preflight on detached metadata. Preserve INVALID_ENVELOPE >
+ * INVALID_POLICY > INVALID_PROOF_REFS failure precedence.
+ *
+ * This is a structural deny-only check, not independently provisioned trust,
+ * verified signatures/time/revocation/finality, atomic concurrent capture,
+ * scoring authorization, or production access. Existing callers are unchanged.
+ */
+export function assessForwardV02TrustPolicyPreflightStrictNodeIngress(
+  envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
+): ForwardV02TrustPolicyAssessment {
+  let policy: unknown, refs: unknown, envelope: unknown;
+  let policyFailed = false, refsFailed = false, envelopeFailed = false;
+  try { policy = snapshotForwardV02UntrustedGraphRejectingProxies(policyInput); }
+  catch { policyFailed = true; }
+  try { refs = snapshotForwardV02UntrustedGraphRejectingProxies(proofRefsInput); }
+  catch { refsFailed = true; }
+  try { envelope = snapshotForwardV02UntrustedGraphRejectingProxies(envelopeInput); }
+  catch { envelopeFailed = true; }
+  if (envelopeFailed) return deny("INVALID_ENVELOPE");
+  if (policyFailed) return deny("INVALID_POLICY");
+  if (refsFailed) return deny("INVALID_PROOF_REFS");
+  return assessForwardV02TrustPolicyPreflight(envelope, policy, refs);
 }
