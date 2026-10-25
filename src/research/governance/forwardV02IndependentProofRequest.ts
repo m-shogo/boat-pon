@@ -12,6 +12,7 @@
  * finality/clock rules from an independent authority, not from this request.
  */
 import { assessForwardV02TrustPolicyPreflight } from "./forwardV02TrustPolicyPreflight";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
 
 export type ForwardV02ClaimedRevision = Readonly<{
   revisionId: string;
@@ -80,67 +81,8 @@ function frozenBlockers(input: readonly string[]): readonly string[] {
   return Object.freeze(copy);
 }
 
-/**
- * Pin the entire caller-owned transcript before validation. A Proxy may return
- * stable own descriptors but different values on later direct property reads.
- * Validate and copy only this detached snapshot, never the original objects.
- *
- * Descriptor-only traversal also rejects accessors, sparse/exotic arrays,
- * symbol keys, cycles and unbounded nesting without executing caller getters.
- * This is a structural snapshot, NOT evidence authentication.
- */
-function snapshotUntrusted(input: unknown): unknown {
-  let visited = 0;
-  function copy(value: unknown, depth: number): unknown {
-    if (value === null || typeof value === "string" ||
-        typeof value === "number" || typeof value === "boolean") return value;
-    if (typeof value !== "object" || depth > 16 || ++visited > 250_000) {
-      throw new TypeError("INVALID_SNAPSHOT");
-    }
-    const isArray = Array.isArray(value);
-    const proto = Object.getPrototypeOf(value);
-    if (isArray ? proto !== Array.prototype
-      : (proto !== Object.prototype && proto !== null)) {
-      throw new TypeError("INVALID_SNAPSHOT");
-    }
-    const keys = Reflect.ownKeys(value);
-    if (isArray) {
-      const length = Object.getOwnPropertyDescriptor(value, "length")?.value;
-      if (!Number.isSafeInteger(length) || length < 0 ||
-          length > 250_000 || keys.length !== length + 1) {
-        throw new TypeError("INVALID_SNAPSHOT");
-      }
-      const out: unknown[] = [];
-      for (let i = 0; i < length; i++) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
-        if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
-          throw new TypeError("INVALID_SNAPSHOT");
-        }
-        out[i] = copy(descriptor.value, depth + 1);
-      }
-      return out;
-    }
-    const out: Record<string, unknown> = Object.create(proto);
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      if (typeof key !== "string") throw new TypeError("INVALID_SNAPSHOT");
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
-      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
-        throw new TypeError("INVALID_SNAPSHOT");
-      }
-      Object.defineProperty(out, key, {
-        value: copy(descriptor.value, depth + 1),
-        enumerable: true, writable: true, configurable: true,
-      });
-    }
-    return out;
-  }
-  return copy(input, 0);
-}
-
-// Shared bounded descriptor-only snapshot for research metadata preflights.
-// It never authenticates evidence and throws on malformed caller-owned graphs.
-export { snapshotUntrusted as snapshotForwardV02UntrustedGraph };
+// Keep the existing public import surface for research-only callers.
+export { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
 
 /**
  * Pin a caller-owned, UNTRUSTED policy graph before a multi-stage synthetic
@@ -150,7 +92,7 @@ export { snapshotUntrusted as snapshotForwardV02UntrustedGraph };
 export function snapshotForwardV02UntrustedPolicy(input: unknown): Record<string, unknown> | null {
   if (input === null || typeof input !== "object" || Array.isArray(input)) return null;
   try {
-    const pinned = snapshotUntrusted(input);
+    const pinned = snapshotForwardV02UntrustedGraph(input);
     return pinned !== null && typeof pinned === "object" && !Array.isArray(pinned)
       ? pinned as Record<string, unknown> : null;
   } catch { return null; }
@@ -178,11 +120,11 @@ export function buildForwardV02IndependentProofRequest(
   envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
 ): ForwardV02ProofRequestAssessment {
   let envelopeSnapshot: unknown, policySnapshot: unknown, refsSnapshot: unknown;
-  try { envelopeSnapshot = snapshotUntrusted(envelopeInput); }
+  try { envelopeSnapshot = snapshotForwardV02UntrustedGraph(envelopeInput); }
   catch { return snapshotRejected("INVALID_ENVELOPE"); }
-  try { policySnapshot = snapshotUntrusted(policyInput); }
+  try { policySnapshot = snapshotForwardV02UntrustedGraph(policyInput); }
   catch { return snapshotRejected("INVALID_POLICY"); }
-  try { refsSnapshot = snapshotUntrusted(proofRefsInput); }
+  try { refsSnapshot = snapshotForwardV02UntrustedGraph(proofRefsInput); }
   catch { return snapshotRejected("INVALID_PROOF_REFS"); }
   const preflight = assessForwardV02TrustPolicyPreflight(
     envelopeSnapshot, policySnapshot, refsSnapshot,

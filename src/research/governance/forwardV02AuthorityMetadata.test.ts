@@ -242,3 +242,45 @@ test("all-excluded frozen cohort cannot admit an evaluable terminal result", () 
   assert.equal(check(e).settlementStatus, "CONFLICT");
   assert.equal(check(e).scoringAuthorized, false);
 });
+
+test("standalone authority metadata pins an invalid root version before a late Proxy repair", () => {
+  const e = envelope();
+  e.schemaVersion = "invalid-initial-version";
+  let repaired = false;
+  const input = new Proxy(e, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "settlement") {
+        repaired = true;
+        target.schemaVersion = "forward-v02-authority-metadata.0.1-untrusted";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = check(input);
+  assert.equal(repaired, true, "the later descriptor trap must actually run");
+  assert.equal(result.metadataConsistent, false);
+  assert.deepEqual(result.blockers, ["INVALID_EVIDENCE_SHAPE"]);
+  assert.equal(result.independentAuthorityVerified, false);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("standalone authority metadata pins an invalid witness commitment before a late Proxy repair", () => {
+  const e = envelope();
+  e.freeze.witness.membershipDigest = h("e");
+  let repaired = false;
+  e.freeze.witness = new Proxy(e.freeze.witness, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "trustAnchorId") {
+        repaired = true;
+        target.membershipDigest = h("b");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = check(e);
+  assert.equal(repaired, true, "the later witness descriptor trap must actually run");
+  assert.equal(result.metadataConsistent, false);
+  assert.equal(result.freezeStatus, "CONFLICT");
+  assert.equal(result.independentAuthorityVerified, false);
+  assert.equal(result.scoringAuthorized, false);
+});

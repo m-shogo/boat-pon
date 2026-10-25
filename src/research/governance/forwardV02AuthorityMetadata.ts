@@ -1,3 +1,5 @@
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
+
 /**
  * UNTRUSTED, research-only v0.2 evidence metadata preflight.
  * This deliberately has no trusted keys, network access, proof verification,
@@ -104,6 +106,10 @@ const result = (freezeStatus: string, settlementStatus: string): ForwardV02Autho
 export function assessForwardV02AuthorityMetadata(input: unknown): ForwardV02AuthorityMetadataAssessment {
   const good = "STRUCTURALLY_VALID_UNATTESTED";
   try {
+    // Pin the complete caller graph before any semantic validation. Own-data
+    // descriptors, not subsequent Proxy property reads, define this snapshot.
+    // A structurally consistent claim is still neither attested nor scorable.
+    input = snapshotForwardV02UntrustedGraph(input);
     if (!exact(input, ROOT) || input.schemaVersion !== "forward-v02-authority-metadata.0.1-untrusted") {
       return result("INVALID_EVIDENCE_SHAPE", "INVALID_EVIDENCE_SHAPE");
     }
