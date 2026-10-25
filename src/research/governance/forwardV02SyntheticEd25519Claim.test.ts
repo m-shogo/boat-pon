@@ -821,3 +821,57 @@ for (const trap of ["getPrototypeOf", "ownKeys"] as const) {
     assert.equal(r.scoringAuthorized, false);
   });
 }
+
+test("claimed-anchor policy is pinned before claim descriptor trap repairs a mismatching key", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  const expectedDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  assert.notEqual(f.policy.anchors[0]!.publicKeyDigest, expectedDigest);
+  let mutations = 0;
+  const claim = new Proxy(f.claim, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "schemaVersion" && mutations++ === 0) {
+        f.policy.anchors[0]!.publicKeyDigest = expectedDigest;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticClaimedAnchorBinding(
+    f.envelope, f.policy, f.refs, claim, "WITNESS",
+  );
+  assert.ok(mutations > 0, "claim descriptor trap must execute");
+  assert.equal(f.policy.anchors[0]!.publicKeyDigest, expectedDigest, "caller policy was repaired");
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_ANCHOR_KEY_MISMATCH"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("synthetic reference cannot launder a mismatching policy through claim ownKeys trap", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  // syntheticReference initially aligns the policy; restore its original
+  // mismatching digest before invoking the untrusted claim Proxy.
+  f.policy.anchors[0]!.publicKeyDigest = h("f");
+  assert.notEqual(f.policy.anchors[0]!.publicKeyDigest, ref.publicKeyDigest);
+  let mutations = 0;
+  const claim = new Proxy(f.claim, {
+    ownKeys(target) {
+      mutations++;
+      f.policy.anchors[0]!.publicKeyDigest = ref.publicKeyDigest;
+      return Reflect.ownKeys(target);
+    },
+  });
+  const r = assessForwardV02SyntheticReferenceAnchorConflict(
+    f.envelope, f.policy, f.refs, claim, "WITNESS", ref,
+  );
+  assert.ok(mutations > 0, "claim ownKeys trap must execute");
+  assert.equal(f.policy.anchors[0]!.publicKeyDigest, ref.publicKeyDigest, "caller policy was repaired");
+  assert.equal(r.signatureMathConsistent, true);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_ANCHOR_NOT_BOUND"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
