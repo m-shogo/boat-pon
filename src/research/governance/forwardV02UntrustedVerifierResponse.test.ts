@@ -312,3 +312,60 @@ test("untrusted verifier response cannot borrow revision digests corrected durin
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("standalone request digest rejects an initially malformed freeze descriptor instead of a later repaired getter", () => {
+  const f = fixture();
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  const expected = digestForwardV02UntrustedRequest(built.request);
+  assert.equal(digestForwardV02UntrustedRequest(structuredClone(built.request)), expected);
+  let descriptorReads = 0;
+  let getterReads = 0;
+  const freeze = new Proxy({ ...built.request.freeze }, {
+    get(target, key, receiver) {
+      if (key === "claimedFirstDecisionAt") getterReads++;
+      return Reflect.get(target, key, receiver);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      const d = Reflect.getOwnPropertyDescriptor(target, key);
+      if (key === "claimedFirstDecisionAt" && d) {
+        descriptorReads++;
+        return { ...d, value: null };
+      }
+      return d;
+    },
+  });
+  const untrusted = { ...built.request, freeze };
+  assert.throws(() => digestForwardV02UntrustedRequest(untrusted), /INVALID_UNTRUSTED_REQUEST/);
+  assert.ok(descriptorReads > 0, "adversarial descriptor must actually be inspected");
+  assert.equal(getterReads, 0, "caller getter must never repair a malformed digest input");
+});
+
+test("standalone request digest rejects an initially malformed revision rather than hashing a repaired getter", () => {
+  const f = fixture();
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  let descriptorReads = 0;
+  let getterReads = 0;
+  const revision = new Proxy({ ...built.request.settlement.revisions[0]! }, {
+    get(target, key, receiver) {
+      if (key === "contentDigest") getterReads++;
+      return Reflect.get(target, key, receiver);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      const d = Reflect.getOwnPropertyDescriptor(target, key);
+      if (key === "contentDigest" && d) {
+        descriptorReads++;
+        return { ...d, value: null };
+      }
+      return d;
+    },
+  });
+  const untrusted = {
+    ...built.request,
+    settlement: { ...built.request.settlement, revisions: [revision] },
+  };
+  assert.throws(() => digestForwardV02UntrustedRequest(untrusted), /INVALID_UNTRUSTED_REQUEST/);
+  assert.ok(descriptorReads > 0, "adversarial correction descriptor must actually be inspected");
+  assert.equal(getterReads, 0, "caller getter must never repair a correction digest");
+});
