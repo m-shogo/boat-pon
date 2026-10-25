@@ -9,7 +9,7 @@
  * Offline metadata and ephemeral synthetic keys only. Never production/admission.
  */
 import { createHash, createPublicKey } from "node:crypto";
-import { buildForwardV02IndependentProofRequest, snapshotForwardV02UntrustedPolicy } from "./forwardV02IndependentProofRequest";
+import { buildForwardV02IndependentProofRequest, snapshotForwardV02UntrustedGraph, snapshotForwardV02UntrustedPolicy } from "./forwardV02IndependentProofRequest";
 import { assessForwardV02SyntheticEd25519Claim, snapshotForwardV02SyntheticClaim } from "./forwardV02SyntheticEd25519Claim";
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 
@@ -63,19 +63,24 @@ export function assessForwardV02SyntheticClaimedAnchorBinding(
   // policy snapshot. Both inputs remain untrusted and non-atomic.
   const policy = snapshotForwardV02UntrustedPolicy(policyInput);
   if (policy === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
+  // The same claim Proxy can also repair initially mismatching proof refs.
+  // Pin them before claim traversal and reuse the detached graph throughout.
+  let refs: unknown;
+  try { refs = snapshotForwardV02UntrustedGraph(proofRefsInput); }
+  catch { refs = undefined; }
   // Pin every claim field once: a caller-controlled descriptor proxy could
   // otherwise swap the public key after Ed25519 verification but before the
   // claimed policy-key comparison.
   const claim = snapshotForwardV02SyntheticClaim(claimInput);
   if (claim === null) return result(false, false, "SIGNATURE_NOT_CONSISTENT");
   const math = assessForwardV02SyntheticEd25519Claim(
-    envelopeInput, policy, proofRefsInput, claim,
+    envelopeInput, policy, refs, claim,
   );
   if (!math.signatureMathConsistent) {
     return result(false, false, "SIGNATURE_NOT_CONSISTENT");
   }
   const built = buildForwardV02IndependentProofRequest(
-    envelopeInput, policy, proofRefsInput,
+    envelopeInput, policy, refs,
   );
   if (!built.metadataConsistent || built.request === null) {
     return result(false, false, "REQUEST_NOT_READY");
