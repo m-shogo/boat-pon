@@ -240,3 +240,47 @@ test("patched Array.prototype.push cannot erase valid anchors before policy bind
     Array.prototype.push = originalPush;
   }
 });
+
+test("standalone preflight pins revoked policy before envelope descriptor can activate it", () => {
+  const f = fixture();
+  f.policy.anchors[0]!.state = "REVOKED";
+  let mutationCount = 0;
+  const envelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "schemaVersion") {
+        mutationCount++;
+        f.policy.anchors[0]!.state = "ACTIVE";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02TrustPolicyPreflight(envelope, f.policy, f.refs);
+  assert.ok(mutationCount > 0, "envelope phase must actually mutate caller policy");
+  assert.equal(f.policy.anchors[0]!.state, "ACTIVE");
+  assert.deepEqual(r.blockers, ["REVOKED_WITNESS_ANCHOR"]);
+  assert.equal(r.policyMetadataConsistent, false);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("standalone preflight pins mismatched proof refs before envelope descriptor can repair them", () => {
+  const f = fixture();
+  f.refs.policySnapshotDigest = h("f");
+  let mutationCount = 0;
+  const envelope = new Proxy(f.envelope, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "schemaVersion") {
+        mutationCount++;
+        f.refs.policySnapshotDigest = h("e");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02TrustPolicyPreflight(envelope, f.policy, f.refs);
+  assert.ok(mutationCount > 0, "envelope phase must actually mutate caller proof refs");
+  assert.equal(f.refs.policySnapshotDigest, h("e"));
+  assert.deepEqual(r.blockers, ["UNBOUND_PROOF_REFS"]);
+  assert.equal(r.policyMetadataConsistent, false);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
