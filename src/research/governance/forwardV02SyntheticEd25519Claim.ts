@@ -10,7 +10,7 @@
  * No network, filesystem, key store, secrets, odds or external callbacks.
  */
 import { createPublicKey, verify } from "node:crypto";
-import { buildForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
+import { buildForwardV02IndependentProofRequest, snapshotForwardV02UntrustedGraph } from "./forwardV02IndependentProofRequest";
 import { digestForwardV02UntrustedRequest } from "./forwardV02UntrustedVerifierResponse";
 
 const CLAIM_VERSION = "forward-v02-synthetic-ed25519-claim.0.1-untrusted";
@@ -77,13 +77,19 @@ export function assessForwardV02SyntheticEd25519Claim(
   envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
   claimInput: unknown,
 ): ForwardV02SyntheticSignatureAssessment {
-  // Pin the caller-owned claim before building the request. A descriptor
-  // proxy in the envelope/policy/refs can otherwise replace a mismatching
-  // key or signature during preflight, laundering a later claim into a
-  // mathematical match. This remains a deny-only, untrusted probe.
+  // Pin policy and proof refs before traversing the claim: a claim Proxy
+  // can otherwise repair a revoked anchor or mismatched proof ref before
+  // the request builder captures those inputs. Pin the claim before the
+  // envelope is traversed, preserving the earlier signature-swap guardrail.
+  // This is a deny-only structural ordering, not an atomic multi-input read.
+  let policy: unknown, refs: unknown;
+  try { policy = snapshotForwardV02UntrustedGraph(policyInput); }
+  catch { policy = undefined; }
+  try { refs = snapshotForwardV02UntrustedGraph(proofRefsInput); }
+  catch { refs = undefined; }
   const c = snapshotForwardV02SyntheticClaim(claimInput);
   const built = buildForwardV02IndependentProofRequest(
-    envelopeInput, policyInput, proofRefsInput,
+    envelopeInput, policy, refs,
   );
   if (!built.metadataConsistent || built.request === null) {
     return assessment(false, false, "REQUEST_NOT_READY");
