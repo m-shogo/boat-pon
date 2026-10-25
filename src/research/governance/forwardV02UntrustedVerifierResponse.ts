@@ -185,7 +185,12 @@ function result(
   blockers: readonly string[],
 ): ForwardV02UntrustedResponseAssessment {
   const copy: string[] = [];
-  for (let i = 0; i < blockers.length; i++) copy[i] = blockers[i]!;
+  for (let i = 0; i < blockers.length; i++) {
+    // Do not let an ambient numeric setter replace a deny-only blocker.
+    Object.defineProperty(copy, String(i), {
+      value: blockers[i]!, enumerable: true, writable: true, configurable: true,
+    });
+  }
   return Object.freeze({
     requestMetadataConsistent, responseMetadataConsistent,
     independentAuthorityVerified: false, scoringAuthorized: false,
