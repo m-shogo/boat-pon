@@ -87,7 +87,9 @@ export function assessForwardV02SyntheticReferenceAnchorConflictStrictNodeIngres
   if (roleInput !== "WITNESS" && roleInput !== "SETTLEMENT") {
     return deniedReference("INVALID_REFERENCE_ROLE");
   }
-  const reference = capture(referenceInput);
+  // Missing is a distinct legacy outcome, not a malformed Proxy graph.
+  const reference = referenceInput === null || referenceInput === undefined
+    ? { ok: true as const, value: referenceInput } : capture(referenceInput);
   const policy = capture(policyInput);
   const refs = capture(proofRefsInput);
   const claim = capture(claimInput);
