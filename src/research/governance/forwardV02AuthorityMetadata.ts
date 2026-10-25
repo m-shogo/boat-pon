@@ -1,4 +1,4 @@
-import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
+import { snapshotForwardV02UntrustedGraph, snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 
 /**
  * UNTRUSTED, research-only v0.2 evidence metadata preflight.
@@ -197,4 +197,24 @@ export function assessForwardV02AuthorityMetadata(input: unknown): ForwardV02Aut
     }
     return result(good, good);
   } catch { return result("INVALID_EVIDENCE_SHAPE", "INVALID_EVIDENCE_SHAPE"); }
+}
+
+/**
+ * Opt-in, research-only Node ingress for one untrusted authority envelope.
+ * Rejects all encountered caller Proxies before their traps run, then reuses
+ * the existing semantic assessment on detached data. Legacy callers are
+ * deliberately unchanged; neither outcome is independent authentication.
+ *
+ * This is not an atomic multi-input or concurrent-mutation guarantee.
+ */
+export function assessForwardV02AuthorityMetadataStrictNodeIngress(
+  input: unknown,
+): ForwardV02AuthorityMetadataAssessment {
+  try {
+    return assessForwardV02AuthorityMetadata(
+      snapshotForwardV02UntrustedGraphRejectingProxies(input),
+    );
+  } catch {
+    return result("INVALID_EVIDENCE_SHAPE", "INVALID_EVIDENCE_SHAPE");
+  }
 }
