@@ -12,7 +12,7 @@
  * finality/clock rules from an independent authority, not from this request.
  */
 import { assessForwardV02TrustPolicyPreflight } from "./forwardV02TrustPolicyPreflight";
-import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
+import { snapshotForwardV02UntrustedGraph, snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 
 export type ForwardV02ClaimedRevision = Readonly<{
   revisionId: string;
@@ -204,4 +204,33 @@ export function buildForwardV02IndependentProofRequest(
     blockers: frozenBlockers(preflight.blockers),
     request,
   });
+}
+
+/**
+ * Opt-in Node-only ingress for the three caller-owned proof-request graphs.
+ * Reject root/nested/revoked Proxies before their traps, and reject accessors
+ * without invoking them. Preserve the legacy INVALID_ENVELOPE > INVALID_POLICY
+ * > INVALID_PROOF_REFS snapshot-failure precedence.
+ *
+ * This only creates an UNTRUSTED metadata request. It cannot authenticate a
+ * witness, prove settlement finality, provide cross-writer atomicity, authorize
+ * scoring, or connect to production. Existing callers remain unchanged.
+ */
+export function buildForwardV02IndependentProofRequestStrictNodeIngress(
+  envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
+): ForwardV02ProofRequestAssessment {
+  let envelope: unknown, policy: unknown, refs: unknown;
+  let envelopeFailed = false, policyFailed = false, refsFailed = false;
+  // Capture policy/refs first so even a later ordinary-object mutation cannot
+  // repair a previously invalid anchor or proof digest during envelope capture.
+  try { policy = snapshotForwardV02UntrustedGraphRejectingProxies(policyInput); }
+  catch { policyFailed = true; }
+  try { refs = snapshotForwardV02UntrustedGraphRejectingProxies(proofRefsInput); }
+  catch { refsFailed = true; }
+  try { envelope = snapshotForwardV02UntrustedGraphRejectingProxies(envelopeInput); }
+  catch { envelopeFailed = true; }
+  if (envelopeFailed) return snapshotRejected("INVALID_ENVELOPE");
+  if (policyFailed) return snapshotRejected("INVALID_POLICY");
+  if (refsFailed) return snapshotRejected("INVALID_PROOF_REFS");
+  return buildForwardV02IndependentProofRequest(envelope, policy, refs);
 }
