@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-request-digest-late-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-request-digest-late-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "digest-forward-v02-untrusted-request-standalone",
+  "symptom": "The exported request transcript digest accepted a TypeScript-typed but runtime caller-controlled request and directly read nested fields while hashing. A Proxy could return a later repaired value through get while its own-data descriptor still represented a malformed initial freeze timestamp or correction content digest. The hash could therefore describe a later claim rather than the entry-time metadata; it never established independent authority.",
+  "rootCauseClass": "EXPORTED_UNTRUSTED_REQUEST_DIGEST_DIRECT_CALLER_READS",
+  "attemptSignature": "pr2286-v318-pin-direct-untrusted-request-digest-before-hashing-two-negative-proxy-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.0.2-untrusted/pr2286-b78f3f4f/exported-digest-direct-unpinned-reads"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/6d695831d6008a2fe9eeab43dc88993d1ab2afd1",
+    "commit/f5299a469143997981d978e9e64aa0c1fbdc62ee",
+    "research/registries/learnings/LEARN-forward-v02-standalone-reference-digest-late-descriptor-repair-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json",
+    "commit/f5452c8d2a5bf387b000fa3486cde4718b157459"
+  ],
+  "lesson": "An exported digest helper is an independent runtime input boundary: its static request type does not guarantee the caller passed an immutable preflight-built request. Hashing direct nested reads can accept a repaired claim even when a descriptor-only snapshot would reject its original malformed fields.",
+  "guardrail": "Before standalone transcript hashing, detach the entire bounded own-data-descriptor request graph and check exact structural fields and scalar types. Hash only the detached copy; assert adversarial freeze and correction-revision descriptor traps fire, getters never execute, and valid synthetic request digests remain stable. Never treat a digest as evidence authentication or scoring authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T04:00:12.000Z",
+  "productionConnection": false,
+  "_digest": "f2238a2f7a9a7ef4578777187d4a8e7d36a674b795596da497ae40840cdafd2c",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T04:00:12.000Z"
+}
