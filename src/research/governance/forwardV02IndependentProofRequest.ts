@@ -156,13 +156,18 @@ export function buildForwardV02IndependentProofRequest(
     const r = settlement.revisions[i]!;
     // Preserve the complete revision chain even if ambient Array.prototype.push
     // has been replaced (the metadata preflight already uses indexed checks).
-    revisions[i] = Object.freeze({
-      revisionId: r.revisionId,
-      contentDigest: r.contentDigest,
-      predecessorDigest: r.predecessorDigest,
-      sequence: r.sequence,
-      claimedObservedAt: r.observedAt,
-      claimedSourceFinality: r.sourceFinality,
+    // An inherited numeric setter can replace a validated correction item
+    // when assigning into a new array. Define an own index without invoking it.
+    Object.defineProperty(revisions, String(i), {
+      value: Object.freeze({
+        revisionId: r.revisionId,
+        contentDigest: r.contentDigest,
+        predecessorDigest: r.predecessorDigest,
+        sequence: r.sequence,
+        claimedObservedAt: r.observedAt,
+        claimedSourceFinality: r.sourceFinality,
+      }),
+      enumerable: true, writable: true, configurable: true,
     });
   }
   const request: ForwardV02IndependentProofRequest = Object.freeze({
