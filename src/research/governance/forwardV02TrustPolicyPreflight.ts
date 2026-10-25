@@ -83,6 +83,58 @@ function validAnchor(x: unknown): x is Anchor {
     utcSeconds(x.validFrom) && utcSeconds(x.validUntil) &&
     Date.parse(x.validFrom) < Date.parse(x.validUntil);
 }
+
+/**
+ * Capture caller-owned policy and refs before any envelope preflight can run
+ * user-controlled Proxy descriptor traps. Detached graphs are untrusted: this
+ * is only a stable structural comparison, not an authenticated trust root.
+ * Mirror the bounded, getter-free graph admission of the proof-request builder.
+ */
+function snapshotUntrustedPreflight(input: unknown): unknown {
+  let visited = 0;
+  function copy(value: unknown, depth: number): unknown {
+    if (value === null || typeof value === "string" ||
+        typeof value === "number" || typeof value === "boolean") return value;
+    if (typeof value !== "object" || depth > 16 || ++visited > 250_000) {
+      throw new TypeError("INVALID_SNAPSHOT");
+    }
+    const isArray = Array.isArray(value);
+    const proto = Object.getPrototypeOf(value);
+    if (isArray ? proto !== Array.prototype
+      : (proto !== Object.prototype && proto !== null)) {
+      throw new TypeError("INVALID_SNAPSHOT");
+    }
+    const keys = Reflect.ownKeys(value);
+    if (isArray) {
+      const length = Object.getOwnPropertyDescriptor(value, "length")?.value;
+      if (!Number.isSafeInteger(length) || length < 0 ||
+          length > 250_000 || keys.length !== length + 1) {
+        throw new TypeError("INVALID_SNAPSHOT");
+      }
+      const out: unknown[] = [];
+      for (let i = 0; i < length; i++) {
+        const d = Object.getOwnPropertyDescriptor(value, String(i));
+        if (!d || !d.enumerable || !("value" in d)) throw new TypeError("INVALID_SNAPSHOT");
+        out[i] = copy(d.value, depth + 1);
+      }
+      return out;
+    }
+    const out: Record<string, unknown> = Object.create(proto);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      if (typeof key !== "string") throw new TypeError("INVALID_SNAPSHOT");
+      const d = Object.getOwnPropertyDescriptor(value, key);
+      if (!d || !d.enumerable || !("value" in d)) throw new TypeError("INVALID_SNAPSHOT");
+      Object.defineProperty(out, key, {
+        value: copy(d.value, depth + 1),
+        enumerable: true, writable: true, configurable: true,
+      });
+    }
+    return out;
+  }
+  return copy(input, 0);
+}
+
 function deny(reason: string): ForwardV02TrustPolicyAssessment {
   return {
     policyMetadataConsistent: false, independentAuthorityVerified: false,
@@ -124,9 +176,26 @@ export function assessForwardV02TrustPolicyPreflight(
   envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
 ): ForwardV02TrustPolicyAssessment {
   try {
+    // Pin policy and refs first. Envelope descriptor traps can mutate those
+    // caller-owned objects during the envelope's own snapshot or validation.
+    // Preserve INVALID_ENVELOPE precedence even when other snapshots fail.
+    let policySnapshot: unknown = null, refsSnapshot: unknown = null;
+    let policySnapshotFailed = false, refsSnapshotFailed = false;
+    try { policySnapshot = snapshotUntrustedPreflight(policyInput); }
+    catch { policySnapshotFailed = true; }
+    try { refsSnapshot = snapshotUntrustedPreflight(proofRefsInput); }
+    catch { refsSnapshotFailed = true; }
+    let envelopeSnapshot: unknown;
+    try { envelopeSnapshot = snapshotUntrustedPreflight(envelopeInput); }
+    catch { return deny("INVALID_ENVELOPE"); }
+    envelopeInput = envelopeSnapshot;
+    policyInput = policySnapshot;
+    proofRefsInput = refsSnapshot;
     if (!assessForwardV02AuthorityMetadata(envelopeInput).metadataConsistent) {
       return deny("INVALID_ENVELOPE");
     }
+    if (policySnapshotFailed) return deny("INVALID_POLICY");
+    if (refsSnapshotFailed) return deny("INVALID_PROOF_REFS");
     if (!exact(policyInput, POLICY_KEYS) ||
         policyInput.schemaVersion !== "forward-v02-trust-policy.0.1-untrusted" ||
         !digest(policyInput.snapshotDigest) ||
