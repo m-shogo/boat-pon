@@ -403,3 +403,61 @@ for (const trapName of ["getPrototypeOf", "ownKeys"] as const) {
     assert.equal(result.scoringAuthorized, false);
   });
 }
+
+test("shared array snapshot pins later sibling reference before nested child trap", () => {
+  const later = { state: "REVOKED" };
+  let triggers = 0;
+  const source = [
+    new Proxy({ marker: "synthetic" }, {
+      getPrototypeOf(target) {
+        triggers++;
+        source[1] = { state: "ACTIVE" };
+        return Reflect.getPrototypeOf(target);
+      },
+    }),
+    later,
+  ];
+  const pinned = snapshotForwardV02UntrustedGraph(source) as typeof source;
+  assert.equal(triggers, 1, "nested trap must actually replace the sibling");
+  assert.equal((source[1] as typeof later).state, "ACTIVE");
+  assert.equal((pinned[1] as typeof later).state, "REVOKED");
+});
+
+test("shared object snapshot pins later sibling reference before nested child trap", () => {
+  const later = { state: "REVOKED" };
+  let triggers = 0;
+  const source = {
+    trigger: new Proxy({ marker: "synthetic" }, {
+      getPrototypeOf(target) {
+        triggers++;
+        source.later = { state: "ACTIVE" };
+        return Reflect.getPrototypeOf(target);
+      },
+    }),
+    later,
+  };
+  const pinned = snapshotForwardV02UntrustedGraph(source) as typeof source;
+  assert.equal(triggers, 1, "nested trap must actually replace the sibling");
+  assert.equal(source.later.state, "ACTIVE");
+  assert.equal(pinned.later.state, "REVOKED");
+});
+
+test("standalone policy preflight denies revoked sibling anchor replaced by nested Proxy trap", () => {
+  const f = fixture();
+  f.policy.anchors[1]!.state = "REVOKED";
+  let triggers = 0;
+  f.policy.anchors[0] = new Proxy(f.policy.anchors[0]!, {
+    getPrototypeOf(target) {
+      triggers++;
+      f.policy.anchors[1] = { ...f.policy.anchors[1]!, state: "ACTIVE" };
+      return Reflect.getPrototypeOf(target);
+    },
+  });
+  const result = check(f);
+  assert.equal(triggers, 1, "earlier anchor trap must replace the later caller anchor");
+  assert.equal(f.policy.anchors[1]!.state, "ACTIVE");
+  assert.deepEqual(result.blockers, ["REVOKED_SETTLEMENT_ANCHOR"]);
+  assert.equal(result.policyMetadataConsistent, false);
+  assert.equal(result.independentAuthorityVerified, false);
+  assert.equal(result.scoringAuthorized, false);
+});
