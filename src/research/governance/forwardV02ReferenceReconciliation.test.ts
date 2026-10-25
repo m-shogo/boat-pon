@@ -153,3 +153,39 @@ test("manifest timestamp cannot normalize impossible days, 24:00, or unknown off
     assert.equal(forwardV02SourceManifestReferenceDigest(m), null);
   }
 });
+
+test("standalone formula digest cannot repair an invalid expression during later descriptor traversal", () => {
+  const f = formula();
+  f.expression = "SUM_PAYOUT/SUM_STAKE";
+  let mutationExecuted = false;
+  const unstable = new Proxy(f, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "denominator") {
+        target.expression = "(SUM_PAYOUT_MINUS_SUM_STAKE)/SUM_STAKE";
+        mutationExecuted = true;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  assert.equal(forwardV02FormulaReferenceDigest(unstable), null);
+  assert.equal(mutationExecuted, true, "late descriptor repair must actually execute");
+  assert.equal(forwardV02FormulaReferenceDigest(formula()) !== null, true);
+});
+
+test("standalone source-manifest digest cannot repair an invalid stage during later descriptor traversal", () => {
+  const m = manifest();
+  m.evidenceStage = "NOT_AN_EVIDENCE_STAGE";
+  let mutationExecuted = false;
+  const unstable = new Proxy(m, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "productionConnection") {
+        target.evidenceStage = "SHADOW_FORWARD";
+        mutationExecuted = true;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  assert.equal(forwardV02SourceManifestReferenceDigest(unstable), null);
+  assert.equal(mutationExecuted, true, "late descriptor repair must actually execute");
+  assert.equal(forwardV02SourceManifestReferenceDigest(manifest()) !== null, true);
+});
