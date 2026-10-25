@@ -6,6 +6,8 @@ import {
 
 import { assessForwardV02AuthorityMetadata, assessForwardV02AuthorityMetadataStrictNodeIngress } from "./forwardV02AuthorityMetadata";
 
+import { assessForwardV02AuthorityBatch, assessForwardV02AuthorityBatchStrictNodeIngress } from "./forwardV02AuthorityBatch";
+
 const strictSnapshot = snapshotForwardV02UntrustedGraphRejectingProxies;
 
 test("strict Node ingress detaches ordinary nested metadata without granting authority", () => {
@@ -186,5 +188,91 @@ test("strict authority ingress denies nested accessor without executing getter",
   assert.equal(reads, 0);
   assert.deepEqual(actual.blockers, ["INVALID_EVIDENCE_SHAPE"]);
   assert.equal(actual.independentAuthorityVerified, false);
+  assert.equal(actual.scoringAuthorized, false);
+});
+
+test("strict batch ingress preserves ordinary replay classification without granting authority", () => {
+  const first = strictAuthorityFixture(), second = strictAuthorityFixture();
+  const clean = assessForwardV02AuthorityBatchStrictNodeIngress([first, second]);
+  assert.deepEqual(clean, assessForwardV02AuthorityBatch([first, second]));
+  assert.equal(clean.metadataConsistent, true);
+  assert.equal(clean.independentAuthorityVerified, false);
+  assert.equal(clean.scoringAuthorized, false);
+
+  second.freeze.cohortId = "different-synthetic-cohort";
+  assert.deepEqual(assessForwardV02AuthorityBatchStrictNodeIngress([first, second]).blockers, ["RECEIPT_REPLAY_CONFLICT"]);
+  second.freeze.cohortId = first.freeze.cohortId;
+  second.freeze.witness.receiptId = "second-synthetic-receipt";
+  second.settlement.revisions[0]!.contentDigest = digest64("e");
+  assert.deepEqual(assessForwardV02AuthorityBatchStrictNodeIngress([first, second]).blockers, ["SOURCE_REVISION_REPLAY_CONFLICT"]);
+});
+
+test("strict batch ingress rejects root Proxy before it repairs a conflicting receipt", () => {
+  const first = strictAuthorityFixture(), second = strictAuthorityFixture();
+  second.freeze.cohortId = "different-synthetic-cohort";
+  let traps = 0;
+  const input = new Proxy([first, second], {
+    getPrototypeOf(target) {
+      traps++;
+      second.freeze.cohortId = first.freeze.cohortId;
+      return Reflect.getPrototypeOf(target);
+    },
+  });
+  const actual = assessForwardV02AuthorityBatchStrictNodeIngress(input);
+  assert.equal(traps, 0);
+  assert.equal(second.freeze.cohortId, "different-synthetic-cohort");
+  assert.deepEqual(actual.blockers, ["INVALID_BATCH"]);
+  assert.equal(actual.independentAuthorityVerified, false);
+  assert.equal(actual.scoringAuthorized, false);
+});
+
+test("strict batch ingress rejects nested child Proxy before later envelope repair", () => {
+  const first = strictAuthorityFixture(), second = strictAuthorityFixture();
+  second.freeze.cohortId = "different-synthetic-cohort";
+  let traps = 0;
+  first.freeze.witness = new Proxy(first.freeze.witness, {
+    getPrototypeOf(target) {
+      traps++;
+      second.freeze.cohortId = first.freeze.cohortId;
+      return Reflect.getPrototypeOf(target);
+    },
+  });
+  const actual = assessForwardV02AuthorityBatchStrictNodeIngress([first, second]);
+  assert.equal(traps, 0);
+  assert.equal(second.freeze.cohortId, "different-synthetic-cohort");
+  assert.deepEqual(actual.blockers, ["INVALID_BATCH"]);
+  assert.equal(actual.scoringAuthorized, false);
+});
+
+test("strict batch ingress rejects later descriptor Proxy before earlier receipt repair", () => {
+  const first = strictAuthorityFixture(), second = strictAuthorityFixture();
+  first.freeze.cohortId = "different-synthetic-cohort";
+  let traps = 0;
+  second.settlement.revisions[0] = new Proxy(second.settlement.revisions[0]!, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      first.freeze.cohortId = second.freeze.cohortId;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const actual = assessForwardV02AuthorityBatchStrictNodeIngress([first, second]);
+  assert.equal(traps, 0);
+  assert.equal(first.freeze.cohortId, "different-synthetic-cohort");
+  assert.deepEqual(actual.blockers, ["INVALID_BATCH"]);
+  assert.equal(actual.independentAuthorityVerified, false);
+});
+
+test("strict batch ingress denies revoked Proxy and accessor without invoking getter", () => {
+  const revoked = Proxy.revocable(strictAuthorityFixture(), {});
+  revoked.revoke();
+  assert.deepEqual(assessForwardV02AuthorityBatchStrictNodeIngress([revoked.proxy]).blockers, ["INVALID_BATCH"]);
+  const first = strictAuthorityFixture();
+  let reads = 0;
+  Object.defineProperty(first.freeze.witness, "receiptAt", {
+    enumerable: true, get() { reads++; return "2026-10-24T00:00:00.0001Z"; },
+  });
+  const actual = assessForwardV02AuthorityBatchStrictNodeIngress([first]);
+  assert.equal(reads, 0);
+  assert.deepEqual(actual.blockers, ["INVALID_BATCH"]);
   assert.equal(actual.scoringAuthorized, false);
 });
