@@ -1,3 +1,5 @@
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02IndependentProofRequest";
+
 /**
  * Unapproved, research-only Forward Vault v0.2 protocol design preflight.
  *
@@ -114,7 +116,11 @@ const deny = (blockers: string[]): ForwardV02CandidateAssessment =>
  * There is intentionally no authorized return path, including on success.
  */
 export function assessForwardV02Candidate(input: unknown): ForwardV02CandidateAssessment {
+  // Standalone candidate validation is also an untrusted entry point. Pin the
+  // complete descriptor graph before any semantic reads; a late Proxy trap
+  // must not repair a previously copied invalid policy or evidence stage.
   try {
+    input = snapshotForwardV02UntrustedGraph(input);
     if (!exactObject(input, TOP)) return deny(["INVALID_CANDIDATE_SHAPE"]);
     const c = input;
     if (c.schemaVersion !== FORWARD_V02_CANDIDATE_VERSION ||
