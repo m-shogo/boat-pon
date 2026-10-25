@@ -29,7 +29,12 @@ export function snapshotForwardV02UntrustedGraph(input: unknown): unknown {
         if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
           throw new TypeError("INVALID_SNAPSHOT");
         }
-        out[i] = copy(descriptor.value, depth + 1);
+        // Defining an own index bypasses an ambient Array.prototype numeric
+        // setter, which could mutate a later caller-owned element mid-copy.
+        Object.defineProperty(out, String(i), {
+          value: copy(descriptor.value, depth + 1),
+          enumerable: true, writable: true, configurable: true,
+        });
       }
       return out;
     }
