@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
-import { assessForwardV02TrustPolicyPreflight } from "./forwardV02TrustPolicyPreflight";
+import { assessForwardV02TrustPolicyPreflight, assessForwardV02TrustPolicyPreflightStrictNodeIngress as strictPreflight } from "./forwardV02TrustPolicyPreflight";
 
 const h = (c: string) => c.repeat(64);
 function fixture() {
@@ -403,3 +403,109 @@ for (const trapName of ["getPrototypeOf", "ownKeys"] as const) {
     assert.equal(result.scoringAuthorized, false);
   });
 }
+
+
+test("strict trust-policy ingress preserves ordinary policy, revocation and reference classifications", () => {
+  const valid = fixture();
+  assert.deepEqual(strictPreflight(valid.envelope, valid.policy, valid.refs), check(valid));
+  assert.equal(strictPreflight(valid.envelope, valid.policy, valid.refs).independentAuthorityVerified, false);
+  assert.equal(strictPreflight(valid.envelope, valid.policy, valid.refs).scoringAuthorized, false);
+  const revoked = fixture();
+  revoked.policy.anchors[0]!.state = "REVOKED";
+  assert.deepEqual(strictPreflight(revoked.envelope, revoked.policy, revoked.refs), check(revoked));
+  const draft = fixture();
+  draft.policy.reviewState = "DRAFT";
+  assert.deepEqual(strictPreflight(draft.envelope, draft.policy, draft.refs), check(draft));
+  const refs = fixture();
+  refs.refs.policySnapshotDigest = h("0");
+  assert.deepEqual(strictPreflight(refs.envelope, refs.policy, refs.refs), check(refs));
+});
+
+test("strict trust-policy ingress rejects root envelope Proxy before revoked-anchor repair", () => {
+  const f = fixture();
+  f.policy.anchors[0]!.state = "REVOKED";
+  let traps = 0;
+  const envelope = new Proxy(f.envelope, {
+    ownKeys(target) {
+      traps++;
+      f.policy.anchors[0]!.state = "ACTIVE";
+      return Reflect.ownKeys(target);
+    },
+  });
+  assert.deepEqual(strictPreflight(envelope, f.policy, f.refs).blockers, ["INVALID_ENVELOPE"]);
+  assert.equal(traps, 0);
+  assert.equal(f.policy.anchors[0]!.state, "REVOKED");
+});
+
+test("strict trust-policy ingress rejects nested policy Proxy before proof-reference repair", () => {
+  const f = fixture();
+  f.refs.policySnapshotDigest = h("0");
+  let traps = 0;
+  f.policy.anchors[0] = new Proxy(f.policy.anchors[0]!, {
+    getPrototypeOf(target) {
+      traps++;
+      f.refs.policySnapshotDigest = h("e");
+      return Reflect.getPrototypeOf(target);
+    },
+  });
+  const result = strictPreflight(f.envelope, f.policy, f.refs);
+  assert.deepEqual(result.blockers, ["INVALID_POLICY"]);
+  assert.equal(result.policyMetadataConsistent, false);
+  assert.equal(traps, 0);
+  assert.equal(f.refs.policySnapshotDigest, h("0"));
+});
+
+test("strict trust-policy ingress rejects proof-reference Proxy before policy repair", () => {
+  const f = fixture();
+  f.policy.anchors[0]!.state = "REVOKED";
+  let traps = 0;
+  const refs = new Proxy(f.refs, {
+    getOwnPropertyDescriptor(target, key) {
+      traps++;
+      f.policy.anchors[0]!.state = "ACTIVE";
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = strictPreflight(f.envelope, f.policy, refs);
+  assert.deepEqual(result.blockers, ["INVALID_PROOF_REFS"]);
+  assert.equal(result.scoringAuthorized, false);
+  assert.equal(traps, 0);
+  assert.equal(f.policy.anchors[0]!.state, "REVOKED");
+});
+
+test("strict trust-policy ingress rejects revoked Proxy and accessor without invoking traps", () => {
+  const f = fixture();
+  let traps = 0;
+  const revocable = Proxy.revocable(f.policy.anchors[0]!, {
+    ownKeys(target) {
+      traps++;
+      return Reflect.ownKeys(target);
+    },
+  });
+  revocable.revoke();
+  f.policy.anchors[0] = revocable.proxy;
+  assert.deepEqual(strictPreflight(f.envelope, f.policy, f.refs).blockers, ["INVALID_POLICY"]);
+  assert.equal(traps, 0);
+
+  const g = fixture();
+  let getters = 0;
+  Object.defineProperty(g.refs, "policySnapshotDigest", {
+    enumerable: true, configurable: true,
+    get() { getters++; return h("e"); },
+  });
+  assert.deepEqual(strictPreflight(g.envelope, g.policy, g.refs).blockers, ["INVALID_PROOF_REFS"]);
+  assert.equal(getters, 0);
+});
+
+test("strict trust-policy ingress retains envelope-first snapshot error precedence", () => {
+  const f = fixture();
+  const invalidEnvelope = new Proxy(f.envelope, { ownKeys() { throw Error("not reached"); } });
+  const invalidPolicy = new Proxy(f.policy, { ownKeys() { throw Error("not reached"); } });
+  const invalidRefs = new Proxy(f.refs, { ownKeys() { throw Error("not reached"); } });
+  assert.deepEqual(strictPreflight(invalidEnvelope, invalidPolicy, invalidRefs).blockers,
+    ["INVALID_ENVELOPE"]);
+  assert.deepEqual(strictPreflight(f.envelope, invalidPolicy, invalidRefs).blockers,
+    ["INVALID_POLICY"]);
+  assert.deepEqual(strictPreflight(f.envelope, f.policy, invalidRefs).blockers,
+    ["INVALID_PROOF_REFS"]);
+});
