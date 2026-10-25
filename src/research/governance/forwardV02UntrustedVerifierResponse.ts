@@ -8,7 +8,7 @@
  */
 import { createHash } from "node:crypto";
 import { buildForwardV02IndependentProofRequest, type ForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
-import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
+import { snapshotForwardV02UntrustedGraph, snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 
 export type ForwardV02UntrustedResponseAssessment = Readonly<{
   requestMetadataConsistent: boolean;
@@ -262,4 +262,31 @@ export function assessForwardV02UntrustedVerifierResponse(
     "UNTRUSTED_VERIFIER_RESPONSE", "UNVERIFIED_WITNESS",
     "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL",
   ]);
+}
+
+/**
+ * Opt-in Node-only quarantine for all four untrusted verifier-response inputs.
+ * Snapshot the response first, preserving the legacy request-first diagnostic
+ * precedence through null sentinels for rejected graphs. No Proxy trap or
+ * accessor on the caller graphs may run during strict admission. The legacy
+ * verifier-response API and all callers remain unchanged.
+ *
+ * This does not authenticate a verifier, attest settlement, provide atomicity
+ * against concurrent ordinary-object writers, or grant scoring authority.
+ */
+export function assessForwardV02UntrustedVerifierResponseStrictNodeIngress(
+  envelopeInput: unknown, policyInput: unknown, proofRefsInput: unknown,
+  responseInput: unknown,
+): ForwardV02UntrustedResponseAssessment {
+  let response: unknown = null, policy: unknown = null;
+  let proofRefs: unknown = null, envelope: unknown = null;
+  try { response = snapshotForwardV02UntrustedGraphRejectingProxies(responseInput); }
+  catch { /* Rejected response is handled after request preflight. */ }
+  try { policy = snapshotForwardV02UntrustedGraphRejectingProxies(policyInput); }
+  catch { /* Invalid policy leaves the request unready. */ }
+  try { proofRefs = snapshotForwardV02UntrustedGraphRejectingProxies(proofRefsInput); }
+  catch { /* Invalid proof references leave the request unready. */ }
+  try { envelope = snapshotForwardV02UntrustedGraphRejectingProxies(envelopeInput); }
+  catch { /* Invalid envelope leaves the request unready. */ }
+  return assessForwardV02UntrustedVerifierResponse(envelope, policy, proofRefs, response);
 }
