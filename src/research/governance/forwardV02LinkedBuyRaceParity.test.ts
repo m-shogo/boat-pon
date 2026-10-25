@@ -330,3 +330,53 @@ test("unequal initial BUY race sets are rejected before local outcome parity", (
   ]);
   assert.deepEqual(localReason(b), ["LINKED_BUY_RACE_PARITY_NOT_VERIFIED"]);
 });
+
+test("late reference repair cannot equalize initially unequal linked BUY race sets", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"),
+    decision("synthetic-b", "2", "b2"),
+  ]);
+  let repaired = false;
+  b.r = new Proxy(b.r, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "expectedAnalysisSnapshotDigest") {
+        repaired = true;
+        b.ds[1]!.canonicalRaceId = "synthetic-race-1";
+        b.os[1]!.canonicalRaceId = "synthetic-race-1";
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = check(b);
+  assert.equal(repaired, true, "late reference descriptor must execute");
+  assert.equal(result.linkedBuyRaceSetsAligned, false);
+  assert.deepEqual(result.blockers, ["UNEQUAL_LINKED_BUY_RACE_SETS"]);
+  assert.equal(result.scoringAuthorized, false);
+});
+
+test("late reference repair cannot hide an initially asymmetric local refund", () => {
+  const b = bundle([
+    decision("synthetic-a", "1", "a1"),
+    decision("synthetic-b", "1", "b1"),
+  ], (os) => refund(os[1]!));
+  let repaired = false;
+  b.r = new Proxy(b.r, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "expectedAnalysisSnapshotDigest") {
+        repaired = true;
+        const o = b.os[1]!;
+        o.disposition = "SETTLED";
+        o.evaluable = true;
+        o.payoutYen = 200;
+        o.refundYen = 0;
+        o.refundReason = null;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = assessForwardV02LocalOutcomeRaceParity(b.c, b.r, b.ds, b.os);
+  assert.equal(repaired, true, "late reference descriptor must execute");
+  assert.equal(result.localOutcomeRaceSetsAligned, false);
+  assert.deepEqual(result.blockers, ["UNEQUAL_LOCAL_SETTLED_RACE_SETS"]);
+  assert.equal(result.scoringAuthorized, false);
+});

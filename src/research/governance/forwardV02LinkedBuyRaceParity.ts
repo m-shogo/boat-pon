@@ -1,4 +1,5 @@
 import { assessForwardV02OutcomeLinkPreflight } from "./forwardV02OutcomeLinkPreflight";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
 
 /**
  * Research-only linked-BUY race-set parity check for the unapproved v0.2
@@ -20,6 +21,22 @@ const deny = (reason: string): ForwardV02LinkedBuyRaceParityAssessment => ({
 });
 
 /**
+ * Detach all untrusted parity inputs before any lower-level preflight can
+ * traverse a caller Proxy and mutate an earlier ledger or candidate.
+ * This establishes stable comparison inputs, NOT independent authority.
+ */
+function pinParityInputs(candidate: unknown, references: unknown, decisions: unknown, outcomes: unknown) {
+  const pinnedDecisions = snapshotForwardV02UntrustedGraph(decisions);
+  const pinnedOutcomes = snapshotForwardV02UntrustedGraph(outcomes);
+  const pinnedCandidate = snapshotForwardV02UntrustedGraph(candidate);
+  const pinnedReferences = snapshotForwardV02UntrustedGraph(references);
+  return {
+    candidate: pinnedCandidate, references: pinnedReferences,
+    decisions: pinnedDecisions, outcomes: pinnedOutcomes,
+  };
+}
+
+/**
  * No success path grants scoring authority. Caller-controlled candidate,
  * manifest, decisions and outcomes are NOT independent evidence.
  */
@@ -30,6 +47,10 @@ export function assessForwardV02LinkedBuyRaceParity(
   outcomes: unknown,
 ): ForwardV02LinkedBuyRaceParityAssessment {
   try {
+    try {
+      ({ candidate, references, decisions, outcomes } =
+        pinParityInputs(candidate, references, decisions, outcomes));
+    } catch { return deny("OUTCOME_LINK_NOT_VERIFIED"); }
     if (!assessForwardV02OutcomeLinkPreflight(
       candidate, references, decisions, outcomes,
     ).outcomeReferencesLinked) return deny("OUTCOME_LINK_NOT_VERIFIED");
@@ -117,6 +138,10 @@ export function assessForwardV02LocalOutcomeRaceParity(
   outcomes: unknown,
 ): ForwardV02LocalOutcomeRaceParityAssessment {
   try {
+    try {
+      ({ candidate, references, decisions, outcomes } =
+        pinParityInputs(candidate, references, decisions, outcomes));
+    } catch { return denyLocal("LINKED_BUY_RACE_PARITY_NOT_VERIFIED"); }
     if (!assessForwardV02LinkedBuyRaceParity(
       candidate, references, decisions, outcomes,
     ).linkedBuyRaceSetsAligned) return denyLocal("LINKED_BUY_RACE_PARITY_NOT_VERIFIED");
