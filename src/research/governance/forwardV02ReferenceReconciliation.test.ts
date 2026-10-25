@@ -54,6 +54,50 @@ test("matching synthetic content references remain unapproved and unscorable", (
   assert.deepEqual(check(candidate(), refs()), { referencesReconciled: true, scoringAuthorized: false,
     blockers: ["UNAPPROVED_PROTOCOL", "INDEPENDENT_AUTHORITY_NOT_ATTESTED", "SETTLEMENT_AND_ENROLLMENT_NOT_VERIFIED"] });
 });
+test("candidate descriptor mutation cannot repair an earlier mismatching formula digest", () => {
+  const c = candidate(), correctDigest = c.metricFormulaDigest;
+  c.metricFormulaDigest = h("e");
+  let mutated = false;
+  const proxy = new Proxy(c, {
+    getOwnPropertyDescriptor(target, key) {
+      // A late descriptor is inspected after metricFormulaDigest was copied.
+      // The old validator examined all descriptors before reading the digest.
+      if (key === "scoringAuthorized") {
+        target.metricFormulaDigest = correctDigest;
+        mutated = true;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = check(proxy, refs());
+  assert.equal(mutated, true, "the attempted late repair must execute");
+  assert.equal(result.referencesReconciled, false);
+  assert.equal(result.scoringAuthorized, false);
+  assert.deepEqual(result.blockers, ["FORMULA_REFERENCE_MISMATCH"]);
+});
+
+test("manifest descriptor mutation cannot repair an earlier mismatching evidence stage", () => {
+  const r = refs();
+  r.sourceManifest.evidenceStage = "VALIDATION";
+  let mutated = false;
+  r.sourceManifest = new Proxy(r.sourceManifest, {
+    getOwnPropertyDescriptor(target, key) {
+      // The source-manifest hash used to validate all descriptors before
+      // reading stage, so this mutation could repair a mismatched reference.
+      if (key === "productionConnection") {
+        target.evidenceStage = "SHADOW_FORWARD";
+        mutated = true;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = check(candidate(), r);
+  assert.equal(mutated, true, "the attempted late stage repair must execute");
+  assert.equal(result.referencesReconciled, false);
+  assert.equal(result.scoringAuthorized, false);
+  assert.deepEqual(result.blockers, ["SOURCE_MANIFEST_REFERENCE_MISMATCH"]);
+});
+
 test("arbitrary digest-shaped candidate reference is not enough", () => {
   assert.deepEqual(check({ ...candidate(), metricFormulaDigest: h("e") }, refs()).blockers, ["FORMULA_REFERENCE_MISMATCH"]);
 });
@@ -87,7 +131,8 @@ test("private fields, unknown keys and accessor fields cannot enter manifest", (
   assert.deepEqual(check(candidate(), r).blockers, ["SOURCE_MANIFEST_REFERENCE_MISMATCH"]);
   const r2 = refs();
   Object.defineProperty(r2.sourceManifest, "manifestId", { enumerable: true, get() { throw new Error("accessor"); } });
-  assert.deepEqual(check(candidate(), r2).blockers, ["SOURCE_MANIFEST_REFERENCE_MISMATCH"]);
+  // The detached snapshot rejects the accessor before manifest hashing.
+  assert.deepEqual(check(candidate(), r2).blockers, ["INVALID_REFERENCE_SHAPE"]);
 });
 test("sparse, duplicate, toJSON arrays are rejected before hashing", () => {
   const r = refs(); r.sourceManifest.decisionDigests = [h("b"), h("b")];
