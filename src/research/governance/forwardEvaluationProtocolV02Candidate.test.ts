@@ -153,10 +153,11 @@ test("unknown, accessor, symbol, sparse and inherited-toJSON shapes fail closed"
   const sparse = candidate();
   sparse.benchmarkDecisionSystems = new Array(2) as string[];
   sparse.benchmarkDecisionSystems[1] = "synthetic";
-  assert.deepEqual(blockers(sparse), ["INVALID_BENCHMARK_SET"]);
+  // The detached snapshot now rejects malformed nested arrays before taxonomy checks.
+  assert.deepEqual(blockers(sparse), ["INVALID_CANDIDATE_SHAPE"]);
   const hooked = candidate();
   Object.defineProperty(hooked.exclusionReasons, "toJSON", { value: () => [] });
-  assert.deepEqual(blockers(hooked), ["INCOMPLETE_EXCLUSION_TAXONOMY"]);
+  assert.deepEqual(blockers(hooked), ["INVALID_CANDIDATE_SHAPE"]);
 });
 
 test("calendar, stage, and source-manifest requirements cannot be inferred", () => {
@@ -181,4 +182,44 @@ test("prior mutable Array.prototype.includes guardrail is reused", () => {
   } finally {
     Array.prototype.includes = original;
   }
+});
+ 
+test("standalone candidate preflight rejects a late root evidence-stage repair", () => {
+  const c = candidate();
+  c.evidenceStage = "MIXED";
+  let mutationExecuted = false;
+  const unstable = new Proxy(c, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "scoringAuthorized") {
+        target.evidenceStage = "SHADOW_FORWARD";
+        mutationExecuted = true;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = assessForwardV02Candidate(unstable);
+  assert.equal(mutationExecuted, true, "late stage repair must actually execute");
+  assert.equal(result.candidateComplete, false);
+  assert.equal(result.scoringAuthorized, false);
+  assert.deepEqual(result.blockers, ["INVALID_CANDIDATE_HEADER"]);
+});
+
+test("standalone candidate preflight rejects a late nested money-policy repair", () => {
+  const c = candidate();
+  c.moneyPolicy.refund = "TREAT_AS_LOSS";
+  let mutationExecuted = false;
+  c.moneyPolicy = new Proxy(c.moneyPolicy, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "zeroDenominator") {
+        target.refund = "EXCLUDE_AND_COUNT";
+        mutationExecuted = true;
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const result = assessForwardV02Candidate(c);
+  assert.equal(mutationExecuted, true, "late refund-policy repair must actually execute");
+  assert.equal(result.candidateComplete, false);
+  assert.equal(result.scoringAuthorized, false);
+  assert.deepEqual(result.blockers, ["UNFROZEN_MONEY_OR_OUTCOME_POLICY"]);
 });
