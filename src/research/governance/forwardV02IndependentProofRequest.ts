@@ -77,7 +77,12 @@ function frozenBlockers(input: readonly string[]): readonly string[] {
   // Do not depend on a mutable Array.prototype iterator when copying even
   // internally generated blockers (reuse the canonical iterator guardrail).
   const copy: string[] = [];
-  for (let i = 0; i < input.length; i++) copy[i] = input[i]!;
+  for (let i = 0; i < input.length; i++) {
+    // Even a deny-only blocker array must not run an inherited index setter.
+    Object.defineProperty(copy, String(i), {
+      value: input[i]!, enumerable: true, writable: true, configurable: true,
+    });
+  }
   return Object.freeze(copy);
 }
 
