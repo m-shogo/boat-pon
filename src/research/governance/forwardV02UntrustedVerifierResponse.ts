@@ -8,6 +8,7 @@
  */
 import { createHash } from "node:crypto";
 import { buildForwardV02IndependentProofRequest, type ForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
 
 export type ForwardV02UntrustedResponseAssessment = Readonly<{
   requestMetadataConsistent: boolean;
@@ -28,6 +29,74 @@ const DIGEST = /^[0-9a-f]{64}$/u;
 const RESPONSE_VERSION = "forward-v02-independent-proof-response.0.2-untrusted";
 const REQUEST_VERSION = "forward-v02-independent-proof-request.0.1-untrusted";
 
+const REQUEST_FIELDS = ["schemaVersion", "policySnapshotDigest", "freeze", "settlement"] as const;
+const REQUEST_FREEZE_FIELDS = [
+  "cohortId", "protocolDigest", "membershipDigest", "claimedFirstDecisionAt",
+  "issuerId", "receiptId", "claimedReceiptAt", "claimedAnchorId", "witnessProofDigest",
+] as const;
+const REQUEST_SETTLEMENT_FIELDS = [
+  "sourceId", "claimedAnchorId", "terminalRevisionId", "settlementProofDigest", "revisions",
+] as const;
+const REQUEST_REVISION_FIELDS = [
+  "revisionId", "contentDigest", "predecessorDigest", "sequence",
+  "claimedObservedAt", "claimedSourceFinality",
+] as const;
+
+function exactOwnFields(input: unknown, keys: readonly string[]): input is Record<string, unknown> {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) return false;
+  const own = Reflect.ownKeys(input);
+  if (own.length !== keys.length) return false;
+  for (let i = 0; i < keys.length; i++) {
+    if (!Object.hasOwn(input, keys[i]!)) return false;
+  }
+  return true;
+}
+
+function nonemptyStringFields(input: Record<string, unknown>, keys: readonly string[]): boolean {
+  for (let i = 0; i < keys.length; i++) {
+    const value = input[keys[i]!];
+    if (typeof value !== "string" || value.length === 0) return false;
+  }
+  return true;
+}
+
+/**
+ * The digest helper is exported, so its TypeScript type alone cannot be a
+ * runtime admission boundary. Pin the complete request graph before hashing:
+ * no caller-owned get trap or later descriptor repair may change the transcript.
+ * This validates only structural metadata, never independent authority.
+ */
+function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofRequest {
+  let pinned: unknown;
+  try { pinned = snapshotForwardV02UntrustedGraph(input); }
+  catch { throw new TypeError("INVALID_UNTRUSTED_REQUEST"); }
+  if (!exactOwnFields(pinned, REQUEST_FIELDS) ||
+      pinned.schemaVersion !== REQUEST_VERSION ||
+      typeof pinned.policySnapshotDigest !== "string" ||
+      !DIGEST.test(pinned.policySnapshotDigest) ||
+      !exactOwnFields(pinned.freeze, REQUEST_FREEZE_FIELDS) ||
+      !nonemptyStringFields(pinned.freeze, REQUEST_FREEZE_FIELDS) ||
+      !exactOwnFields(pinned.settlement, REQUEST_SETTLEMENT_FIELDS) ||
+      !nonemptyStringFields(pinned.settlement, REQUEST_SETTLEMENT_FIELDS.slice(0, 4))) {
+    throw new TypeError("INVALID_UNTRUSTED_REQUEST");
+  }
+  const revisions = pinned.settlement.revisions;
+  if (!Array.isArray(revisions) || revisions.length < 1 || revisions.length > 10000) {
+    throw new TypeError("INVALID_UNTRUSTED_REQUEST");
+  }
+  for (let i = 0; i < revisions.length; i++) {
+    const r: unknown = revisions[i];
+    if (!exactOwnFields(r, REQUEST_REVISION_FIELDS) ||
+        !nonemptyStringFields(r, ["revisionId", "contentDigest", "claimedObservedAt", "claimedSourceFinality"]) ||
+        (r.predecessorDigest !== null && typeof r.predecessorDigest !== "string") ||
+        !Number.isSafeInteger(r.sequence) || (r.sequence as number) < 1) {
+      throw new TypeError("INVALID_UNTRUSTED_REQUEST");
+    }
+  }
+  return pinned as unknown as ForwardV02IndependentProofRequest;
+}
+
+
 /**
  * Deterministic SHA-256 transcript of ALL allowlisted request fields.
  * This is a collision-resistant structural correlation ID, NOT a signature,
@@ -36,6 +105,7 @@ const REQUEST_VERSION = "forward-v02-independent-proof-request.0.1-untrusted";
  * Call only on the immutable request returned by the strict preflight builder.
  */
 export function digestForwardV02UntrustedRequest(request: ForwardV02IndependentProofRequest): string {
+  const pinned = pinnedRequestForDigest(request);
   const hash = createHash("sha256");
   hash.update("boat-pon.forward-v02.untrusted-request-transcript.v1\\0");
   const add = (value: string): void => {
@@ -44,9 +114,9 @@ export function digestForwardV02UntrustedRequest(request: ForwardV02IndependentP
     hash.update(value, "utf8");
     hash.update(";");
   };
-  add(request.schemaVersion);
-  add(request.policySnapshotDigest);
-  const f = request.freeze;
+  add(pinned.schemaVersion);
+  add(pinned.policySnapshotDigest);
+  const f = pinned.freeze;
   add(f.cohortId);
   add(f.protocolDigest);
   add(f.membershipDigest);
@@ -56,7 +126,7 @@ export function digestForwardV02UntrustedRequest(request: ForwardV02IndependentP
   add(f.claimedReceiptAt);
   add(f.claimedAnchorId);
   add(f.witnessProofDigest);
-  const settlement = request.settlement;
+  const settlement = pinned.settlement;
   add(settlement.sourceId);
   add(settlement.claimedAnchorId);
   add(settlement.terminalRevisionId);
