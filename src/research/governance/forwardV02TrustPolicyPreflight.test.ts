@@ -346,3 +346,60 @@ test("policy snapshot and anchor accumulation cannot launder an invalid later an
   assert.equal(outcome?.independentAuthorityVerified, false);
   assert.equal(outcome?.scoringAuthorized, false);
 });
+
+for (const trapName of ["getPrototypeOf", "ownKeys"] as const) {
+  test(`bounded array snapshot pins an invalid item before ${trapName} repairs it`, () => {
+    const source = [{ state: "REVOKED" }, { state: "ACTIVE" }];
+    let traps = 0;
+    const proxy = new Proxy(source, {
+      getPrototypeOf(target) {
+        if (trapName === "getPrototypeOf") {
+          traps++;
+          source[0]!.state = "ACTIVE";
+        }
+        return Reflect.getPrototypeOf(target);
+      },
+      ownKeys(target) {
+        if (trapName === "ownKeys") {
+          traps++;
+          source[0]!.state = "ACTIVE";
+        }
+        return Reflect.ownKeys(target);
+      },
+    });
+    const pinned = snapshotForwardV02UntrustedGraph(proxy) as typeof source;
+    assert.equal(traps, 1);
+    assert.equal(source[0]!.state, "ACTIVE");
+    assert.equal(pinned[0]!.state, "REVOKED");
+  });
+
+  test(`standalone policy preflight rejects a revoked anchor repaired by ${trapName}`, () => {
+    const f = fixture();
+    const anchors = f.policy.anchors;
+    anchors[0]!.state = "REVOKED";
+    let traps = 0;
+    f.policy.anchors = new Proxy(anchors, {
+      getPrototypeOf(target) {
+        if (trapName === "getPrototypeOf") {
+          traps++;
+          anchors[0]!.state = "ACTIVE";
+        }
+        return Reflect.getPrototypeOf(target);
+      },
+      ownKeys(target) {
+        if (trapName === "ownKeys") {
+          traps++;
+          anchors[0]!.state = "ACTIVE";
+        }
+        return Reflect.ownKeys(target);
+      },
+    });
+    const result = check(f);
+    assert.equal(traps, 1);
+    assert.equal(anchors[0]!.state, "ACTIVE");
+    assert.deepEqual(result.blockers, ["REVOKED_WITNESS_ANCHOR"]);
+    assert.equal(result.policyMetadataConsistent, false);
+    assert.equal(result.independentAuthorityVerified, false);
+    assert.equal(result.scoringAuthorized, false);
+  });
+}
