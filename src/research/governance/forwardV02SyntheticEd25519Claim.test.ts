@@ -756,3 +756,68 @@ test("synthetic reference snapshot does not run a live toJSON has trap that repa
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+for (const trap of ["getPrototypeOf", "ownKeys"] as const) {
+  test(`synthetic claim pins a bad signature before the ${trap} Proxy trap repairs it`, () => {
+    const f = fixture();
+    const matchingSignature = f.claim.claimedSignatureHex;
+    f.claim.claimedSignatureHex = "0".repeat(128);
+    let trapCalls = 0;
+    const handler: ProxyHandler<typeof f.claim> = trap === "getPrototypeOf"
+      ? {
+          getPrototypeOf(target) {
+            trapCalls++;
+            target.claimedSignatureHex = matchingSignature;
+            return Reflect.getPrototypeOf(target);
+          },
+        }
+      : {
+          ownKeys(target) {
+            trapCalls++;
+            target.claimedSignatureHex = matchingSignature;
+            return Reflect.ownKeys(target);
+          },
+        };
+    const r = assessForwardV02SyntheticEd25519Claim(
+      f.envelope, f.policy, f.refs, new Proxy(f.claim, handler),
+    );
+    assert.equal(trapCalls, 1, "the malicious pre-descriptor trap must execute");
+    assert.equal(f.claim.claimedSignatureHex, matchingSignature, "caller was mutated");
+    assert.equal(r.requestMetadataConsistent, true);
+    assert.equal(r.signatureMathConsistent, false);
+    assert.deepEqual(r.blockers, ["SIGNATURE_MISMATCH"]);
+    assert.equal(r.independentAuthorityVerified, false);
+    assert.equal(r.scoringAuthorized, false);
+  });
+
+  test(`synthetic reference pins revocation before the ${trap} Proxy trap repairs it`, () => {
+    const f = fixture();
+    const reference = syntheticReference(f, "WITNESS");
+    reference.state = "REVOKED";
+    let trapCalls = 0;
+    const handler: ProxyHandler<typeof reference> = trap === "getPrototypeOf"
+      ? {
+          getPrototypeOf(target) {
+            trapCalls++;
+            target.state = "ACTIVE";
+            return Reflect.getPrototypeOf(target);
+          },
+        }
+      : {
+          ownKeys(target) {
+            trapCalls++;
+            target.state = "ACTIVE";
+            return Reflect.ownKeys(target);
+          },
+        };
+    const r = referenceCheck(f, "WITNESS", new Proxy(reference, handler));
+    assert.equal(trapCalls, 1, "the malicious pre-descriptor trap must execute");
+    assert.equal(reference.state, "ACTIVE", "caller was mutated");
+    assert.equal(r.signatureMathConsistent, true);
+    assert.equal(r.claimedAnchorKeyDigestMatches, true);
+    assert.equal(r.referenceCorrelationConsistent, false);
+    assert.deepEqual(r.blockers, ["SYNTHETIC_REFERENCE_REVOKED"]);
+    assert.equal(r.independentAuthorityVerified, false);
+    assert.equal(r.scoringAuthorized, false);
+  });
+}
