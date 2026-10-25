@@ -923,3 +923,55 @@ test("standalone signature math pins mismatched proof refs before claim ownKeys 
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("claimed-anchor correlation pins mismatched proof refs before claim descriptor repairs them", () => {
+  const f = fixture();
+  f.claim.claimedSignerId = "synthetic-witness-issuer";
+  f.policy.anchors[0]!.publicKeyDigest = claimedKeyDigest(f.claim.claimedPublicKeySpkiPem);
+  f.refs.policySnapshotDigest = h("f");
+  let mutations = 0;
+  const claim = new Proxy(f.claim, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === "schemaVersion") {
+        mutations++;
+        f.refs.policySnapshotDigest = h("e");
+      }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const r = assessForwardV02SyntheticClaimedAnchorBinding(
+    f.envelope, f.policy, f.refs, claim, "WITNESS",
+  );
+  assert.ok(mutations > 0, "claim descriptor trap must execute");
+  assert.equal(f.refs.policySnapshotDigest, h("e"), "caller refs were repaired");
+  assert.equal(r.signatureMathConsistent, false);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.deepEqual(r.blockers, ["SIGNATURE_NOT_CONSISTENT"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
+
+test("synthetic reference pins mismatched proof refs before claim ownKeys repairs them", () => {
+  const f = fixture();
+  const ref = syntheticReference(f, "WITNESS");
+  f.refs.policySnapshotDigest = h("f");
+  let mutations = 0;
+  const claim = new Proxy(f.claim, {
+    ownKeys(target) {
+      mutations++;
+      f.refs.policySnapshotDigest = h("e");
+      return Reflect.ownKeys(target);
+    },
+  });
+  const r = assessForwardV02SyntheticReferenceAnchorConflict(
+    f.envelope, f.policy, f.refs, claim, "WITNESS", ref,
+  );
+  assert.ok(mutations > 0, "claim ownKeys trap must execute");
+  assert.equal(f.refs.policySnapshotDigest, h("e"), "caller refs were repaired");
+  assert.equal(r.signatureMathConsistent, false);
+  assert.equal(r.claimedAnchorKeyDigestMatches, false);
+  assert.equal(r.referenceCorrelationConsistent, false);
+  assert.deepEqual(r.blockers, ["CLAIMED_ANCHOR_NOT_BOUND"]);
+  assert.equal(r.independentAuthorityVerified, false);
+  assert.equal(r.scoringAuthorized, false);
+});
