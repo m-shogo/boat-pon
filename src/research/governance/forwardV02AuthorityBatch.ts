@@ -83,11 +83,12 @@ function sameRevision(a: Settlement, ar: Revision, b: Settlement, br: Revision):
  */
 export function assessForwardV02AuthorityBatch(input: unknown): ForwardV02AuthorityBatchAssessment {
   try {
-    if (!denseOwnDataArray(input)) return deny("INVALID_BATCH");
-    // Copy the complete batch before any envelope is validated or retained
-    // in replay maps. An original array descriptor Proxy may mutate an earlier
-    // envelope while a later index is read; only detached earlier copies are
-    // eligible for replay comparison. These are still UNTRUSTED claims.
+    // Do not probe a caller-controlled array before taking its snapshot:
+    // reading .length or checking "toJSON" in a Proxy can run traps that
+    // repair an initially conflicting receipt/revision before capture.
+    // The descriptor-only snapshot is the first admission boundary; then
+    // validate the detached batch and build replay maps from it alone.
+    // This is structural quarantine, NOT independent attestation.
     const pinned = snapshotForwardV02UntrustedGraph(input);
     if (!denseOwnDataArray(pinned)) return deny("INVALID_BATCH");
     const receipts = new Map<string, Map<string, Freeze>>();
