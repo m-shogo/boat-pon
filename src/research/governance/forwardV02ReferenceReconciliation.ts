@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { assessForwardV02Candidate } from "./forwardEvaluationProtocolV02Candidate";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02IndependentProofRequest";
 
 /**
  * Research-only content-address reconciliation of UNTRUSTED reference
@@ -120,10 +121,19 @@ const blocked = (reason: string): ForwardV02ReferenceAssessment => ({
 export function assessForwardV02ReferenceReconciliation(
   candidate: unknown, references: unknown,
 ): ForwardV02ReferenceAssessment {
+  // Pin both caller-owned graphs before any semantic preflight. Strict shape
+  // validation alone does not stop later descriptor reads from changing an
+  // earlier candidate digest or manifest field. These are still UNTRUSTED
+  // references: matching content never authenticates an independent source.
+  let pinnedCandidate: unknown, pinnedReferences: unknown;
+  try { pinnedCandidate = snapshotForwardV02UntrustedGraph(candidate); }
+  catch { return blocked("INVALID_V02_CANDIDATE"); }
+  try { pinnedReferences = snapshotForwardV02UntrustedGraph(references); }
+  catch { return blocked("INVALID_REFERENCE_SHAPE"); }
   try {
-    if (!assessForwardV02Candidate(candidate).candidateComplete) return blocked("INVALID_V02_CANDIDATE");
-    if (!exactDataObject(references, REFS_KEYS)) return blocked("INVALID_REFERENCE_SHAPE");
-    const c = candidate as Record<string, unknown>, r = references;
+    if (!assessForwardV02Candidate(pinnedCandidate).candidateComplete) return blocked("INVALID_V02_CANDIDATE");
+    if (!exactDataObject(pinnedReferences, REFS_KEYS)) return blocked("INVALID_REFERENCE_SHAPE");
+    const c = pinnedCandidate as Record<string, unknown>, r = pinnedReferences;
     const formulaHash = forwardV02FormulaReferenceDigest(r.formula);
     if (formulaHash === null || typeof r.formulaDigest !== "string" ||
         r.formulaDigest !== formulaHash || c.metricFormulaDigest !== formulaHash) {
