@@ -115,7 +115,12 @@ function snapshotUntrustedPreflight(input: unknown): unknown {
       for (let i = 0; i < length; i++) {
         const d = Object.getOwnPropertyDescriptor(value, String(i));
         if (!d || !d.enumerable || !("value" in d)) throw new TypeError("INVALID_SNAPSHOT");
-        out[i] = copy(d.value, depth + 1);
+        // Never invoke an inherited numeric setter while detaching a policy
+        // anchor array: it could repair a later invalid anchor mid-snapshot.
+        Object.defineProperty(out, String(i), {
+          value: copy(d.value, depth + 1),
+          enumerable: true, writable: true, configurable: true,
+        });
       }
       return out;
     }
