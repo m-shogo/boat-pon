@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { snapshotForwardV02UntrustedGraph } from "./forwardV02UntrustedSnapshot";
 import { assessForwardV02TrustPolicyPreflight } from "./forwardV02TrustPolicyPreflight";
 
 const h = (c: string) => c.repeat(64);
@@ -283,4 +284,65 @@ test("standalone preflight pins mismatched proof refs before envelope descriptor
   assert.equal(r.policyMetadataConsistent, false);
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
+});
+
+test("shared untrusted snapshot bypasses an inherited numeric index setter", () => {
+  const input = Array.from({ length: 19 }, (_, i) => String(i));
+  input[18] = "original";
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, "17");
+  let intercepted = 0;
+  let snapshot: unknown;
+  try {
+    Object.defineProperty(Array.prototype, "17", {
+      configurable: true,
+      set: function (this: unknown[], item: unknown) {
+        intercepted++;
+        Object.defineProperty(this, "17", {
+          value: item, enumerable: true, writable: true, configurable: true,
+        });
+        input[18] = "repaired";
+      },
+    });
+    snapshot = snapshotForwardV02UntrustedGraph(input);
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, "17", previous);
+    else Reflect.deleteProperty(Array.prototype, "17");
+  }
+  assert.equal(intercepted, 0, "snapshot must not invoke ambient index setters");
+  assert.equal(input[18], "original", "later caller data must remain unchanged");
+  assert.equal((snapshot as string[])[18], "original");
+  assert.equal(Object.hasOwn(snapshot, "17"), true);
+});
+
+test("policy snapshot and anchor accumulation cannot launder an invalid later anchor via prototype setter", () => {
+  const f = fixture();
+  for (let i = 2; i < 19; i++) {
+    f.policy.anchors[i] = { ...f.policy.anchors[0]!, anchorId: `synthetic-unused-${i}` };
+  }
+  f.policy.anchors[18]!.state = "UNKNOWN";
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, "17");
+  let intercepted = 0;
+  let outcome: ReturnType<typeof check> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "17", {
+      configurable: true,
+      set: function (this: unknown[], item: unknown) {
+        intercepted++;
+        Object.defineProperty(this, "17", {
+          value: item, enumerable: true, writable: true, configurable: true,
+        });
+        f.policy.anchors[18]!.state = "ACTIVE";
+      },
+    });
+    outcome = check(f);
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, "17", previous);
+    else Reflect.deleteProperty(Array.prototype, "17");
+  }
+  assert.equal(intercepted, 0, "neither snapshot nor anchor list may invoke the setter");
+  assert.equal(f.policy.anchors[18]!.state, "UNKNOWN");
+  assert.deepEqual(outcome?.blockers, ["INVALID_POLICY"]);
+  assert.equal(outcome?.policyMetadataConsistent, false);
+  assert.equal(outcome?.independentAuthorityVerified, false);
+  assert.equal(outcome?.scoringAuthorized, false);
 });
