@@ -115,14 +115,16 @@ export function assessForwardV02SyntheticReferenceAnchorConflict(
   // key/identity appear consistent at the final lookup. Still UNTRUSTED.
   const referenceSnapshot = referenceInput === null || referenceInput === undefined
     ? null : snapshot(referenceInput);
+  // Pin policy before the caller claim can run descriptor Proxy traps.
+  // Otherwise a claim can repair a mismatching policy anchor before capture.
+  // The reference is already pinned above; these graphs are still untrusted
+  // and no atomic snapshot across adversarial inputs is claimed.
+  const policy = snapshotForwardV02UntrustedPolicy(policyInput);
+  if (policy === null) return result(false, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
   // A later reference-key lookup must use the same claim snapshot that
   // passed signature math and claimed-anchor correlation, not a mutable proxy.
   const claim = snapshotForwardV02SyntheticClaim(claimInput);
   if (claim === null) return result(false, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
-  // The outer reference phase must reuse the same detached untrusted policy
-  // that claimed-anchor correlation used, not a later caller-owned revision.
-  const policy = snapshotForwardV02UntrustedPolicy(policyInput);
-  if (policy === null) return result(false, false, false, "CLAIMED_ANCHOR_NOT_BOUND");
   const claimed = assessForwardV02SyntheticClaimedAnchorBinding(
     envelopeInput, policy, proofRefsInput, claim, roleInput,
   );
