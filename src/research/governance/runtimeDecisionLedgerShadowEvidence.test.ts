@@ -587,3 +587,35 @@ test("shadow evidence cannot skip admission checks under an empty Array iterator
   assert.equal(observed?.extra.valid, false);
   assert.ok(observed?.extra.errors.includes("unknown top-level field: unapprovedMetadata"));
 });
+
+test("shadow evidence validation verdict and errors cannot be rewritten after return", () => {
+  const accepted = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const rejected = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (rejected.safety as { publicWrites: number }).publicWrites = 1;
+  resign(rejected);
+
+  const scenarios = [
+    { label: "accepted", result: validateRuntimeDecisionLedgerShadowEvidence(accepted), valid: true },
+    { label: "rejected", result: validateRuntimeDecisionLedgerShadowEvidence(rejected), valid: false },
+    { label: "non-object", result: validateRuntimeDecisionLedgerShadowEvidence(null), valid: false },
+  ];
+
+  for (const { label, result, valid } of scenarios) {
+    assert.equal(result.valid, valid, label);
+    assert.equal(Object.isFrozen(result), true, label);
+    assert.equal(Object.isFrozen(result.errors), true, label);
+    const originalErrors = [...result.errors];
+    assert.throws(() => { result.valid = !valid; }, TypeError, label);
+    assert.throws(() => { result.errors.push("forged error"); }, TypeError, label);
+    assert.throws(() => { result.errors[0] = "forged error"; }, TypeError, label);
+    assert.equal(result.valid, valid, label);
+    assert.deepEqual(result.errors, originalErrors, label);
+  }
+
+  assert.equal(scenarios[0]!.result.evidence, accepted);
+  assert.equal(scenarios[1]!.result.evidence, null);
+  assert.equal(scenarios[2]!.result.evidence, null);
+  // Accepted evidence is still caller-owned; the validation result is not
+  // an immutable evidence snapshot or an independent authority assertion.
+  assert.equal(Object.isFrozen(accepted), false);
+});
