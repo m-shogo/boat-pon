@@ -509,3 +509,23 @@ test("strict trust-policy ingress retains envelope-first snapshot error preceden
   assert.deepEqual(strictPreflight(f.envelope, f.policy, invalidRefs).blockers,
     ["INVALID_PROOF_REFS"]);
 });
+
+test("policy preflight assessments cannot be mutated into claimed authorization", () => {
+  const good = fixture(), rejected = fixture();
+  rejected.policy.reviewState = "DRAFT";
+  const results = [check(good), check(rejected)];
+  for (const assessment of results) {
+    assert.equal(Object.isFrozen(assessment), true);
+    assert.equal(Object.isFrozen(assessment.blockers), true);
+    const original = [...assessment.blockers];
+    assert.throws(() => {
+      (assessment as unknown as { independentAuthorityVerified: boolean }).independentAuthorityVerified = true;
+    }, TypeError);
+    assert.throws(() => {
+      (assessment.blockers as string[]).push("APPROVED");
+    }, TypeError);
+    assert.equal(assessment.independentAuthorityVerified, false);
+    assert.equal(assessment.scoringAuthorized, false);
+    assert.deepEqual(assessment.blockers, original);
+  }
+});
