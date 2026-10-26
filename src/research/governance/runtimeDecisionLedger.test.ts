@@ -132,3 +132,51 @@ test("Runtime Decision Ledger rejects integers outside the JavaScript safe range
     assert.equal(result.valid, false, `${field} must fail closed outside the safe integer range`);
   }
 });
+
+test("Runtime Decision Ledger validation cannot lose errors when Array.push is replaced", () => {
+  const originalPush = Object.getOwnPropertyDescriptor(Array.prototype, "push");
+  let observed: { good: boolean; bad: boolean; errors: string[]; digestRejected: boolean };
+  try {
+    Object.defineProperty(Array.prototype, "push", {
+      configurable: true, writable: true,
+      value() { return this.length; },
+    });
+    const good = validBuyRecord();
+    const bad = { ...good, sourceRowDigest: "not-a-digest", decision: "UNKNOWN" };
+    const result = validateRuntimeDecisionLedgerRecord(bad);
+    let digestRejected = false;
+    try { runtimeDecisionLedgerDigest(bad as RuntimeDecisionLedgerRecord); }
+    catch (error) { digestRejected = error instanceof TypeError; }
+    observed = {
+      good: validateRuntimeDecisionLedgerRecord(good).valid,
+      bad: result.valid,
+      errors: result.errors,
+      digestRejected,
+    };
+  } finally {
+    if (originalPush) Object.defineProperty(Array.prototype, "push", originalPush);
+    else Reflect.deleteProperty(Array.prototype, "push");
+  }
+  assert.equal(observed.good, true);
+  assert.equal(observed.bad, false);
+  assert.ok(observed.errors.includes("sourceRowDigest must be a SHA-256 hex digest"));
+  assert.ok(observed.errors.includes("decision must be BUY, WATCH, or SKIP"));
+  assert.equal(observed.digestRejected, true);
+});
+
+test("Runtime Decision Ledger validation verdict and errors are immutable at runtime", () => {
+  const invalid = { ...validBuyRecord(), sourceRowDigest: "bad" };
+  for (const result of [
+    validateRuntimeDecisionLedgerRecord(validBuyRecord()),
+    validateRuntimeDecisionLedgerRecord(invalid),
+    validateRuntimeDecisionLedgerRecord(null),
+  ]) {
+    const valid = result.valid;
+    const errors = [...result.errors];
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.errors), true);
+    assert.throws(() => { result.valid = !valid; }, TypeError);
+    assert.throws(() => { result.errors.push("forged"); }, TypeError);
+    assert.deepEqual(result, { valid, errors });
+  }
+});
