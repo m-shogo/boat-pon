@@ -59,3 +59,37 @@ test("Runtime Decision Ledger requires lowercase canonical SHA-256 source digest
     "invalid uppercase source digests must fail before canonical hashing",
   );
 });
+
+test("Runtime Ledger digest remains canonical under overridden array helpers", () => {
+  const first = record("a".repeat(64));
+  const second = record("b".repeat(64));
+  const reordered = Object.fromEntries(Object.entries(first).reverse()) as RuntimeDecisionLedgerRecord;
+  const baselineFirst = runtimeDecisionLedgerDigest(first);
+  const baselineSecond = runtimeDecisionLedgerDigest(second);
+  assert.notEqual(baselineFirst, baselineSecond);
+  assert.equal(runtimeDecisionLedgerDigest(reordered), baselineFirst);
+
+  const originalFrom = Object.getOwnPropertyDescriptor(Array, "from")!;
+  const originalMap = Object.getOwnPropertyDescriptor(Array.prototype, "map")!;
+  const originalSort = Object.getOwnPropertyDescriptor(Array.prototype, "sort")!;
+  let observed: { first: string; second: string; reordered: string } | undefined;
+  try {
+    Object.defineProperty(Array, "from", { configurable: true, writable: true, value() { return []; } });
+    Object.defineProperty(Array.prototype, "map", { configurable: true, writable: true, value() { return []; } });
+    Object.defineProperty(Array.prototype, "sort", { configurable: true, writable: true, value() { return this; } });
+    observed = {
+      first: runtimeDecisionLedgerDigest(first),
+      second: runtimeDecisionLedgerDigest(second),
+      reordered: runtimeDecisionLedgerDigest(reordered),
+    };
+  } finally {
+    Object.defineProperty(Array, "from", originalFrom);
+    Object.defineProperty(Array.prototype, "map", originalMap);
+    Object.defineProperty(Array.prototype, "sort", originalSort);
+  }
+  assert.deepEqual(observed, {
+    first: baselineFirst,
+    second: baselineSecond,
+    reordered: baselineFirst,
+  });
+});
