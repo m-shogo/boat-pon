@@ -281,3 +281,24 @@ test("strict Node reconciliation rejects revoked Proxies and accessors without i
   assert.deepEqual(strictCheck(candidate(), r).blockers, ["INVALID_REFERENCE_SHAPE"]);
   assert.equal(getterCalls, 0);
 });
+
+test("reference reconciliation assessments are immutable on both denied and unverified paths", () => {
+  const good = check(candidate(), refs());
+  const badCandidate = candidate();
+  badCandidate.scoringAuthorized = true;
+  const denied = check(badCandidate, refs());
+  for (const result of [good, denied]) {
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.blockers), true);
+    assert.equal(result.scoringAuthorized, false);
+    assert.throws(() => {
+      (result as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (result.blockers as unknown as string[]).push("FAKE_AUTHORITY");
+    }, TypeError);
+    assert.equal(result.scoringAuthorized, false);
+  }
+  assert.equal(good.referencesReconciled, true);
+  assert.equal(denied.referencesReconciled, false);
+});
