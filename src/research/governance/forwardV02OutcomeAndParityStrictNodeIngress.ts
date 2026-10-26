@@ -56,12 +56,12 @@ export function assessForwardV02OutcomeLinkPreflightStrictNodeIngress(
   candidate: unknown, references: unknown, decisions: unknown, outcomes: unknown,
 ): ForwardV02OutcomeLinkAssessment {
   const captured = captureAll(candidate, references, decisions, outcomes);
-  if (!captured.ok) return {
+  if (!captured.ok) return Object.freeze({
     outcomeReferencesLinked: false, excludedOutcomePresent: false,
     scoringAuthorized: false,
-    blockers: [captured.failed === "LEDGER" ?
-      "INVALID_LEDGER_COLLECTION" : "REFERENCE_CONTEXT_NOT_RECONCILED"],
-  };
+    blockers: Object.freeze([captured.failed === "LEDGER" ?
+      "INVALID_LEDGER_COLLECTION" : "REFERENCE_CONTEXT_NOT_RECONCILED"]),
+  });
   const p = captured.pinned;
   return assessForwardV02OutcomeLinkPreflight(
     p.candidate, p.references, p.decisions, p.outcomes,
@@ -72,10 +72,10 @@ export function assessForwardV02LinkedBuyRaceParityStrictNodeIngress(
   candidate: unknown, references: unknown, decisions: unknown, outcomes: unknown,
 ): ForwardV02LinkedBuyRaceParityAssessment {
   const captured = captureAll(candidate, references, decisions, outcomes);
-  if (!captured.ok) return {
+  if (!captured.ok) return Object.freeze({
     linkedBuyRaceSetsAligned: false, scoringAuthorized: false,
-    blockers: ["OUTCOME_LINK_NOT_VERIFIED"],
-  };
+    blockers: Object.freeze(["OUTCOME_LINK_NOT_VERIFIED"]),
+  });
   const p = captured.pinned;
   return assessForwardV02LinkedBuyRaceParity(
     p.candidate, p.references, p.decisions, p.outcomes,
@@ -86,10 +86,10 @@ export function assessForwardV02LocalOutcomeRaceParityStrictNodeIngress(
   candidate: unknown, references: unknown, decisions: unknown, outcomes: unknown,
 ): ForwardV02LocalOutcomeRaceParityAssessment {
   const captured = captureAll(candidate, references, decisions, outcomes);
-  if (!captured.ok) return {
+  if (!captured.ok) return Object.freeze({
     localOutcomeRaceSetsAligned: false, scoringAuthorized: false,
-    blockers: ["LINKED_BUY_RACE_PARITY_NOT_VERIFIED"],
-  };
+    blockers: Object.freeze(["LINKED_BUY_RACE_PARITY_NOT_VERIFIED"]),
+  });
   const p = captured.pinned;
   return assessForwardV02LocalOutcomeRaceParity(
     p.candidate, p.references, p.decisions, p.outcomes,
