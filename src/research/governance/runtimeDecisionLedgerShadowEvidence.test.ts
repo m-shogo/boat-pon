@@ -533,3 +533,57 @@ test("shadow evidence retains multi-reason row coverage without requiring one re
   });
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(evidence).valid, true);
 });
+
+test("shadow evidence cannot skip admission checks under an empty Array iterator", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const privacyDrift = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (privacyDrift.privacy as { rawRecordsIncluded: boolean }).rawRecordsIncluded = true;
+  (privacyDrift.safety as { publicWrites: number }).publicWrites = 1;
+  resign(privacyDrift);
+
+  const sourceDrift = buildRuntimeDecisionLedgerShadowEvidence(input());
+  sourceDrift.source.fileSizeBytes = -1;
+  sourceDrift.sourceDescriptorDigest = sha256(sourceDrift.source);
+  resign(sourceDrift);
+
+  const extraField = buildRuntimeDecisionLedgerShadowEvidence(input()) as RuntimeDecisionLedgerShadowEvidence &
+    { unapprovedMetadata?: string };
+  extraField.unapprovedMetadata = "synthetic-only";
+
+  const original = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator)!;
+  let observed: {
+    good: RuntimeDecisionLedgerShadowEvidence;
+    validGood: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    privacy: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    source: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    extra: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+  } | undefined;
+  try {
+    Object.defineProperty(Array.prototype, Symbol.iterator, {
+      configurable: true, writable: true,
+      value: function* () { /* synthetic empty iterator */ },
+    });
+    const good = buildRuntimeDecisionLedgerShadowEvidence(input());
+    observed = {
+      good,
+      validGood: validateRuntimeDecisionLedgerShadowEvidence(good),
+      privacy: validateRuntimeDecisionLedgerShadowEvidence(privacyDrift),
+      source: validateRuntimeDecisionLedgerShadowEvidence(sourceDrift),
+      extra: validateRuntimeDecisionLedgerShadowEvidence(extraField),
+    };
+  } finally {
+    Object.defineProperty(Array.prototype, Symbol.iterator, original);
+  }
+
+  assert.equal(observed?.good.contentDigest, baseline.contentDigest);
+  assert.deepEqual(observed?.good.completeness.unresolvedReasonCounts, baseline.completeness.unresolvedReasonCounts);
+  assert.deepEqual(observed?.good.completeness.taxonomyCounts, baseline.completeness.taxonomyCounts);
+  assert.equal(observed?.validGood.valid, true, observed?.validGood.errors.join("; "));
+  assert.equal(observed?.privacy.valid, false);
+  assert.ok(observed?.privacy.errors.includes("privacy.rawRecordsIncluded must be false"));
+  assert.ok(observed?.privacy.errors.includes("safety.publicWrites must be 0"));
+  assert.equal(observed?.source.valid, false);
+  assert.ok(observed?.source.errors.includes("source.fileSizeBytes must be a non-negative safe integer"));
+  assert.equal(observed?.extra.valid, false);
+  assert.ok(observed?.extra.errors.includes("unknown top-level field: unapprovedMetadata"));
+});
