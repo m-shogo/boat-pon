@@ -93,13 +93,13 @@ function compareInstants(left: string, right: string): number {
 const result = (freezeStatus: string, settlementStatus: string): ForwardV02AuthorityMetadataAssessment => {
   const consistent = freezeStatus === "STRUCTURALLY_VALID_UNATTESTED" &&
     settlementStatus === "STRUCTURALLY_VALID_UNATTESTED";
-  return {
+  return Object.freeze({
     metadataConsistent: consistent, freezeStatus, settlementStatus,
     independentAuthorityVerified: false, scoringAuthorized: false,
-    blockers: consistent
+    blockers: Object.freeze(consistent
       ? ["UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL"]
-      : [freezeStatus !== "STRUCTURALLY_VALID_UNATTESTED" ? freezeStatus : settlementStatus],
-  };
+      : [freezeStatus !== "STRUCTURALLY_VALID_UNATTESTED" ? freezeStatus : settlementStatus]),
+  });
 };
 
 /** Structural classification only. All caller-provided trust claims remain unverified. */
