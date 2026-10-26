@@ -107,9 +107,12 @@ function catalogErrors(input: unknown): string[] {
       errors.push("authority separation semantics drift");
     }
   }
-  if (!Array.isArray(input.usageRules) ||
-      input.usageRules.length !== expectedUsageRules.length ||
-      expectedUsageRules.some((rule, index) => input.usageRules[index] !== rule)) {
+  // Pin the narrowed local before the callback: TS cannot preserve a property
+  // narrowing on an unknown record across a closure.
+  const usageRules = input.usageRules;
+  if (!Array.isArray(usageRules) ||
+      usageRules.length !== expectedUsageRules.length ||
+      expectedUsageRules.some((rule, index) => usageRules[index] !== rule)) {
     errors.push("usage rules semantics drift");
   }
   if (!Array.isArray(input.fixtures)) return [...errors, "fixtures must be an array"];
