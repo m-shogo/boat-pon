@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   RUNTIME_DECISION_LEDGER_SCHEMA_VERSION,
+  runtimeDecisionLedgerDigest,
   validateRuntimeDecisionLedgerRecord,
   type RuntimeDecisionLedgerRecord,
 } from "./runtimeDecisionLedger";
@@ -98,4 +99,37 @@ test("Runtime Decision Ledger preserves known UTC offsets and equal submilliseco
   candidate.decisionAt = "2026-10-19T01:00:00.0001000Z";
   candidate.scheduledCloseAtSeen = "2026-10-19T01:00:00.0001001+00:00";
   assert.deepEqual(validateRuntimeDecisionLedgerRecord(candidate), { valid: true, errors: [] });
+});
+
+test("Runtime Decision Ledger date validation ignores a hostile array iterator", () => {
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator);
+  let observed: { good: boolean; invalid: boolean; errors: string[]; digestRejected: boolean };
+  try {
+    Object.defineProperty(Array.prototype, Symbol.iterator, {
+      configurable: true, writable: true,
+      value: function* () { /* synthetic empty iterator */ },
+    });
+    const good = record();
+    const impossible = record();
+    impossible.decisionAt = "2026-02-30T05:26:30Z";
+    impossible.oddsObservedAt = null;
+    impossible.scheduledCloseAtSeen = "2026-03-03T05:32:00Z";
+    const result = validateRuntimeDecisionLedgerRecord(impossible);
+    let digestRejected = false;
+    try { runtimeDecisionLedgerDigest(impossible); }
+    catch (error) { digestRejected = error instanceof TypeError; }
+    observed = {
+      good: validateRuntimeDecisionLedgerRecord(good).valid,
+      invalid: result.valid,
+      errors: result.errors,
+      digestRejected,
+    };
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, Symbol.iterator, previous);
+    else Reflect.deleteProperty(Array.prototype, Symbol.iterator);
+  }
+  assert.equal(observed.good, true);
+  assert.equal(observed.invalid, false);
+  assert.ok(observed.errors.includes("decisionAt must be a valid timezone-bound ISO timestamp"));
+  assert.equal(observed.digestRejected, true);
 });
