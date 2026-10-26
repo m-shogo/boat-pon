@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-v02-negative-catalog-global-policy-drift-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-negative-catalog-global-policy-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-offline-independent-verifier-negative-catalog-authority-boundaries",
+  "symptom": "The v352 static negative-catalog contract test pinned all 18 case IDs, mutations, fixture states and first denial codes, but accepted changes or removal of authoritySeparation and usageRules. A modified catalog could say caller-selected keys, caller FINAL or protocol approval suffice, or delete the no-production rule, while all existing catalog tests still passed. This is a specification-integrity gap only; no independent verifier or production/scoring path was executed.",
+  "rootCauseClass": "NEGATIVE_CATALOG_GLOBAL_AUTHORITY_AND_USAGE_POLICY_NOT_SEMANTICALLY_PINNED",
+  "attemptSignature": "pr2286-v353-pin-catalog-authority-separation-and-usage-rules-with-mutation-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-negative-fixtures.0.1-spec/pr2286-v352-static-case-guards-only"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "reports/research/forward-v02-independent-verifier-negative-vectors-20261026.json",
+    "src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts",
+    "commit/39f2aa3167dd24de54b80d3c8dbfa9cf10b0dc8c"
+  ],
+  "lesson": "Freezing individual negative cases is insufficient when a catalog also carries global authority-custody and usage restrictions. Those global policy statements can be weakened independently of case identities, expected denials and authorization flags.",
+  "guardrail": "Pin the exact independent-witness, settlement, caller-claim and protocol custody statements and all usage restrictions in a separately maintained static test expectation. Add deliberate mutation, deletion and addition tests for those fields. Changes to the contract require an explicit reviewed update; a static catalog PASS is never independent attestation, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T07:06:53.457Z",
+  "productionConnection": false,
+  "_digest": "0378d4825b9d523e051a2df86cdae098015e40ab11c440d9ce2dd58a57bf9e0f",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T07:06:53.457Z"
+}
