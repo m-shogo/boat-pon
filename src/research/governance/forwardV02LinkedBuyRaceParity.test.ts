@@ -380,3 +380,30 @@ test("late reference repair cannot hide an initially asymmetric local refund", (
   assert.deepEqual(result.blockers, ["UNEQUAL_LOCAL_SETTLED_RACE_SETS"]);
   assert.equal(result.scoringAuthorized, false);
 });
+
+test("linked and local race-parity results remain deny-only under runtime mutation", () => {
+  const good = aligned();
+  const mismatch = bundle([
+    decision("synthetic-a", "1", "a1"), decision("synthetic-b", "2", "b2"),
+  ]);
+  const assessments = [
+    check(good),
+    check(mismatch),
+    assessForwardV02LocalOutcomeRaceParity(good.c, good.r, good.ds, good.os),
+    assessForwardV02LocalOutcomeRaceParity(mismatch.c, mismatch.r, mismatch.ds, mismatch.os),
+  ];
+  for (const result of assessments) {
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.blockers), true);
+    assert.equal(result.scoringAuthorized, false);
+    assert.throws(() => {
+      (result as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (result.blockers as unknown as string[]).push("FAKE_AUTHORITY");
+    }, TypeError);
+    assert.equal(result.scoringAuthorized, false);
+  }
+  assert.equal(assessments[0]!.scoringAuthorized, false);
+  assert.equal(assessments[2]!.scoringAuthorized, false);
+});
