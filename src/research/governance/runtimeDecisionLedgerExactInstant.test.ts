@@ -103,7 +103,7 @@ test("Runtime Decision Ledger preserves known UTC offsets and equal submilliseco
 
 test("Runtime Decision Ledger date validation ignores a hostile array iterator", () => {
   const previous = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator);
-  let observed: { good: boolean; invalid: boolean; errors: string[]; digestRejected: boolean };
+  let observed: { good: boolean; invalid: boolean; errors: string[]; digestRejected: boolean; invalidId: boolean; unknownField: boolean; invalidOdds: boolean; hiddenSymbol: boolean };
   try {
     Object.defineProperty(Array.prototype, Symbol.iterator, {
       configurable: true, writable: true,
@@ -123,6 +123,10 @@ test("Runtime Decision Ledger date validation ignores a hostile array iterator",
       invalid: result.valid,
       errors: result.errors,
       digestRejected,
+      invalidId: validateRuntimeDecisionLedgerRecord({ ...record(), recordId: "" }).valid,
+      unknownField: validateRuntimeDecisionLedgerRecord({ ...record(), unexpected: "research-only" }).valid,
+      invalidOdds: validateRuntimeDecisionLedgerRecord({ ...record(), currentOdds: "not-a-number" }).valid,
+      hiddenSymbol: validateRuntimeDecisionLedgerRecord({ ...record(), [Symbol("hidden")]: "not-json" }).valid,
     };
   } finally {
     if (previous) Object.defineProperty(Array.prototype, Symbol.iterator, previous);
@@ -132,4 +136,8 @@ test("Runtime Decision Ledger date validation ignores a hostile array iterator",
   assert.equal(observed.invalid, false);
   assert.ok(observed.errors.includes("decisionAt must be a valid timezone-bound ISO timestamp"));
   assert.equal(observed.digestRejected, true);
+  assert.equal(observed.invalidId, false);
+  assert.equal(observed.unknownField, false);
+  assert.equal(observed.invalidOdds, false);
+  assert.equal(observed.hiddenSymbol, false);
 });
