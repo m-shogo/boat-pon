@@ -32,13 +32,16 @@ type Settlement = {
 };
 type Envelope = { freeze: Freeze; settlement: Settlement };
 
-const deny = (reason: string): ForwardV02AuthorityBatchAssessment => ({
+// A deny-only result must remain deny-only even when passed to an untrusted
+// consumer. TypeScript's literal-false type does not prevent runtime mutation.
+const deny = (reason: string): ForwardV02AuthorityBatchAssessment => Object.freeze({
   metadataConsistent: false, independentAuthorityVerified: false,
-  scoringAuthorized: false, blockers: [reason],
+  scoringAuthorized: false, blockers: Object.freeze([reason]),
 });
-const unverified = (): ForwardV02AuthorityBatchAssessment => ({
+const unverified = (): ForwardV02AuthorityBatchAssessment => Object.freeze({
   metadataConsistent: true, independentAuthorityVerified: false,
-  scoringAuthorized: false, blockers: ["UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL"],
+  scoringAuthorized: false,
+  blockers: Object.freeze(["UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL"]),
 });
 
 function denseOwnDataArray(input: unknown): input is unknown[] {
