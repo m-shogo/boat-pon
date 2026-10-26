@@ -101,3 +101,44 @@ test("reconciliation deduplicates exact rows and fails conflicting identity", ()
   assert.equal(conflict.status, "FAILED");
   assert.equal(conflict.conflictCount, 1);
 });
+
+test("shadow mapper preserves distinct source-row digests under no-op Array.map/sort", () => {
+  // Only a source-audit field differs; mapped decision fields remain identical.
+  // Collapsing sourceRowDigest would incorrectly hide this source change.
+  const first = row({ decision_reasons: null, feature_adjustment_breakdown: '{"motor":0.012}' });
+  const second = row({ decision_reasons: null, feature_adjustment_breakdown: '{"motor":0.013}' });
+  const baselineFirst = mapDecisionHistoryRowToRuntimeLedger(first, context);
+  const baselineSecond = mapDecisionHistoryRowToRuntimeLedger(second, context);
+  assert.equal(baselineFirst.status, "mapped");
+  assert.equal(baselineSecond.status, "mapped");
+  if (baselineFirst.status !== "mapped" || baselineSecond.status !== "mapped") return;
+  assert.notEqual(baselineFirst.record.sourceRowDigest, baselineSecond.record.sourceRowDigest);
+  assert.notEqual(baselineFirst.ledgerDigest, baselineSecond.ledgerDigest);
+
+  const originalMap = Object.getOwnPropertyDescriptor(Array.prototype, "map")!;
+  const originalSort = Object.getOwnPropertyDescriptor(Array.prototype, "sort")!;
+  let observed: [ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger>, ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger>] | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "map", {
+      configurable: true, writable: true, value() { return []; },
+    });
+    Object.defineProperty(Array.prototype, "sort", {
+      configurable: true, writable: true, value() { return this; },
+    });
+    observed = [
+      mapDecisionHistoryRowToRuntimeLedger(first, context),
+      mapDecisionHistoryRowToRuntimeLedger(second, context),
+    ];
+  } finally {
+    Object.defineProperty(Array.prototype, "map", originalMap);
+    Object.defineProperty(Array.prototype, "sort", originalSort);
+  }
+
+  assert.equal(observed?.[0].status, "mapped");
+  assert.equal(observed?.[1].status, "mapped");
+  if (observed?.[0].status !== "mapped" || observed[1].status !== "mapped") return;
+  assert.equal(observed[0].record.sourceRowDigest, baselineFirst.record.sourceRowDigest);
+  assert.equal(observed[1].record.sourceRowDigest, baselineSecond.record.sourceRowDigest);
+  assert.equal(observed[0].ledgerDigest, baselineFirst.ledgerDigest);
+  assert.equal(observed[1].ledgerDigest, baselineSecond.ledgerDigest);
+});
