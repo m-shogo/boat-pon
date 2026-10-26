@@ -94,6 +94,53 @@ test("canonical digest retains array contents even if Array.from is replaced", (
   });
 });
 
+test("canonical array digest ignores inherited numeric-index setters", () => {
+  // Fully synthetic protocols: only the final element differs. An inherited
+  // setter on a fresh canonical array used to drop index 17, aliasing digests.
+  const existing = protocol("ROI");
+  existing.metricFamilies = Array.from({ length: 18 }, (_, i) => `synthetic-metric-${i}`);
+  const changed = protocol("ROI");
+  changed.metricFamilies = existing.metricFamilies.slice();
+  changed.metricFamilies[17] = "synthetic-metric-changed";
+  assert.equal(validateForwardVaultRecord(existing).valid, true);
+  assert.equal(validateForwardVaultRecord(changed).valid, true);
+  const expectedExisting = forwardVaultDigest(existing);
+  const expectedChanged = forwardVaultDigest(changed);
+  assert.notEqual(expectedExisting, expectedChanged);
+  assert.equal(classifyForwardVaultAppend(existing, changed), "CONFLICT");
+
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, "17");
+  let interceptedCanonicalEntries = 0;
+  let observed: { first: string; second: string; append: string } | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "17", {
+      configurable: true,
+      set(this: unknown[], value: unknown) {
+        if (typeof value === "string" && value.startsWith("synthetic-metric-")) {
+          interceptedCanonicalEntries++;
+          return;
+        }
+        // Preserve unrelated array writes while the synthetic hook is active.
+        Object.defineProperty(this, "17", {
+          value, enumerable: true, writable: true, configurable: true,
+        });
+      },
+    });
+    observed = {
+      first: forwardVaultDigest(existing),
+      second: forwardVaultDigest(changed),
+      append: classifyForwardVaultAppend(existing, changed),
+    };
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, "17", previous);
+    else Reflect.deleteProperty(Array.prototype, "17");
+  }
+  assert.deepEqual(observed, {
+    first: expectedExisting, second: expectedChanged, append: "CONFLICT",
+  });
+  assert.equal(interceptedCanonicalEntries, 0);
+});
+
 test("ordinary valid arrays and property order remain digest-stable", () => {
   const a = protocol("ROI");
   const b = { ...a, metricFamilies: ["ROI"], benchmarkDecisionSystems: ["synthetic-shadow"] };
