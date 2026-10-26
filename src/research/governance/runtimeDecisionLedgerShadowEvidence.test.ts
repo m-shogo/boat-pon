@@ -310,3 +310,47 @@ test("shadow evidence rejects nested arrays even with a no-op Array.forEach", ()
   assert.equal(observed?.evidence, null);
   assert.ok(observed?.errors.includes("unexpected array at $.completeness.unresolvedReasonCounts"));
 });
+
+test("shadow evidence binds distinct source and content digests under no-op Array.map/sort", () => {
+  const firstInput = input();
+  const secondInput = input({ source: { ...firstInput.source, fileSizeBytes: 8192 } });
+  const baselineFirst = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+  const baselineSecond = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+  assert.notEqual(baselineFirst.sourceDescriptorDigest, baselineSecond.sourceDescriptorDigest);
+  assert.notEqual(baselineFirst.contentDigest, baselineSecond.contentDigest);
+
+  const originalMap = Object.getOwnPropertyDescriptor(Array.prototype, "map")!;
+  const originalSort = Object.getOwnPropertyDescriptor(Array.prototype, "sort")!;
+  let observed: {
+    first: RuntimeDecisionLedgerShadowEvidence;
+    second: RuntimeDecisionLedgerShadowEvidence;
+    validFirst: boolean;
+    validSecond: boolean;
+  } | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "map", {
+      configurable: true, writable: true, value() { return []; },
+    });
+    Object.defineProperty(Array.prototype, "sort", {
+      configurable: true, writable: true, value() { return this; },
+    });
+    const first = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+    const second = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+    observed = {
+      first, second,
+      validFirst: validateRuntimeDecisionLedgerShadowEvidence(first).valid,
+      validSecond: validateRuntimeDecisionLedgerShadowEvidence(second).valid,
+    };
+  } finally {
+    Object.defineProperty(Array.prototype, "map", originalMap);
+    Object.defineProperty(Array.prototype, "sort", originalSort);
+  }
+
+  assert.equal(observed?.validFirst, true);
+  assert.equal(observed?.validSecond, true);
+  assert.equal(observed?.first.sourceDescriptorDigest, baselineFirst.sourceDescriptorDigest);
+  assert.equal(observed?.second.sourceDescriptorDigest, baselineSecond.sourceDescriptorDigest);
+  assert.equal(observed?.first.contentDigest, baselineFirst.contentDigest);
+  assert.equal(observed?.second.contentDigest, baselineSecond.contentDigest);
+  assert.notEqual(observed?.first.contentDigest, observed?.second.contentDigest);
+});
