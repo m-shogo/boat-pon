@@ -190,7 +190,9 @@ function isOwnSerializableDataObject(value: unknown): value is Record<string, un
     const proto = Object.getPrototypeOf(value);
     if (proto !== Object.prototype && proto !== null) return false;
     if ("toJSON" in value) return false;
-    for (const key of Reflect.ownKeys(value)) {
+    const keys = Reflect.ownKeys(value);
+    for (let index = 0; index < keys.length; index++) {
+      const key = keys[index]!;
       if (typeof key !== "string") return false;
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
@@ -254,7 +256,9 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
     }
   }
 
-  for (const field of Object.keys(value)) {
+  const actualFields = Object.keys(value);
+  for (let index = 0; index < actualFields.length; index++) {
+    const field = actualFields[index]!;
     if (!ALLOWED_FIELDS.has(field as keyof RuntimeDecisionLedgerRecord)) {
       appendValidationError(errors, `unknown field is not allowed: ${field}`);
     }
@@ -264,7 +268,7 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
     appendValidationError(errors, `schemaVersion must be ${RUNTIME_DECISION_LEDGER_SCHEMA_VERSION}`);
   }
 
-  for (const field of [
+  const requiredStrings = [
     "recordId",
     "decisionId",
     "canonicalRaceId",
@@ -277,7 +281,9 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
     "ticketType",
     "selection",
     "sourceRowDigest",
-  ] as const) {
+  ] as const;
+  for (let index = 0; index < requiredStrings.length; index++) {
+    const field = requiredStrings[index]!;
     if (!isNonEmptyString(value[field])) appendValidationError(errors, `${field} must be a non-empty string`);
   }
   if (isNonEmptyString(value.sourceRowDigest) && !/^[0-9a-f]{64}$/.test(value.sourceRowDigest)) {
@@ -304,7 +310,9 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
     appendValidationError(errors, "oddsObservedAt must not be after decisionAt");
   }
 
-  for (const field of ["currentOdds", "requiredOdds", "expectedValue"] as const) {
+  const nullableNumbers = ["currentOdds", "requiredOdds", "expectedValue"] as const;
+  for (let index = 0; index < nullableNumbers.length; index++) {
+    const field = nullableNumbers[index]!;
     if (!isNullableFiniteNumber(value[field])) appendValidationError(errors, `${field} must be finite or null`);
   }
   if (typeof value.currentOdds === "number" && value.currentOdds <= 0) appendValidationError(errors, "currentOdds must be greater than 0");
