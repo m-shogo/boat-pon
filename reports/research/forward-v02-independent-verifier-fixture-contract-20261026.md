@@ -26,7 +26,7 @@ The JSON freezes **18 named negative cases** with lane, mutation, independent-fi
 
 - **W01–W07, witness:** caller self-signing; unapproved issuer; missing append-only inclusion; witness time equal to first decision; omitted eligible member; stale/missing revocation; independently signed receipt binding a different protocol digest.
 - **S01–S09, settlement:** caller `FINAL/EXACT` without source attestation; missing predecessor; fork; source-scoped revision equivocation; unauthenticated latest terminality; terminal tie without trusted total order; ticket/decision mismatch; refund/void mislabeled evaluable; predecessor outside trust-anchor validity despite a valid terminal revision.
-- **X01–X02, conjunction:** internally consistent but unauthenticated two-lane claims; independently valid **test-only** proofs with an unapproved evaluation protocol. Both remain unscorable.
+- **X01–X02, conjunction:** internally consistent but unauthenticated two-lane claims; matching **unattested test-only proof shapes** with an unapproved evaluation protocol. Both remain unscorable.
 
 Expected denial codes are **proposed future verifier classifications**, not claims that the current implementation emits them. They reuse the outcome vocabulary of `forward-v02-independent-authority-evidence-contract-20261024.md` where applicable; `UNAPPROVED_PROTOCOL` is the existing admission blocker, not a new external attestation result. A future verifier may need a separately reviewed priority rule when multiple failures coexist; this catalog intentionally isolates each mutation.
 
