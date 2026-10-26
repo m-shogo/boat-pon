@@ -262,3 +262,28 @@ test("symmetric excluded local outcomes retain legacy parity but never gain scor
   assert.equal(strictLocal(...inputs(b)).localOutcomeRaceSetsAligned, true);
   assert.equal(strictLocal(...inputs(b)).scoringAuthorized, false);
 });
+
+test("strict Node ingress denial and delegated assessments remain immutable", () => {
+  const valid = aligned();
+  const blocked = aligned();
+  blocked.ds = new Proxy(blocked.ds, {});
+  const results = [
+    strictLink(...inputs(valid)), strictBuy(...inputs(valid)), strictLocal(...inputs(valid)),
+    strictLink(...inputs(blocked)), strictBuy(...inputs(blocked)), strictLocal(...inputs(blocked)),
+  ];
+  for (const result of results) {
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.blockers), true);
+    assert.equal(result.scoringAuthorized, false);
+    assert.throws(() => {
+      (result as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (result.blockers as unknown as string[]).push("FAKE_AUTHORITY");
+    }, TypeError);
+    assert.equal(result.scoringAuthorized, false);
+  }
+  assert.deepEqual(results[3]!.blockers, ["INVALID_LEDGER_COLLECTION"]);
+  assert.deepEqual(results[4]!.blockers, ["OUTCOME_LINK_NOT_VERIFIED"]);
+  assert.deepEqual(results[5]!.blockers, ["LINKED_BUY_RACE_PARITY_NOT_VERIFIED"]);
+});
