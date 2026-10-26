@@ -354,3 +354,70 @@ test("shadow evidence binds distinct source and content digests under no-op Arra
   assert.equal(observed?.second.contentDigest, baselineSecond.contentDigest);
   assert.notEqual(observed?.first.contentDigest, observed?.second.contentDigest);
 });
+
+test("shadow evidence rejects inherited, hidden, accessor and symbol fields despite matching digests", () => {
+  const cases: Array<{
+    label: string;
+    change: (evidence: RuntimeDecisionLedgerShadowEvidence) => void;
+    expected: RegExp;
+  }> = [
+    {
+      label: "inherited nested privacy flag",
+      change: (evidence) => {
+        const privacy = evidence.privacy as unknown as Record<string, unknown>;
+        delete privacy.rawRecordsIncluded;
+        Object.setPrototypeOf(privacy, { rawRecordsIncluded: false });
+      },
+      expected: /missing own enumerable data field: privacy.rawRecordsIncluded/,
+    },
+    {
+      label: "inherited top-level timestamp",
+      change: (evidence) => {
+        const record = evidence as unknown as Record<string, unknown>;
+        const timestamp = record.generatedAt;
+        delete record.generatedAt;
+        Object.setPrototypeOf(record, { generatedAt: timestamp });
+      },
+      expected: /missing own enumerable data top-level field: generatedAt/,
+    },
+    {
+      label: "non-enumerable nested privacy flag",
+      change: (evidence) => {
+        Object.defineProperty(evidence.privacy, "rawRecordsIncluded", {
+          value: false, enumerable: false, writable: true, configurable: true,
+        });
+      },
+      expected: /missing own enumerable data field: privacy.rawRecordsIncluded/,
+    },
+    {
+      label: "accessor nested privacy flag",
+      change: (evidence) => {
+        Object.defineProperty(evidence.privacy, "rawRecordsIncluded", {
+          enumerable: true, configurable: true,
+          get() { throw new Error("privacy getter must not run"); },
+        });
+      },
+      expected: /missing own enumerable data field: privacy.rawRecordsIncluded/,
+    },
+    {
+      label: "symbol-only extra nested property",
+      change: (evidence) => {
+        Object.defineProperty(evidence.privacy, Symbol("hidden"), {
+          value: "untrusted", enumerable: true, configurable: true,
+        });
+      },
+      expected: /unknown field: privacy.Symbol\(hidden\)/,
+    },
+  ];
+
+  for (const scenario of cases) {
+    const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    scenario.change(evidence);
+    // Re-sign using the JSON projection that omits inherited/hidden fields.
+    // This is a shape-admission test, not a cryptographic forgery claim.
+    if (scenario.label !== "accessor nested privacy flag") resign(evidence);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(result.valid, false, scenario.label);
+    assert.match(result.errors.join("\n"), scenario.expected, scenario.label);
+  }
+});
