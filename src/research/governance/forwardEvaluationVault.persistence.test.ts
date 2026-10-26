@@ -65,6 +65,7 @@ describe("Forward Evaluation Vault persistence boundary", () => {
     assert.equal(forwardVaultDigest(after), forwardVaultDigest(original));
     assert.equal(after.protocolVersion, "v1");
   });
+
   it("fails closed on an interrupted no-replace publication without discarding the published bytes", () => {
     const root = mkdtempSync(join(tmpdir(), "forward-vault-"));
     roots.push(root);
@@ -75,7 +76,7 @@ describe("Forward Evaluation Vault persistence boundary", () => {
     // Model the exact on-disk state after executorSdk.atomicWriteUtf8
     // linkSync(temp, path), but before its finally-block unlinkSync(temp).
     // This is a synthetic interruption fixture, not a real process crash.
-    writeFileSync(temp, `${JSON.stringify(value, null, 2)}\\n`, "utf8");
+    writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
     linkSync(temp, path);
 
     assert.equal(statSync(path).nlink, 2);
@@ -96,5 +97,4 @@ describe("Forward Evaluation Vault persistence boundary", () => {
     assert.equal(verifyJsonReadback(path).ok, true);
     assert.equal(forwardVaultDigest(JSON.parse(readFileSync(path, "utf8"))), forwardVaultDigest(value));
   });
-
 });
