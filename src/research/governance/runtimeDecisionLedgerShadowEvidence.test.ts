@@ -237,3 +237,76 @@ test("JSON Schema is aligned with the runtime version and privacy constants", ()
   assert.equal(schema.properties.privacy.properties.rawRecordsIncluded.const, false);
   assert.equal(schema.properties.safety.properties.operationalDbWrites.const, 0);
 });
+
+test("shadow evidence rejects rehashed safety drift with a no-op Array.push", () => {
+  const good = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const bad = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (bad.safety as { publicWrites: number }).publicWrites = 1;
+  resign(bad);
+
+  const original = Object.getOwnPropertyDescriptor(Array.prototype, "push");
+  let observed: { good: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>; bad: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> } | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "push", {
+      configurable: true, writable: true, value() { return this.length; },
+    });
+    observed = {
+      good: validateRuntimeDecisionLedgerShadowEvidence(good),
+      bad: validateRuntimeDecisionLedgerShadowEvidence(bad),
+    };
+  } finally {
+    if (original) Object.defineProperty(Array.prototype, "push", original);
+    else Reflect.deleteProperty(Array.prototype, "push");
+  }
+
+  assert.equal(observed?.good.valid, true);
+  assert.equal(observed?.bad.valid, false);
+  assert.equal(observed?.bad.evidence, null);
+  assert.ok(observed?.bad.errors.includes("safety.publicWrites must be 0"));
+});
+
+test("shadow evidence rejects invalid scope with an inherited array index setter", () => {
+  const bad = buildRuntimeDecisionLedgerShadowEvidence(input());
+  bad.scope.bounded = false as true;
+  resign(bad);
+
+  const original = Object.getOwnPropertyDescriptor(Array.prototype, "0");
+  let observed: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "0", {
+      configurable: true, set(_value: unknown) { /* synthetic hostile inherited setter */ },
+    });
+    observed = validateRuntimeDecisionLedgerShadowEvidence(bad);
+  } finally {
+    if (original) Object.defineProperty(Array.prototype, "0", original);
+    else Reflect.deleteProperty(Array.prototype, "0");
+  }
+
+  assert.equal(observed?.valid, false);
+  assert.equal(observed?.evidence, null);
+  assert.ok(observed?.errors.includes("scope.bounded must be true"));
+});
+
+test("shadow evidence rejects nested arrays even with a no-op Array.forEach", () => {
+  const bad = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (bad.completeness as unknown as Record<string, unknown>).unresolvedReasonCounts = [
+    { dbPath: "synthetic-nonprivate-placeholder" },
+  ];
+  resign(bad);
+
+  const original = Object.getOwnPropertyDescriptor(Array.prototype, "forEach");
+  let observed: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "forEach", {
+      configurable: true, writable: true, value() { return undefined; },
+    });
+    observed = validateRuntimeDecisionLedgerShadowEvidence(bad);
+  } finally {
+    if (original) Object.defineProperty(Array.prototype, "forEach", original);
+    else Reflect.deleteProperty(Array.prototype, "forEach");
+  }
+
+  assert.equal(observed?.valid, false);
+  assert.equal(observed?.evidence, null);
+  assert.ok(observed?.errors.includes("unexpected array at $.completeness.unresolvedReasonCounts"));
+});
