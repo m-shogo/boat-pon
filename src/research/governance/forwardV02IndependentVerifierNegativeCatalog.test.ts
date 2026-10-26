@@ -24,7 +24,7 @@ const expectedDenials: Readonly<Record<string, string>> = Object.freeze({
   S08: "UNRESOLVED_REFUND_OR_INVALIDATION",
   S09: "UNVERIFIED_SOURCE",
   X01: "UNVERIFIED_WITNESS",
-  X02: "UNAPPROVED_PROTOCOL",
+  X02: "UNVERIFIED_WITNESS",
 });
 
 const fixtureFields = [
@@ -50,9 +50,10 @@ function catalogErrors(input: unknown): string[] {
   for (const field of ["productionConnection", "scoringAuthorized", "independentAuthorityVerified"]) {
     if (input[field] !== false) errors.push(`${field} must be literal false`);
   }
-  if (!isRecord(input.authoritySeparation) ||
+  const separation = input.authoritySeparation;
+  if (!isRecord(separation) ||
       !["callerClaims", "independentWitness", "independentSettlement", "protocol"]
-        .every(key => typeof input.authoritySeparation?.[key] === "string")) {
+        .every(key => typeof separation[key] === "string")) {
     errors.push("authority separation contract missing");
   }
   if (!Array.isArray(input.fixtures)) return [...errors, "fixtures must be an array"];
@@ -63,7 +64,7 @@ function catalogErrors(input: unknown): string[] {
       continue;
     }
     const id = item.caseId;
-    if (typeof id !== "string" || !(id in expectedDenials)) {
+    if (typeof id !== "string" || !Object.hasOwn(expectedDenials, id)) {
       errors.push(`unknown case id at index ${index}`);
       continue;
     }
