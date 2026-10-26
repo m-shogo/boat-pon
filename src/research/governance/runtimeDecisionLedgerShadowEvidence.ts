@@ -198,7 +198,9 @@ function taxonomyCounts(
   for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
     const entries = Object.entries(sources[sourceIndex]!);
     for (let index = 0; index < entries.length; index++) {
-      const [reason, count] = entries[index]!;
+      const pair = entries[index]!;
+      const reason = pair[0];
+      const count = pair[1];
       const taxonomy = taxonomyForReason(reason);
       counts.set(taxonomy, (counts.get(taxonomy) ?? 0) + count);
     }
@@ -528,7 +530,9 @@ function walk(value: unknown, path: string, errors: string[]): void {
   if (!isRecord(value)) return;
   const entries = Object.entries(value);
   for (let index = 0; index < entries.length; index++) {
-    const [key, entry] = entries[index]!;
+    const pair = entries[index]!;
+    const key = pair[0];
+    const entry = pair[1];
     if (FORBIDDEN_KEYS.has(key)) appendError(errors,`forbidden key at ${path}.${key}`);
     walk(entry, `${path}.${key}`, errors);
   }
@@ -573,7 +577,9 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     ["contentDigest", evidence.contentDigest],
   ] as const;
   for (let index = 0; index < digestFields.length; index++) {
-    const [name, valueToCheck] = digestFields[index]!;
+    const pair = digestFields[index]!;
+    const name = pair[0];
+    const valueToCheck = pair[1];
     if (typeof valueToCheck !== "string" || !/^[0-9a-f]{64}$/.test(valueToCheck)) appendError(errors,`${name} must be sha256 hex`);
   }
 
@@ -590,7 +596,9 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     ["freelistCount", source.freelistCount],
   ] as const;
   for (let index = 0; index < sourceCountFields.length; index++) {
-    const [name, count] = sourceCountFields[index]!;
+    const pair = sourceCountFields[index]!;
+    const name = pair[0];
+    const count = pair[1];
     if (!nonNegativeSafeInteger(count)) appendError(errors,`source.${name} must be a non-negative safe integer`);
   }
   if (!Number.isSafeInteger(source.pageSizeBytes) || source.pageSizeBytes < 1) {
@@ -619,7 +627,9 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       ["conflictCount", r.conflictCount],
     ] as const;
     for (let index = 0; index < reconciliationCountFields.length; index++) {
-      const [name, count] = reconciliationCountFields[index]!;
+      const pair = reconciliationCountFields[index]!;
+      const name = pair[0];
+      const count = pair[1];
       if (!nonNegativeSafeInteger(count)) appendError(errors,`${name} must be a non-negative safe integer`);
     }
     if (
@@ -700,7 +710,9 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
 
   const privacyFields = Object.entries(evidence.privacy);
   for (let index = 0; index < privacyFields.length; index++) {
-    const [name, actual] = privacyFields[index]!;
+    const pair = privacyFields[index]!;
+    const name = pair[0];
+    const actual = pair[1];
     if (actual !== false) appendError(errors,`privacy.${name} must be false`);
   }
   const zeroWriteFields = ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const;
