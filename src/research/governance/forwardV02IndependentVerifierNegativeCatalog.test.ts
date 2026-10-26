@@ -68,6 +68,15 @@ const expectedUsageRules: readonly string[] = Object.freeze([
   "For X02, absent independent proof is the first causal denial (UNVERIFIED_WITNESS); UNAPPROVED_PROTOCOL remains a downstream blocker and must not mask failed authenticity."
 ]);
 
+// Close the catalog's top-level vocabulary independently of the JSON file.
+// An unknown field such as positiveControlsVerified must not smuggle an
+// independently verified or execution-ready claim past the deny-only guard.
+const catalogFields = [
+  "schemaVersion", "status", "evidenceStage", "productionConnection",
+  "scoringAuthorized", "independentAuthorityVerified", "requestContract",
+  "responseContract", "authoritySeparation", "fixtures", "usageRules",
+] as const;
+
 const fixtureFields = [
   "caseId", "lane", "mutation", "independentFixtureState",
   "expectedDenial", "expectedIndependentAuthorityVerified",
@@ -82,6 +91,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function catalogErrors(input: unknown): string[] {
   const errors: string[] = [];
   if (!isRecord(input)) return ["catalog must be an object"];
+  if (Object.keys(input).sort().join("|") !== [...catalogFields].sort().join("|"))
+    errors.push("top-level catalog fields drift");
   if (input.schemaVersion !== "forward-v02-independent-verifier-negative-fixtures.0.1-spec")
     errors.push("schema version drift");
   if (input.status !== "SPECIFICATION_ONLY_NOT_EXECUTABLE")
@@ -166,6 +177,9 @@ test("negative catalog contract rejects silent authorization, deletion and denia
     assert.notDeepEqual(catalogErrors(copy), []);
   };
   mutate(c => { c.scoringAuthorized = true; });
+  mutate(c => { c.positiveControlsVerified = true; });
+  mutate(c => { c.executionReady = true; });
+  mutate(c => { c.independentTestTrustRoot = { approved: true }; });
   mutate(c => { c.status = "EXECUTABLE"; });
   mutate(c => { c.evidenceStage = "SHADOW_FORWARD"; });
   mutate(c => { (c.fixtures as unknown[]).pop(); });
