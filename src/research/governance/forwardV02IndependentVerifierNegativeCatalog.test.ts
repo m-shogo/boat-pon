@@ -52,6 +52,30 @@ const expectedCaseSemantics: Readonly<Record<string, readonly [string, string]>>
 // verifier. Pin their meaning independently of the JSON fixture: otherwise a
 // catalog can preserve all 18 denial codes while silently authorizing caller
 // keys, caller FINAL claims or a production/scoring connection.
+// Pin the human-readable causal rationale as well as the mutation and denial.
+// A rewritten explanation must not teach a future harness to trust caller FINAL,
+// self-signed witness receipts, or a latest-seen revision as independent proof.
+const expectedCaseRationales: Readonly<Record<string, string>> = Object.freeze({
+  W01: "Matching request digest and caller-selected issuer/key never establish independence.",
+  W02: "Cryptographic validity under an unapproved issuer is insufficient.",
+  W03: "A signature without the approved inclusion/ordering proof is not a prospective freeze.",
+  W04: "Receipt commit must be strictly earlier, not equal.",
+  W05: "An included-only digest cannot prove the complete eligible universe.",
+  W06: "No inference from caller's REVIEWED or ACTIVE flags.",
+  W07: "Witness signature must bind the exact prospective protocol and membership digests.",
+  S01: "FINAL and EXACT are claims, not source authority.",
+  S02: "Terminal status cannot erase a predecessor gap.",
+  S03: "A fork cannot be resolved by local observedAt ordering.",
+  S04: "Source-scoped revision equivocation fails closed.",
+  S05: "Latest seen is not the terminal source revision.",
+  S06: "Do not use caller sequence or local timestamp to break a source tie.",
+  S07: "Race-only matching is insufficient for exact ticket settlement.",
+  S08: "Never count excluded refunds as ROI losses.",
+  S09: "Valid FINAL cannot launder an earlier out-of-window revision.",
+  X01: "Metadata-only conjunction remains unverified and unscorable.",
+  X02: "Unattested test-only proof shapes fail the witness-authenticity gate first; the unapproved protocol remains a separate downstream blocker and cannot authorize scoring.",
+});
+
 const expectedAuthoritySeparation: Readonly<Record<string, string>> = Object.freeze({
   "callerClaims": "Only allowlisted immutable metadata request/response; digests, issuer IDs, timestamps and claimed FINAL/VERIFIED never become trust roots.",
   "independentWitness": "Future verifier must separately provision reviewed issuer trust, append-only inclusion and trusted ordering/clock, revocation freshness and prospective eligible-universe proof.",
@@ -169,6 +193,7 @@ function catalogErrors(input: unknown): string[] {
     const semantics = expectedCaseSemantics[id];
     if (!semantics || item.mutation !== semantics[0] || item.independentFixtureState !== semantics[1])
       errors.push(`fixture semantics drift ${id}`);
+    if (item.why !== expectedCaseRationales[id]) errors.push(`causal rationale drift ${id}`);
     if (item.expectedIndependentAuthorityVerified !== false ||
         item.expectedScoringAuthorized !== false) errors.push(`authorization drift ${id}`);
     if (Object.keys(item).sort().join("|") !== [...fixtureFields].sort().join("|"))
@@ -223,6 +248,24 @@ test("negative catalog contract rejects silent authorization, deletion and denia
   mutate(c => { (c.usageRules as string[]).push("Enable scoring"); });
   mutate(c => { c.requestContract = "forward-v02-independent-proof-request.0.1-verified"; });
   mutate(c => { c.responseContract = "forward-v02-independent-proof-response.0.2-verified"; });
+});
+
+test("negative catalog rejects rewritten causal rationales that would mislead future verifier work", () => {
+  const source = readCatalog();
+  assert.ok(isRecord(source));
+  const mutate = (caseId: string, forgedRationale: string) => {
+    const copy = structuredClone(source);
+    assert.ok(isRecord(copy));
+    const fixtures = copy.fixtures;
+    assert.ok(Array.isArray(fixtures));
+    const item: unknown = fixtures.find((candidate: unknown) => isRecord(candidate) && candidate.caseId === caseId);
+    assert.ok(isRecord(item));
+    item.why = forgedRationale;
+    assert.ok(catalogErrors(copy).includes(`causal rationale drift ${caseId}`));
+  };
+  mutate("W01", "A caller-selected self-signing key establishes independent witness authority.");
+  mutate("S05", "The latest locally observed revision is authenticated terminal settlement.");
+  mutate("X02", "Unapproved protocols may score if test proof shapes look consistent.");
 });
 
 test("negative catalog cannot masquerade as an independently provisioned positive control", () => {
