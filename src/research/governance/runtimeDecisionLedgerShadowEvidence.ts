@@ -137,6 +137,29 @@ function digest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
 }
 
+// Do not feed an array to Object.fromEntries: an ambient empty Array iterator
+// can silently erase the complete reason/taxonomy map.
+function orderedCountMap(counts: Map<string, number>): Record<string, number> {
+  const keys = [...counts.keys()];
+  for (let index = 1; index < keys.length; index++) {
+    const key = keys[index]!;
+    let previous = index - 1;
+    while (previous >= 0 && keys[previous]! > key) {
+      keys[previous + 1] = keys[previous]!;
+      previous--;
+    }
+    keys[previous + 1] = key;
+  }
+  const result: Record<string, number> = {};
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    Object.defineProperty(result, key, {
+      value: counts.get(key)!, enumerable: true, writable: true, configurable: true,
+    });
+  }
+  return result;
+}
+
 function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number> {
   const counts = new Map<string, number>();
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
@@ -146,7 +169,7 @@ function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number
       counts.set(reason, (counts.get(reason) ?? 0) + 1);
     }
   }
-  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  return orderedCountMap(counts);
 }
 
 function taxonomyForReason(reason: string): string {
@@ -181,7 +204,7 @@ function taxonomyCounts(
     }
   }
   if (conflictCount > 0) counts.set("identity_conflict", (counts.get("identity_conflict") ?? 0) + conflictCount);
-  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  return orderedCountMap(counts);
 }
 
 function rate(count: number, total: number): number | null {
