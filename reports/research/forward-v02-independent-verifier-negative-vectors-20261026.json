@@ -189,10 +189,10 @@
       "lane": "CONJUNCTION",
       "mutation": "CLAIMED_TEST_PROOFS_WITH_UNAPPROVED_EVALUATION_PROTOCOL",
       "independentFixtureState": "TEST_ONLY_PROOF_SHAPES_NOT_ATTESTED",
-      "expectedDenial": "UNAPPROVED_PROTOCOL",
+      "expectedDenial": "UNVERIFIED_WITNESS",
       "expectedIndependentAuthorityVerified": false,
       "expectedScoringAuthorized": false,
-      "why": "Matching synthetic proof shapes do not authenticate either evidence chain or approve scoring; a separately reviewed verified-positive test is out of scope."
+      "why": "Unattested test-only proof shapes fail the witness-authenticity gate first; the unapproved protocol remains a separate downstream blocker and cannot authorize scoring."
     }
   ],
   "usageRules": [
@@ -201,7 +201,8 @@
     "Use the immutable proof request builder output only as caller claims. Never accept caller-supplied trusted, VERIFIED, FINAL, sourceAuthority or REVIEWED fields as trust configuration.",
     "Enforce failure precedence: malformed input -> trust/proof authenticity -> chronology/inclusion/completeness -> source revision ordering/terminality -> exact ticket/refund reconciliation -> protocol approval.",
     "Do not infer a successful positive attestation from absence of any one denial; each lane needs an independently reviewed positive control before future authorization work.",
-    "Never call protected N2 or touch Current BUY, LINE, public publishing, production settings or automated betting for fixture validation."
+    "Never call protected N2 or touch Current BUY, LINE, public publishing, production settings or automated betting for fixture validation.",
+    "For X02, absent independent proof is the first causal denial (UNVERIFIED_WITNESS); UNAPPROVED_PROTOCOL remains a downstream blocker and must not mask failed authenticity."
   ],
   "sourceRefs": [
     "docs/architecture/research-learning-loop.md",
