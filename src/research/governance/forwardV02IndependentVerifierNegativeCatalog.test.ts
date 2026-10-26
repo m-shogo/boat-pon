@@ -74,7 +74,7 @@ const expectedUsageRules: readonly string[] = Object.freeze([
 const catalogFields = [
   "schemaVersion", "status", "evidenceStage", "productionConnection",
   "scoringAuthorized", "independentAuthorityVerified", "requestContract",
-  "responseContract", "authoritySeparation", "fixtures", "usageRules",
+  "responseContract", "authoritySeparation", "fixtures", "usageRules", "sourceRefs",
 ] as const;
 
 const fixtureFields = [
