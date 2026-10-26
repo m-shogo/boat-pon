@@ -211,3 +211,23 @@ test("backdated membership creation and late snapshot authoring cannot be prospe
   const reboundResult2 = { ...x.result, analysisSnapshotDigest: forwardVaultDigest(backdatedCutoff) };
   assert.equal(reason({ ...x, snapshot: backdatedCutoff, result: reboundResult2 }), "DENY_CHRONOLOGY");
 });
+
+test("v0.1 scoring denial cannot be rewritten by a runtime consumer", () => {
+  const assessments = [
+    assessForwardScoringAdmission(fixture()),
+    assessForwardScoringAdmission(null),
+  ];
+  for (const result of assessments) {
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(result.scoringAuthorized, false);
+    assert.throws(() => {
+      (result as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (result as unknown as { reason: string }).reason = "AUTHORIZED";
+    }, TypeError);
+    assert.equal(result.scoringAuthorized, false);
+  }
+  assert.equal(assessments[0]!.reason, "DENY_UNFROZEN_SCORING_CONTRACT");
+  assert.equal(assessments[1]!.reason, "DENY_INVALID_EVIDENCE");
+});
