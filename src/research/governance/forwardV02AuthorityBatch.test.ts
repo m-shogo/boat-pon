@@ -194,3 +194,26 @@ test("live batch toJSON has trap cannot repair a conflicting source revision bef
   assert.equal(r.independentAuthorityVerified, false);
   assert.equal(r.scoringAuthorized, false);
 });
+
+test("batch denial and unverified assessments are runtime-immutable, including blockers", () => {
+  const assessments = [
+    check([envelope()]),
+    check([]),
+    check([envelope(), { invalid: true }]),
+  ];
+  for (const assessment of assessments) {
+    assert.equal(assessment.independentAuthorityVerified, false);
+    assert.equal(assessment.scoringAuthorized, false);
+    assert.equal(Object.isFrozen(assessment), true);
+    assert.equal(Object.isFrozen(assessment.blockers), true);
+    const originalBlockers = [...assessment.blockers];
+    assert.throws(() => {
+      (assessment as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (assessment.blockers as string[]).push("SCORING_APPROVED");
+    }, TypeError);
+    assert.equal(assessment.scoringAuthorized, false);
+    assert.deepEqual(assessment.blockers, originalBlockers);
+  }
+});
