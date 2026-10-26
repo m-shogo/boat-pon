@@ -15,6 +15,11 @@ export type EvaluationProtocol = Base & { kind: "EVALUATION_PROTOCOL"; evaluatio
 export type EvaluationResult = Base & { kind: "RESULT"; resultId: string; analysisSnapshotId: string; analysisSnapshotDigest: string; evaluationProtocolId: string; evaluationProtocolDigest: string; decisionSystem: string; comparisonMode: ComparisonMode; oddsBasis: OddsBasis; metricFamily: string; includedCount: number; excludedCount: number; metrics: Record<string, number>; sourceManifestDigest: string; evaluatorVersion: string };
 export type ForwardVaultRecord = EnrollmentProtocol | Membership | AnalysisSnapshot | EvaluationProtocol | EvaluationResult;
 export type Validation = { valid: boolean; errors: string[] };
+// Runtime consumers must not rewrite an already-issued validation verdict or
+// its diagnostic list. Compile-time types alone do not enforce this boundary.
+const frozenValidation=(valid:boolean,errors:string[]):Validation=>Object.freeze({
+  valid, errors:Object.freeze(errors),
+}) as Validation;
 
 const SHA = /^[0-9a-f]{64}$/u;
 const STAGES = new Set<EvidenceStage>(["HISTORICAL","VALIDATION","UNTOUCHED_HOLDOUT","SHADOW_FORWARD","FUTURE_ONLY"]);
@@ -173,12 +178,12 @@ export const forwardVaultDigest=(r:ForwardVaultRecord)=>{
 };
 
 export function validateForwardVaultRecord(v:unknown):Validation {
-  const e:string[]=[]; if(!obj(v)) return {valid:false,errors:["record must be an object"]};
+  const e:string[]=[]; if(!obj(v)) return frozenValidation(false,["record must be an object"]);
   const appendError=(message:string):void=>{ e[e.length]=message; };
-  if(!ownDataShape(v))return {valid:false,errors:["record fields must be enumerable own data properties"]};
+  if(!ownDataShape(v))return frozenValidation(false,["record fields must be enumerable own data properties"]);
   if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)appendError("invalid schemaVersion");
   if(!str(v.recordId))appendError("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
-  if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return {valid:false,errors:[...e,"invalid kind"]};
+  if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return frozenValidation(false,[...e,"invalid kind"]);
   if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))appendError("record fields must exactly match kind");
   for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))appendError(`unknown field is not allowed: ${k}`);
   const req=(...ks:string[])=>{
@@ -200,7 +205,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
     case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(v.oddsBasis!=="BUY_TIME"&&v.oddsBasis!=="CLOSING"&&v.oddsBasis!=="NONE")appendError("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))appendError("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")appendError("unresolvedPolicy must fail closed"); break;
     case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(v.oddsBasis!=="BUY_TIME"&&v.oddsBasis!=="CLOSING"&&v.oddsBasis!=="NONE")appendError("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0)appendError(`${k} must be non-negative safe integer`); if(!finiteMetricMap(v.metrics))appendError("metrics must contain finite numbers"); break;
   }
-  return {valid:e.length===0,errors:e};
+  return frozenValidation(e.length===0,e);
 }
 
 export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; if(!existing)return "APPEND"; if(!validateForwardVaultRecord(existing).valid)return "REJECTED_INVALID"; if(existing.recordId!==next.recordId)return "CONFLICT"; try { return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; } catch { return "REJECTED_INVALID"; } }
