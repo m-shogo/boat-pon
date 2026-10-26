@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-reason-count-map-admission-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.dynamic-count-map-admission-and-taxonomy-drift",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-reason-count-maps",
+  "symptom": "Before the fix, synthetic rehashed shadow evidence could keep unresolvedCount nonzero while deleting its reason counts, change count values to non-integers, or relabel the taxonomy map without a validation error. Hidden, symbol, inherited and accessor properties on dynamic count maps also escaped the runtime shape check. No real research evidence corruption or production impact was observed.",
+  "rootCauseClass": "UNVALIDATED_DYNAMIC_REASON_COUNT_MAP_AND_TAXONOMY",
+  "attemptSignature": "pr2286-v368-synthetic-rehashed-reason-count-coverage-taxonomy-and-hidden-shape-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.0.1/pr2286-v367-dynamic-count-maps-unvalidated"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/8ab4d4fb4e596b94f53fcf39ad25ed9d49d2f7f0",
+    "commit/6dc8b593b42a17f4118618649a82e941493542f4",
+    "commit/3a63919fcdd51950980343d2d57cf023fe6220a8",
+    "research/registries/learnings/LEARN-ledger-validation-error-sink-push-bypass-20261022.json",
+    "research/registries/learnings/LEARN-forward-v02-deny-only-assessment-runtime-mutability-20261026.json"
+  ],
+  "lesson": "Validating fixed shadow-evidence fields and its content digest is not enough: caller-controlled dynamic count dictionaries can suppress or relabel failure evidence even after recomputing the digest. JSON Schema countMap constraints and own-property shape checks must be enforced by the runtime validator too.",
+  "guardrail": "Require plain own enumerable data entries and safe nonnegative integer values for every reason and taxonomy count map; reject hidden/symbol/accessor/inherited and forbidden reason keys. Require reason-count coverage for unresolved/rejected rows and recompute taxonomy from reason keys plus conflict count. Regression-test rehashed synthetic mutations, preserving valid multi-reason rows. This never authenticates independent sources or authorizes scoring/production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T20:04:16.000Z",
+  "productionConnection": false,
+  "_digest": "91de775b1de762a2d930c60ee9f036a6631cd2d447c28446712c0c82fa6d40e0",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T20:04:16.000Z"
+}
