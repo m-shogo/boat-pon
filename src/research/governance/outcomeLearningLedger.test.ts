@@ -150,3 +150,20 @@ test("Outcome Ledger JSON admission rejects inherited, exotic, hidden, accessor 
   assert.equal(validateOutcomeLearningLedgerRecord(valid).valid, true);
   assert.equal(outcomeLearningLedgerDigest(valid), outcomeLearningLedgerDigest({ ...valid }));
 });
+
+test("Outcome Learning Ledger validation verdict and errors are immutable at runtime", () => {
+  const invalid = { ...validSettled(), payoutYen: -1 };
+  for (const result of [
+    validateOutcomeLearningLedgerRecord(validSettled()),
+    validateOutcomeLearningLedgerRecord(invalid),
+    validateOutcomeLearningLedgerRecord(null),
+  ]) {
+    const valid = result.valid;
+    const errors = [...result.errors];
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.errors), true);
+    assert.throws(() => { result.valid = !valid; }, TypeError);
+    assert.throws(() => { result.errors.push("forged"); }, TypeError);
+    assert.deepEqual(result, { valid, errors });
+  }
+});
