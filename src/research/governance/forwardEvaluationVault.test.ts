@@ -20,3 +20,17 @@ test("prototype-inherited kind names are rejected without throwing",()=>{
     assert.equal(classifyForwardVaultAppend(membership(),malformed),"REJECTED_INVALID");
   }
 });
+
+test("validation verdict and diagnostic list cannot be rewritten after handoff",()=>{
+  // Synthetic valid and denied research records; no scoring or production input.
+  for(const candidate of [membership(),{...membership(),included:"not-a-boolean"},null]){
+    const assessment=validateForwardVaultRecord(candidate);
+    const originalValid=assessment.valid;
+    const originalErrors=[...assessment.errors];
+    assert.equal(Object.isFrozen(assessment),true);
+    assert.equal(Object.isFrozen(assessment.errors),true);
+    assert.throws(()=>{ assessment.valid=!originalValid; },TypeError);
+    assert.throws(()=>{ assessment.errors.push("forged approval"); },TypeError);
+    assert.deepEqual({valid:assessment.valid,errors:assessment.errors},{valid:originalValid,errors:originalErrors});
+  }
+});
