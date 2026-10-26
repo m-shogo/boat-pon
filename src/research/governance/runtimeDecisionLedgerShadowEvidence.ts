@@ -94,9 +94,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
+  if (Array.isArray(value)) {
+    const result: unknown[] = [];
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+        throw new TypeError("invalid canonical shadow evidence array");
+      }
+      Object.defineProperty(result, String(index), {
+        value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+      });
+    }
+    return result;
+  }
   if (!isRecord(value)) return value;
-  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+  const keys = Object.keys(value);
+  // Source and content digests must not depend on mutable Array.map/sort.
+  for (let index = 1; index < keys.length; index++) {
+    const key = keys[index]!;
+    let previous = index - 1;
+    while (previous >= 0 && keys[previous]! > key) {
+      keys[previous + 1] = keys[previous]!;
+      previous--;
+    }
+    keys[previous + 1] = key;
+  }
+  const result: Record<string, unknown> = Object.create(null);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      throw new TypeError("invalid canonical shadow evidence object");
+    }
+    Object.defineProperty(result, key, {
+      value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+    });
+  }
+  return result;
 }
 
 function digest(value: unknown): string {
