@@ -23,9 +23,9 @@ export type ForwardV02OutcomeLinkAssessment = Readonly<{
   blockers: readonly string[];
 }>;
 
-const blocked = (reason: string): ForwardV02OutcomeLinkAssessment => ({
+const blocked = (reason: string): ForwardV02OutcomeLinkAssessment => Object.freeze({
   outcomeReferencesLinked: false, excludedOutcomePresent: false,
-  scoringAuthorized: false, blockers: [reason],
+  scoringAuthorized: false, blockers: Object.freeze([reason]),
 });
 
 function exactArray(value: unknown): value is unknown[] {
@@ -154,16 +154,16 @@ export function assessForwardV02OutcomeLinkPreflight(
     if (linkedDecisionIds.size !== decisionByRecordId.size) {
       return blocked("UNMATCHED_DECISION_RECORDS");
     }
-    return {
+    return Object.freeze({
       outcomeReferencesLinked: true,
       excludedOutcomePresent: excluded,
       scoringAuthorized: false,
-      blockers: [
+      blockers: Object.freeze([
         "UNAPPROVED_PROTOCOL",
         "INDEPENDENT_EXACT_SETTLEMENT_NOT_ATTESTED",
         "PROSPECTIVE_ENROLLMENT_NOT_ATTESTED",
-      ],
-    };
+      ]),
+    });
   } catch {
     return blocked("INVALID_LEDGER_COLLECTION");
   }
