@@ -223,19 +223,39 @@ function validateStringArray(value: unknown, field: string, errors: string[]): v
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) {
     if (!isDenseSerializableStringArray(value)) throw new TypeError("non-JSON array in Runtime Decision Ledger");
-    return Array.from({ length: value.length }, (_, index) => {
+    const output: unknown[] = [];
+    for (let index = 0; index < value.length; index++) {
       const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
       if (!descriptor || !("value" in descriptor)) throw new TypeError("non-JSON array in Runtime Decision Ledger");
-      return canonicalize(descriptor.value);
-    });
+      Object.defineProperty(output, String(index), {
+        value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+      });
+    }
+    return output;
   }
   if (value !== null && typeof value === "object") {
     if (!isOwnSerializableDataObject(value)) throw new TypeError("non-JSON object in Runtime Decision Ledger");
-    return Object.fromEntries(Object.keys(value).sort().map((key) => {
+    const keys = Object.keys(value);
+    // Sort keys without mutable Array.prototype.sort/map before constructing the digest object.
+    for (let index = 1; index < keys.length; index++) {
+      const key = keys[index]!;
+      let previous = index - 1;
+      while (previous >= 0 && keys[previous]! > key) {
+        keys[previous + 1] = keys[previous]!;
+        previous--;
+      }
+      keys[previous + 1] = key;
+    }
+    const output: Record<string, unknown> = Object.create(null);
+    for (let index = 0; index < keys.length; index++) {
+      const key = keys[index]!;
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (!descriptor || !("value" in descriptor)) throw new TypeError("non-JSON object in Runtime Decision Ledger");
-      return [key, canonicalize(descriptor.value)];
-    }));
+      Object.defineProperty(output, key, {
+        value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+      });
+    }
+    return output;
   }
   return value;
 }
