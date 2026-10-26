@@ -95,17 +95,17 @@ function validAnchor(x: unknown): x is Anchor {
 const snapshotUntrustedPreflight = snapshotForwardV02UntrustedGraph;
 
 function deny(reason: string): ForwardV02TrustPolicyAssessment {
-  return {
+  return Object.freeze({
     policyMetadataConsistent: false, independentAuthorityVerified: false,
-    scoringAuthorized: false, blockers: [reason],
-  };
+    scoringAuthorized: false, blockers: Object.freeze([reason]),
+  });
 }
 function unverified(): ForwardV02TrustPolicyAssessment {
-  return {
+  return Object.freeze({
     policyMetadataConsistent: true, independentAuthorityVerified: false,
     scoringAuthorized: false,
-    blockers: ["UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL"],
-  };
+    blockers: Object.freeze(["UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL"]),
+  });
 }
 function boundAnchor(
   anchors: readonly Anchor[], role: Anchor["role"], id: string,
