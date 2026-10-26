@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-v02-negative-catalog-top-level-authority-field-drift-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-negative-catalog-top-level-authority-field-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-offline-independent-verifier-negative-catalog-top-level-vocabulary",
+  "symptom": "The v353 static negative-catalog guard pinned 18 cases, per-case fields and global policy text but accepted arbitrary new top-level fields. A catalog with positiveControlsVerified=true, executionReady=true or a caller-controlled independentTestTrustRoot object could still pass the static catalog test despite introducing unsupported authority-looking metadata. This was a specification-integrity gap only; no independent verifier, trusted evidence, scoring or production path ran.",
+  "rootCauseClass": "NEGATIVE_CATALOG_TOP_LEVEL_UNKNOWN_FIELDS_NOT_CLOSED",
+  "attemptSignature": "pr2286-v354-close-negative-catalog-top-level-vocabulary-and-test-authority-injection",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-negative-fixtures.0.1-spec/pr2286-v353-global-policy-pinned-top-level-open"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "reports/research/forward-v02-independent-verifier-negative-vectors-20261026.json",
+    "src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts",
+    "commit/a579c57498838796a9d230de9a7ea35766b3a69d"
+  ],
+  "lesson": "Exact denial codes and global custody statements do not prevent unsupported authority-like metadata from being added at the catalog root. A future consumer could mistakenly interpret such fields as an independently verified positive control or an execution gate.",
+  "guardrail": "Close the catalog root to an independently pinned exact key set, in addition to the existing per-case field and policy checks. Mutation-test added positiveControlsVerified, executionReady and independentTestTrustRoot fields. Do not treat a static catalog PASS as an executed verifier, positive attestation, scoring authorization or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T08:10:23.000Z",
+  "productionConnection": false,
+  "_digest": "69cf97a1e6b2415385971c68a819257d8676e712a4d8a57979b8f1d6d69968f0",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T08:10:23.000Z"
+}
