@@ -68,6 +68,20 @@ const expectedUsageRules: readonly string[] = Object.freeze([
   "For X02, absent independent proof is the first causal denial (UNVERIFIED_WITNESS); UNAPPROVED_PROTOCOL remains a downstream blocker and must not mask failed authenticity."
 ]);
 
+// Evidence references are review navigation, never independent proof. Pin the
+// reviewed set independently: a forged or removed reference must not quietly
+// turn this deny-only specification into an apparent attestation.
+const expectedSourceRefs: readonly string[] = Object.freeze([
+  "docs/architecture/research-learning-loop.md",
+  "docs/architecture/research-knowledge-retention-contract.md",
+  "reports/research/forward-v02-independent-authority-evidence-contract-20261024.md",
+  "reports/research/forward-v02-independent-proof-request-handoff-20261024.md",
+  "reports/research/forward-v02-untrusted-verifier-response-quarantine-20261024.md",
+  "research/registries/learnings/LEARN-forward-v02-partial-verifier-request-binding-20261024.json",
+  "research/registries/learnings/LEARN-forward-v02-terminal-proof-ref-fixture-drift-20261024.json",
+  "research/registries/learnings/LEARN-forward-v02-settlement-revision-anchor-window-20261024.json",
+]);
+
 // Close the catalog's top-level vocabulary independently of the JSON file.
 // An unknown field such as positiveControlsVerified must not smuggle an
 // independently verified or execution-ready claim past the deny-only guard.
@@ -125,6 +139,15 @@ function catalogErrors(input: unknown): string[] {
       usageRules.length !== expectedUsageRules.length ||
       expectedUsageRules.some((rule, index) => usageRules[index] !== rule)) {
     errors.push("usage rules semantics drift");
+  }
+  // Do not infer authenticity from a reference string. This only detects
+  // provenance drift in the static, non-executable negative catalog.
+  const sourceRefs = input.sourceRefs;
+  if (!Array.isArray(sourceRefs) ||
+      sourceRefs.length !== expectedSourceRefs.length ||
+      sourceRefs.some(ref => typeof ref !== "string") ||
+      [...sourceRefs].sort().join("|") !== [...expectedSourceRefs].sort().join("|")) {
+    errors.push("reviewed source references drift");
   }
   if (!Array.isArray(input.fixtures)) return [...errors, "fixtures must be an array"];
   const seen = new Set<string>();
@@ -211,3 +234,24 @@ test("negative catalog cannot masquerade as an independently provisioned positiv
   assert.equal(source.status, "SPECIFICATION_ONLY_NOT_EXECUTABLE");
   assert.equal((source.fixtures as unknown[]).length, 18);
 });
+
+test("negative catalog rejects provenance reference substitution, deletion and injection", () => {
+  const source = readCatalog();
+  assert.ok(isRecord(source));
+  const refs = source.sourceRefs;
+  assert.ok(Array.isArray(refs));
+  assert.deepEqual([...refs].sort(), [...expectedSourceRefs].sort());
+  const mutate = (edit: (catalog: Record<string, unknown>) => void) => {
+    const copy = structuredClone(source);
+    assert.ok(isRecord(copy));
+    edit(copy);
+    assert.ok(catalogErrors(copy).includes("reviewed source references drift"));
+  };
+  mutate(c => { delete c.sourceRefs; });
+  mutate(c => { c.sourceRefs = ["caller-claimed-independent-trust-root"]; });
+  mutate(c => { (c.sourceRefs as string[])[0] = "reports/research/caller-verified-finality.json"; });
+  mutate(c => { (c.sourceRefs as string[]).pop(); });
+  mutate(c => { (c.sourceRefs as string[]).push("reports/research/positive-controls-verified.json"); });
+  mutate(c => { (c.sourceRefs as string[])[0] = (c.sourceRefs as string[])[1]; });
+});
+
