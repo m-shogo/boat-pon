@@ -407,6 +407,75 @@ const FORBIDDEN_KEYS = new Set([
   "stakeYen",
 ]);
 
+// Dynamic reason-count dictionaries are part of the public sanitized evidence shape.
+// Unlike the fixed schema objects, their keys must be validated individually.
+function validateCountMap(value: unknown, path: string, errors: string[]): Record<string, number> | null {
+  if (!isRecord(value)) {
+    appendError(errors, `${path} must be a count map`);
+    return null;
+  }
+  const initialErrors = errors.length;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    appendError(errors, `${path} must have a plain object prototype`);
+  }
+  const keys = Reflect.ownKeys(value);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    if (typeof key !== "string") {
+      appendError(errors, `${path} must not contain symbol keys`);
+      continue;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors, `${path}.${key} must be an own enumerable data field`);
+      continue;
+    }
+    if (FORBIDDEN_KEYS.has(key) || /^(?:\\/|file:\\/\\/|[A-Za-z]:\\\\)/.test(key) ||
+      key.includes("/Users/") || key.includes("\\\\Users\\\\")) {
+      appendError(errors, `${path} contains forbidden reason key`);
+    }
+    if (!nonNegativeSafeInteger(descriptor.value)) {
+      appendError(errors, `${path}.${key} must be a non-negative safe integer`);
+    }
+  }
+  return errors.length === initialErrors ? value as Record<string, number> : null;
+}
+
+function countMapTotal(counts: Record<string, number>): number {
+  let total = 0;
+  const keys = Reflect.ownKeys(counts);
+  for (let index = 0; index < keys.length; index++) total += counts[keys[index] as string]!;
+  return total;
+}
+
+function taxonomyMatches(
+  actual: Record<string, number>,
+  unresolved: Record<string, number>,
+  rejected: Record<string, number>,
+  conflictCount: number,
+): boolean {
+  const expected = new Map<string, number>();
+  for (const source of [unresolved, rejected]) {
+    const keys = Reflect.ownKeys(source);
+    for (let index = 0; index < keys.length; index++) {
+      const reason = keys[index] as string;
+      const taxonomy = taxonomyForReason(reason);
+      expected.set(taxonomy, (expected.get(taxonomy) ?? 0) + source[reason]!);
+    }
+  }
+  if (conflictCount > 0) {
+    expected.set("identity_conflict", (expected.get("identity_conflict") ?? 0) + conflictCount);
+  }
+  const keys = Reflect.ownKeys(actual);
+  if (keys.length !== expected.size) return false;
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index] as string;
+    if (!expected.has(key) || actual[key] !== expected.get(key)) return false;
+  }
+  return true;
+}
+
 function walk(value: unknown, path: string, errors: string[]): void {
   if (typeof value === "string") {
     if (/^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(value) || value.includes("/Users/") || value.includes("\\Users\\")) {
@@ -558,6 +627,29 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   }
   if (!rateMatches(evidence.completeness.conflictRate, r.conflictCount, r.sourceRows)) {
     appendError(errors,"completeness.conflictRate mismatch");
+  }
+
+  const unresolvedCounts = validateCountMap(
+    evidence.completeness.unresolvedReasonCounts, "completeness.unresolvedReasonCounts", errors,
+  );
+  const rejectedCounts = validateCountMap(
+    evidence.completeness.rejectedReasonCounts, "completeness.rejectedReasonCounts", errors,
+  );
+  const taxonomies = validateCountMap(
+    evidence.completeness.taxonomyCounts, "completeness.taxonomyCounts", errors,
+  );
+  if (unresolvedCounts && rejectedCounts && taxonomies) {
+    if (!Number.isSafeInteger(countMapTotal(unresolvedCounts)) ||
+      countMapTotal(unresolvedCounts) < r.unresolvedCount) {
+      appendError(errors, "completeness.unresolvedReasonCounts does not cover unresolved rows");
+    }
+    if (!Number.isSafeInteger(countMapTotal(rejectedCounts)) ||
+      countMapTotal(rejectedCounts) < r.rejectedCount) {
+      appendError(errors, "completeness.rejectedReasonCounts does not cover rejected rows");
+    }
+    if (!taxonomyMatches(taxonomies, unresolvedCounts, rejectedCounts, r.conflictCount)) {
+      appendError(errors, "completeness.taxonomyCounts mismatch");
+    }
   }
 
   for (const [name, actual] of Object.entries(evidence.privacy)) {
