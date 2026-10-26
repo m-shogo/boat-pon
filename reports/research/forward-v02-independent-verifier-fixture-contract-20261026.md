@@ -26,9 +26,9 @@ The JSON freezes **18 named negative cases** with lane, mutation, independent-fi
 
 - **W01–W07, witness:** caller self-signing; unapproved issuer; missing append-only inclusion; witness time equal to first decision; omitted eligible member; stale/missing revocation; independently signed receipt binding a different protocol digest.
 - **S01–S09, settlement:** caller `FINAL/EXACT` without source attestation; missing predecessor; fork; source-scoped revision equivocation; unauthenticated latest terminality; terminal tie without trusted total order; ticket/decision mismatch; refund/void mislabeled evaluable; predecessor outside trust-anchor validity despite a valid terminal revision.
-- **X01–X02, conjunction:** internally consistent but unauthenticated two-lane claims; matching **unattested test-only proof shapes** with an unapproved evaluation protocol. Both remain unscorable.
+- **X01–X02, conjunction:** internally consistent but unauthenticated two-lane claims; matching **unattested test-only proof shapes** with an unapproved evaluation protocol. Both remain unscorable. **X02 must first deny as `UNVERIFIED_WITNESS`** because its test-only proof shapes are explicitly unattested; `UNAPPROVED_PROTOCOL` is an additional downstream blocker, not the first causal denial.
 
-Expected denial codes are **proposed future verifier classifications**, not claims that the current implementation emits them. They reuse the outcome vocabulary of `forward-v02-independent-authority-evidence-contract-20261024.md` where applicable; `UNAPPROVED_PROTOCOL` is the existing admission blocker, not a new external attestation result. A future verifier may need a separately reviewed priority rule when multiple failures coexist; this catalog intentionally isolates each mutation.
+Expected denial codes are **proposed future verifier classifications**, not claims that the current implementation emits them. They reuse the outcome vocabulary of `forward-v02-independent-authority-evidence-contract-20261024.md` where applicable; `UNAPPROVED_PROTOCOL` is the existing admission blocker, not a new external attestation result. The stated precedence (authenticity before protocol approval) applies even when multiple blockers coexist. X02 deliberately contains both missing independent attestation and missing protocol approval, so the expected **first** denial is `UNVERIFIED_WITNESS`; the protocol blocker must still be retained separately. Other cases isolate one primary mutation.
 
 ## Required execution sequence (future work, NOT run)
 
@@ -52,10 +52,14 @@ Falsifiers: a case returning `scoringAuthorized=true`; any caller-selected trust
 
 ## Verification and blockers
 
-At creation, the JSON was read back from the PR branch: 18 unique case IDs, all denial-only with both authorization flags false, `productionConnection=false`. Official PR CI is **not** yet verified for this change; record its run/conclusion separately rather than copying the previous green status. Existing prior-head CI #40243284925 succeeded (verify 4,504 PASS / 2 SKIP / 0 FAIL; governance SUCCESS).
+At initial creation, the JSON was read back from the PR branch: 18 unique case IDs, all denial-only with both authorization flags false, `productionConnection=false`. Official PR CI is **not** yet verified for this change; record its run/conclusion separately rather than copying the previous green status. Existing prior-head CI #40243284925 succeeded (verify 4,504 PASS / 2 SKIP / 0 FAIL; governance SUCCESS).
 
 Read-only red-workflow separation: natural N2 Daily Readiness #40218434947 had payload `DAILY_PLAN_MISSING`, process exit 3 and workflow FAILURE with checkout cleanup completed; prior v332 PR CI #40191810250 failed three research tests, process exit 1, governance green, cleanup completed. Full job logs were inspected; neither failure proves a runner outage. No diagnostic N2 activation/retry was performed.
 
 **Still missing:** independently provisioned witness/clock/revocation and source-finality trust policy, authenticated complete correction history, independently frozen prospective membership, formula/source attestation and approved v0.2 evaluation protocol. No scoring, merge, production or Owner Dashboard authority follows from this contract.
 
 **Next safe step:** separately review the source-specific finality/ordering policy and choose a public, test-only trust-root/inclusion proof format before writing an executable offline verifier harness. Do not invent a trusted provider or fabricate a positive vector.
+
+## v347 precedence correction and executable catalog guard (2026-10-26)
+
+The original X02 specification contradicted its own first-causal-denial ordering: it expected `UNAPPROVED_PROTOCOL` even though its proof shapes were expressly **not independently attested**, while the catalog mandates trust/proof authenticity before protocol approval. X02 now expects `UNVERIFIED_WITNESS`, with protocol approval still separately blocked. This corrects **fixture expectations only**, not verifier behavior or readiness. `src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts` is an executable **static contract guard** (18-case identity, denial precedence, false authorization, duplicate/drift mutations), **not** execution of the 18 cryptographic/source verification vectors. No positive verifier, trust root, real source, scoring or production connection is introduced.
