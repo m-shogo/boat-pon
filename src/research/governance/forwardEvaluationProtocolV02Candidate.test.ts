@@ -223,3 +223,24 @@ test("standalone candidate preflight rejects a late nested money-policy repair",
   assert.equal(result.scoringAuthorized, false);
   assert.deepEqual(result.blockers, ["UNFROZEN_MONEY_OR_OUTCOME_POLICY"]);
 });
+
+test("candidate preflight cannot be rewritten into scoring authority after assessment", () => {
+  const complete = assessForwardV02Candidate(candidate());
+  const malformed = candidate();
+  malformed.scoringAuthorized = true;
+  const denied = assessForwardV02Candidate(malformed);
+  for (const result of [complete, denied]) {
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.blockers), true);
+    assert.equal(result.scoringAuthorized, false);
+    assert.throws(() => {
+      (result as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (result.blockers as unknown as string[]).push("FAKE_AUTHORITY");
+    }, TypeError);
+    assert.equal(result.scoringAuthorized, false);
+  }
+  assert.equal(complete.candidateComplete, true);
+  assert.equal(denied.candidateComplete, false);
+});
