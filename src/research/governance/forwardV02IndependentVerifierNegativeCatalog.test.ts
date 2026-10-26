@@ -27,6 +27,27 @@ const expectedDenials: Readonly<Record<string, string>> = Object.freeze({
   X02: "UNVERIFIED_WITNESS",
 });
 
+const expectedCaseSemantics: Readonly<Record<string, readonly [string, string]>> = Object.freeze({
+  W01: ["CALLER_SELF_SIGNED_RECEIPT", "NO_INDEPENDENT_TRUST_ROOT"],
+  W02: ["RECEIPT_SIGNED_BY_UNAPPROVED_ISSUER", "INDEPENDENT_TEST_TRUST_ROOT_PRESENT"],
+  W03: ["RECEIPT_WITHOUT_APPEND_ONLY_INCLUSION", "INDEPENDENT_TEST_TRUST_ROOT_PRESENT"],
+  W04: ["WITNESS_COMMIT_EQUALS_EARLIEST_DECISION", "INDEPENDENT_TEST_CLOCK_PROOF_PRESENT"],
+  W05: ["ELIGIBLE_UNIVERSE_OMITS_PREDECLARED_MEMBER", "INDEPENDENT_TEST_MEMBERSHIP_PROOF_PRESENT"],
+  W06: ["REVOCATION_STATE_MISSING_OR_STALE", "INDEPENDENT_TEST_TRUST_ROOT_PRESENT"],
+  W07: ["SIGNED_RECEIPT_BINDS_DIFFERENT_PROTOCOL_DIGEST", "INDEPENDENT_TEST_RECEIPT_PRESENT"],
+  S01: ["CALLER_FINAL_AND_EXACT_WITHOUT_SOURCE_PROOF", "NO_INDEPENDENT_SOURCE_ATTESTATION"],
+  S02: ["FINAL_REVISION_PREDECESSOR_MISSING", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  S03: ["TWO_CHILDREN_SHARE_PREDECESSOR_WITHOUT_SUPERSESSION_RULE", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  S04: ["SAME_SOURCE_REVISION_ID_TWO_CONTENT_DIGESTS", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  S05: ["LATEST_OBSERVATION_LACKS_AUTHENTICATED_TERMINALITY", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  S06: ["TWO_TERMINAL_REVISIONS_WITHOUT_TRUSTED_TOTAL_ORDER", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  S07: ["SOURCE_RECORD_TICKET_OR_DECISION_ID_MISMATCH", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  S08: ["REFUND_VOID_INVALIDATION_MARKED_EVALUABLE", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  S09: ["TRUST_ANCHOR_REVOKED_AT_PREDECESSOR_REVISION", "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT"],
+  X01: ["BOTH_PROOFS_STRUCTURALLY_CONSISTENT_BUT_NOT_AUTHENTICATED", "NO_INDEPENDENT_PROOF"],
+  X02: ["CLAIMED_TEST_PROOFS_WITH_UNAPPROVED_EVALUATION_PROTOCOL", "TEST_ONLY_PROOF_SHAPES_NOT_ATTESTED"],
+});
+
 const fixtureFields = [
   "caseId", "lane", "mutation", "independentFixtureState",
   "expectedDenial", "expectedIndependentAuthorityVerified",
@@ -47,6 +68,9 @@ function catalogErrors(input: unknown): string[] {
     errors.push("catalog must remain non-executable");
   if (input.evidenceStage !== "SYNTHETIC_OFFLINE_DESIGN")
     errors.push("catalog must remain synthetic design evidence");
+  if (input.requestContract !== "forward-v02-independent-proof-request.0.1-untrusted" ||
+      input.responseContract !== "forward-v02-independent-proof-response.0.2-untrusted")
+    errors.push("untrusted proof handoff contract drift");
   for (const field of ["productionConnection", "scoringAuthorized", "independentAuthorityVerified"]) {
     if (input[field] !== false) errors.push(`${field} must be literal false`);
   }
@@ -73,6 +97,9 @@ function catalogErrors(input: unknown): string[] {
     const lane = id[0] === "W" ? "FREEZE" : id[0] === "S" ? "SETTLEMENT" : "CONJUNCTION";
     if (item.lane !== lane) errors.push(`lane mismatch ${id}`);
     if (item.expectedDenial !== expectedDenials[id]) errors.push(`denial drift ${id}`);
+    const semantics = expectedCaseSemantics[id];
+    if (!semantics || item.mutation !== semantics[0] || item.independentFixtureState !== semantics[1])
+      errors.push(`fixture semantics drift ${id}`);
     if (item.expectedIndependentAuthorityVerified !== false ||
         item.expectedScoringAuthorized !== false) errors.push(`authorization drift ${id}`);
     if (Object.keys(item).sort().join("|") !== [...fixtureFields].sort().join("|"))
@@ -111,6 +138,11 @@ test("negative catalog contract rejects silent authorization, deletion and denia
   mutate(c => { ((c.fixtures as Record<string, unknown>[])[0]).expectedScoringAuthorized = true; });
   mutate(c => { ((c.fixtures as Record<string, unknown>[])[0]).expectedDenial = "VERIFIED"; });
   mutate(c => { ((c.fixtures as Record<string, unknown>[])[0]).trusted = true; });
+  mutate(c => { ((c.fixtures as Record<string, unknown>[])[8]).mutation = "FINAL_REVISION_PREDECESSOR_PRESENT"; });
+  mutate(c => { ((c.fixtures as Record<string, unknown>[])[8]).independentFixtureState = "CALLER_CLAIMED_SOURCE_PROOF"; });
+  mutate(c => { ((c.fixtures as Record<string, unknown>[])[17]).mutation = "APPROVED_EVALUATION_PROTOCOL"; });
+  mutate(c => { c.requestContract = "forward-v02-independent-proof-request.0.1-verified"; });
+  mutate(c => { c.responseContract = "forward-v02-independent-proof-response.0.2-verified"; });
 });
 
 test("negative catalog cannot masquerade as an independently provisioned positive control", () => {
