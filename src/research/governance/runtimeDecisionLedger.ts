@@ -117,7 +117,10 @@ function isLeapYear(year: number): boolean {
 function isExactInstant(value: string): boolean {
   const match = EXACT_INSTANT_RE.exec(value);
   if (!match || value.endsWith("-00:00")) return false;
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText, offsetMinuteText] = match;
+  // RegExp match arrays must be read by index: an inherited iterator can erase captures.
+  const yearText = match[1], monthText = match[2], dayText = match[3];
+  const hourText = match[4], minuteText = match[5], secondText = match[6];
+  const offsetHourText = match[7], offsetMinuteText = match[8];
   const year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
