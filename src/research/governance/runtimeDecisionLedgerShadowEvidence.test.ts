@@ -421,3 +421,115 @@ test("shadow evidence rejects inherited, hidden, accessor and symbol fields desp
     assert.match(result.errors.join("\n"), scenario.expected, scenario.label);
   }
 });
+
+test("shadow evidence rejects rehashed reason-count omissions, invalid values and taxonomy drift", () => {
+  const cases: Array<{
+    label: string;
+    change: (evidence: RuntimeDecisionLedgerShadowEvidence) => void;
+    expected: RegExp;
+  }> = [
+    {
+      label: "unresolved rows without any recorded reason",
+      change: (evidence) => { evidence.completeness.unresolvedReasonCounts = {}; },
+      expected: /unresolvedReasonCounts does not cover unresolved rows/,
+    },
+    {
+      label: "non-integer reason count despite rehashed content",
+      change: (evidence) => {
+        (evidence.completeness.unresolvedReasonCounts as Record<string, unknown>)
+          .close_time_not_proven_visible_at_decision = "1";
+      },
+      expected: /unresolvedReasonCounts.close_time_not_proven_visible_at_decision must be a non-negative safe integer/,
+    },
+    {
+      label: "taxonomy reclassification despite rehashed content",
+      change: (evidence) => { evidence.completeness.taxonomyCounts = { schema_or_value: 1 }; },
+      expected: /completeness.taxonomyCounts mismatch/,
+    },
+    {
+      label: "forbidden raw-data key in reason dictionary",
+      change: (evidence) => { evidence.completeness.unresolvedReasonCounts = { dbPath: 1 }; },
+      expected: /completeness.unresolvedReasonCounts contains forbidden reason key/,
+    },
+  ];
+  for (const scenario of cases) {
+    const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    scenario.change(evidence);
+    resign(evidence);
+    const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(validation.valid, false, scenario.label);
+    assert.equal(validation.evidence, null, scenario.label);
+    assert.match(validation.errors.join("\n"), scenario.expected, scenario.label);
+  }
+});
+
+test("shadow evidence rejects hidden, symbol, inherited and accessor reason-count properties", () => {
+  const cases: Array<{
+    label: string;
+    change: (evidence: RuntimeDecisionLedgerShadowEvidence) => void;
+    expected: RegExp;
+  }> = [
+    {
+      label: "hidden data property",
+      change: (evidence) => {
+        Object.defineProperty(evidence.completeness.unresolvedReasonCounts, "hidden", {
+          value: 1, enumerable: false, configurable: true,
+        });
+      },
+      expected: /unresolvedReasonCounts.hidden must be an own enumerable data field/,
+    },
+    {
+      label: "symbol property",
+      change: (evidence) => {
+        Object.defineProperty(evidence.completeness.unresolvedReasonCounts, Symbol("hidden"), {
+          value: 1, enumerable: true, configurable: true,
+        });
+      },
+      expected: /unresolvedReasonCounts must not contain symbol keys/,
+    },
+    {
+      label: "inherited property",
+      change: (evidence) => {
+        Object.setPrototypeOf(evidence.completeness.unresolvedReasonCounts, { hidden: 1 });
+      },
+      expected: /unresolvedReasonCounts must have a plain object prototype/,
+    },
+    {
+      label: "accessor property",
+      change: (evidence) => {
+        Object.defineProperty(evidence.completeness.unresolvedReasonCounts, "hidden", {
+          enumerable: false, configurable: true,
+          get() { throw new Error("hidden reason getter must not execute"); },
+        });
+      },
+      expected: /unresolvedReasonCounts.hidden must be an own enumerable data field/,
+    },
+  ];
+  for (const scenario of cases) {
+    const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    scenario.change(evidence);
+    // JSON projection ignores these extra properties; the existing digest still matches.
+    const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(validation.valid, false, scenario.label);
+    assert.equal(validation.evidence, null, scenario.label);
+    assert.match(validation.errors.join("\n"), scenario.expected, scenario.label);
+  }
+});
+
+test("shadow evidence retains multi-reason row coverage without requiring one reason per row", () => {
+  const original = input();
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input({
+    reconciliation: {
+      ...original.reconciliation,
+      unresolved: [{
+        sourceDecisionHistoryId: 99,
+        reasons: ["close_time_not_proven_visible_at_decision", "identity_missing"],
+      }],
+    },
+  }));
+  assert.deepEqual(evidence.completeness.taxonomyCounts, {
+    identity_completeness: 1,
+    temporal_provenance: 1,
+  });
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(evidence).valid, true);
+});
