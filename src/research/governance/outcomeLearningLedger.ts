@@ -116,7 +116,9 @@ function canonicalize(value: unknown): unknown {
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
         throw new TypeError("invalid canonical array data");
       }
-      result[index] = canonicalize(descriptor.value);
+      Object.defineProperty(result, String(index), {
+      value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+    });
     }
     return result;
   }
@@ -207,7 +209,12 @@ function validationResult(valid: boolean, errors: string[]): OutcomeLearningLedg
 
 export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLearningLedgerValidation {
   const errors: string[] = [];
-  const appendError = (message: string): void => { errors[errors.length] = message; };
+  // Indexed assignment is intercepted by inherited numeric setters; preserve every rejection as an own property.
+  const appendError = (message: string): void => {
+    Object.defineProperty(errors, String(errors.length), {
+      value: message, enumerable: true, writable: true, configurable: true,
+    });
+  };
   if (!isRecord(value)) return validationResult(false, ["record must be an object"]);
   if (!hasOwnEnumerableDataFields(value)) return validationResult(false, ["record fields must be enumerable own data properties"]);
   const actualFields = Object.keys(value);
