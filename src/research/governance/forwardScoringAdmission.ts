@@ -58,7 +58,7 @@ export type ForwardScoringEvidence = Readonly<{
   reconciliation: OutcomeReconciliationState;
 }>;
 
-const DENY = (reason: ForwardScoringDenial): ForwardScoringPreflight => ({
+const DENY = (reason: ForwardScoringDenial): ForwardScoringPreflight => Object.freeze({
   scoringAuthorized: false,
   reason,
 });
