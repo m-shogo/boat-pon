@@ -123,8 +123,8 @@ export function forwardV02SourceManifestReferenceDigest(value: unknown): string 
   return contentHash("forward-v02-source-manifest-reference-v1", fields);
 }
 
-const blocked = (reason: string): ForwardV02ReferenceAssessment => ({
-  referencesReconciled: false, scoringAuthorized: false, blockers: [reason],
+const blocked = (reason: string): ForwardV02ReferenceAssessment => Object.freeze({
+  referencesReconciled: false, scoringAuthorized: false, blockers: Object.freeze([reason]),
 });
 
 /** Reference equality only. Caller-supplied matching hashes are never proof of independent origin. */
@@ -162,10 +162,10 @@ export function assessForwardV02ReferenceReconciliation(
         m.analysisSnapshotDigest !== r.expectedAnalysisSnapshotDigest) {
       return blocked("STAGE_OR_SNAPSHOT_REFERENCE_MISMATCH");
     }
-    return {
+    return Object.freeze({
       referencesReconciled: true, scoringAuthorized: false,
-      blockers: ["UNAPPROVED_PROTOCOL", "INDEPENDENT_AUTHORITY_NOT_ATTESTED", "SETTLEMENT_AND_ENROLLMENT_NOT_VERIFIED"],
-    };
+      blockers: Object.freeze(["UNAPPROVED_PROTOCOL", "INDEPENDENT_AUTHORITY_NOT_ATTESTED", "SETTLEMENT_AND_ENROLLMENT_NOT_VERIFIED"]),
+    });
   } catch { return blocked("INVALID_REFERENCE_SHAPE"); }
 }
 
