@@ -380,8 +380,15 @@ function requireExactObject(value: unknown, path: string, keys: Set<string>, err
     appendError(errors,`${path} must be an object`);
     return false;
   }
-  for (const key of Object.keys(value)) if (!keys.has(key)) appendError(errors,`unknown field: ${path}.${key}`);
-  for (const key of keys) if (!(key in value)) appendError(errors,`missing field: ${path}.${key}`);
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== "string" || !keys.has(key)) appendError(errors,`unknown field: ${path}.${String(key)}`);
+  }
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors,`missing own enumerable data field: ${path}.${key}`);
+    }
+  }
   return true;
 }
 
@@ -425,8 +432,15 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const errors: string[] = [];
   if (!isRecord(value)) return { valid: false, errors: ["evidence must be an object"], evidence: null };
-  for (const key of Object.keys(value)) if (!TOP_LEVEL_KEYS.has(key)) appendError(errors,`unknown top-level field: ${key}`);
-  for (const key of TOP_LEVEL_KEYS) if (!(key in value)) appendError(errors,`missing top-level field: ${key}`);
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== "string" || !TOP_LEVEL_KEYS.has(key)) appendError(errors,`unknown top-level field: ${String(key)}`);
+  }
+  for (const key of TOP_LEVEL_KEYS) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors,`missing own enumerable data top-level field: ${key}`);
+    }
+  }
   if (errors.length > 0) return { valid: false, errors, evidence: null };
 
   requireExactObject(value.scope, "scope", SCOPE_KEYS, errors);
