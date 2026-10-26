@@ -331,13 +331,23 @@ const SAFETY_KEYS = new Set([
   "productionPromotion",
 ]);
 
+// Avoid ambient Array.prototype.push and inherited numeric setters when collecting failures.
+function appendError(errors: string[], message: string): void {
+  Object.defineProperty(errors, String(errors.length), {
+    value: message,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
+}
+
 function requireExactObject(value: unknown, path: string, keys: Set<string>, errors: string[]): boolean {
   if (!isRecord(value)) {
-    errors.push(`${path} must be an object`);
+    appendError(errors,`${path} must be an object`);
     return false;
   }
-  for (const key of Object.keys(value)) if (!keys.has(key)) errors.push(`unknown field: ${path}.${key}`);
-  for (const key of keys) if (!(key in value)) errors.push(`missing field: ${path}.${key}`);
+  for (const key of Object.keys(value)) if (!keys.has(key)) appendError(errors,`unknown field: ${path}.${key}`);
+  for (const key of keys) if (!(key in value)) appendError(errors,`missing field: ${path}.${key}`);
   return true;
 }
 
@@ -359,17 +369,19 @@ const FORBIDDEN_KEYS = new Set([
 function walk(value: unknown, path: string, errors: string[]): void {
   if (typeof value === "string") {
     if (/^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(value) || value.includes("/Users/") || value.includes("\\Users\\")) {
-      errors.push(`absolute path-like value at ${path}`);
+      appendError(errors,`absolute path-like value at ${path}`);
     }
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => walk(entry, `${path}[${index}]`, errors));
+    // The sanitized shadow-evidence schema contains no arrays at any depth.
+    // Reject them rather than trusting mutable Array.prototype.forEach to inspect contents.
+    appendError(errors, `unexpected array at ${path}`);
     return;
   }
   if (!isRecord(value)) return;
   for (const [key, entry] of Object.entries(value)) {
-    if (FORBIDDEN_KEYS.has(key)) errors.push(`forbidden key at ${path}.${key}`);
+    if (FORBIDDEN_KEYS.has(key)) appendError(errors,`forbidden key at ${path}.${key}`);
     walk(entry, `${path}.${key}`, errors);
   }
 }
@@ -379,8 +391,8 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const errors: string[] = [];
   if (!isRecord(value)) return { valid: false, errors: ["evidence must be an object"], evidence: null };
-  for (const key of Object.keys(value)) if (!TOP_LEVEL_KEYS.has(key)) errors.push(`unknown top-level field: ${key}`);
-  for (const key of TOP_LEVEL_KEYS) if (!(key in value)) errors.push(`missing top-level field: ${key}`);
+  for (const key of Object.keys(value)) if (!TOP_LEVEL_KEYS.has(key)) appendError(errors,`unknown top-level field: ${key}`);
+  for (const key of TOP_LEVEL_KEYS) if (!(key in value)) appendError(errors,`missing top-level field: ${key}`);
   if (errors.length > 0) return { valid: false, errors, evidence: null };
 
   requireExactObject(value.scope, "scope", SCOPE_KEYS, errors);
@@ -393,21 +405,21 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
 
   const evidence = value as unknown as RuntimeDecisionLedgerShadowEvidence;
   if (evidence.schemaVersion !== RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION) {
-    errors.push(`schemaVersion must be ${RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION}`);
+    appendError(errors,`schemaVersion must be ${RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION}`);
   }
-  if (!canonicalGeneratedAt(evidence.generatedAt)) errors.push("generatedAt must be a canonical UTC date-time");
-  if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(evidence.verdict)) errors.push("invalid verdict");
+  if (!canonicalGeneratedAt(evidence.generatedAt)) appendError(errors,"generatedAt must be a canonical UTC date-time");
+  if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(evidence.verdict)) appendError(errors,"invalid verdict");
   for (const [name, valueToCheck] of [
     ["sourceDescriptorDigest", evidence.sourceDescriptorDigest],
     ["contextDigest", evidence.contextDigest],
     ["recordsDigest", evidence.reconciliation?.recordsDigest],
     ["contentDigest", evidence.contentDigest],
   ] as const) {
-    if (typeof valueToCheck !== "string" || !/^[0-9a-f]{64}$/.test(valueToCheck)) errors.push(`${name} must be sha256 hex`);
+    if (typeof valueToCheck !== "string" || !/^[0-9a-f]{64}$/.test(valueToCheck)) appendError(errors,`${name} must be sha256 hex`);
   }
 
   if (evidence.sourceDescriptorDigest !== digest(evidence.source)) {
-    errors.push("sourceDescriptorDigest mismatch");
+    appendError(errors,"sourceDescriptorDigest mismatch");
   }
 
   const source = evidence.source;
@@ -418,24 +430,24 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     ["pageCount", source.pageCount],
     ["freelistCount", source.freelistCount],
   ] as const) {
-    if (!nonNegativeSafeInteger(count)) errors.push(`source.${name} must be a non-negative safe integer`);
+    if (!nonNegativeSafeInteger(count)) appendError(errors,`source.${name} must be a non-negative safe integer`);
   }
   if (!Number.isSafeInteger(source.pageSizeBytes) || source.pageSizeBytes < 1) {
-    errors.push("source.pageSizeBytes must be a positive safe integer");
+    appendError(errors,"source.pageSizeBytes must be a positive safe integer");
   }
   if (!Number.isFinite(source.modifiedTimeMs) || source.modifiedTimeMs < 0) {
-    errors.push("source.modifiedTimeMs must be a non-negative finite number");
+    appendError(errors,"source.modifiedTimeMs must be a non-negative finite number");
   }
   if (typeof source.journalMode !== "string" || source.journalMode.trim().length === 0) {
-    errors.push("source.journalMode must be a non-empty string");
+    appendError(errors,"source.journalMode must be a non-empty string");
   }
 
   const r = evidence.reconciliation;
   if (!r || !isRecord(r)) {
-    errors.push("reconciliation must be an object");
+    appendError(errors,"reconciliation must be an object");
   } else {
     if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(r.status)) {
-      errors.push("reconciliation.status is invalid");
+      appendError(errors,"reconciliation.status is invalid");
     }
     for (const [name, count] of [
       ["sourceRows", r.sourceRows],
@@ -445,68 +457,68 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       ["rejectedCount", r.rejectedCount],
       ["conflictCount", r.conflictCount],
     ] as const) {
-      if (!nonNegativeSafeInteger(count)) errors.push(`${name} must be a non-negative safe integer`);
+      if (!nonNegativeSafeInteger(count)) appendError(errors,`${name} must be a non-negative safe integer`);
     }
     if (
       nonNegativeSafeInteger(r.sourceRows) &&
       r.sourceRows !== r.mappedUnique + r.exactDuplicates + r.unresolvedCount + r.rejectedCount + r.conflictCount
-    ) errors.push("reconciliation counts do not sum to sourceRows");
+    ) appendError(errors,"reconciliation counts do not sum to sourceRows");
   }
 
-  if (!canonicalNonEmpty(evidence.scope.runKind)) errors.push("scope.runKind must be a canonical non-empty string");
-  if (!canonicalNonEmpty(evidence.scope.modelVersion)) errors.push("scope.modelVersion must be a canonical non-empty string");
+  if (!canonicalNonEmpty(evidence.scope.runKind)) appendError(errors,"scope.runKind must be a canonical non-empty string");
+  if (!canonicalNonEmpty(evidence.scope.modelVersion)) appendError(errors,"scope.modelVersion must be a canonical non-empty string");
   if (!canonicalDate(evidence.scope.from) || !canonicalDate(evidence.scope.to)) {
-    errors.push("bounded scope requires canonical from/to dates");
+    appendError(errors,"bounded scope requires canonical from/to dates");
   } else if (evidence.scope.from > evidence.scope.to) {
-    errors.push("scope.from must not be after scope.to");
+    appendError(errors,"scope.from must not be after scope.to");
   }
   if (!Number.isSafeInteger(evidence.scope.limit) || evidence.scope.limit < 1 || evidence.scope.limit > 5000) {
-    errors.push("scope.limit must be an integer between 1 and 5000");
+    appendError(errors,"scope.limit must be an integer between 1 and 5000");
   }
   if (!nonNegativeSafeInteger(evidence.scope.returnedRows)) {
-    errors.push("scope.returnedRows must be a non-negative safe integer");
+    appendError(errors,"scope.returnedRows must be a non-negative safe integer");
   }
-  if (evidence.scope.bounded !== true) errors.push("scope.bounded must be true");
-  if (typeof evidence.scope.limitReached !== "boolean") errors.push("scope.limitReached must be boolean");
+  if (evidence.scope.bounded !== true) appendError(errors,"scope.bounded must be true");
+  if (typeof evidence.scope.limitReached !== "boolean") appendError(errors,"scope.limitReached must be boolean");
   if (Number.isSafeInteger(evidence.scope.limit)
     && nonNegativeSafeInteger(evidence.scope.returnedRows)
     && evidence.scope.returnedRows > evidence.scope.limit) {
-    errors.push("scope.returnedRows must not exceed scope.limit");
+    appendError(errors,"scope.returnedRows must not exceed scope.limit");
   }
   if (evidence.scope.returnedRows !== evidence.reconciliation.sourceRows) {
-    errors.push("scope.returnedRows must equal reconciliation.sourceRows");
+    appendError(errors,"scope.returnedRows must equal reconciliation.sourceRows");
   }
   if (evidence.scope.limitReached && evidence.scope.returnedRows !== evidence.scope.limit) {
-    errors.push("limitReached requires returnedRows to equal limit");
+    appendError(errors,"limitReached requires returnedRows to equal limit");
   }
-  if (evidence.source.walPresent) errors.push("bounded evidence requires walPresent=false");
+  if (evidence.source.walPresent) appendError(errors,"bounded evidence requires walPresent=false");
   if (evidence.source.readOnly !== true || evidence.source.queryOnly !== true) {
-    errors.push("source must be readOnly and queryOnly");
+    appendError(errors,"source must be readOnly and queryOnly");
   }
 
   const expectedVerdict = expectedEvidenceVerdict(evidence);
-  if (evidence.verdict !== expectedVerdict) errors.push(`verdict must be ${expectedVerdict}`);
+  if (evidence.verdict !== expectedVerdict) appendError(errors,`verdict must be ${expectedVerdict}`);
 
   if (!rateMatches(evidence.completeness.mappedRate, r.mappedUnique, r.sourceRows)) {
-    errors.push("completeness.mappedRate mismatch");
+    appendError(errors,"completeness.mappedRate mismatch");
   }
   if (!rateMatches(evidence.completeness.unresolvedRate, r.unresolvedCount, r.sourceRows)) {
-    errors.push("completeness.unresolvedRate mismatch");
+    appendError(errors,"completeness.unresolvedRate mismatch");
   }
   if (!rateMatches(evidence.completeness.rejectedRate, r.rejectedCount, r.sourceRows)) {
-    errors.push("completeness.rejectedRate mismatch");
+    appendError(errors,"completeness.rejectedRate mismatch");
   }
   if (!rateMatches(evidence.completeness.conflictRate, r.conflictCount, r.sourceRows)) {
-    errors.push("completeness.conflictRate mismatch");
+    appendError(errors,"completeness.conflictRate mismatch");
   }
 
   for (const [name, actual] of Object.entries(evidence.privacy)) {
-    if (actual !== false) errors.push(`privacy.${name} must be false`);
+    if (actual !== false) appendError(errors,`privacy.${name} must be false`);
   }
   for (const field of ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const) {
-    if (evidence.safety[field] !== 0) errors.push(`safety.${field} must be 0`);
+    if (evidence.safety[field] !== 0) appendError(errors,`safety.${field} must be 0`);
   }
-  if (evidence.safety.productionPromotion !== false) errors.push("safety.productionPromotion must be false");
+  if (evidence.safety.productionPromotion !== false) appendError(errors,"safety.productionPromotion must be false");
 
   const expectedDigest = digest(digestableEvidence({
     schemaVersion: evidence.schemaVersion,
@@ -520,7 +532,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     privacy: evidence.privacy,
     safety: evidence.safety,
   }));
-  if (evidence.contentDigest !== expectedDigest) errors.push("contentDigest mismatch");
+  if (evidence.contentDigest !== expectedDigest) appendError(errors,"contentDigest mismatch");
 
   walk(evidence, "$", errors);
   return { valid: errors.length === 0, errors, evidence: errors.length === 0 ? evidence : null };
