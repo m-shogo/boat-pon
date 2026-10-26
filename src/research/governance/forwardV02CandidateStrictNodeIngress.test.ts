@@ -126,3 +126,37 @@ test("revoked nested Proxy and accessor are rejected without trap or getter", ()
   assert.deepEqual(strict(d).blockers, ["INVALID_CANDIDATE_SHAPE"]);
   assert.equal(getters, 0);
 });
+
+test("strict candidate ingress returns runtime-immutable deny-only results", () => {
+  const c = candidate();
+  const rejected = strict(new Proxy(c, {}));
+  assert.deepEqual(rejected.blockers, ["INVALID_CANDIDATE_SHAPE"]);
+
+  const assessments = [
+    rejected,
+    strict({ ...c, status: "APPROVED" }),
+    strict(c),
+  ];
+  for (const assessment of assessments) {
+    assert.equal(assessment.scoringAuthorized, false);
+    assert.equal(Object.isFrozen(assessment), true);
+    assert.equal(Object.isFrozen(assessment.blockers), true);
+    const originalBlockers = [...assessment.blockers];
+    const originalComplete = assessment.candidateComplete;
+    assert.throws(() => {
+      (assessment as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (assessment as unknown as { candidateComplete: boolean }).candidateComplete = !originalComplete;
+    }, TypeError);
+    assert.throws(() => {
+      (assessment.blockers as string[]).push("SCORING_APPROVED");
+    }, TypeError);
+    assert.throws(() => {
+      (assessment.blockers as string[])[0] = "SCORING_APPROVED";
+    }, TypeError);
+    assert.equal(assessment.scoringAuthorized, false);
+    assert.equal(assessment.candidateComplete, originalComplete);
+    assert.deepEqual(assessment.blockers, originalBlockers);
+  }
+});

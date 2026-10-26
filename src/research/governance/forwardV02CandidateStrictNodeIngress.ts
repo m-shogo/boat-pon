@@ -21,9 +21,11 @@ export function assessForwardV02CandidateStrictNodeIngress(
       snapshotForwardV02UntrustedGraphRejectingProxies(input),
     );
   } catch {
-    return {
+    // Keep the opt-in strict-ingress denial immutable at runtime, just like
+    // the legacy candidate assessment's rejected/unapproved results.
+    return Object.freeze({
       candidateComplete: false, scoringAuthorized: false,
-      blockers: ["INVALID_CANDIDATE_SHAPE"],
-    };
+      blockers: Object.freeze(["INVALID_CANDIDATE_SHAPE"]),
+    });
   }
 }
