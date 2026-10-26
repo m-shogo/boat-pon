@@ -16,8 +16,8 @@ export type ForwardV02LinkedBuyRaceParityAssessment = Readonly<{
   blockers: readonly string[];
 }>;
 
-const deny = (reason: string): ForwardV02LinkedBuyRaceParityAssessment => ({
-  linkedBuyRaceSetsAligned: false, scoringAuthorized: false, blockers: [reason],
+const deny = (reason: string): ForwardV02LinkedBuyRaceParityAssessment => Object.freeze({
+  linkedBuyRaceSetsAligned: false, scoringAuthorized: false, blockers: Object.freeze([reason]),
 });
 
 /**
@@ -96,16 +96,16 @@ export function assessForwardV02LinkedBuyRaceParity(
       }
     }
 
-    return {
+    return Object.freeze({
       linkedBuyRaceSetsAligned: true,
       scoringAuthorized: false,
-      blockers: [
+      blockers: Object.freeze([
         "UNAPPROVED_PROTOCOL",
         "PROSPECTIVE_COHORT_NOT_ATTESTED",
         "INDEPENDENT_EXACT_SETTLEMENT_NOT_ATTESTED",
         "ELIGIBLE_DENOMINATORS_AND_EXCLUSIONS_NOT_VERIFIED",
-      ],
-    };
+      ]),
+    });
   } catch {
     return deny("INVALID_PARITY_CONTEXT");
   }
@@ -127,8 +127,8 @@ export type ForwardV02LocalOutcomeRaceParityAssessment = Readonly<{
   blockers: readonly string[];
 }>;
 
-const denyLocal = (reason: string): ForwardV02LocalOutcomeRaceParityAssessment => ({
-  localOutcomeRaceSetsAligned: false, scoringAuthorized: false, blockers: [reason],
+const denyLocal = (reason: string): ForwardV02LocalOutcomeRaceParityAssessment => Object.freeze({
+  localOutcomeRaceSetsAligned: false, scoringAuthorized: false, blockers: Object.freeze([reason]),
 });
 
 export function assessForwardV02LocalOutcomeRaceParity(
@@ -196,16 +196,16 @@ export function assessForwardV02LocalOutcomeRaceParity(
         if (!excluded.has(race)) return denyLocal("UNEQUAL_LOCAL_EXCLUSION_RACE_SETS");
       }
     }
-    return {
+    return Object.freeze({
       localOutcomeRaceSetsAligned: true,
       scoringAuthorized: false,
-      blockers: [
+      blockers: Object.freeze([
         "UNAPPROVED_PROTOCOL",
         "PROSPECTIVE_COHORT_NOT_ATTESTED",
         "INDEPENDENT_EXACT_SETTLEMENT_NOT_ATTESTED",
         "TICKET_STAKE_AND_FROZEN_EXCLUSION_POLICY_NOT_VERIFIED",
-      ],
-    };
+      ]),
+    });
   } catch {
     return denyLocal("INVALID_LOCAL_OUTCOME_PARITY_CONTEXT");
   }
