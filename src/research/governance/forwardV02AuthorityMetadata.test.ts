@@ -284,3 +284,25 @@ test("standalone authority metadata pins an invalid witness commitment before a 
   assert.equal(result.independentAuthorityVerified, false);
   assert.equal(result.scoringAuthorized, false);
 });
+
+test("authority metadata assessments cannot be mutated into claimed authorization", () => {
+  const results = [
+    check(envelope()),
+    check({}),
+    check({ ...envelope(), evidenceStage: "HISTORICAL" }),
+  ];
+  for (const assessment of results) {
+    assert.equal(Object.isFrozen(assessment), true);
+    assert.equal(Object.isFrozen(assessment.blockers), true);
+    const original = [...assessment.blockers];
+    assert.throws(() => {
+      (assessment as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (assessment.blockers as string[]).push("VERIFIED");
+    }, TypeError);
+    assert.equal(assessment.scoringAuthorized, false);
+    assert.equal(assessment.independentAuthorityVerified, false);
+    assert.deepEqual(assessment.blockers, original);
+  }
+});
