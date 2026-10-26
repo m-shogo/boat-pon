@@ -431,8 +431,8 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
       appendError(errors, `${path}.${key} must be an own enumerable data field`);
       continue;
     }
-    if (FORBIDDEN_KEYS.has(key) || /^(?:\\/|file:\\/\\/|[A-Za-z]:\\\\)/.test(key) ||
-      key.includes("/Users/") || key.includes("\\\\Users\\\\")) {
+    if (FORBIDDEN_KEYS.has(key) || /^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(key) ||
+      key.includes("/Users/") || key.includes("\\Users\\")) {
       appendError(errors, `${path} contains forbidden reason key`);
     }
     if (!nonNegativeSafeInteger(descriptor.value)) {
