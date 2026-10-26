@@ -200,11 +200,16 @@ export function classifyOutcomeReconciliation(input: {
   return "EXACT";
 }
 
+function validationResult(valid: boolean, errors: string[]): OutcomeLearningLedgerValidation {
+  Object.freeze(errors);
+  return Object.freeze({ valid, errors });
+}
+
 export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLearningLedgerValidation {
   const errors: string[] = [];
   const appendError = (message: string): void => { errors[errors.length] = message; };
-  if (!isRecord(value)) return { valid: false, errors: ["record must be an object"] };
-  if (!hasOwnEnumerableDataFields(value)) return { valid: false, errors: ["record fields must be enumerable own data properties"] };
+  if (!isRecord(value)) return validationResult(false, ["record must be an object"]);
+  if (!hasOwnEnumerableDataFields(value)) return validationResult(false, ["record fields must be enumerable own data properties"]);
   const actualFields = Object.keys(value);
   for (let index = 0; index < actualFields.length; index++) {
     const field = actualFields[index]!;
@@ -260,5 +265,5 @@ export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLear
     if (!isNonEmptyString(value.refundReason)) appendError("VOID requires an explicit reason");
   }
   if (value.evaluable === true && value.finality !== "FINAL") appendError("evaluable outcome requires finality=FINAL");
-  return { valid: errors.length === 0, errors };
+  return validationResult(errors.length === 0, errors);
 }
