@@ -296,3 +296,24 @@ test("late reference-descriptor repair cannot rewrite an earlier outcome linkage
   assert.deepEqual(result.blockers, ["OUTCOME_DIGEST_MISMATCH"]);
   assert.equal(result.scoringAuthorized, false);
 });
+
+test("cross-ledger assessments cannot be rewritten after either outcome", () => {
+  const valid = check(bundle());
+  const invalid = bundle();
+  invalid.c.scoringAuthorized = true;
+  const denied = check(invalid);
+  for (const result of [valid, denied]) {
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.blockers), true);
+    assert.equal(result.scoringAuthorized, false);
+    assert.throws(() => {
+      (result as unknown as { scoringAuthorized: boolean }).scoringAuthorized = true;
+    }, TypeError);
+    assert.throws(() => {
+      (result.blockers as unknown as string[]).push("FAKE_AUTHORITY");
+    }, TypeError);
+    assert.equal(result.scoringAuthorized, false);
+  }
+  assert.equal(valid.outcomeReferencesLinked, true);
+  assert.equal(denied.outcomeReferencesLinked, false);
+});
