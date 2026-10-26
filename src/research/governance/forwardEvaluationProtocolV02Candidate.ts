@@ -109,7 +109,7 @@ function hasOwnArrayEntry(values: readonly string[], expected: string): boolean 
 }
 
 const deny = (blockers: string[]): ForwardV02CandidateAssessment =>
-  ({ candidateComplete: false, scoringAuthorized: false, blockers });
+  Object.freeze({ candidateComplete: false, scoringAuthorized: false, blockers: Object.freeze(blockers) });
 
 /**
  * Only validates a CANDIDATE contract's explicitness and internal coherence.
@@ -186,11 +186,11 @@ export function assessForwardV02Candidate(input: unknown): ForwardV02CandidateAs
         c.evidenceRequirements.stagePooling !== "PROHIBITED") {
       return deny(["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
     }
-    return {
+    return Object.freeze({
       candidateComplete: true,
       scoringAuthorized: false,
-      blockers: ["UNAPPROVED_PROTOCOL", "INDEPENDENT_EVIDENCE_NOT_VERIFIED"],
-    };
+      blockers: Object.freeze(["UNAPPROVED_PROTOCOL", "INDEPENDENT_EVIDENCE_NOT_VERIFIED"]),
+    });
   } catch {
     return deny(["INVALID_CANDIDATE_SHAPE"]);
   }
