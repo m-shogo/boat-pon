@@ -538,11 +538,23 @@ function walk(value: unknown, path: string, errors: string[]): void {
   }
 }
 
+// A caller must not be able to rewrite the validation verdict or suppress its
+// recorded errors after validation. Keep the accepted evidence caller-owned:
+// this protects the result envelope, not the underlying evidence snapshot.
+function immutableValidationResult(
+  errors: string[],
+  evidence: RuntimeDecisionLedgerShadowEvidence | null,
+): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
+  const valid = errors.length === 0;
+  Object.freeze(errors);
+  return Object.freeze({ valid, errors, evidence: valid ? evidence : null });
+}
+
 export function validateRuntimeDecisionLedgerShadowEvidence(
   value: unknown,
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const errors: string[] = [];
-  if (!isRecord(value)) return { valid: false, errors: ["evidence must be an object"], evidence: null };
+  if (!isRecord(value)) return immutableValidationResult(["evidence must be an object"], null);
   const topLevelKeys = Reflect.ownKeys(value);
   for (let index = 0; index < topLevelKeys.length; index++) {
     const key = topLevelKeys[index]!;
@@ -554,7 +566,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       appendError(errors,`missing own enumerable data top-level field: ${key}`);
     }
   }
-  if (errors.length > 0) return { valid: false, errors, evidence: null };
+  if (errors.length > 0) return immutableValidationResult(errors, null);
 
   requireExactObject(value.scope, "scope", SCOPE_KEYS, errors);
   requireExactObject(value.source, "source", SOURCE_KEYS, errors);
@@ -562,7 +574,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   requireExactObject(value.completeness, "completeness", COMPLETENESS_KEYS, errors);
   requireExactObject(value.privacy, "privacy", PRIVACY_KEYS, errors);
   requireExactObject(value.safety, "safety", SAFETY_KEYS, errors);
-  if (errors.length > 0) return { valid: false, errors, evidence: null };
+  if (errors.length > 0) return immutableValidationResult(errors, null);
 
   const evidence = value as unknown as RuntimeDecisionLedgerShadowEvidence;
   if (evidence.schemaVersion !== RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION) {
@@ -737,5 +749,5 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (evidence.contentDigest !== expectedDigest) appendError(errors,"contentDigest mismatch");
 
   walk(evidence, "$", errors);
-  return { valid: errors.length === 0, errors, evidence: errors.length === 0 ? evidence : null };
+  return immutableValidationResult(errors, evidence);
 }
