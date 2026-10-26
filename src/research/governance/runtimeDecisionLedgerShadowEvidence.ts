@@ -139,8 +139,12 @@ function digest(value: unknown): string {
 
 function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number> {
   const counts = new Map<string, number>();
-  for (const row of rows) {
-    for (const reason of row.reasons) counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const reasons = rows[rowIndex]!.reasons;
+    for (let index = 0; index < reasons.length; index++) {
+      const reason = reasons[index]!;
+      counts.set(reason, (counts.get(reason) ?? 0) + 1);
+    }
   }
   return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
 }
@@ -167,9 +171,14 @@ function taxonomyCounts(
   conflictCount: number,
 ): Record<string, number> {
   const counts = new Map<string, number>();
-  for (const [reason, count] of [...Object.entries(unresolved), ...Object.entries(rejected)]) {
-    const taxonomy = taxonomyForReason(reason);
-    counts.set(taxonomy, (counts.get(taxonomy) ?? 0) + count);
+  const sources = [unresolved, rejected];
+  for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
+    const entries = Object.entries(sources[sourceIndex]!);
+    for (let index = 0; index < entries.length; index++) {
+      const [reason, count] = entries[index]!;
+      const taxonomy = taxonomyForReason(reason);
+      counts.set(taxonomy, (counts.get(taxonomy) ?? 0) + count);
+    }
   }
   if (conflictCount > 0) counts.set("identity_conflict", (counts.get("identity_conflict") ?? 0) + conflictCount);
   return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
@@ -380,7 +389,9 @@ function requireExactObject(value: unknown, path: string, keys: Set<string>, err
     appendError(errors,`${path} must be an object`);
     return false;
   }
-  for (const key of Reflect.ownKeys(value)) {
+  const ownKeys = Reflect.ownKeys(value);
+  for (let index = 0; index < ownKeys.length; index++) {
+    const key = ownKeys[index]!;
     if (typeof key !== "string" || !keys.has(key)) appendError(errors,`unknown field: ${path}.${String(key)}`);
   }
   for (const key of keys) {
@@ -456,7 +467,9 @@ function taxonomyMatches(
   conflictCount: number,
 ): boolean {
   const expected = new Map<string, number>();
-  for (const source of [unresolved, rejected]) {
+  const sources = [unresolved, rejected];
+  for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
+    const source = sources[sourceIndex]!;
     const keys = Reflect.ownKeys(source);
     for (let index = 0; index < keys.length; index++) {
       const reason = keys[index] as string;
@@ -490,7 +503,9 @@ function walk(value: unknown, path: string, errors: string[]): void {
     return;
   }
   if (!isRecord(value)) return;
-  for (const [key, entry] of Object.entries(value)) {
+  const entries = Object.entries(value);
+  for (let index = 0; index < entries.length; index++) {
+    const [key, entry] = entries[index]!;
     if (FORBIDDEN_KEYS.has(key)) appendError(errors,`forbidden key at ${path}.${key}`);
     walk(entry, `${path}.${key}`, errors);
   }
@@ -501,7 +516,9 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const errors: string[] = [];
   if (!isRecord(value)) return { valid: false, errors: ["evidence must be an object"], evidence: null };
-  for (const key of Reflect.ownKeys(value)) {
+  const topLevelKeys = Reflect.ownKeys(value);
+  for (let index = 0; index < topLevelKeys.length; index++) {
+    const key = topLevelKeys[index]!;
     if (typeof key !== "string" || !TOP_LEVEL_KEYS.has(key)) appendError(errors,`unknown top-level field: ${String(key)}`);
   }
   for (const key of TOP_LEVEL_KEYS) {
@@ -526,12 +543,14 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   }
   if (!canonicalGeneratedAt(evidence.generatedAt)) appendError(errors,"generatedAt must be a canonical UTC date-time");
   if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(evidence.verdict)) appendError(errors,"invalid verdict");
-  for (const [name, valueToCheck] of [
+  const digestFields = [
     ["sourceDescriptorDigest", evidence.sourceDescriptorDigest],
     ["contextDigest", evidence.contextDigest],
     ["recordsDigest", evidence.reconciliation?.recordsDigest],
     ["contentDigest", evidence.contentDigest],
-  ] as const) {
+  ] as const;
+  for (let index = 0; index < digestFields.length; index++) {
+    const [name, valueToCheck] = digestFields[index]!;
     if (typeof valueToCheck !== "string" || !/^[0-9a-f]{64}$/.test(valueToCheck)) appendError(errors,`${name} must be sha256 hex`);
   }
 
@@ -540,13 +559,15 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   }
 
   const source = evidence.source;
-  for (const [name, count] of [
+  const sourceCountFields = [
     ["fileSizeBytes", source.fileSizeBytes],
     ["sqliteSchemaVersion", source.sqliteSchemaVersion],
     ["sqliteUserVersion", source.sqliteUserVersion],
     ["pageCount", source.pageCount],
     ["freelistCount", source.freelistCount],
-  ] as const) {
+  ] as const;
+  for (let index = 0; index < sourceCountFields.length; index++) {
+    const [name, count] = sourceCountFields[index]!;
     if (!nonNegativeSafeInteger(count)) appendError(errors,`source.${name} must be a non-negative safe integer`);
   }
   if (!Number.isSafeInteger(source.pageSizeBytes) || source.pageSizeBytes < 1) {
@@ -566,14 +587,16 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(r.status)) {
       appendError(errors,"reconciliation.status is invalid");
     }
-    for (const [name, count] of [
+    const reconciliationCountFields = [
       ["sourceRows", r.sourceRows],
       ["mappedUnique", r.mappedUnique],
       ["exactDuplicates", r.exactDuplicates],
       ["unresolvedCount", r.unresolvedCount],
       ["rejectedCount", r.rejectedCount],
       ["conflictCount", r.conflictCount],
-    ] as const) {
+    ] as const;
+    for (let index = 0; index < reconciliationCountFields.length; index++) {
+      const [name, count] = reconciliationCountFields[index]!;
       if (!nonNegativeSafeInteger(count)) appendError(errors,`${name} must be a non-negative safe integer`);
     }
     if (
@@ -652,10 +675,14 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     }
   }
 
-  for (const [name, actual] of Object.entries(evidence.privacy)) {
+  const privacyFields = Object.entries(evidence.privacy);
+  for (let index = 0; index < privacyFields.length; index++) {
+    const [name, actual] = privacyFields[index]!;
     if (actual !== false) appendError(errors,`privacy.${name} must be false`);
   }
-  for (const field of ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const) {
+  const zeroWriteFields = ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const;
+  for (let index = 0; index < zeroWriteFields.length; index++) {
+    const field = zeroWriteFields[index]!;
     if (evidence.safety[field] !== 0) appendError(errors,`safety.${field} must be 0`);
   }
   if (evidence.safety.productionPromotion !== false) appendError(errors,"safety.productionPromotion must be false");
