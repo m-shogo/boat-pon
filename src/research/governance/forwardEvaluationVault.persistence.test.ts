@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { linkSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
@@ -65,4 +65,36 @@ describe("Forward Evaluation Vault persistence boundary", () => {
     assert.equal(forwardVaultDigest(after), forwardVaultDigest(original));
     assert.equal(after.protocolVersion, "v1");
   });
+  it("fails closed on an interrupted no-replace publication without discarding the published bytes", () => {
+    const root = mkdtempSync(join(tmpdir(), "forward-vault-"));
+    roots.push(root);
+    const path = join(root, "vault-protocol-1.json");
+    const temp = `${path}.tmp-simulated-interruption`;
+    const value = protocol();
+
+    // Model the exact on-disk state after executorSdk.atomicWriteUtf8
+    // linkSync(temp, path), but before its finally-block unlinkSync(temp).
+    // This is a synthetic interruption fixture, not a real process crash.
+    writeFileSync(temp, `${JSON.stringify(value, null, 2)}\\n`, "utf8");
+    linkSync(temp, path);
+
+    assert.equal(statSync(path).nlink, 2);
+    assert.deepEqual(JSON.parse(readFileSync(path, "utf8")), value);
+    const interruptedReadback = verifyJsonReadback(path);
+    assert.equal(interruptedReadback.ok, false);
+    assert.match(interruptedReadback.errors.join(" "), /single-link regular file/u);
+    assert.throws(() => atomicWriteJson(path, value), /target already exists/u);
+    assert.equal(
+      classifyForwardVaultAppend(JSON.parse(readFileSync(path, "utf8")) as EnrollmentProtocol, value),
+      "IDEMPOTENT_NOOP",
+    );
+
+    // Removing only the known synthetic temporary hard link restores the
+    // existing single-link readback invariant without replacing the record.
+    unlinkSync(temp);
+    assert.equal(statSync(path).nlink, 1);
+    assert.equal(verifyJsonReadback(path).ok, true);
+    assert.equal(forwardVaultDigest(JSON.parse(readFileSync(path, "utf8"))), forwardVaultDigest(value));
+  });
+
 });
