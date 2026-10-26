@@ -132,7 +132,12 @@ const canonical=(v:unknown):unknown=>{
     for(let i=0;i<v.length;i++){
       const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor))throw new TypeError("non-JSON array in Forward Evaluation Vault");
-      output[i]=canonical(descriptor.value);
+      // A caller-independent inherited Array.prototype numeric setter must not
+      // erase a validated metric/protocol entry from the canonical digest.
+      Object.defineProperty(output, String(i), {
+        value: canonical(descriptor.value),
+        enumerable: true, writable: true, configurable: true,
+      });
     }
     return output;
   }
