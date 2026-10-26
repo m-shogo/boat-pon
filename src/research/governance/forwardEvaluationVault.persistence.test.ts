@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { linkSync, lstatSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
@@ -96,5 +96,54 @@ describe("Forward Evaluation Vault persistence boundary", () => {
     assert.equal(statSync(path).nlink, 1);
     assert.equal(verifyJsonReadback(path).ok, true);
     assert.equal(forwardVaultDigest(JSON.parse(readFileSync(path, "utf8"))), forwardVaultDigest(value));
+  });
+});
+
+describe("Forward Vault orphan-hardlink recovery preflight (negative fixtures only)", () => {
+  it("does not delete a reused temporary name when the published inode differs", () => {
+    const root = mkdtempSync(join(tmpdir(), "forward-vault-recovery-"));
+    roots.push(root);
+    const path = join(root, "vault-protocol-1.json");
+    const temp = `${path}.tmp-synthetic-orphan`;
+    const value = protocol();
+    writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+    linkSync(temp, path);
+
+    const published = statSync(path);
+    assert.equal(statSync(temp).ino, published.ino);
+    assert.equal(published.nlink, 2);
+    assert.equal(verifyJsonReadback(path).ok, false);
+
+    // Model a concurrent actor reusing the old temporary name. A cleanup
+    // routine that unlinks solely by filename would delete unrelated data.
+    unlinkSync(temp);
+    writeFileSync(temp, "unrelated synthetic scratch", "utf8");
+    const replacement = lstatSync(temp);
+    assert.equal(replacement.isFile(), true);
+    assert.equal(replacement.dev === published.dev && replacement.ino === published.ino, false);
+    assert.equal(statSync(path).nlink, 1);
+    assert.equal(verifyJsonReadback(path).ok, true);
+    assert.equal(readFileSync(temp, "utf8"), "unrelated synthetic scratch");
+    assert.equal(forwardVaultDigest(JSON.parse(readFileSync(path, "utf8"))), forwardVaultDigest(value));
+    // This fixture deliberately performs NO cleanup of the substituted name.
+  });
+
+  it("rejects a symlink at the published destination without following or replacing it", () => {
+    const root = mkdtempSync(join(tmpdir(), "forward-vault-recovery-"));
+    roots.push(root);
+    const path = join(root, "vault-protocol-1.json");
+    const outside = join(root, "unrelated-synthetic.json");
+    const original = `${JSON.stringify(protocol("other-protocol"), null, 2)}\n`;
+    writeFileSync(outside, original, "utf8");
+    symlinkSync(outside, path);
+
+    assert.equal(lstatSync(path).isSymbolicLink(), true);
+    const readback = verifyJsonReadback(path);
+    assert.equal(readback.ok, false);
+    assert.match(readback.errors.join(" "), /symlink forbidden|readback failed/u);
+    assert.throws(() => atomicWriteJson(path, protocol()), /target already exists/u);
+    assert.equal(lstatSync(path).isSymbolicLink(), true);
+    assert.equal(readFileSync(outside, "utf8"), original);
+    // No automated recovery or deletion is authorized by a readback rejection.
   });
 });
