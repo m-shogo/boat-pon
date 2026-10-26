@@ -187,12 +187,12 @@
     {
       "caseId": "X02",
       "lane": "CONJUNCTION",
-      "mutation": "TEST_PROOFS_VALID_BUT_EVALUATION_PROTOCOL_NOT_APPROVED",
-      "independentFixtureState": "INDEPENDENT_TEST_PROOFS_ONLY",
+      "mutation": "CLAIMED_TEST_PROOFS_WITH_UNAPPROVED_EVALUATION_PROTOCOL",
+      "independentFixtureState": "TEST_ONLY_PROOF_SHAPES_NOT_ATTESTED",
       "expectedDenial": "UNAPPROVED_PROTOCOL",
       "expectedIndependentAuthorityVerified": false,
       "expectedScoringAuthorized": false,
-      "why": "Even independently verified evidence does not approve scoring or production."
+      "why": "Matching synthetic proof shapes do not authenticate either evidence chain or approve scoring; a separately reviewed verified-positive test is out of scope."
     }
   ],
   "usageRules": [
