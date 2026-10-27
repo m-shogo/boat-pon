@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-scm-rights-recvmsg-output-flag-mask-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.scm-rights-recvmsg-output-flag-zero-assumption",
+  "subsystem": "research-governance-forward-vault-linux-scm-rights-receiver",
+  "operation": "disposable-recvmsg-msg-cmsg-cloexec-output-flag-admission-fixture",
+  "symptom": "Initial local Linux receiver-admission tests incorrectly required recvmsg returned msg_flags == 0; Python/Linux returned MSG_CMSG_CLOEXEC in the output flags on valid single-FD receives, failing three otherwise valid fixture cases. The corrected fixture masks this known flag, rejects MSG_CTRUNC/unknown bits, and separately asserts the received FD is non-inheritable. This was a test assumption, not a production failure.",
+  "rootCauseClass": "LINUX_RECVMSG_INPUT_CMSG_CLOEXEC_ECHOED_IN_OUTPUT_FLAGS",
+  "attemptSignature": "pr2286-v392-recvmsg-output-flags-must-equal-zero-before-known-flag-mask",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-node22-python3.13",
+    "materialStateKey": "pr2286-v391-scm-rights-transfer-lifetime-v392-new-receiver-admission-fixture"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.scmRightsAdmissionLinux.test.ts",
+    "reports/research/forward-vault-scm-rights-receiver-admission-20261028.md",
+    "commit/c0696989aa63b04082434848ba1cd68c6e3cf728",
+    "commit/0e54d26b0699b58aea1ea89f777666a71d784f32"
+  ],
+  "lesson": "Do not infer recvmsg success from a zero output flag word when MSG_CMSG_CLOEXEC is requested. In the observed Python/Linux binding the input flag appears in msg_flags on successful receive. The security property is the received FD's actual non-inheritable state, while MSG_CTRUNC and unexpected output bits must still be denied.",
+  "guardrail": "For Linux/Python SCM_RIGHTS fixtures, permit only the documented MSG_CMSG_CLOEXEC flag in the returned mask; fail closed on MSG_CTRUNC, unexpected flags, missing or extra FDs, and inheritable received FDs. Close all received FDs even when rejecting. Reuse the embedded-Python newline framing LEARN; do not connect this research-only test to production, Current BUY/LINE/public/automated betting, protected N2 or automatic recovery.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T17:05:57.271Z",
+  "productionConnection": false,
+  "_digest": "a8139b66dfd6ba617b7762957d3f3c2c76e66362114945cdefebadeefbd441f6",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T17:05:57.271Z"
+}
