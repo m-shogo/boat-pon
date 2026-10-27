@@ -84,6 +84,7 @@ describe("Forward Vault bounded real-kernel openat2 concurrent rename (disposabl
       assert.ok(match, result.stdout);
       const counts = match.slice(1).map(Number);
       assert.equal(counts.reduce((a, b) => a + b, 0), 8_000);
+      t.diagnostic(`kernel openat2 bounded outcomes: OK=${counts[0]}, EAGAIN=${counts[1]}, ENOENT=${counts[2]}, EXDEV=${counts[3]}`);
       // Do not assert an EAGAIN minimum: kernel scheduling is not deterministic.
       assert.equal(readFileSync(path, "utf8"), content);
       assert.equal(statSync(path).nlink, 1);
