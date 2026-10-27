@@ -10,7 +10,7 @@ import { describe, it } from "node:test";
 // fixed fixtures, NOT authenticated challenges or a production protocol.
 // String.raw preserves embedded Python source escapes (prior LEARN guardrail).
 const pythonProbe = String.raw`
-import array, os, socket, stat, struct, sys
+import array, errno, os, socket, stat, struct, sys
 root, mode = sys.argv[1:]
 flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 reference_fd = os.open(os.path.join(root, 'authorized'), flags)
