@@ -97,7 +97,7 @@ print('SENT', flush=True)
             finally:
                 conn.close()
             stdout, stderr = child.communicate(timeout=5)
-            assert child.returncode == 0 and stdout == 'SENT\\n' and stderr == '', (child.returncode, stdout, stderr)
+            assert child.returncode == 0 and stdout == 'SENT\n' and stderr == '', (child.returncode, stdout, stderr)
         finally:
             listener.close()
     else:
@@ -128,11 +128,11 @@ function probe(mode: "truncation" | "multiple" | "cloexec" | "peer-accept" | "pe
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stderr, "");
     const expected = {
-      truncation: "TRUNCATED_ANCILLARY_REJECTED\\n",
-      multiple: "MULTIPLE_FDS_REJECTED\\n",
-      cloexec: "SINGLE_CLOEXEC_ACCEPTED\\n",
-      "peer-accept": "AUTHORIZED_PEER_ACCEPTED\\n",
-      "peer-reject": "UNAUTHORIZED_PEER_REJECTED\\n",
+      truncation: "TRUNCATED_ANCILLARY_REJECTED\n",
+      multiple: "MULTIPLE_FDS_REJECTED\n",
+      cloexec: "SINGLE_CLOEXEC_ACCEPTED\n",
+      "peer-accept": "AUTHORIZED_PEER_ACCEPTED\n",
+      "peer-reject": "UNAUTHORIZED_PEER_REJECTED\n",
     }[mode];
     assert.equal(result.stdout, expected);
     assert.equal(readFileSync(join(root, "authorized", "synthetic.json"), "utf8"), "synthetic-admission-only");
