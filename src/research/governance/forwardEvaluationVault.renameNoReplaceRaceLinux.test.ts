@@ -54,13 +54,13 @@ function launch(source: string, destination: string) {
     child.once("close", (code, signal) => { closed = true; notify(); resolve({ code, signal }); });
     child.once("error", (error) => { closed = true; notify(); reject(error); });
   });
-  const waitFor = (marker: string) => new Promise<void>((resolve, reject) => {
+  const waitFor = (marker: string | RegExp) => new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       listeners.delete(check);
       reject(new Error("timeout waiting for " + marker + ": " + output + " " + errors));
     }, 8_000);
     function check() {
-      if (output.includes(marker)) { clearTimeout(timer); listeners.delete(check); resolve(); }
+      if (typeof marker === "string" ? output.includes(marker) : marker.test(output)) { clearTimeout(timer); listeners.delete(check); resolve(); }
       else if (closed) {
         clearTimeout(timer); listeners.delete(check);
         reject(new Error("child exited before " + marker + ": " + output + " " + errors));
@@ -86,7 +86,10 @@ describe("Forward Vault Linux renameat2 two-writer/reader race (disposable probe
       await Promise.all(contenders.map((contender) => contender.waitFor("READY\n")));
       assert.equal(existsSync(destination), false);
       for (const contender of contenders) contender.child.stdin.write("GO\n");
-      await Promise.all(contenders.map((contender) => contender.waitFor("RESULT:")));
+      // A stdout chunk can end between RESULT:LOST and its newline. Wait for
+      // a complete outcome line before comparing exact outputs.
+      await Promise.all(contenders.map((contender) => contender.waitFor(/RESULT:(?:WON|LOST|UNSUPPORTED)\
+/u)));
       const outcomes = contenders.map((contender) => contender.output());
       if (outcomes.some((output) => output.includes("RESULT:UNSUPPORTED"))) {
         t.skip("renameat2 RENAME_NOREPLACE unsupported on this runner/filesystem");
