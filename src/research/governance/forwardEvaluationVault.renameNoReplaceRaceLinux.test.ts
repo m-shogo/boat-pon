@@ -88,8 +88,7 @@ describe("Forward Vault Linux renameat2 two-writer/reader race (disposable probe
       for (const contender of contenders) contender.child.stdin.write("GO\n");
       // A stdout chunk can end between RESULT:LOST and its newline. Wait for
       // a complete outcome line before comparing exact outputs.
-      await Promise.all(contenders.map((contender) => contender.waitFor(/RESULT:(?:WON|LOST|UNSUPPORTED)\
-/u)));
+      await Promise.all(contenders.map((contender) => contender.waitFor(/RESULT:(?:WON|LOST|UNSUPPORTED)\n/u)));
       const outcomes = contenders.map((contender) => contender.output());
       if (outcomes.some((output) => output.includes("RESULT:UNSUPPORTED"))) {
         t.skip("renameat2 RENAME_NOREPLACE unsupported on this runner/filesystem");
