@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-scm-rights-session-premature-handoff-decode-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.scm-rights-session-premature-ownership-before-decode",
+  "subsystem": "research-governance-forward-vault-linux-scm-rights-session-fixture",
+  "operation": "disposable-receiver-fallible-ascii-frame-decode-before-fd-handoff",
+  "symptom": "A research-only session receive() helper set admitted=True before evaluating return payload.decode(ASCII). An invalid non-ASCII frame raised UnicodeDecodeError after the ownership flag had already been set; the receive-local finally skipped close, leaving the SCM_RIGHTS FD live before process exit. A disposable Linux reproduction observed fstat succeed on the leaked FD, then explicitly closed it. Moving decode before admitted=True and adding an invalid-frame EBADF regression fixed the synthetic fixture. No production defect is claimed.",
+  "rootCauseClass": "SCM_RIGHTS_PREMATURE_OWNERSHIP_FLAG_BEFORE_FALLIBLE_RETURN_EXPRESSION",
+  "attemptSignature": "pr2286-v397-unsafe-admitted-before-ascii-decode-nonascii-synthetic",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-python3.13-node22+github-actions-linux-node24-python3",
+    "materialStateKey": "pr2286-v397-first-session-receive-local-finally-flag-before-decode"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.scmRightsSessionReplayLinux.test.ts",
+    "reports/research/forward-vault-scm-rights-session-prehandoff-ownership-20261028.md",
+    "commit/09ff0dca562c15cb7b35bd3c2e61cfa850280a4f"
+  ],
+  "lesson": "An ownership handoff flag must not be set before any fallible expression that prepares the return value. Even with receive-local finally cleanup, return payload.decode(...) can throw after admitted=True and leak an SCM_RIGHTS descriptor. Decode and validate while the helper still owns all received FDs; transfer ownership only immediately before a non-throwing return.",
+  "guardrail": "In research-only SCM_RIGHTS receivers, parse and validate ancillary FDs, decode frame bytes, and prepare the complete return value inside the receive-local ownership scope. Mark admitted only after all fallible work completes; on any denial or decode error close every received FD and verify EBADF before process exit. Reuse LEARN-forward-vault-scm-rights-prehandoff-fd-leak-20261028 and Python String.raw/output-flag guardrails. Never connect production, Current BUY, LINE, public publishing, automated betting, Owner Dashboard, protected N2 or private raw evidence.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T22:08:05.000Z",
+  "productionConnection": false,
+  "_digest": "4c28ac0a5087eba13373608975eb0e160c68c374da4d6e37107c979d17dc80fd",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T22:08:05.000Z"
+}
