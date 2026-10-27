@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { linkSync, lstatSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, constants, fsyncSync, linkSync, lstatSync, mkdtempSync, openSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
@@ -145,5 +145,72 @@ describe("Forward Vault orphan-hardlink recovery preflight (negative fixtures on
     assert.equal(lstatSync(path).isSymbolicLink(), true);
     assert.equal(readFileSync(outside, "utf8"), original);
     // No automated recovery or deletion is authorized by a readback rejection.
+  });
+});
+
+
+describe("Forward Vault recovery race and directory-sync probes (synthetic only)", () => {
+  it("does not authorize cleanup when a matching temporary inode is substituted after preflight", () => {
+    const root = mkdtempSync(join(tmpdir(), "forward-vault-recovery-"));
+    roots.push(root);
+    const path = join(root, "vault-protocol-1.json");
+    const temp = `${path}.tmp-synthetic-orphan`;
+    const held = `${temp}.held`;
+    const original = `${JSON.stringify(protocol(), null, 2)}\n`;
+    const unrelated = "unrelated synthetic scratch after preflight";
+    writeFileSync(temp, original, "utf8");
+    linkSync(temp, path);
+
+    // The first observation would pass a naive same-inode cleanup check.
+    const checked = lstatSync(temp);
+    const published = lstatSync(path);
+    assert.equal(checked.dev, published.dev);
+    assert.equal(checked.ino, published.ino);
+
+    // A second actor can replace the *name* after that check but before unlink.
+    // No path-based unlink is performed here: it would delete unrelated bytes.
+    renameSync(temp, held);
+    writeFileSync(temp, unrelated, "utf8");
+    const substituted = lstatSync(temp);
+    assert.equal(substituted.dev === published.dev && substituted.ino === published.ino, false);
+    assert.equal(statSync(path).nlink, 2);
+    assert.equal(readFileSync(path, "utf8"), original);
+    assert.equal(readFileSync(held, "utf8"), original);
+    assert.equal(readFileSync(temp, "utf8"), unrelated);
+    assert.equal(verifyJsonReadback(path).ok, false);
+    assert.throws(() => atomicWriteJson(path, protocol()), /target already exists/u);
+    // A prior inode match cannot grant permission to unlink a now-reused name.
+  });
+
+  it("probes parent-directory fsync without mistaking it for orphan recovery or power-loss proof", { skip: process.platform !== "linux" }, () => {
+    const root = mkdtempSync(join(tmpdir(), "forward-vault-recovery-"));
+    roots.push(root);
+    const path = join(root, "vault-protocol-1.json");
+    const temp = `${path}.tmp-synthetic-orphan`;
+    const value = protocol();
+    const fd = openSync(temp, "wx", 0o600);
+    try {
+      writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+      fsyncSync(fd); // Match the SDK's completed temporary-file data sync.
+    } finally {
+      closeSync(fd);
+    }
+    linkSync(temp, path);
+
+    const syncParent = (): void => {
+      const dirFd = openSync(root, constants.O_RDONLY | constants.O_DIRECTORY);
+      try { fsyncSync(dirFd); } finally { closeSync(dirFd); }
+    };
+    syncParent();
+    assert.equal(statSync(path).nlink, 2);
+    assert.equal(verifyJsonReadback(path).ok, false);
+
+    // Directory fsync does not resolve the leftover hard link; only the
+    // known fixture link is removed. This is not an automatic recovery API.
+    unlinkSync(temp);
+    syncParent();
+    assert.equal(statSync(path).nlink, 1);
+    assert.equal(verifyJsonReadback(path).ok, true);
+    assert.equal(forwardVaultDigest(JSON.parse(readFileSync(path, "utf8"))), forwardVaultDigest(value));
   });
 });
