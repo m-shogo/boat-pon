@@ -94,16 +94,18 @@ describe("Forward Vault same-dirfd reader/writer namespace (disposable Linux pro
       assert.equal(result.stderr, "");
       assert.equal(result.stdout, "FD_READER_MATCHES_WRITER\nPATH_READER_DIVERGES\n");
 
-      // Both documents are syntactically valid and independently pass the
-      // legacy path-only integrity check. The path alone cannot prove that
-      // a reader observes the same directory object as the publisher.
+      // A raw path reader follows the substituted ancestor to valid decoy
+      // JSON. The existing strict SDK reader rejects that symlink ancestor,
+      // but cannot reach the anchored publisher's record by the old path.
       assert.equal(lstatSync(join(root, "anchor")).isSymbolicLink(), true);
       assert.equal(existsSync(join(root, "moved", "vault", "staged.json")), false);
       assert.equal(readFileSync(join(root, "moved", "vault", "published.json"), "utf8"), anchoredJson);
       assert.equal(statSync(join(root, "moved", "vault", "published.json")).nlink, 1);
       assert.equal(readFileSync(join(root, "anchor", "vault", "published.json"), "utf8"), decoyJson);
       assert.equal(verifyJsonReadback(join(root, "moved", "vault", "published.json")).ok, true);
-      assert.equal(verifyJsonReadback(join(root, "anchor", "vault", "published.json")).ok, true);
+      const strictCanonical = verifyJsonReadback(join(root, "anchor", "vault", "published.json"));
+      assert.equal(strictCanonical.ok, false);
+      assert.equal(strictCanonical.errors.some((error) => error.includes("parent path must be a real directory")), true);
       assert.equal(readFileSync(join(decoy, "published.json"), "utf8"), decoyJson);
     } finally {
       rmSync(root, { recursive: true, force: true });
