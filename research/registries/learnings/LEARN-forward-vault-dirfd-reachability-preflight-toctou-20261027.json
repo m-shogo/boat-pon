@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-dirfd-reachability-preflight-toctou-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.dirfd-canonical-reachability-preflight-toctou",
+  "subsystem": "research-governance-forward-vault-persistence",
+  "operation": "linux-dirfd-canonical-path-identity-preflight-before-renameat2-disposable-probe",
+  "symptom": "A synthetic publisher can verify that its pinned directory FD matches the expected canonical pathname, then have that pathname moved and replaced with a symlink before dirfd-relative RENAME_NOREPLACE. The rename publishes a complete single-link JSON in the moved original directory, while the consumer's canonical pathname no longer reaches the record. A swap before preflight is rejected. This is a deterministic candidate-design counterexample, not an observed production failure.",
+  "rootCauseClass": "CANONICAL_PATH_IDENTITY_CHECK_TOCTOU_AFTER_DIRFD_PREFLIGHT",
+  "attemptSignature": "pr2286-v380-dirfd-preflight-check-then-parent-swap-before-rename",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-linux-node24-python3-glibc",
+    "materialStateKey": "executor-sdk-v3/pr2286-v379-dirfd-parent-swap-fixture-v380-preflight-window"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.renameDirfdReachabilityLinux.test.ts",
+    "reports/research/forward-vault-dirfd-canonical-reachability-preflight-toctou-20261027.md",
+    "commit/326ff9d312e4ce96e8f8571c2ff88cbc7d212d43",
+    "actions/runs/40470690299"
+  ],
+  "lesson": "A directory FD protects the object used by renameat2, but a separate stat/fstat equality check on a mutable canonical pathname is only a point-in-time assertion. Even when that check passes, a later ancestor rename/symlink substitution can sever consumer-visible reachability before atomic publication. The preflight is useful for rejecting an already visible swap, not for closing the check-to-use window.",
+  "guardrail": "Do not promote a preflight-only directory identity check as a canonical-path reachability guarantee. Require a separately reviewed namespace/consumer authority model and deterministic post-check swap adversarial fixtures before considering native publication. Keep strict readback and fail closed on lost reachability; do not auto-delete staged or published paths using stale names, weaken no-replace semantics, or connect research to Current BUY/production. Power-loss, mount and cross-filesystem safety remain unproven.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T08:04:44.816Z",
+  "productionConnection": false,
+  "_digest": "b358cbe768f26e42da3b12128f033144cf7b7d26533daf5633943e63c132f9a0",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T08:04:44.816Z"
+}
