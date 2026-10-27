@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-linux-dirfd-parent-swap-20261027",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-vault.linux-renameat2-dirfd-parent-path-substitution",
+  "subsystem": "research-governance-forward-vault-persistence",
+  "operation": "linux-dirfd-anchored-renameat2-RENAME_NOREPLACE-parent-symlink-swap-probe",
+  "symptom": "A directory pathname can be moved and replaced by a symlink after a publisher has opened it. A synthetic Linux child using a pre-opened O_DIRECTORY|O_NOFOLLOW directory FD for both renameat2 endpoints kept publication in the original moved directory, left the decoy target untouched, and allowed strict SDK readback. This is a bounded namespace probe, not a production writer or power-loss guarantee.",
+  "rootCauseClass": "DIRFD_ANCHORS_RENAME_NAMESPACE_ACROSS_PARENT_PATH_SUBSTITUTION",
+  "attemptSignature": "pr2286-v379-dirfd-open-before-rename-symlink-swap-native-noreplace",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-node22-python3-glibc+github-actions-linux-node24",
+    "materialStateKey": "executor-sdk-v3/pr2286-v378-native-no-replace-race-v379-dirfd-namespace-fixture"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.renameDirfdLinux.test.ts",
+    "reports/research/forward-vault-linux-renameat2-dirfd-parent-swap-20261027.md",
+    "commit/765e127bb397a500156b47a8f450485b5e6ad8e3",
+    "actions/runs/40464402606"
+  ],
+  "lesson": "A pre-opened directory descriptor is bound to the directory object, not the mutable pathname. Relative renameat2 on the same directory FD can preserve single-link no-replace publication when the old parent pathname is moved and replaced by a symlink; a path-based lookup would have a different authority boundary. The record may nevertheless become unreachable under the original canonical path.",
+  "guardrail": "For any future Linux-native candidate, pin a reviewed directory FD using O_DIRECTORY and O_NOFOLLOW and use dirfd-relative names, then independently verify expected directory identity, consumer-visible canonical reachability, and failure behavior. This fixture does not clear ancestor symlink chains, mount moves, cross-filesystem semantics, crash durability, staged-file cleanup, or native integration. Never auto-delete by stale pathname, relax strict readback, or connect to production/BUY.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-27T07:02:42.746Z",
+  "productionConnection": false,
+  "_digest": "0aa8cb73f2988dbef9c76a89fe4acbf87a028b36487aff002f7681dc93a7df4e",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T07:02:42.746Z"
+}
