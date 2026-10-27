@@ -21,7 +21,7 @@ reads = 0
 rejected_received_fds = []
 
 def receive(frame, expected_frame=None):
-    sender.sendmsg([frame.encode('ascii')], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array('i', [sender_fd]))])
+    sender.sendmsg([frame.encode('ascii') if isinstance(frame, str) else frame], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array('i', [sender_fd]))])
     payload, ancillary, msg_flags, _ = receiver.recvmsg(32, socket.CMSG_SPACE(array.array('i').itemsize * 4), socket.MSG_CMSG_CLOEXEC)
     received = []
     admitted = False
@@ -42,13 +42,15 @@ def receive(frame, expected_frame=None):
         assert (expected.st_dev, expected.st_ino) == (actual.st_dev, actual.st_ino)
         if expected_frame is not None:
             assert payload == expected_frame.encode('ascii')
+        # Decoding is fallible: do it while this helper still owns the FD.
+        decoded = payload.decode('ascii')
         admitted = True
-        return payload.decode('ascii'), fd
+        return decoded, fd
     finally:
         if not admitted:
             # recvmsg has installed these FDs before validation. On failure,
             # the helper still owns them; the caller never receives a handle.
-            if mode == 'pre-handoff-reject-close':
+            if mode in ('pre-handoff-reject-close', 'nonascii-pre-handoff-reject-close'):
                 rejected_received_fds.extend(received)
             for fd in received:
                 os.close(fd)
@@ -136,6 +138,31 @@ try:
                 os.close(fd)
         else:
             raise AssertionError('stale frame unexpectedly admitted')
+    elif mode == 'nonascii-pre-handoff-reject-close':
+        # An invalid ASCII frame fails during return-value preparation.
+        # Ownership must not be transferred before this fallible decode.
+        try:
+            receive(b'\xff')
+        except UnicodeDecodeError:
+            assert reads == 0 and not consumed
+            assert len(rejected_received_fds) == 1
+            for fd in rejected_received_fds:
+                try:
+                    os.fstat(fd)
+                except OSError as error:
+                    assert error.errno == errno.EBADF
+                else:
+                    raise AssertionError('non-ASCII session frame leaked FD')
+            frame, fd = receive('SESSION_B', expected_frame='SESSION_B')
+            try:
+                assert admit(frame, 'SESSION_B')
+                read_synthetic(fd)
+                assert reads == 1
+                print('NONASCII_SESSION_FD_CLOSED_THEN_CURRENT_ACCEPTED', flush=True)
+            finally:
+                os.close(fd)
+        else:
+            raise AssertionError('non-ASCII frame unexpectedly admitted')
     else:
         raise AssertionError('unknown mode')
 finally:
@@ -148,7 +175,7 @@ finally:
 const pythonAvailable = process.platform === "linux" &&
   spawnSync("python3", ["--version"], { encoding: "utf8", timeout: 5_000 }).status === 0;
 
-function probe(mode: "stale-unbound" | "stale-deny" | "current-accept" | "duplicate-deny" | "pre-handoff-reject-close"): void {
+function probe(mode: "stale-unbound" | "stale-deny" | "current-accept" | "duplicate-deny" | "pre-handoff-reject-close" | "nonascii-pre-handoff-reject-close"): void {
   const root = mkdtempSync(join(tmpdir(), "forward-vault-scm-session-"));
   try {
     mkdirSync(join(root, "authorized"));
@@ -166,6 +193,7 @@ function probe(mode: "stale-unbound" | "stale-deny" | "current-accept" | "duplic
       "current-accept": "CURRENT_SESSION_ACCEPTED",
       "duplicate-deny": "DUPLICATE_SESSION_REJECTED_BEFORE_SECOND_READ",
       "pre-handoff-reject-close": "REJECTED_SESSION_FD_CLOSED_THEN_CURRENT_ACCEPTED",
+      "nonascii-pre-handoff-reject-close": "NONASCII_SESSION_FD_CLOSED_THEN_CURRENT_ACCEPTED",
     }[mode];
     assert.equal(result.stdout, expected + "\n");
     assert.equal(readFileSync(join(root, "authorized", "synthetic.json"), "utf8"), "authorized-synthetic-only");
@@ -190,4 +218,7 @@ describe("Forward Vault SCM_RIGHTS session freshness (disposable Linux probe)", 
   it("closes a rejected session FD before helper handoff and still admits a later current session", {
     skip: !pythonAvailable, timeout: 20_000,
   }, () => { probe("pre-handoff-reject-close"); });
+  it("closes a received FD when non-ASCII session decoding fails before ownership handoff", {
+    skip: !pythonAvailable, timeout: 20_000,
+  }, () => { probe("nonascii-pre-handoff-reject-close"); });
 });
