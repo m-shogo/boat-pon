@@ -41,7 +41,9 @@ const pythonPreflight = [
 ].join("\n");
 
 const pythonAvailable = process.platform === "linux" &&
-  spawnSync("python3", ["--version"], { encoding: "utf8", timeout: 5_000 }).status === 0;
+  spawnSync("python3", [
+    "-c", "import ctypes,sys; sys.exit(0 if hasattr(ctypes.CDLL(None), 'renameat2') else 1)",
+  ], { encoding: "utf8", timeout: 5_000 }).status === 0;
 
 function stage(path: string, content: string): void {
   const fd = openSync(path, "wx", 0o600);
