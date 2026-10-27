@@ -18,26 +18,40 @@ sender_fd = os.open(os.path.join(root, 'authorized'), flags)
 sender, receiver = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
 consumed = set()
 reads = 0
+rejected_received_fds = []
 
-def receive(frame):
+def receive(frame, expected_frame=None):
     sender.sendmsg([frame.encode('ascii')], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array('i', [sender_fd]))])
     payload, ancillary, msg_flags, _ = receiver.recvmsg(32, socket.CMSG_SPACE(array.array('i').itemsize * 4), socket.MSG_CMSG_CLOEXEC)
     received = []
-    for level, kind, data in ancillary:
-        if level == socket.SOL_SOCKET and kind == socket.SCM_RIGHTS:
-            values = array.array('i')
-            assert len(data) % values.itemsize == 0
-            values.frombytes(data)
-            received.extend(values)
-    assert msg_flags & ~socket.MSG_CMSG_CLOEXEC == 0
-    assert len(received) == 1
-    fd = received[0]
-    assert not os.get_inheritable(fd)
-    expected = os.fstat(reference_fd)
-    actual = os.fstat(fd)
-    assert stat.S_ISDIR(actual.st_mode)
-    assert (expected.st_dev, expected.st_ino) == (actual.st_dev, actual.st_ino)
-    return payload.decode('ascii'), fd
+    admitted = False
+    try:
+        for level, kind, data in ancillary:
+            if level == socket.SOL_SOCKET and kind == socket.SCM_RIGHTS:
+                values = array.array('i')
+                assert len(data) % values.itemsize == 0
+                values.frombytes(data)
+                received.extend(values)
+        assert msg_flags & ~socket.MSG_CMSG_CLOEXEC == 0
+        assert len(received) == 1
+        fd = received[0]
+        assert not os.get_inheritable(fd)
+        expected = os.fstat(reference_fd)
+        actual = os.fstat(fd)
+        assert stat.S_ISDIR(actual.st_mode)
+        assert (expected.st_dev, expected.st_ino) == (actual.st_dev, actual.st_ino)
+        if expected_frame is not None:
+            assert payload == expected_frame.encode('ascii')
+        admitted = True
+        return payload.decode('ascii'), fd
+    finally:
+        if not admitted:
+            # recvmsg has installed these FDs before validation. On failure,
+            # the helper still owns them; the caller never receives a handle.
+            if mode == 'pre-handoff-reject-close':
+                rejected_received_fds.extend(received)
+            for fd in received:
+                os.close(fd)
 
 def read_synthetic(fd):
     global reads
@@ -96,6 +110,32 @@ try:
             print('DUPLICATE_SESSION_REJECTED_BEFORE_SECOND_READ', flush=True)
         finally:
             os.close(fd)
+    elif mode == 'pre-handoff-reject-close':
+        # Exercise an exception after recvmsg installs the FD, but before
+        # receive() transfers ownership. Check EBADF in the live process.
+        try:
+            receive('SESSION_A', expected_frame='SESSION_B')
+        except AssertionError:
+            assert reads == 0 and not consumed
+            assert len(rejected_received_fds) == 1
+            for fd in rejected_received_fds:
+                try:
+                    os.fstat(fd)
+                except OSError as error:
+                    assert error.errno == errno.EBADF
+                else:
+                    raise AssertionError('rejected session frame leaked FD')
+            # A valid subsequent frame remains admissible after rejection.
+            frame, fd = receive('SESSION_B', expected_frame='SESSION_B')
+            try:
+                assert admit(frame, 'SESSION_B')
+                read_synthetic(fd)
+                assert reads == 1
+                print('REJECTED_SESSION_FD_CLOSED_THEN_CURRENT_ACCEPTED', flush=True)
+            finally:
+                os.close(fd)
+        else:
+            raise AssertionError('stale frame unexpectedly admitted')
     else:
         raise AssertionError('unknown mode')
 finally:
@@ -108,7 +148,7 @@ finally:
 const pythonAvailable = process.platform === "linux" &&
   spawnSync("python3", ["--version"], { encoding: "utf8", timeout: 5_000 }).status === 0;
 
-function probe(mode: "stale-unbound" | "stale-deny" | "current-accept" | "duplicate-deny"): void {
+function probe(mode: "stale-unbound" | "stale-deny" | "current-accept" | "duplicate-deny" | "pre-handoff-reject-close"): void {
   const root = mkdtempSync(join(tmpdir(), "forward-vault-scm-session-"));
   try {
     mkdirSync(join(root, "authorized"));
@@ -125,6 +165,7 @@ function probe(mode: "stale-unbound" | "stale-deny" | "current-accept" | "duplic
       "stale-deny": "STALE_SESSION_REJECTED_BEFORE_READ",
       "current-accept": "CURRENT_SESSION_ACCEPTED",
       "duplicate-deny": "DUPLICATE_SESSION_REJECTED_BEFORE_SECOND_READ",
+      "pre-handoff-reject-close": "REJECTED_SESSION_FD_CLOSED_THEN_CURRENT_ACCEPTED",
     }[mode];
     assert.equal(result.stdout, expected + "\n");
     assert.equal(readFileSync(join(root, "authorized", "synthetic.json"), "utf8"), "authorized-synthetic-only");
@@ -146,4 +187,7 @@ describe("Forward Vault SCM_RIGHTS session freshness (disposable Linux probe)", 
   it("rejects the same session label a second time before any second payload read", {
     skip: !pythonAvailable, timeout: 20_000,
   }, () => { probe("duplicate-deny"); });
+  it("closes a rejected session FD before helper handoff and still admits a later current session", {
+    skip: !pythonAvailable, timeout: 20_000,
+  }, () => { probe("pre-handoff-reject-close"); });
 });
