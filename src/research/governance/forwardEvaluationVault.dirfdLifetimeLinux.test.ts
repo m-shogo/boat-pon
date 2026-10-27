@@ -44,7 +44,7 @@ const pythonProbe = [
   "    try:",
   "        record = os.fstat(fd)",
   "        assert stat.S_ISREG(record.st_mode) and record.st_nlink == 1",
-  "        expected = b'{\"recordId\":\"synthetic-only\",\"writer\":\"decoy\"}\n' if mode == 'stale' else b'{\"recordId\":\"synthetic-only\",\"writer\":\"original\"}\n'",
+  "        expected = b'{\"recordId\":\"synthetic-only\",\"writer\":\"decoy\"}\\n' if mode == 'stale' else b'{\"recordId\":\"synthetic-only\",\"writer\":\"original\"}\\n'",
   "        assert os.read(fd, 4096) == expected",
   "    finally: os.close(fd)",
   "    print('STALE_INTEGER_PUBLISHED_DECOY' if mode == 'stale' else 'LIVE_DUP_PUBLISHED_ORIGINAL', flush=True)",
