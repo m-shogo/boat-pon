@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-openat2-real-rename-eagain-20261027",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-vault.openat2-real-concurrent-rename-eagain",
+  "subsystem": "research-governance-forward-vault-linux-reader-namespace",
+  "operation": "bounded-real-linux-openat2-parent-traversal-concurrent-rename-probe",
+  "symptom": "In disposable Linux official CI #40509724807, 8000 bounded openat2 calls during concurrent real-directory rename yielded 3060 original single-link JSON reads, 131 real-kernel EAGAIN denials, 4809 ENOENT denials and no unexpected errors; the test passed without requiring a minimum EAGAIN count. This is not a production incident or proof of canonical publisher identity.",
+  "rootCauseClass": "OPENAT2_CONCURRENT_RENAME_PARENT_TRAVERSAL_RESOLUTION_UNCERTAINTY",
+  "attemptSignature": "pr2286-v388-bounded-kernel-rename-8000-openat2-attempts",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-linux-node24-python3-openat2-syscall437",
+    "materialStateKey": "executor-sdk-v3/pr2286-v387-injected-eagain-v388-bounded-kernel-rename"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.openat2ConcurrentRenameLinux.test.ts",
+    "reports/research/forward-vault-openat2-real-concurrent-rename-eagain-20261027.md",
+    "commit/24d63379a563a9e771a1002b8333f60a5a07fb0e",
+    "actions/runs/40509724807"
+  ],
+  "lesson": "Actual Linux openat2 may emit EAGAIN during concurrent real-directory rename with parent traversal. A bounded synthetic observer can verify permitted denial classes and original bytes without asserting a flaky minimum EAGAIN count. A deterministic injected EAGAIN contract and real-kernel observation establish different, complementary evidence.",
+  "guardrail": "Treat openat2 EAGAIN as indeterminate and fail closed: no unbounded retry, pathname fallback, stale-path cleanup, or inferred publisher identity. Keep bounded aggregate errno observations diagnostic only, never readiness statistics. Reuse the pinned root FD and traversal constraints solely as path-resolution guards; independently review common reader/writer directory authority, mount changes, power-loss durability and recovery before any native integration. No protected N2, BUY, LINE, public or production authority.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-27T13:14:49.129Z",
+  "productionConnection": false,
+  "_digest": "fbe91e7105d14516e9085a064db8c3afa61701a37bcc4e62e1c4093a78b074eb",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T13:14:49.129Z"
+}
