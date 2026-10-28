@@ -667,3 +667,34 @@ test("shadow evidence denies missing privacy field under empty ambient Set itera
   assert.equal(observed?.valid, false);
   assert.ok(observed?.errors.includes("missing own enumerable data field: privacy.outcomeColumnsRead"));
 });
+
+
+test("shadow evidence denies rehashed taxonomy relabeling under ambient Map.has/get forgery", () => {
+  const good = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const expectedDigest = good.contentDigest;
+  const altered = buildRuntimeDecisionLedgerShadowEvidence(input());
+  altered.completeness.taxonomyCounts = { schema_or_value: 1 };
+  resign(altered);
+
+  const originalHas = Object.getOwnPropertyDescriptor(Map.prototype, "has");
+  const originalGet = Object.getOwnPropertyDescriptor(Map.prototype, "get");
+  assert.ok(originalHas);
+  assert.ok(originalGet);
+  let observed: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    Object.defineProperty(Map.prototype, "has", {
+      configurable: true, writable: true, value() { return true; },
+    });
+    Object.defineProperty(Map.prototype, "get", {
+      configurable: true, writable: true, value() { return 1; },
+    });
+    observed = validateRuntimeDecisionLedgerShadowEvidence(altered);
+  } finally {
+    Object.defineProperty(Map.prototype, "has", originalHas);
+    Object.defineProperty(Map.prototype, "get", originalGet);
+  }
+  assert.equal(observed?.valid, false);
+  assert.ok(observed?.errors.includes("completeness.taxonomyCounts mismatch"));
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(good).valid, true);
+  assert.equal(good.contentDigest, expectedDigest);
+});
