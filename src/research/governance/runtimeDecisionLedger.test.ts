@@ -234,3 +234,51 @@ test("Runtime Decision Ledger admission is stable under ambient Set.has and iter
   assert.ok(absent?.errors.includes("missing own field: evaluationMode"));
   assert.equal(digestRejected, true);
 });
+
+test("Runtime Decision Ledger rejects Proxy getter/descriptor disagreement before any caller hook", () => {
+  const good = validBuyRecord();
+  const baselineDigest = runtimeDecisionLedgerDigest(good);
+  const underlying = { ...good, currentOdds: -100 };
+  let reads = 0;
+  const disguised = new Proxy(underlying, {
+    get(target, key, receiver) {
+      if (key === "currentOdds") { reads += 1; return good.currentOdds; }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  // Before Proxy denial, validation read 6.4 while canonical hashing read
+  // the own data descriptor -100, accepting a digest for an invalid record.
+  assert.equal(validateRuntimeDecisionLedgerRecord(disguised).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(disguised), TypeError);
+  assert.equal(reads, 0, "Proxy getter must not execute during admission");
+
+  const revoked = Proxy.revocable({ ...good }, {});
+  revoked.revoke();
+  assert.equal(validateRuntimeDecisionLedgerRecord(revoked.proxy).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(revoked.proxy), TypeError);
+  assert.equal(validateRuntimeDecisionLedgerRecord(good).valid, true);
+  assert.equal(runtimeDecisionLedgerDigest(good), baselineDigest);
+});
+
+test("Runtime Decision Ledger rejects nested Proxy reason arrays, including revoked arrays", () => {
+  const good = validBuyRecord();
+  const baselineDigest = runtimeDecisionLedgerDigest(good);
+  let reads = 0;
+  const reasons = new Proxy([...good.reasons], {
+    get(target, key, receiver) {
+      reads += 1;
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const disguised = { ...good, reasons };
+  assert.equal(validateRuntimeDecisionLedgerRecord(disguised).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(disguised), TypeError);
+  assert.equal(reads, 0, "nested Proxy traps must not execute");
+
+  const revoked = Proxy.revocable([...good.warnings], {});
+  revoked.revoke();
+  const withRevoked = { ...good, warnings: revoked.proxy };
+  assert.equal(validateRuntimeDecisionLedgerRecord(withRevoked).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(withRevoked), TypeError);
+  assert.equal(runtimeDecisionLedgerDigest(good), baselineDigest);
+});
