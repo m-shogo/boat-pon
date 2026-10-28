@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { types as nodeTypes } from "node:util";
 import {
   RUNTIME_DECISION_LEDGER_SCHEMA_VERSION,
   runtimeDecisionLedgerDigest,
@@ -529,15 +530,38 @@ export function mapDecisionHistoryRowToRuntimeLedger(
   };
 }
 
+// The row container is caller-owned. Reject a Proxy (including a revoked one)
+// before its length/getOwnPropertyDescriptor traps can erase source membership.
+// This is a Node-only research ingress guard; it does not authenticate rows.
+function denySourceRowsContainer(reason: string): RuntimeDecisionLedgerReconciliation {
+  return {
+    status: "CONDITIONAL", sourceRows: 0, mappedUnique: 0,
+    exactDuplicates: 0, unresolvedCount: 0, rejectedCount: 1, conflictCount: 0,
+    recordsDigest: digest([]), records: [], unresolved: [],
+    rejected: [{ sourceDecisionHistoryId: null, reasons: [reason] }],
+    conflicts: [],
+  };
+}
+
 export function reconcileDecisionHistoryRowsToRuntimeLedger(
   rows: DecisionHistoryShadowRow[],
   context: RuntimeDecisionLedgerMappingContext,
 ): RuntimeDecisionLedgerReconciliation {
+  // No live length getter or index descriptor trap may run on a Proxy array.
+  // An unadmitted container has no trustworthy source-row count: zero here
+  // means "not counted", with an explicit rejection, never a PASS.
+  if (nodeTypes.isProxy(rows)) return denySourceRowsContainer("source_rows_proxy_not_admitted");
+  if (!Array.isArray(rows)) return denySourceRowsContainer("source_rows_not_array");
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(rows, "length");
+  const sourceRows = lengthDescriptor?.value;
+  if (!Number.isSafeInteger(sourceRows) || sourceRows < 0) {
+    return denySourceRowsContainer("source_rows_length_not_own_data");
+  }
   const pinnedContext = snapshotMappingContext(context);
   if (pinnedContext === null) {
     // A global context denial is one rejection, not fabricated row evidence.
     return {
-      status: "CONDITIONAL", sourceRows: rows.length, mappedUnique: 0,
+      status: "CONDITIONAL", sourceRows: sourceRows, mappedUnique: 0,
       exactDuplicates: 0, unresolvedCount: 0, rejectedCount: 1, conflictCount: 0,
       recordsDigest: digest([]), records: [], unresolved: [],
       rejected: [{ sourceDecisionHistoryId: null, reasons: ["mapping_context_fields_not_own_data"] }],
@@ -557,7 +581,7 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
   // A caller-supplied source array must be traversed by own data indices.
   // for-of can silently visit zero rows when Array.prototype[Symbol.iterator]
   // is replaced, producing a false PASS with sourceRows > 0.
-  for (let index = 0; index < rows.length; index++) {
+  for (let index = 0; index < sourceRows; index++) {
     const descriptor = Object.getOwnPropertyDescriptor(rows, String(index));
     if (!descriptor || !("value" in descriptor) || !isRecord(descriptor.value)) {
       appendOwn(rejected, { sourceDecisionHistoryId: null, reasons: ["source_row_not_own_data_object"] });
@@ -623,7 +647,7 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
 
   return {
     status,
-    sourceRows: rows.length,
+    sourceRows: sourceRows,
     mappedUnique: ordered.length,
     exactDuplicates,
     unresolvedCount: unresolved.length,
