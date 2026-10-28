@@ -169,18 +169,41 @@ function hasValidCalendarDateTime(value: string): boolean {
   return day >= 1 && day <= daysInMonth;
 }
 
+// Date.parse truncates submillisecond source precision. Preserve the source's
+// fractional digits after converting the known offset to UTC.
+function utcIsoWithSourceFraction(parsed: number, source: string): string {
+  const canonical = new Date(parsed).toISOString();
+  const fraction = /\.(\d+)(?=(?:Z|[+-]\d{2}:\d{2})?$)/i.exec(source)?.[1];
+  return fraction === undefined ? canonical : canonical.replace(/\.\d{3}Z$/, `.${fraction}Z`);
+}
+
+// Both operands are normalized UTC ISO strings; compare full fractions instead
+// of Date.parse's millisecond-truncated instants.
+function compareNormalizedUtcInstants(a: string, b: string): number {
+  const aSecond = Date.parse(a.replace(/\.\d+Z$/, "Z"));
+  const bSecond = Date.parse(b.replace(/\.\d+Z$/, "Z"));
+  if (aSecond !== bSecond) return aSecond < bSecond ? -1 : 1;
+  const fraction = /\.(\d+)Z$/;
+  const aFraction = fraction.exec(a)?.[1] ?? "";
+  const bFraction = fraction.exec(b)?.[1] ?? "";
+  const width = Math.max(aFraction.length, bFraction.length);
+  const left = aFraction.padEnd(width, "0");
+  const right = bFraction.padEnd(width, "0");
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function normalizeUtcTimestamp(value: string): string | null {
   const trimmed = value.trim();
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(trimmed)) {
     if (!hasValidCalendarDateTime(trimmed)) return null;
     const parsed = Date.parse(`${trimmed.replace(" ", "T")}Z`);
-    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+    return Number.isFinite(parsed) ? utcIsoWithSourceFraction(parsed, trimmed) : null;
   }
   // RFC 3339 -00:00 denotes an unknown local offset, not a proven UTC instant.
   if (/-00:00$/i.test(trimmed)) return null;
   if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed) || !hasValidCalendarDateTime(trimmed)) return null;
   const parsed = Date.parse(trimmed);
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+  return Number.isFinite(parsed) ? utcIsoWithSourceFraction(parsed, trimmed) : null;
 }
 
 function normalizeCloseTimestamp(date: string, closeAt: string): string | null {
@@ -321,10 +344,10 @@ export function mapDecisionHistoryRowToRuntimeLedger(
   if (row.close_at == null || scheduledCloseAtSeen == null) appendOwn(unresolved, "scheduled_close_missing_or_invalid");
   if (row.program_imported_at == null || programImportedAt == null) appendOwn(unresolved, "program_import_time_missing_or_invalid");
 
-  if (decisionAt != null && oddsObservedAt != null && Date.parse(oddsObservedAt) > Date.parse(decisionAt)) {
+  if (decisionAt != null && oddsObservedAt != null && compareNormalizedUtcInstants(oddsObservedAt, decisionAt) > 0) {
     appendOwn(unresolved, "source_row_update_or_odds_observation_after_created_at");
   }
-  if (decisionAt != null && programImportedAt != null && Date.parse(programImportedAt) > Date.parse(decisionAt)) {
+  if (decisionAt != null && programImportedAt != null && compareNormalizedUtcInstants(programImportedAt, decisionAt) > 0) {
     appendOwn(unresolved, "close_time_not_proven_visible_at_decision");
   }
 
