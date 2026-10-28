@@ -7,6 +7,7 @@
  * There are no network calls, trust roots, secrets, raw values or callbacks.
  */
 import { createHash } from "node:crypto";
+import { validForwardV02ClaimedInstant, compareForwardV02ClaimedInstants } from "./forwardV02ClaimedInstant";
 import { buildForwardV02IndependentProofRequest, type ForwardV02IndependentProofRequest } from "./forwardV02IndependentProofRequest";
 import { snapshotForwardV02UntrustedGraph, snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 
@@ -97,10 +98,19 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
   if (!Array.isArray(revisions) || revisions.length < 1 || revisions.length > 10000) {
     throw new TypeError("INVALID_UNTRUSTED_REQUEST");
   }
+  // Match the strict envelope's calendar and claimed chronology contract,
+  // without treating any caller timestamp as a trusted clock attestation.
+  const firstAt = pinned.freeze.claimedFirstDecisionAt;
+  const receiptAt = pinned.freeze.claimedReceiptAt;
+  if (!validForwardV02ClaimedInstant(firstAt) ||
+      !validForwardV02ClaimedInstant(receiptAt) ||
+      compareForwardV02ClaimedInstants(receiptAt, firstAt) >= 0) {
+    throw new TypeError("INVALID_UNTRUSTED_REQUEST");
+  }
   // A detached transcript must not assign a correlation digest to an
   // impossible correction-chain topology. These are deny-only consistency
   // checks on caller claims, NOT independent source-finality verification.
-  let predecessor: string | null = null;
+  let predecessor: string | null = null, previousAt: string | null = null;
   const revisionIds = new Set<string>(), revisionDigests = new Set<string>();
   for (let i = 0; i < revisions.length; i++) {
     const r: unknown = revisions[i];
@@ -118,9 +128,17 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
         revisionIds.has(r.revisionId) || revisionDigests.has(r.contentDigest)) {
       throw new TypeError("INVALID_UNTRUSTED_REQUEST");
     }
+    const observedAt = r.claimedObservedAt;
+    if (!validForwardV02ClaimedInstant(observedAt) ||
+        compareForwardV02ClaimedInstants(observedAt, firstAt) <= 0 ||
+        (previousAt !== null &&
+          compareForwardV02ClaimedInstants(observedAt, previousAt) <= 0)) {
+      throw new TypeError("INVALID_UNTRUSTED_REQUEST");
+    }
     revisionIds.add(r.revisionId);
     revisionDigests.add(r.contentDigest);
     predecessor = r.contentDigest;
+    previousAt = observedAt;
   }
   const terminal = revisions[revisions.length - 1]!;
   if (terminal.revisionId !== pinned.settlement.terminalRevisionId ||
