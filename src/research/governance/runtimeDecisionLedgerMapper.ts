@@ -149,7 +149,9 @@ const SOURCE_ROW_FIELDS = [
 ] as const satisfies readonly (keyof DecisionHistoryShadowRow)[];
 
 function snapshotSourceRow(input: unknown): DecisionHistoryShadowRow | null {
-  if (!isRecord(input)) return null;
+  // Reject caller-controlled descriptor traps, including revoked Proxies, before
+  // the source-row snapshot can treat a fabricated descriptor as own evidence.
+  if (nodeTypes.isProxy(input) || !isRecord(input)) return null;
   const snapshot = Object.create(null) as DecisionHistoryShadowRow;
   try {
     for (let index = 0; index < SOURCE_ROW_FIELDS.length; index++) {
@@ -179,7 +181,9 @@ const MAPPING_CONTEXT_FIELDS = [
 ] as const satisfies readonly (keyof RuntimeDecisionLedgerMappingContext)[];
 
 function snapshotMappingContext(input: unknown): RuntimeDecisionLedgerMappingContext | null {
-  if (!isRecord(input)) return null;
+  // Context identity is research evidence too: do not execute Proxy descriptor
+  // traps or accept a fabricated decisionSystem/manifestId in the snapshot.
+  if (nodeTypes.isProxy(input) || !isRecord(input)) return null;
   const snapshot = Object.create(null) as RuntimeDecisionLedgerMappingContext;
   try {
     for (let index = 0; index < MAPPING_CONTEXT_FIELDS.length; index++) {
