@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-source-row-descriptor-snapshot-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.shadow-mapper-source-row-accessor-validation-digest-drift",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "map-source-decision-history-row-to-runtime-ledger",
+  "symptom": "The research-only shadow mapper validated caller-owned source row fields and later reread the same object for sourceRowDigest and ledger record construction. A synthetic accessor can return different current_odds values across reads; a Proxy get trap can disagree with its own-data descriptor. A Node 22.16.0 synthetic two-read reproduction showed validated 6.4 versus recorded 7.1. This is a source-row consistency failure, not a production incident or external evidence claim.",
+  "rootCauseClass": "UNTRUSTED_SOURCE_ROW_REREAD_BETWEEN_VALIDATION_AND_DIGEST",
+  "attemptSignature": "pr2286-v423-own-descriptor-source-row-snapshot-and-proxy-get-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@96a5af3b/validate-original-source-row-then-reread-digest-record"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/63cc9a791521d9838cb9c0ff521ee9b4fb1f8de7",
+    "commit/8881bb06865d9ed5efe887f0ecc54e608ad535d1",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-empty-array-iterator-membership-20261028.json"
+  ],
+  "lesson": "Validating an untrusted row is not sufficient when the same caller-owned object is read again for digest and output fields. Accessors and Proxy get hooks can make the audited value differ from the validated value without any SHA-256 collision.",
+  "guardrail": "Capture every allowlisted source field once through enumerable own data descriptors into a detached null-prototype snapshot before shape/PIT validation, digesting or ledger mapping. Reject accessors, missing fields and throwing descriptor traps without invoking source getters. Regress accessor rejection and Proxy get/descriptor disagreement while retaining baseline valid digests. This does not authenticate sources or authorize production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T17:01:43.983Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T17:01:43.983Z",
+  "_digest": "1fa779bb09f2413d1a58479155bf8e59274e9447b782663eef924562bd0d397b"
+}
