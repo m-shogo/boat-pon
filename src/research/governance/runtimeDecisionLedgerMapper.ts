@@ -166,6 +166,42 @@ function snapshotSourceRow(input: unknown): DecisionHistoryShadowRow | null {
   return snapshot;
 }
 
+// Context identity must remain stable across all rows in one reconciliation.
+// Accessors or Proxy get hooks must not change recordId versus decisionSystem.
+const MAPPING_CONTEXT_FIELDS = [
+  "decisionSystem",
+  "strategyVersion",
+  "featureVersion",
+  "manifestId",
+  "cohortId",
+  "evaluationMode",
+] as const satisfies readonly (keyof RuntimeDecisionLedgerMappingContext)[];
+
+function snapshotMappingContext(input: unknown): RuntimeDecisionLedgerMappingContext | null {
+  if (!isRecord(input)) return null;
+  const snapshot = Object.create(null) as RuntimeDecisionLedgerMappingContext;
+  try {
+    for (let index = 0; index < MAPPING_CONTEXT_FIELDS.length; index++) {
+      const field = MAPPING_CONTEXT_FIELDS[index]!;
+      const descriptor = Object.getOwnPropertyDescriptor(input, field);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return null;
+      Object.defineProperty(snapshot, field, {
+        value: descriptor.value, enumerable: true, writable: false, configurable: false,
+      });
+    }
+    const optional = Object.getOwnPropertyDescriptor(input, "lineNotificationEligible");
+    if (optional !== undefined) {
+      if (!optional.enumerable || !("value" in optional)) return null;
+      Object.defineProperty(snapshot, "lineNotificationEligible", {
+        value: optional.value, enumerable: true, writable: false, configurable: false,
+      });
+    }
+  } catch {
+    return null;
+  }
+  return snapshot;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
@@ -398,11 +434,15 @@ function validateSourceShape(row: DecisionHistoryShadowRow): string[] {
 
 export function mapDecisionHistoryRowToRuntimeLedger(
   sourceRow: DecisionHistoryShadowRow,
-  context: RuntimeDecisionLedgerMappingContext,
+  sourceContext: RuntimeDecisionLedgerMappingContext,
 ): RuntimeDecisionLedgerMapResult {
   const row = snapshotSourceRow(sourceRow);
   if (row === null) {
     return { status: "rejected", sourceDecisionHistoryId: null, reasons: ["source_row_fields_not_own_data"] };
+  }
+  const context = snapshotMappingContext(sourceContext);
+  if (context === null) {
+    return { status: "rejected", sourceDecisionHistoryId: Number.isInteger(row.id) ? row.id : null, reasons: ["mapping_context_fields_not_own_data"] };
   }
   const sourceErrors = validateSourceShape(row);
   if (sourceErrors.length > 0) {
@@ -493,6 +533,18 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
   rows: DecisionHistoryShadowRow[],
   context: RuntimeDecisionLedgerMappingContext,
 ): RuntimeDecisionLedgerReconciliation {
+  const pinnedContext = snapshotMappingContext(context);
+  if (pinnedContext === null) {
+    // A global context denial is one rejection, not fabricated row evidence.
+    return {
+      status: "CONDITIONAL", sourceRows: rows.length, mappedUnique: 0,
+      exactDuplicates: 0, unresolvedCount: 0, rejectedCount: 1, conflictCount: 0,
+      recordsDigest: digest([]), records: [], unresolved: [],
+      rejected: [{ sourceDecisionHistoryId: null, reasons: ["mapping_context_fields_not_own_data"] }],
+      conflicts: [],
+    };
+  }
+
   // Own-data lookup and accepted membership avoid ambient Map.prototype
   // get/set/values hooks silently erasing rows or conflicts.
   const records: Record<string, { record: RuntimeDecisionLedgerRecord; digest: string }> = Object.create(null);
@@ -511,7 +563,7 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
       appendOwn(rejected, { sourceDecisionHistoryId: null, reasons: ["source_row_not_own_data_object"] });
       continue;
     }
-    const result = mapDecisionHistoryRowToRuntimeLedger(descriptor.value as DecisionHistoryShadowRow, context);
+    const result = mapDecisionHistoryRowToRuntimeLedger(descriptor.value as DecisionHistoryShadowRow, pinnedContext);
     if (result.status === "unresolved") {
       appendOwn(unresolved, { sourceDecisionHistoryId: result.sourceDecisionHistoryId, reasons: result.reasons });
       continue;
