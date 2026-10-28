@@ -180,3 +180,57 @@ test("Runtime Decision Ledger validation verdict and errors are immutable at run
     assert.deepEqual(result, { valid, errors });
   }
 });
+
+test("Runtime Decision Ledger admission is stable under ambient Set.has and iterator hooks", () => {
+  const good = validBuyRecord();
+  const expectedDigest = runtimeDecisionLedgerDigest(good);
+  const malformed = {
+    ...good,
+    decision: "UNKNOWN",
+    evaluationMode: "unapproved",
+    dataCompleteness: "unknown",
+    notificationEligible: false,
+    notificationDedupeKey: null,
+    unapprovedResearchField: "must be denied",
+  };
+  const missing: Record<string, unknown> = {
+    ...good, decision: "WATCH", notificationEligible: false, notificationDedupeKey: null,
+  };
+  delete missing.evaluationMode;
+
+  const originalHas = Object.getOwnPropertyDescriptor(Set.prototype, "has")!;
+  const originalIterator = Object.getOwnPropertyDescriptor(Set.prototype, Symbol.iterator)!;
+  let goodValid = false;
+  let goodDigest = "";
+  let invalid: ReturnType<typeof validateRuntimeDecisionLedgerRecord> | undefined;
+  let absent: ReturnType<typeof validateRuntimeDecisionLedgerRecord> | undefined;
+  let digestRejected = false;
+  try {
+    Object.defineProperty(Set.prototype, "has", {
+      configurable: true, writable: true, value() { return true; },
+    });
+    Object.defineProperty(Set.prototype, Symbol.iterator, {
+      configurable: true, writable: true, value: function* () {},
+    });
+    goodValid = validateRuntimeDecisionLedgerRecord(good).valid;
+    goodDigest = runtimeDecisionLedgerDigest(good);
+    invalid = validateRuntimeDecisionLedgerRecord(malformed);
+    absent = validateRuntimeDecisionLedgerRecord(missing);
+    try { runtimeDecisionLedgerDigest(malformed as RuntimeDecisionLedgerRecord); }
+    catch (error) { digestRejected = error instanceof TypeError; }
+  } finally {
+    Object.defineProperty(Set.prototype, Symbol.iterator, originalIterator);
+    Object.defineProperty(Set.prototype, "has", originalHas);
+  }
+
+  assert.equal(goodValid, true);
+  assert.equal(goodDigest, expectedDigest);
+  assert.equal(invalid?.valid, false);
+  assert.ok(invalid?.errors.includes("decision must be BUY, WATCH, or SKIP"));
+  assert.ok(invalid?.errors.includes("evaluationMode is invalid"));
+  assert.ok(invalid?.errors.includes("dataCompleteness is invalid"));
+  assert.ok(invalid?.errors.includes("unknown field is not allowed: unapprovedResearchField"));
+  assert.equal(absent?.valid, false);
+  assert.ok(absent?.errors.includes("missing own field: evaluationMode"));
+  assert.equal(digestRejected, true);
+});
