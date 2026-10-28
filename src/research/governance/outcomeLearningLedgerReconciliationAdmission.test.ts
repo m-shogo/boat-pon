@@ -47,3 +47,38 @@ test("truthy non-booleans, inherited flags and non-JSON shapes cannot claim EXAC
   for (const candidate of malformed) assert.equal(classify(candidate), "REJECTED_INVALID");
   assert.equal(getterReads, 0);
 });
+
+test("inherited numeric array accessors cannot turn a false reconciliation flag into EXACT", () => {
+  const cases = [
+    ["decisionExact", "UNRESOLVED_DECISION"],
+    ["settlementIdentityExact", "UNRESOLVED_SETTLEMENT_IDENTITY"],
+    ["ticketLinkExact", "UNRESOLVED_TICKET_LINK"],
+    ["refundOrInvalidationExact", "UNRESOLVED_REFUND_OR_INVALIDATION"],
+    ["finalityExact", "UNRESOLVED_FINALITY"],
+  ] as const;
+  for (let index = 0; index < cases.length; index++) {
+    const [field, expected] = cases[index]!;
+    const key = String(index);
+    const original = Object.getOwnPropertyDescriptor(Array.prototype, key);
+    let setterCalls = 0;
+    let denied: ReturnType<typeof classify> | undefined;
+    let valid: ReturnType<typeof classify> | undefined;
+    try {
+      // Before the fix, flags[index] = false was swallowed by this setter
+      // and the inherited true getter made an unresolved claim look EXACT.
+      Object.defineProperty(Array.prototype, key, {
+        configurable: true,
+        get() { return true; },
+        set(_value: unknown) { setterCalls++; },
+      });
+      denied = classify({ ...exact, [field]: false });
+      valid = classify({ ...exact });
+    } finally {
+      if (original) Object.defineProperty(Array.prototype, key, original);
+      else Reflect.deleteProperty(Array.prototype, key);
+    }
+    assert.equal(denied, expected);
+    assert.equal(valid, "EXACT");
+    assert.equal(setterCalls, 0, "reconciliation flags must be own data properties");
+  }
+});
