@@ -716,7 +716,7 @@ test("shadow evidence denies root, nested and revoked Proxies without executing 
     const result = validateRuntimeDecisionLedgerShadowEvidence(candidate);
     assert.equal(result.valid, false);
     assert.equal(result.evidence, null);
-    assert.ok(result.errors.includes("evidence must be an object"));
+    assert.ok(result.errors.includes("proxy value forbidden in evidence graph"));
   }
 
   for (const field of ["scope", "source", "reconciliation", "completeness", "privacy", "safety"] as const) {
@@ -725,14 +725,28 @@ test("shadow evidence denies root, nested and revoked Proxies without executing 
     const result = validateRuntimeDecisionLedgerShadowEvidence(evidence);
     assert.equal(result.valid, false, field);
     assert.equal(result.evidence, null, field);
-    assert.ok(result.errors.includes(`${field} must be an object`), field);
+    assert.ok(result.errors.includes("proxy value forbidden in evidence graph"), field);
   }
 
   const countMap = buildRuntimeDecisionLedgerShadowEvidence(input());
   countMap.completeness.unresolvedReasonCounts = hostile(countMap.completeness.unresolvedReasonCounts);
   const countResult = validateRuntimeDecisionLedgerShadowEvidence(countMap);
   assert.equal(countResult.valid, false);
-  assert.ok(countResult.errors.includes("completeness.unresolvedReasonCounts must be a count map"));
+  assert.ok(countResult.errors.includes("proxy value forbidden in evidence graph"));
+
+  const leaf = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (leaf.scope as unknown as Record<string, unknown>).runKind = hostile({});
+  const leafResult = validateRuntimeDecisionLedgerShadowEvidence(leaf);
+  assert.equal(leafResult.valid, false);
+  assert.ok(leafResult.errors.includes("proxy value forbidden in evidence graph"));
+
+  const revokedLeaf = Proxy.revocable({}, {});
+  revokedLeaf.revoke();
+  const nestedRevoked = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (nestedRevoked.source as unknown as Record<string, unknown>).journalMode = revokedLeaf.proxy;
+  const revokedResult = validateRuntimeDecisionLedgerShadowEvidence(nestedRevoked);
+  assert.equal(revokedResult.valid, false);
+  assert.ok(revokedResult.errors.includes("proxy value forbidden in evidence graph"));
 
   const source = input().source;
   assert.throws(
