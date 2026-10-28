@@ -45,7 +45,7 @@ export type RuntimeDecisionLedgerValidation = {
   errors: string[];
 };
 
-const ALLOWED_FIELDS = new Set<keyof RuntimeDecisionLedgerRecord>([
+const ALLOWED_FIELDS: readonly (keyof RuntimeDecisionLedgerRecord)[] = [
   "schemaVersion",
   "recordId",
   "decisionId",
@@ -77,21 +77,31 @@ const ALLOWED_FIELDS = new Set<keyof RuntimeDecisionLedgerRecord>([
   "notificationEligible",
   "notificationDedupeKey",
   "sourceRowDigest",
-]);
+];
 
-const DECISIONS = new Set<RuntimeDecision>(["BUY", "WATCH", "SKIP"]);
-const EVALUATION_MODES = new Set<RuntimeEvaluationMode>([
+const DECISIONS: readonly RuntimeDecision[] = ["BUY", "WATCH", "SKIP"];
+const EVALUATION_MODES: readonly RuntimeEvaluationMode[] = [
   "formal_forward",
   "shadow_forward",
   "historical",
   "validation",
   "future_only",
-]);
-const COMPLETENESS = new Set<RuntimeDataCompleteness>(["complete", "partial", "blocked"]);
+];
+const COMPLETENESS: readonly RuntimeDataCompleteness[] = ["complete", "partial", "blocked"];
 const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+// Module-owned literal arrays have own indexed data. Avoid mutable Set.prototype
+// has/iterator methods when deciding whether untrusted ledger fields are valid.
+function includesOwn<T extends string>(allowed: readonly T[], value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  for (let index = 0; index < allowed.length; index++) {
+    if (allowed[index] === value) return true;
+  }
+  return false;
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -270,7 +280,8 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
   const errors: string[] = [];
   if (!isRecord(value)) return validationResult(false, ["record must be an object"]);
   if (!isOwnSerializableDataObject(value)) return validationResult(false, ["record fields must be enumerable own data properties"]);
-  for (const field of ALLOWED_FIELDS) {
+  for (let index = 0; index < ALLOWED_FIELDS.length; index++) {
+    const field = ALLOWED_FIELDS[index]!;
     if (!Object.prototype.hasOwnProperty.call(value, field)) {
       return validationResult(false, [`missing own field: ${field}`]);
     }
@@ -279,7 +290,7 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
   const actualFields = Object.keys(value);
   for (let index = 0; index < actualFields.length; index++) {
     const field = actualFields[index]!;
-    if (!ALLOWED_FIELDS.has(field as keyof RuntimeDecisionLedgerRecord)) {
+    if (!includesOwn(ALLOWED_FIELDS, field)) {
       appendValidationError(errors, `unknown field is not allowed: ${field}`);
     }
   }
@@ -314,9 +325,9 @@ export function validateRuntimeDecisionLedgerRecord(value: unknown): RuntimeDeci
     appendValidationError(errors, "sourceDecisionHistoryId must be a positive integer or null");
   }
 
-  if (!DECISIONS.has(value.decision as RuntimeDecision)) appendValidationError(errors, "decision must be BUY, WATCH, or SKIP");
-  if (!EVALUATION_MODES.has(value.evaluationMode as RuntimeEvaluationMode)) appendValidationError(errors, "evaluationMode is invalid");
-  if (!COMPLETENESS.has(value.dataCompleteness as RuntimeDataCompleteness)) appendValidationError(errors, "dataCompleteness is invalid");
+  if (!includesOwn(DECISIONS, value.decision)) appendValidationError(errors, "decision must be BUY, WATCH, or SKIP");
+  if (!includesOwn(EVALUATION_MODES, value.evaluationMode)) appendValidationError(errors, "evaluationMode is invalid");
+  if (!includesOwn(COMPLETENESS, value.dataCompleteness)) appendValidationError(errors, "dataCompleteness is invalid");
 
   const decisionAt = parseInstant(value.decisionAt, "decisionAt", errors);
   const scheduledCloseAtSeen = parseInstant(value.scheduledCloseAtSeen, "scheduledCloseAtSeen", errors);
