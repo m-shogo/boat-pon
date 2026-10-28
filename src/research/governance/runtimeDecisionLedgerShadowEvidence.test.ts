@@ -698,3 +698,47 @@ test("shadow evidence denies rehashed taxonomy relabeling under ambient Map.has/
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(good).valid, true);
   assert.equal(good.contentDigest, expectedDigest);
 });
+
+
+test("shadow evidence denies root, nested and revoked Proxies without executing traps", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const expectedDigest = baseline.contentDigest;
+  const trap = (): never => { throw new Error("untrusted Proxy trap must not execute"); };
+  const hostile = <T extends object>(value: T): T => new Proxy(value, {
+    get: trap,
+    ownKeys: trap,
+    getOwnPropertyDescriptor: trap,
+  });
+  const revoked = Proxy.revocable(baseline, {});
+  revoked.revoke();
+
+  for (const candidate of [hostile(baseline), revoked.proxy]) {
+    const result = validateRuntimeDecisionLedgerShadowEvidence(candidate);
+    assert.equal(result.valid, false);
+    assert.equal(result.evidence, null);
+    assert.ok(result.errors.includes("evidence must be an object"));
+  }
+
+  for (const field of ["scope", "source", "reconciliation", "completeness", "privacy", "safety"] as const) {
+    const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    (evidence as unknown as Record<string, unknown>)[field] = hostile(evidence[field]);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(result.valid, false, field);
+    assert.equal(result.evidence, null, field);
+    assert.ok(result.errors.includes(`${field} must be an object`), field);
+  }
+
+  const countMap = buildRuntimeDecisionLedgerShadowEvidence(input());
+  countMap.completeness.unresolvedReasonCounts = hostile(countMap.completeness.unresolvedReasonCounts);
+  const countResult = validateRuntimeDecisionLedgerShadowEvidence(countMap);
+  assert.equal(countResult.valid, false);
+  assert.ok(countResult.errors.includes("completeness.unresolvedReasonCounts must be a count map"));
+
+  const source = input().source;
+  assert.throws(
+    () => buildRuntimeDecisionLedgerShadowEvidence(input({ source: hostile(source) })),
+    /invalid canonical shadow evidence proxy/,
+  );
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+  assert.equal(baseline.contentDigest, expectedDigest);
+});
