@@ -179,7 +179,13 @@ export const forwardVaultDigest=(r:ForwardVaultRecord)=>{
 
 export function validateForwardVaultRecord(v:unknown):Validation {
   const e:string[]=[]; if(!obj(v)) return frozenValidation(false,["record must be an object"]);
-  const appendError=(message:string):void=>{ e[e.length]=message; };
+  // A fresh error array has no own index yet: inherited numeric setters can
+  // silently discard a denial and make an invalid research record appear valid.
+  const appendError=(message:string):void=>{
+    Object.defineProperty(e,String(e.length),{
+      value:message,enumerable:true,writable:true,configurable:true,
+    });
+  };
   if(!ownDataShape(v))return frozenValidation(false,["record fields must be enumerable own data properties"]);
   if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)appendError("invalid schemaVersion");
   if(!str(v.recordId))appendError("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
