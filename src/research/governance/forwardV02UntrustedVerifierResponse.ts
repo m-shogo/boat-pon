@@ -97,6 +97,11 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
   if (!Array.isArray(revisions) || revisions.length < 1 || revisions.length > 10000) {
     throw new TypeError("INVALID_UNTRUSTED_REQUEST");
   }
+  // A detached transcript must not assign a correlation digest to an
+  // impossible correction-chain topology. These are deny-only consistency
+  // checks on caller claims, NOT independent source-finality verification.
+  let predecessor: string | null = null;
+  const revisionIds = new Set<string>(), revisionDigests = new Set<string>();
   for (let i = 0; i < revisions.length; i++) {
     const r: unknown = revisions[i];
     if (!exactOwnFields(r, REQUEST_REVISION_FIELDS) ||
@@ -104,9 +109,22 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
         typeof r.contentDigest !== "string" || !DIGEST.test(r.contentDigest) ||
         (r.predecessorDigest !== null &&
           (typeof r.predecessorDigest !== "string" || !DIGEST.test(r.predecessorDigest))) ||
-        !Number.isSafeInteger(r.sequence) || (r.sequence as number) < 1) {
+        !Number.isSafeInteger(r.sequence) || r.sequence !== i + 1 ||
+        r.predecessorDigest !== predecessor ||
+        (r.claimedSourceFinality !== "PROVISIONAL" &&
+          r.claimedSourceFinality !== "FINAL" &&
+          r.claimedSourceFinality !== "REVOKED") ||
+        revisionIds.has(r.revisionId) || revisionDigests.has(r.contentDigest)) {
       throw new TypeError("INVALID_UNTRUSTED_REQUEST");
     }
+    revisionIds.add(r.revisionId);
+    revisionDigests.add(r.contentDigest);
+    predecessor = r.contentDigest;
+  }
+  const terminal = revisions[revisions.length - 1]!;
+  if (terminal.revisionId !== pinned.settlement.terminalRevisionId ||
+      terminal.claimedSourceFinality !== "FINAL") {
+    throw new TypeError("INVALID_UNTRUSTED_REQUEST");
   }
   return pinned as unknown as ForwardV02IndependentProofRequest;
 }
