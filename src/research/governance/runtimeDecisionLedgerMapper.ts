@@ -116,6 +116,56 @@ function uniqueOwn(values: string[]): string[] {
   return result;
 }
 
+// Pin the entire research source row once. A caller-owned accessor or late
+// mutation must not change a field between shape/PIT validation, the source
+// digest, and the mapped ledger record. Never invoke source-row getters.
+const SOURCE_ROW_FIELDS = [
+  "id",
+  "race_id",
+  "date",
+  "venue",
+  "race_no",
+  "bet_type",
+  "selection",
+  "estimated_hit_rate",
+  "raw_estimated_hit_rate",
+  "required_odds",
+  "current_odds",
+  "ev",
+  "decision",
+  "recommended_stake_yen",
+  "sample_size",
+  "model_version",
+  "run_kind",
+  "source",
+  "fetched_at",
+  "created_at",
+  "decision_reasons",
+  "feature_adjustment",
+  "feature_adjustment_breakdown",
+  "close_at",
+  "program_imported_at",
+] as const satisfies readonly (keyof DecisionHistoryShadowRow)[];
+
+function snapshotSourceRow(input: unknown): DecisionHistoryShadowRow | null {
+  if (!isRecord(input)) return null;
+  const snapshot = Object.create(null) as DecisionHistoryShadowRow;
+  try {
+    for (let index = 0; index < SOURCE_ROW_FIELDS.length; index++) {
+      const field = SOURCE_ROW_FIELDS[index]!;
+      const descriptor = Object.getOwnPropertyDescriptor(input, field);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return null;
+      Object.defineProperty(snapshot, field, {
+        value: descriptor.value, enumerable: true, writable: false, configurable: false,
+      });
+    }
+  } catch {
+    // Proxy descriptor traps can throw; fail closed without consulting getters.
+    return null;
+  }
+  return snapshot;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
@@ -347,9 +397,13 @@ function validateSourceShape(row: DecisionHistoryShadowRow): string[] {
 }
 
 export function mapDecisionHistoryRowToRuntimeLedger(
-  row: DecisionHistoryShadowRow,
+  sourceRow: DecisionHistoryShadowRow,
   context: RuntimeDecisionLedgerMappingContext,
 ): RuntimeDecisionLedgerMapResult {
+  const row = snapshotSourceRow(sourceRow);
+  if (row === null) {
+    return { status: "rejected", sourceDecisionHistoryId: null, reasons: ["source_row_fields_not_own_data"] };
+  }
   const sourceErrors = validateSourceShape(row);
   if (sourceErrors.length > 0) {
     return { status: "rejected", sourceDecisionHistoryId: Number.isInteger(row.id) ? row.id : null, reasons: sourceErrors };
