@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { types as nodeTypes } from "node:util";
 
 export const RUNTIME_DECISION_LEDGER_SCHEMA_VERSION = "runtime-decision-ledger.0.1" as const;
 
@@ -91,7 +92,7 @@ const COMPLETENESS: readonly RuntimeDataCompleteness[] = ["complete", "partial",
 const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
+  return value != null && typeof value === "object" && !nodeTypes.isProxy(value) && !Array.isArray(value);
 }
 
 // Module-owned literal arrays have own indexed data. Avoid mutable Set.prototype
@@ -195,7 +196,7 @@ function validateProbability(value: unknown, field: string, errors: string[]): v
 
 // Validate the same own enumerable data fields that JSON persistence will observe.
 function isOwnSerializableDataObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || Array.isArray(value)) return false;
   try {
     const proto = Object.getPrototypeOf(value);
     if (proto !== Object.prototype && proto !== null) return false;
@@ -212,7 +213,8 @@ function isOwnSerializableDataObject(value: unknown): value is Record<string, un
 }
 
 function isDenseSerializableStringArray(value: unknown): value is string[] {
-  if (!Array.isArray(value)) return false;
+  // Reject even revoked Proxy arrays before consulting their length or descriptors.
+  if (nodeTypes.isProxy(value) || !Array.isArray(value)) return false;
   try {
     if (Object.getPrototypeOf(value) !== Array.prototype || "toJSON" in value) return false;
     if (Reflect.ownKeys(value).length !== value.length + 1) return false;
