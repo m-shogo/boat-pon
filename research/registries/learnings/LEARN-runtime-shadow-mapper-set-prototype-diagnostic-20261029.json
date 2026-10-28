@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-set-prototype-diagnostic-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.shadow-mapper-ambient-set-has-add-diagnostic-erasure",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "deduplicate-shadow-diagnostic-warnings",
+  "symptom": "The research-only mapper's uniqueOwn diagnostic collector used a fresh Set with ambient Set.prototype.has/add. A synthetic has() that always returns true erases an invalid decision_reasons warning before mapping and can erase additional feature warnings, changing a mapped record's audit digest while status remains mapped. Node 22.16.0 source-equivalent reproduction confirmed one warning collapsing to zero. No private rows or production execution were involved.",
+  "rootCauseClass": "AMBIENT_SET_HAS_ADD_ERASES_SHADOW_WARNING_EVIDENCE",
+  "attemptSignature": "pr2286-v422-set-prototype-has-add-warning-evidence-digest-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@7570518f/uniqueOwn-Set-prototype-has-add"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/70b2285e43539dfdb51ee2de551594478724b1cf",
+    "commit/f1bc0d1d3265e4aea1a2df85bcffc26aeeb659d6",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-array-helper-membership-digest-20261028.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-map-prototype-membership-20261029.json"
+  ],
+  "lesson": "Indexed own-data diagnostic arrays can still lose warning evidence during deduplication if membership checks rely on mutable Set.prototype.has/add. A mapped status alone does not prove the audit warnings and digest are preserved.",
+  "guardrail": "Use a null-prototype own-data dictionary to deduplicate warning strings, with indexed descriptor reads and appendOwn writes. Regression-test malformed reason JSON plus feature warnings and unchanged mapped digest under reversible Set.prototype.has/add overrides. This does not authenticate sources or authorize production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T16:11:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T16:11:00.000Z",
+  "_digest": "0d8b009f5e890b77999b74371a5e410b2692b55da4ae8a5ce44c01b6b788a31b"
+}
