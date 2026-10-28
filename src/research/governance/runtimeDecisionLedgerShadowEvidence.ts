@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isProxy } from "node:util/types";
 import type {
   RuntimeDecisionLedgerMappingContext,
   RuntimeDecisionLedgerReconciliation,
@@ -90,10 +91,12 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+  return value !== null && typeof value === "object" && !isProxy(value) && !Array.isArray(value);
 }
 
 function canonicalize(value: unknown): unknown {
+  // Never serialize a caller-controlled Proxy through its traps as canonical evidence.
+  if (isProxy(value)) throw new TypeError("invalid canonical shadow evidence proxy");
   if (Array.isArray(value)) {
     const result: unknown[] = [];
     for (let index = 0; index < value.length; index++) {
@@ -535,6 +538,10 @@ function taxonomyMatches(
 }
 
 function walk(value: unknown, path: string, errors: string[]): void {
+  if (isProxy(value)) {
+    appendError(errors, `proxy value forbidden at ${path}`);
+    return;
+  }
   if (typeof value === "string") {
     if (/^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(value) || value.includes("/Users/") || value.includes("\\Users\\")) {
       appendError(errors,`absolute path-like value at ${path}`);
