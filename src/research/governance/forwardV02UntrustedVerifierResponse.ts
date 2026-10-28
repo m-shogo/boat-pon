@@ -58,7 +58,7 @@ function exactOwnFields(input: unknown, keys: readonly string[]): input is Recor
 function nonemptyStringFields(input: Record<string, unknown>, keys: readonly string[]): boolean {
   for (let i = 0; i < keys.length; i++) {
     const value = input[keys[i]!];
-    if (typeof value !== "string" || value.length === 0) return false;
+    if (typeof value !== "string" || value.trim().length === 0) return false;
   }
   return true;
 }
