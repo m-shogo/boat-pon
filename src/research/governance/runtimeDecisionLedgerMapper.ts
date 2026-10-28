@@ -94,6 +94,24 @@ function appendOwn<T>(items: T[], value: T): void {
   });
 }
 
+// Do not spread or iterate diagnostic arrays through ambient Array.prototype
+// iterators: an empty replacement iterator can silently erase evidence.
+function uniqueOwn(values: string[]): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < values.length; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(values, String(index));
+    if (!descriptor || !("value" in descriptor) || typeof descriptor.value !== "string") {
+      throw new TypeError("invalid shadow diagnostic array");
+    }
+    if (!seen.has(descriptor.value)) {
+      seen.add(descriptor.value);
+      appendOwn(result, descriptor.value);
+    }
+  }
+  return result;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
@@ -157,13 +175,13 @@ function isLeapYear(year: number): boolean {
 function hasValidCalendarDateTime(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})(?:T| )(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?/.exec(value);
   if (!match) return false;
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText] = match;
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  const second = Number(secondText);
+  // RegExp match arrays are indexed data; destructuring invokes an ambient iterator.
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
   if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return false;
   const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
   return day >= 1 && day <= daysInMonth;
@@ -291,35 +309,36 @@ function sourceRowDigest(row: DecisionHistoryShadowRow): string {
 function validateSourceShape(row: DecisionHistoryShadowRow): string[] {
   const errors: string[] = [];
   if (!Number.isInteger(row.id) || row.id < 1) appendOwn(errors, "id must be a positive integer");
-  for (const [field, value] of [
-    ["race_id", row.race_id],
-    ["date", row.date],
-    ["venue", row.venue],
-    ["bet_type", row.bet_type],
-    ["selection", row.selection],
-    ["run_kind", row.run_kind],
-    ["source", row.source],
-    ["fetched_at", row.fetched_at],
-    ["created_at", row.created_at],
-  ] as const) {
+  // Explicit field checks avoid for-of/destructuring over ambient array iterators.
+  const checkRequired = (field: string, value: unknown): void => {
     if (!nonEmpty(value)) appendOwn(errors, `${field} must be non-empty`);
-  }
+  };
+  checkRequired("race_id", row.race_id);
+  checkRequired("date", row.date);
+  checkRequired("venue", row.venue);
+  checkRequired("bet_type", row.bet_type);
+  checkRequired("selection", row.selection);
+  checkRequired("run_kind", row.run_kind);
+  checkRequired("source", row.source);
+  checkRequired("fetched_at", row.fetched_at);
+  checkRequired("created_at", row.created_at);
   if (!Number.isInteger(row.race_no) || row.race_no < 1 || row.race_no > 12) appendOwn(errors, "race_no is invalid");
   if (!finiteOrNull(row.raw_estimated_hit_rate)) appendOwn(errors, "raw_estimated_hit_rate must be finite or null");
-  for (const [field, value] of [
-    ["estimated_hit_rate", row.estimated_hit_rate],
-    ["required_odds", row.required_odds],
-    ["current_odds", row.current_odds],
-    ["ev", row.ev],
-    ["feature_adjustment", row.feature_adjustment],
-  ] as const) {
+  const checkFinite = (field: string, value: unknown): void => {
     if (!finiteOrNull(value)) appendOwn(errors, `${field} must be finite or null`);
-  }
+  };
+  checkFinite("estimated_hit_rate", row.estimated_hit_rate);
+  checkFinite("required_odds", row.required_odds);
+  checkFinite("current_odds", row.current_odds);
+  checkFinite("ev", row.ev);
+  checkFinite("feature_adjustment", row.feature_adjustment);
   if (!Number.isInteger(row.recommended_stake_yen) || row.recommended_stake_yen < 0) {
     appendOwn(errors, "recommended_stake_yen must be a non-negative integer");
   }
   if (!Number.isInteger(row.sample_size) || row.sample_size < 0) appendOwn(errors, "sample_size must be a non-negative integer");
-  if (!(["BUY", "WATCH", "SKIP"] as string[]).includes(row.decision)) appendOwn(errors, "decision is invalid");
+  if (row.decision !== "BUY" && row.decision !== "WATCH" && row.decision !== "SKIP") {
+    appendOwn(errors, "decision is invalid");
+  }
   return errors;
 }
 
@@ -352,11 +371,13 @@ export function mapDecisionHistoryRowToRuntimeLedger(
   }
 
   if (unresolved.length > 0) {
-    return { status: "unresolved", sourceDecisionHistoryId: row.id, reasons: [...new Set(unresolved)] };
+    return { status: "unresolved", sourceDecisionHistoryId: row.id, reasons: uniqueOwn(unresolved) };
   }
 
   const parsedReasons = parseReasons(row.decision_reasons);
-  const warnings = [...parsedReasons.warnings, ...featureWarnings(row)];
+  const warnings = uniqueOwn(parsedReasons.warnings);
+  const feature = featureWarnings(row);
+  for (let index = 0; index < feature.length; index++) appendOwn(warnings, feature[index]!);
   const decision = row.decision as RuntimeDecision;
   const notificationEligible = context.lineNotificationEligible === true && decision === "BUY";
   const currentOddsPresent = row.current_odds != null && row.current_odds > 0;
@@ -390,7 +411,7 @@ export function mapDecisionHistoryRowToRuntimeLedger(
     recommendedStakeYen: row.recommended_stake_yen,
     sampleSize: row.sample_size,
     reasons: parsedReasons.reasons,
-    warnings: [...new Set(warnings)],
+    warnings: uniqueOwn(warnings),
     dataCompleteness,
     notificationEligible,
     notificationDedupeKey: notificationEligible ? `line:${row.race_id}` : null,
@@ -420,8 +441,16 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
   const conflicts: RuntimeDecisionLedgerConflict[] = [];
   let exactDuplicates = 0;
 
-  for (const row of rows) {
-    const result = mapDecisionHistoryRowToRuntimeLedger(row, context);
+  // A caller-supplied source array must be traversed by own data indices.
+  // for-of can silently visit zero rows when Array.prototype[Symbol.iterator]
+  // is replaced, producing a false PASS with sourceRows > 0.
+  for (let index = 0; index < rows.length; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(rows, String(index));
+    if (!descriptor || !("value" in descriptor) || !isRecord(descriptor.value)) {
+      appendOwn(rejected, { sourceDecisionHistoryId: null, reasons: ["source_row_not_own_data_object"] });
+      continue;
+    }
+    const result = mapDecisionHistoryRowToRuntimeLedger(descriptor.value as DecisionHistoryShadowRow, context);
     if (result.status === "unresolved") {
       appendOwn(unresolved, { sourceDecisionHistoryId: result.sourceDecisionHistoryId, reasons: result.reasons });
       continue;
