@@ -308,11 +308,11 @@ test("source manifest digest rejects malformed UTF-16 identifier aliases before 
   assert.equal(unchanged, "0015145a50f9a860b211a324cfa2c165465bd924b64b36a321ecb15a5f0bce59");
 
   const replacement = manifest();
-  replacement.manifestId = "synthetic-\\uFFFD-manifest";
+  replacement.manifestId = "synthetic-\uFFFD-manifest";
   const replacementDigest = forwardV02SourceManifestReferenceDigest(replacement);
   assert.equal(typeof replacementDigest, "string");
 
-  for (const malformed of ["synthetic-\\uD800-manifest", "synthetic-\\uDC00-manifest"]) {
+  for (const malformed of ["synthetic-\uD800-manifest", "synthetic-\uDC00-manifest"]) {
     // Node encodes both malformed strings exactly like the replacement form;
     // the reference must not assign any content digest to either one.
     assert.equal(Buffer.from(malformed, "utf8").equals(Buffer.from(replacement.manifestId, "utf8")), true);
@@ -322,7 +322,7 @@ test("source manifest digest rejects malformed UTF-16 identifier aliases before 
   }
 
   const validPair = manifest();
-  validPair.manifestId = "synthetic-\\uD83D\\uDE80-manifest";
+  validPair.manifestId = "synthetic-\uD83D\uDE80-manifest";
   const validPairDigest = forwardV02SourceManifestReferenceDigest(validPair);
   assert.equal(typeof validPairDigest, "string");
   assert.notEqual(validPairDigest, replacementDigest);
