@@ -176,6 +176,8 @@ function normalizeUtcTimestamp(value: string): string | null {
     const parsed = Date.parse(`${trimmed.replace(" ", "T")}Z`);
     return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
   }
+  // RFC 3339 -00:00 denotes an unknown local offset, not a proven UTC instant.
+  if (/-00:00$/i.test(trimmed)) return null;
   if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed) || !hasValidCalendarDateTime(trimmed)) return null;
   const parsed = Date.parse(trimmed);
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
