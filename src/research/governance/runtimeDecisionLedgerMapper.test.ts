@@ -236,3 +236,33 @@ test("shadow mapper preserves reasons, membership and sorted digest under no-op 
     assert.ok(malformed.record.warnings.includes("decision_reasons_not_string_array"));
   }
 });
+
+test("shadow mapper does not convert unknown -00:00 source offsets into proven PIT evidence", () => {
+  const cases: Array<{
+    overrides: Partial<DecisionHistoryShadowRow>;
+    reason: string;
+  }> = [
+    { overrides: { created_at: "2026-08-05T05:26:30-00:00" }, reason: "decision_at_timezone_or_format_unresolved" },
+    { overrides: { fetched_at: "2026-08-05T05:26:10-00:00" }, reason: "odds_observed_at_timezone_or_format_unresolved" },
+    { overrides: { program_imported_at: "2026-08-05T04:00:00-00:00" }, reason: "program_import_time_missing_or_invalid" },
+    { overrides: { close_at: "2026-08-05T05:32:00-00:00" }, reason: "scheduled_close_missing_or_invalid" },
+  ];
+  for (const candidate of cases) {
+    const result = mapDecisionHistoryRowToRuntimeLedger(row(candidate.overrides), context);
+    assert.equal(result.status, "unresolved", candidate.reason);
+    if (result.status === "unresolved") assert.ok(result.reasons.includes(candidate.reason));
+  }
+
+  // +00:00 is a known UTC offset and must retain the valid mapping path.
+  const known = mapDecisionHistoryRowToRuntimeLedger(row({
+    created_at: "2026-08-05T05:26:30+00:00",
+    fetched_at: "2026-08-05T05:26:10+00:00",
+    program_imported_at: "2026-08-05T04:00:00+00:00",
+    close_at: "2026-08-05T05:32:00+00:00",
+  }), context);
+  assert.equal(known.status, "mapped");
+  if (known.status === "mapped") {
+    assert.equal(known.record.decisionAt, "2026-08-05T05:26:30.000Z");
+    assert.equal(known.record.scheduledCloseAtSeen, "2026-08-05T05:32:00.000Z");
+  }
+});
