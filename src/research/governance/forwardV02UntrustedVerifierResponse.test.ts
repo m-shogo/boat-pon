@@ -370,6 +370,47 @@ test("standalone request digest rejects an initially malformed revision rather t
   assert.equal(getterReads, 0, "caller getter must never repair a correction digest");
 });
 
+test("standalone request transcript rejects malformed nested SHA digests before correlation", () => {
+  const f = fixture();
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  f.envelope.settlement.revisions.push({
+    revisionId: "synthetic-revision-2", contentDigest: h("f"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  });
+  f.refs.settlementRevisionId = "synthetic-revision-2";
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  const validDigest = digestForwardV02UntrustedRequest(built.request);
+  const mutations = [
+    ["freeze", "protocolDigest"],
+    ["freeze", "membershipDigest"],
+    ["freeze", "witnessProofDigest"],
+    ["settlement", "settlementProofDigest"],
+    ["revision0", "contentDigest"],
+    ["revision1", "predecessorDigest"],
+  ] as const;
+  for (const [target, field] of mutations) {
+    const copy = structuredClone(built.request) as unknown as Record<string, unknown>;
+    const settlement = copy.settlement as Record<string, unknown>;
+    const revisions = settlement.revisions as Record<string, unknown>[];
+    const node = target === "freeze"
+      ? copy.freeze as Record<string, unknown>
+      : target === "settlement"
+        ? settlement
+        : revisions[target === "revision0" ? 0 : 1]!;
+    node[field] = "not-a-sha256-digest";
+    assert.throws(
+      () => digestForwardV02UntrustedRequest(copy as unknown as NonNullable<typeof built.request>),
+      /INVALID_UNTRUSTED_REQUEST/,
+      `${target}.${field} must be rejected rather than hashed`,
+    );
+  }
+  assert.equal(digestForwardV02UntrustedRequest(built.request), validDigest);
+  assert.equal(built.scoringAuthorized, false);
+  assert.equal(built.independentAuthorityVerified, false);
+});
+
 test("verifier response cannot hide an extra revision digest by changing array length between checks", () => {
   const f = fixture();
   let lengthReads = 0;
