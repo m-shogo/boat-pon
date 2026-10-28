@@ -134,9 +134,17 @@ export function forwardV02SourceManifestReferenceDigest(value: unknown): string 
     value.schemaVersion, value.manifestId, value.evidenceStage,
     value.analysisSnapshotDigest, value.createdAt, "false", String(decisions.length),
   ];
-  for (let i = 0; i < decisions.length; i++) fields[fields.length] = decisions[i]!;
-  fields[fields.length] = String(outcomes.length);
-  for (let i = 0; i < outcomes.length; i++) fields[fields.length] = outcomes[i]!;
+  // An inherited Array.prototype numeric setter can discard an appended
+  // digest and alias two distinct manifests. Define every appended index as
+  // an own data property before the content-addressed hash consumes it.
+  const appendField = (field: string): void => {
+    Object.defineProperty(fields, String(fields.length), {
+      value: field, enumerable: true, writable: true, configurable: true,
+    });
+  };
+  for (let i = 0; i < decisions.length; i++) appendField(decisions[i]!);
+  appendField(String(outcomes.length));
+  for (let i = 0; i < outcomes.length; i++) appendField(outcomes[i]!);
   return contentHash("forward-v02-source-manifest-reference-v1", fields);
 }
 
