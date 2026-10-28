@@ -303,3 +303,78 @@ test("shadow mapper preserves submillisecond PIT chronology before UTC canonical
     assert.equal(valid.record.scheduledCloseAtSeen, "2026-08-05T05:32:00.0001001Z");
   }
 });
+
+test("shadow mapper retains source membership and denials under an empty ambient array iterator", () => {
+  const sourceRows = [
+    row({ id: 1002, decision_reasons: null }),
+    row({ id: 1001, decision_reasons: null }),
+  ];
+  const baseline = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+  const baselineWarning = mapDecisionHistoryRowToRuntimeLedger(row({ decision_reasons: "[5]" }), context);
+  assert.equal(baseline.status, "PASS");
+  assert.equal(baseline.mappedUnique, 2);
+  assert.equal(baselineWarning.status, "mapped");
+
+  const originalIterator = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator)!;
+  let observed: ReturnType<typeof reconcileDecisionHistoryRowsToRuntimeLedger> | undefined;
+  let invalidSource: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  let invalidRunKind: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  let lateProgram: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  let warning: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  let valid: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, Symbol.iterator, {
+      configurable: true, writable: true, value: function* () {},
+    });
+    observed = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+    invalidSource = mapDecisionHistoryRowToRuntimeLedger(row({ source: "" }), context);
+    invalidRunKind = mapDecisionHistoryRowToRuntimeLedger(row({ run_kind: "" }), context);
+    lateProgram = mapDecisionHistoryRowToRuntimeLedger(
+      row({ program_imported_at: "2026-08-05 05:30:00" }), context,
+    );
+    warning = mapDecisionHistoryRowToRuntimeLedger(row({ decision_reasons: "[5]" }), context);
+    valid = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  } finally {
+    Object.defineProperty(Array.prototype, Symbol.iterator, originalIterator);
+  }
+
+  assert.equal(observed?.status, "PASS");
+  assert.equal(observed?.sourceRows, 2);
+  assert.equal(observed?.mappedUnique, 2);
+  assert.equal(observed?.recordsDigest, baseline.recordsDigest);
+  assert.deepEqual(observed?.records.map((record) => record.recordId), baseline.records.map((record) => record.recordId));
+  assert.equal(invalidSource?.status, "rejected");
+  if (invalidSource?.status === "rejected") assert.ok(invalidSource.reasons.includes("source must be non-empty"));
+  assert.equal(invalidRunKind?.status, "rejected");
+  if (invalidRunKind?.status === "rejected") assert.ok(invalidRunKind.reasons.includes("run_kind must be non-empty"));
+  assert.equal(lateProgram?.status, "unresolved");
+  if (lateProgram?.status === "unresolved") {
+    assert.ok(lateProgram.reasons.includes("close_time_not_proven_visible_at_decision"));
+  }
+  assert.equal(warning?.status, "mapped");
+  if (warning?.status === "mapped" && baselineWarning.status === "mapped") {
+    assert.deepEqual(warning.record.warnings, baselineWarning.record.warnings);
+    assert.equal(warning.ledgerDigest, baselineWarning.ledgerDigest);
+  }
+  assert.equal(valid?.status, "mapped");
+});
+
+test("shadow reconciliation fails closed on sparse or accessor source rows", () => {
+  const rows: DecisionHistoryShadowRow[] = [row({ id: 1001 }), row({ id: 1002 })];
+  Object.defineProperty(rows, "1", {
+    configurable: true, enumerable: true,
+    get() { throw new Error("untrusted row accessor must not execute"); },
+  });
+  const result = reconcileDecisionHistoryRowsToRuntimeLedger(rows, context);
+  assert.equal(result.status, "CONDITIONAL");
+  assert.equal(result.sourceRows, 2);
+  assert.equal(result.mappedUnique, 1);
+  assert.equal(result.rejectedCount, 1);
+  assert.deepEqual(result.rejected[0]?.reasons, ["source_row_not_own_data_object"]);
+
+  const sparse: DecisionHistoryShadowRow[] = [row()];
+  sparse.length = 2;
+  const sparseResult = reconcileDecisionHistoryRowsToRuntimeLedger(sparse, context);
+  assert.equal(sparseResult.status, "CONDITIONAL");
+  assert.equal(sparseResult.rejectedCount, 1);
+});
