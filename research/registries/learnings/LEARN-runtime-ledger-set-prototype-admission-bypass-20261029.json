@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-ledger-set-prototype-admission-bypass-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.ambient-set-prototype-validation-bypass",
+  "subsystem": "research-governance-runtime-decision-ledger",
+  "operation": "validate-runtime-decision-ledger-record-and-canonical-digest",
+  "symptom": "The research-only Runtime Decision Ledger validator used Set iteration for required-field presence and Set.prototype.has for allowed fields, decision, evaluation mode and completeness. A Node 22.16.0 synthetic Set.has=true plus empty Set iterator can bypass both membership and enum checks; source-equivalent malformed metadata becomes admitted. This is not a production or private-evidence incident.",
+  "rootCauseClass": "AMBIENT_SET_METHODS_BYPASS_LEDGER_FIELD_AND_ENUM_ADMISSION",
+  "attemptSignature": "pr2286-v426-runtime-ledger-set-has-iterator-fail-closed-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedger.ts@a7627739/Set-has-and-iterator-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedger.ts",
+    "src/research/governance/runtimeDecisionLedger.test.ts",
+    "commit/3d2e58e14a6ca14431d0efae01e5a27ce44ec87c",
+    "commit/9245e407a2127b9c0d754fcf494fbc3efe0077f1",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-set-prototype-diagnostic-20261029.json",
+    "research/registries/learnings/LEARN-runtime-ledger-ambient-array-admission-digest-drift-20261027.json"
+  ],
+  "lesson": "A correct ledger schema does not enforce required fields or enum membership if the validator depends on mutable Set.prototype iteration and has. An ambient no-op iterator and always-true has can turn missing or unsupported metadata into an apparently valid research record.",
+  "guardrail": "Use module-owned literal arrays with explicit indexed loops for required-field checks and scalar membership, not Set.prototype.has or Symbol.iterator. Preserve normal canonical digests; test invalid enum values, unknown fields and missing required fields under reversible synthetic Set hooks, and require direct digest entry to reject invalid records. This is research-only validation and grants no external source authentication or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T18:08:51.338Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T18:08:51.338Z",
+  "_digest": "864a16dae0928447d650ad69a1b3d428caf489783d45273a8aa61bd6f2d63ae3"
+}
