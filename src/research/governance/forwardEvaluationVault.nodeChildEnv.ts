@@ -1,12 +1,13 @@
-/** Research-only Node child-process fixture environment.
- * Avoid inherited NODE_OPTIONS preloads/imports changing synthetic child
- * handshakes or filesystem behavior. This does not isolate the parent runner,
- * sanitize every environment variable, or authenticate any evidence.
+/** Research-only Forward Vault compatibility wrapper for Node child fixtures.
+ * Reuse the shared research-governance child environment guardrail.
+ * Neither this wrapper nor its delegate isolates the parent runner,
+ * sanitizes all environment variables, or authenticates evidence.
  */
+import { isolatedResearchNodeChildEnv } from "./researchNodeChildEnv.js";
+
 export function isolatedForwardVaultNodeChildEnv(
   source: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
-  const env = { ...source };
-  delete env.NODE_OPTIONS;
-  return env;
+  return isolatedResearchNodeChildEnv(source);
 }
+

@@ -4,12 +4,13 @@ import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { isolatedResearchNodeChildEnv } from "./researchNodeChildEnv.js";
 
 const SCRIPT = resolve(process.cwd(), "scripts/assert-canonical-request.mjs");
 
 function runIn(cwd: string): { status: number; output: string } {
   try {
-    execFileSync(process.execPath, [SCRIPT, "canonical-request.json"], { cwd, encoding: "utf8", stdio: "pipe" });
+    execFileSync(process.execPath, [SCRIPT, "canonical-request.json"], { cwd, encoding: "utf8", stdio: "pipe", env: isolatedResearchNodeChildEnv() });
     return { status: 0, output: "" };
   } catch (error) {
     const failed = error as { status?: number; stdout?: string; stderr?: string };
