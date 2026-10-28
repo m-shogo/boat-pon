@@ -8,9 +8,12 @@ import { describe, it } from "node:test";
 // Research-only, disposable Linux directory-FD lifetime probe. The receiver
 // validates synthetic content; it does not authenticate original provenance.
 // String.raw prevents JS from changing Python source escapes (v390 guardrail).
+// Python -I ignores ambient PYTHONOPTIMIZE, preserving assert-based synthetic test oracles.
 const pythonProbe = String.raw`
 import array, errno, os, socket, subprocess, sys
 root, mode = sys.argv[1:]
+if sys.flags.optimize != 0:
+    raise RuntimeError("optimized Python disables synthetic assertion oracles")
 fd = os.open(os.path.join(root, 'authorized'), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
 try:
     identity = os.fstat(fd)
@@ -26,7 +29,7 @@ except OSError as error:
 else:
     raise AssertionError('unexpected inherited directory FD')
 '''
-        denied = subprocess.run([sys.executable, '-c', child_source, str(fd)], close_fds=False, capture_output=True, text=True, timeout=5)
+        denied = subprocess.run([sys.executable, '-I', '-c', child_source, str(fd)], close_fds=False, capture_output=True, text=True, timeout=5)
         assert denied.returncode == 0, denied.stderr
         assert denied.stdout == 'CLOEXEC_DENIED\n', (denied.stdout, denied.stderr)
         # Explicit pass_fds intentionally clears close-on-exec for this child.
@@ -37,7 +40,7 @@ info = os.fstat(fd)
 assert (info.st_dev, info.st_ino) == (int(sys.argv[2]), int(sys.argv[3]))
 print('EXPLICIT_INHERITANCE_CONFIRMED', flush=True)
 '''
-        allowed = subprocess.run([sys.executable, '-c', child_source, str(fd), str(identity.st_dev), str(identity.st_ino)], pass_fds=(fd,), capture_output=True, text=True, timeout=5)
+        allowed = subprocess.run([sys.executable, '-I', '-c', child_source, str(fd), str(identity.st_dev), str(identity.st_ino)], pass_fds=(fd,), capture_output=True, text=True, timeout=5)
         assert allowed.returncode == 0, allowed.stderr
         assert allowed.stdout == 'EXPLICIT_INHERITANCE_CONFIRMED\n', (allowed.stdout, allowed.stderr)
         print('EXEC_BOUNDARY_CONFIRMED', flush=True)
@@ -82,7 +85,7 @@ finally:
     sock.close()
 print(outcome, flush=True)
 '''
-        proc = subprocess.Popen([sys.executable, '-c', child_source, str(child_sock.fileno()), str(identity.st_dev), str(identity.st_ino + (1 if mode == 'transfer-deny-close' else 0)), mode], pass_fds=(child_sock.fileno(),), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        proc = subprocess.Popen([sys.executable, '-I', '-c', child_source, str(child_sock.fileno()), str(identity.st_dev), str(identity.st_ino + (1 if mode == 'transfer-deny-close' else 0)), mode], pass_fds=(child_sock.fileno(),), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         child_sock.close()
         parent_sock.sendmsg([b'X'], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array('i', [fd]))])
         os.close(fd)
@@ -108,7 +111,7 @@ function probe(mode: "exec" | "transfer" | "transfer-deny-close"): void {
   try {
     mkdirSync(join(root, "authorized"));
     writeFileSync(join(root, "authorized", "synthetic.json"), "synthetic-cross-process-only", { flag: "wx" });
-    const result = spawnSync("python3", ["-c", pythonProbe, root, mode], { encoding: "utf8", timeout: 10_000 });
+    const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, mode], { encoding: "utf8", timeout: 10_000 });
     assert.equal(result.error, undefined);
     assert.equal(result.signal, null);
     assert.equal(result.status, 0, result.stderr);

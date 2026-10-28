@@ -8,9 +8,12 @@ import { describe, it } from "node:test";
 // Disposable research-only capability-binding negative control. The trusted
 // directory FD is a synthetic fixture assumption, not authenticated provenance.
 // String.raw preserves Python newlines (prior embedded-fixture LEARN guardrail).
+// Python -I ignores ambient PYTHONOPTIMIZE, preserving assert-based synthetic test oracles.
 const pythonProbe = String.raw`
 import array, errno, os, socket, stat, struct, sys
 root, mode = sys.argv[1:]
+if sys.flags.optimize != 0:
+    raise RuntimeError("optimized Python disables synthetic assertion oracles")
 flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 authorized_fd = os.open(os.path.join(root, 'authorized'), flags)
 decoy_fd = os.open(os.path.join(root, 'decoy'), flags)
@@ -83,7 +86,7 @@ function probe(mode: "peer-only" | "bound-deny" | "bound-accept"): void {
     mkdirSync(join(root, "decoy"));
     writeFileSync(join(root, "authorized", "synthetic.json"), "authorized-synthetic-only", { flag: "wx" });
     writeFileSync(join(root, "decoy", "synthetic.json"), "decoy-synthetic-only", { flag: "wx" });
-    const result = spawnSync("python3", ["-c", pythonProbe, root, mode], {
+    const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, mode], {
       encoding: "utf8", timeout: 10_000,
     });
     assert.equal(result.error, undefined);

@@ -8,9 +8,12 @@ import { describe, it } from "node:test";
 // Disposable research-only Linux negative controls for an untrusted FD handoff.
 // No production bridge, real evidence, mounts, SDK behavior or recovery.
 // String.raw preserves Python source escapes (prior LEARN fixture guardrail).
+// Python -I ignores ambient PYTHONOPTIMIZE, preserving assert-based synthetic test oracles.
 const pythonProbe = String.raw`
 import array, errno, os, socket, struct, subprocess, sys
 root, mode = sys.argv[1:]
+if sys.flags.optimize != 0:
+    raise RuntimeError("optimized Python disables synthetic assertion oracles")
 flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 source_fd = os.open(os.path.join(root, 'authorized'), flags)
 received = []
@@ -68,7 +71,7 @@ finally:
     sock.close()
 print('SENT', flush=True)
 '''
-            child = subprocess.Popen([sys.executable, '-c', child_source, path, os.path.join(root, 'authorized')], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            child = subprocess.Popen([sys.executable, '-I', '-c', child_source, path, os.path.join(root, 'authorized')], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             conn, _ = listener.accept()
             conn.settimeout(5)
             try:
@@ -117,12 +120,15 @@ finally:
 const pythonAvailable = process.platform === "linux" &&
   spawnSync("python3", ["--version"], { encoding: "utf8", timeout: 5_000 }).status === 0;
 
-function probe(mode: "truncation" | "multiple" | "cloexec" | "peer-accept" | "peer-reject"): void {
+function probe(mode: "truncation" | "multiple" | "cloexec" | "peer-accept" | "peer-reject", ambientOptimize = false): void {
   const root = mkdtempSync(join(tmpdir(), "forward-vault-scm-admission-"));
   try {
     mkdirSync(join(root, "authorized"));
     writeFileSync(join(root, "authorized", "synthetic.json"), "synthetic-admission-only", { flag: "wx" });
-    const result = spawnSync("python3", ["-c", pythonProbe, root, mode], { encoding: "utf8", timeout: 10_000 });
+    const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, mode], {
+      encoding: "utf8", timeout: 10_000,
+      ...(ambientOptimize ? { env: { ...process.env, PYTHONOPTIMIZE: "2" } } : {}),
+    });
     assert.equal(result.error, undefined);
     assert.equal(result.signal, null);
     assert.equal(result.status, 0, result.stderr);
@@ -147,4 +153,7 @@ describe("Forward Vault SCM_RIGHTS receiver admission (disposable Linux probe)",
   it("accepts exactly one descriptor with MSG_CMSG_CLOEXEC", { skip: !pythonAvailable, timeout: 20_000 }, () => { probe("cloexec"); });
   it("checks the actual connecting peer credentials before an authorized synthetic read", { skip: !pythonAvailable, timeout: 20_000 }, () => { probe("peer-accept"); });
   it("rejects a peer that does not match the expected process identity", { skip: !pythonAvailable, timeout: 20_000 }, () => { probe("peer-reject"); });
+  it("keeps parent and nested-child assertion oracles active despite ambient PYTHONOPTIMIZE=2", {
+    skip: !pythonAvailable, timeout: 20_000,
+  }, () => { probe("truncation", true); probe("peer-reject", true); });
 });

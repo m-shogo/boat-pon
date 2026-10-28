@@ -10,9 +10,12 @@ import { describe, it } from "node:test";
 // A claimed channel string is forgeable; only the receiver-owned socket route
 // is the synthetic admission oracle. No real authentication is implemented.
 // String.raw preserves embedded Python source escapes (prior LEARN guardrail).
+// Python -I ignores ambient PYTHONOPTIMIZE, preserving assert-based synthetic test oracles.
 const pythonProbe = String.raw`
 import array, errno, os, socket, stat, struct, sys
 root, mode = sys.argv[1:]
+if sys.flags.optimize != 0:
+    raise RuntimeError("optimized Python disables synthetic assertion oracles")
 flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
 reference_fd = os.open(os.path.join(root, 'authorized'), flags)
 sender_fd = os.open(os.path.join(root, 'authorized'), flags)
@@ -132,7 +135,7 @@ function probe(mode: "wrong-route-unbound" | "wrong-route-deny" | "correct-route
   try {
     mkdirSync(join(root, "authorized"));
     writeFileSync(join(root, "authorized", "synthetic.json"), "authorized-synthetic-only", { flag: "wx" });
-    const result = spawnSync("python3", ["-c", pythonProbe, root, mode], {
+    const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, mode], {
       encoding: "utf8", timeout: 10_000,
     });
     assert.equal(result.error, undefined);
