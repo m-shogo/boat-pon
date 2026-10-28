@@ -507,3 +507,57 @@ test("shadow mapper pins source-row descriptors before validation, audit digest 
     assert.equal(pinned.ledgerDigest, baseline.ledgerDigest);
   }
 });
+
+test("shadow mapper pins mapping context identity across row and reconciliation digests", () => {
+  const baseline = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  assert.equal(baseline.status, "mapped");
+  if (baseline.status !== "mapped") return;
+
+  let getterReads = 0;
+  const accessorContext = { ...context };
+  Object.defineProperty(accessorContext, "decisionSystem", {
+    configurable: true, enumerable: true,
+    get() { getterReads++; return getterReads === 1 ? "shadow-A" : "shadow-B"; },
+  });
+  const invalid = mapDecisionHistoryRowToRuntimeLedger(row(), accessorContext);
+  assert.equal(invalid.status, "rejected");
+  if (invalid.status === "rejected") {
+    assert.deepEqual(invalid.reasons, ["mapping_context_fields_not_own_data"]);
+  }
+  const denied = reconcileDecisionHistoryRowsToRuntimeLedger([row(), row({ id: 1002 })], accessorContext);
+  assert.equal(denied.status, "CONDITIONAL");
+  assert.equal(denied.mappedUnique, 0);
+  assert.equal(denied.rejectedCount, 1);
+  assert.equal(getterReads, 0);
+
+  const optionalAccessor = { ...context };
+  Object.defineProperty(optionalAccessor, "lineNotificationEligible", {
+    configurable: true, enumerable: true,
+    get() { throw new Error("notification accessor must not execute"); },
+  });
+  assert.equal(mapDecisionHistoryRowToRuntimeLedger(row(), optionalAccessor).status, "rejected");
+
+  let directReads = 0;
+  const proxyContext = new Proxy({ ...context }, {
+    get(target, property, receiver) {
+      directReads++;
+      if (property === "decisionSystem") return "shadow-tampered";
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const pinned = mapDecisionHistoryRowToRuntimeLedger(row(), proxyContext);
+  assert.equal(pinned.status, "mapped");
+  assert.equal(directReads, 0);
+  if (pinned.status === "mapped") {
+    assert.equal(pinned.record.recordId, baseline.record.recordId);
+    assert.equal(pinned.record.decisionSystem, baseline.record.decisionSystem);
+    assert.equal(pinned.ledgerDigest, baseline.ledgerDigest);
+  }
+  const sourceRows = [row({ id: 1001 }), row({ id: 1002 })];
+  const expected = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+  const observed = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, proxyContext);
+  assert.equal(observed.status, "PASS");
+  assert.equal(observed.mappedUnique, 2);
+  assert.equal(observed.recordsDigest, expected.recordsDigest);
+  assert.equal(directReads, 0);
+});
