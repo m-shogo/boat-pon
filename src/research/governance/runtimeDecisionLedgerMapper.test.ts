@@ -608,12 +608,12 @@ test("shadow mapper denies nested source-row and mapping-context Proxies before 
 
   let descriptorReads = 0;
   let getterReads = 0;
-  const traps: ProxyHandler<object> = {
-    getOwnPropertyDescriptor(target, key) {
+  const traps = {
+    getOwnPropertyDescriptor(target: object, key: string | symbol) {
       descriptorReads += 1;
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
-    get(target, key, receiver) {
+    get(target: object, key: string | symbol, receiver: unknown) {
       getterReads += 1;
       return Reflect.get(target, key, receiver);
     },
