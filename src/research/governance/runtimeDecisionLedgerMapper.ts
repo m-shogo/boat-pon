@@ -435,7 +435,10 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
   rows: DecisionHistoryShadowRow[],
   context: RuntimeDecisionLedgerMappingContext,
 ): RuntimeDecisionLedgerReconciliation {
-  const records = new Map<string, { record: RuntimeDecisionLedgerRecord; digest: string }>();
+  // Own-data lookup and accepted membership avoid ambient Map.prototype
+  // get/set/values hooks silently erasing rows or conflicts.
+  const records: Record<string, { record: RuntimeDecisionLedgerRecord; digest: string }> = Object.create(null);
+  const accepted: RuntimeDecisionLedgerRecord[] = [];
   const unresolved: RuntimeDecisionLedgerReconciliation["unresolved"] = [];
   const rejected: RuntimeDecisionLedgerReconciliation["rejected"] = [];
   const conflicts: RuntimeDecisionLedgerConflict[] = [];
@@ -460,9 +463,14 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
       continue;
     }
 
-    const existing = records.get(result.record.recordId);
-    if (!existing) {
-      records.set(result.record.recordId, { record: result.record, digest: result.ledgerDigest });
+    const existing = Object.getOwnPropertyDescriptor(records, result.record.recordId)?.value as
+      | { record: RuntimeDecisionLedgerRecord; digest: string } | undefined;
+    if (existing === undefined) {
+      Object.defineProperty(records, result.record.recordId, {
+        value: { record: result.record, digest: result.ledgerDigest },
+        enumerable: true, writable: false, configurable: false,
+      });
+      appendOwn(accepted, result.record);
       continue;
     }
     if (existing.digest === result.ledgerDigest) {
@@ -480,16 +488,17 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
   // Keep mapped membership, stable identity ordering and digest input independent
   // of mutable Array.map/sort and inherited numeric setters.
   const ordered: RuntimeDecisionLedgerRecord[] = [];
-  for (const entry of records.values()) {
+  for (let acceptedIndex = 0; acceptedIndex < accepted.length; acceptedIndex++) {
+    const entry = accepted[acceptedIndex]!;
     let index = ordered.length;
-    while (index > 0 && ordered[index - 1]!.recordId.localeCompare(entry.record.recordId) > 0) {
+    while (index > 0 && ordered[index - 1]!.recordId.localeCompare(entry.recordId) > 0) {
       Object.defineProperty(ordered, String(index), {
         value: ordered[index - 1]!, enumerable: true, writable: true, configurable: true,
       });
       index--;
     }
     Object.defineProperty(ordered, String(index), {
-      value: entry.record, enumerable: true, writable: true, configurable: true,
+      value: entry, enumerable: true, writable: true, configurable: true,
     });
   }
   const recordDigests: string[] = [];
