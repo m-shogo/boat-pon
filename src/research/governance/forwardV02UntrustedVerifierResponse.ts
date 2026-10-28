@@ -106,6 +106,7 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
     const r: unknown = revisions[i];
     if (!exactOwnFields(r, REQUEST_REVISION_FIELDS) ||
         !nonemptyStringFields(r, ["revisionId", "contentDigest", "claimedObservedAt", "claimedSourceFinality"]) ||
+        typeof r.revisionId !== "string" ||
         typeof r.contentDigest !== "string" || !DIGEST.test(r.contentDigest) ||
         (r.predecessorDigest !== null &&
           (typeof r.predecessorDigest !== "string" || !DIGEST.test(r.predecessorDigest))) ||
