@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-outcome-reconciliation-ambient-index-setter-exact-alias-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.reconciliation-ambient-index-setter-exact-alias",
+  "subsystem": "research-governance-outcome-learning-ledger",
+  "operation": "classify-outcome-reconciliation-runtime-flags",
+  "symptom": "The exported research-only reconciliation classifier copied validated boolean flags into a fresh array using numeric assignment. A synthetic inherited Array.prototype index-zero accessor (getter true, setter discarding false) changed a caller's decisionExact=false into EXACT, despite all five own-data type checks passing. Reproduced with Node 22.16.0 and synthetic flags; no private evidence or production behavior was used.",
+  "rootCauseClass": "INHERITED_NUMERIC_ACCESSOR_LAUNDERS_FALSE_RECONCILIATION_FLAG_TO_EXACT",
+  "attemptSignature": "pr2286-v413-five-boolean-flags-ambient-array-accessor-denial-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "outcomeLearningLedger.ts@d314c15f/reconciliation-flags-empty-array-index-assignment"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedgerReconciliationAdmission.test.ts",
+    "commit/907432981c3ff40f9cedaa2a8b10d63acebc0add",
+    "commit/1fa64e97c60fb2ac65ef707e9160c3713b72e83b",
+    "research/registries/learnings/LEARN-outcome-ledger-reconciliation-nonboolean-exact-20261020.json",
+    "research/registries/learnings/LEARN-outcome-ledger-inherited-index-setter-admission-digest-20261027.json"
+  ],
+  "lesson": "Runtime descriptor validation is not sufficient if a newly allocated boolean-flag array is populated through inherited-setter-sensitive index assignment. An ambient getter can turn a discarded false value into truthy EXACT even without modifying the caller's validated object.",
+  "guardrail": "Write each validated reconciliation boolean into a fresh array with Object.defineProperty as an own enumerable data property. Regression-test all five false-flag priority cases under reversible inherited numeric getter/setter pairs, verify no setter is invoked, preserve all-true EXACT, and never interpret reconciliation EXACT as independent settlement authentication or scoring/production permission.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T12:04:10.000Z",
+  "productionConnection": false,
+  "_digest": "02a9c61c306ffe1a60f298914b05eaddbe4057d9458924f32a97cfbf010b7076",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T12:04:10.000Z"
+}
