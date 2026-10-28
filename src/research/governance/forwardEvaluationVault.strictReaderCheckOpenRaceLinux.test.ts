@@ -71,7 +71,7 @@ async function runInterleaving(swap: boolean): Promise<void> {
   stage(join(anchorVault, "published.json"), original);
   stage(join(decoyVault, "published.json"), decoy);
 
-  const child = spawn("python3", ["-u", "-c", pythonReader, root, swap ? "swap" : "control", original, decoy], {
+  const child = spawn("python3", ["-I", "-u", "-c", pythonReader, root, swap ? "swap" : "control", original, decoy], {
     stdio: ["pipe", "pipe", "pipe"],
   });
   let stdout = "";

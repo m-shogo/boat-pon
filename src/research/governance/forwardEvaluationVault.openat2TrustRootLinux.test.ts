@@ -101,7 +101,7 @@ describe("Forward Vault openat2 trust-root and mount boundaries (disposable Linu
       stage(join(root, "anchor", "vault", "published.json"), original);
       stage(join(root, "decoy", "vault", "published.json"), decoy);
       symlinkSync(join(root, "decoy"), join(root, "alias"), "dir");
-      const result = spawnSync("python3", ["-c", pythonProbe, "namespace", root, original, decoy], {
+      const result = spawnSync("python3", ["-I", "-c", pythonProbe, "namespace", root, original, decoy], {
         encoding: "utf8", timeout: 8_000,
       });
       assert.equal(result.error, undefined);
@@ -123,7 +123,7 @@ describe("Forward Vault openat2 trust-root and mount boundaries (disposable Linu
   it("rejects an existing /proc mount crossing with RESOLVE_NO_XDEV without modifying mounts", {
     skip: !pythonAvailable, timeout: 20_000,
   }, (t) => {
-    const result = spawnSync("python3", ["-c", pythonProbe, "mount"], {
+    const result = spawnSync("python3", ["-I", "-c", pythonProbe, "mount"], {
       encoding: "utf8", timeout: 8_000,
     });
     assert.equal(result.error, undefined);

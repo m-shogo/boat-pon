@@ -61,7 +61,7 @@ describe("Forward Vault dirfd ancestor-symlink admission (disposable Linux probe
       writeFileSync(join(decoy, "staged.json"), content, { flag: "wx" });
       symlinkSync(join(root, "decoy"), join(root, "alias"), "dir");
 
-      const result = spawnSync("python3", ["-c", pythonAncestorProbe, root], {
+      const result = spawnSync("python3", ["-I", "-c", pythonAncestorProbe, root], {
         encoding: "utf8",
         timeout: 8_000,
       });

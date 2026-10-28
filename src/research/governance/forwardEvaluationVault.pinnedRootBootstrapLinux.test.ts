@@ -72,7 +72,7 @@ function probe(mode: "guarded" | "unguarded", t: { skip: (reason: string) => voi
     mkdirSync(join(root, "decoy", "vault"), { recursive: true });
     stage(join(root, "anchor", "vault", "staged.json"), original);
     stage(join(root, "decoy", "vault", "staged.json"), decoy);
-    const result = spawnSync("python3", ["-c", pythonProbe, root, mode], {
+    const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, mode], {
       encoding: "utf8", timeout: 8_000,
     });
     assert.equal(result.error, undefined);

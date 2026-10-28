@@ -77,7 +77,7 @@ describe("Forward Vault real-ancestor replacement (disposable Linux negative pro
       stage(join(originalVault, "staged.json"), anchoredJson);
       stage(join(decoyVault, "published.json"), decoyJson);
 
-      const result = spawnSync("python3", ["-c", pythonProbe, root, anchoredJson], {
+      const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, anchoredJson], {
         encoding: "utf8",
         timeout: 8_000,
       });

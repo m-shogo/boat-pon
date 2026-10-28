@@ -71,7 +71,7 @@ function probe(mode: "stale" | "retained", t: { skip: (reason: string) => void }
     mkdirSync(join(root, "decoy"));
     stage(join(root, "original", "staged.json"), original);
     stage(join(root, "decoy", "staged.json"), decoy);
-    const result = spawnSync("python3", ["-c", pythonProbe, root, mode], {
+    const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, mode], {
       encoding: "utf8", timeout: 8_000,
     });
     assert.equal(result.error, undefined);

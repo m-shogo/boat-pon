@@ -68,7 +68,7 @@ async function probe(t: { skip: (reason: string) => void }, swapAfterPreflight: 
   stage(join(anchor, "staged.json"), content);
   stage(join(outside, "staged.json"), decoy);
 
-  const child = spawn("python3", ["-u", "-c", pythonPreflight, anchor], {
+  const child = spawn("python3", ["-I", "-u", "-c", pythonPreflight, anchor], {
     stdio: ["pipe", "pipe", "pipe"],
   });
   let stdout = "";

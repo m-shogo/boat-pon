@@ -40,7 +40,7 @@ function stage(root: string, name: string, content: string): string {
 }
 
 function launch(source: string, destination: string) {
-  const child = spawn("python3", ["-u", "-c", pythonRace, source, destination], {
+  const child = spawn("python3", ["-I", "-u", "-c", pythonRace, source, destination], {
     stdio: ["pipe", "pipe", "pipe"],
   });
   let output = "";

@@ -72,7 +72,7 @@ describe("Forward Vault bounded real-kernel openat2 concurrent rename (disposabl
       const fd = openSync(path, "wx", 0o600);
       try { writeFileSync(fd, content, "utf8"); fsyncSync(fd); }
       finally { closeSync(fd); }
-      const result = spawnSync("python3", ["-c", pythonProbe, root, content], {
+      const result = spawnSync("python3", ["-I", "-c", pythonProbe, root, content], {
         encoding: "utf8", timeout: 15_000,
       });
       assert.equal(result.error, undefined);

@@ -80,7 +80,7 @@ describe("Forward Vault same-dirfd reader/writer namespace (disposable Linux pro
       stage(join(anchor, "staged.json"), anchoredJson);
       stage(join(decoy, "published.json"), decoyJson);
 
-      const result = spawnSync("python3", ["-c", pythonProbe, root], {
+      const result = spawnSync("python3", ["-I", "-c", pythonProbe, root], {
         encoding: "utf8",
         timeout: 8_000,
       });

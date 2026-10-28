@@ -47,7 +47,7 @@ function stage(root: string, name: string, content: string): string {
 }
 
 function renameNoReplace(source: string, destination: string) {
-  return spawnSync("python3", ["-c", pythonRename, source, destination], {
+  return spawnSync("python3", ["-I", "-c", pythonRename, source, destination], {
     encoding: "utf8", timeout: 8_000,
   });
 }
@@ -122,7 +122,7 @@ describe("Forward Vault Linux renameat2 no-replace candidate (disposable probe)"
     const content = '{"recordId":"synthetic-only","version":3}\n';
     const source = stage(root, "staged.json", content);
     const destination = join(root, "published.json");
-    const child = spawn("python3", ["-u", "-c", pythonRename, source, destination], {
+    const child = spawn("python3", ["-I", "-u", "-c", pythonRename, source, destination], {
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, PROBE_HOLD_AFTER_RENAME: "1" },
     });

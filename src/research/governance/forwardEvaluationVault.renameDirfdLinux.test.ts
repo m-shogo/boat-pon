@@ -63,7 +63,7 @@ describe("Forward Vault Linux renameat2 dirfd namespace anchoring (disposable pr
     const decoy = '{"recordId":"synthetic-only","writer":"decoy"}\n';
     stage(anchor, "staged.json", content);
     stage(outside, "staged.json", decoy);
-    const child = spawn("python3", ["-u", "-c", pythonDirfd, anchor], {
+    const child = spawn("python3", ["-I", "-u", "-c", pythonDirfd, anchor], {
       stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
