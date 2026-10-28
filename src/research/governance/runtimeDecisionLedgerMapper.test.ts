@@ -600,3 +600,59 @@ test("shadow reconciliation rejects Proxy source-row containers before length or
   assert.equal(revokedResult.status, "CONDITIONAL");
   assert.deepEqual(revokedResult.rejected[0]?.reasons, ["source_rows_proxy_not_admitted"]);
 });
+
+test("shadow mapper denies nested source-row and mapping-context Proxies before descriptor hooks", () => {
+  const baseline = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  assert.equal(baseline.status, "mapped");
+  if (baseline.status !== "mapped") return;
+
+  let descriptorReads = 0;
+  let getterReads = 0;
+  const traps: ProxyHandler<object> = {
+    getOwnPropertyDescriptor(target, key) {
+      descriptorReads += 1;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+    get(target, key, receiver) {
+      getterReads += 1;
+      return Reflect.get(target, key, receiver);
+    },
+  };
+  const proxyRow = new Proxy(row(), traps);
+  const proxyContext = new Proxy({ ...context }, traps);
+  const rejectedRow = mapDecisionHistoryRowToRuntimeLedger(proxyRow, context);
+  assert.equal(rejectedRow.status, "rejected");
+  if (rejectedRow.status === "rejected") {
+    assert.deepEqual(rejectedRow.reasons, ["source_row_fields_not_own_data"]);
+  }
+  const rejectedContext = mapDecisionHistoryRowToRuntimeLedger(row(), proxyContext);
+  assert.equal(rejectedContext.status, "rejected");
+  if (rejectedContext.status === "rejected") {
+    assert.deepEqual(rejectedContext.reasons, ["mapping_context_fields_not_own_data"]);
+  }
+
+  const reconciledRow = reconcileDecisionHistoryRowsToRuntimeLedger([proxyRow], context);
+  assert.equal(reconciledRow.status, "CONDITIONAL");
+  assert.equal(reconciledRow.sourceRows, 1);
+  assert.equal(reconciledRow.mappedUnique, 0);
+  assert.equal(reconciledRow.rejectedCount, 1);
+  const reconciledContext = reconcileDecisionHistoryRowsToRuntimeLedger([row()], proxyContext);
+  assert.equal(reconciledContext.status, "CONDITIONAL");
+  assert.equal(reconciledContext.mappedUnique, 0);
+  assert.equal(reconciledContext.rejectedCount, 1);
+  assert.equal(descriptorReads, 0, "untrusted descriptor traps must never execute");
+  assert.equal(getterReads, 0, "untrusted getter traps must never execute");
+
+  const revokedRow = Proxy.revocable(row(), {});
+  revokedRow.revoke();
+  const revokedContext = Proxy.revocable({ ...context }, {});
+  revokedContext.revoke();
+  assert.equal(mapDecisionHistoryRowToRuntimeLedger(revokedRow.proxy, context).status, "rejected");
+  assert.equal(mapDecisionHistoryRowToRuntimeLedger(row(), revokedContext.proxy).status, "rejected");
+  assert.equal(reconcileDecisionHistoryRowsToRuntimeLedger([revokedRow.proxy], context).status, "CONDITIONAL");
+  assert.equal(reconcileDecisionHistoryRowsToRuntimeLedger([row()], revokedContext.proxy).status, "CONDITIONAL");
+
+  const after = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  assert.equal(after.status, "mapped");
+  if (after.status === "mapped") assert.equal(after.ledgerDigest, baseline.ledgerDigest);
+});
