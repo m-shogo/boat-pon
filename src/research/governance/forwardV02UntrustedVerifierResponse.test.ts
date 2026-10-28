@@ -411,6 +411,45 @@ test("standalone request transcript rejects malformed nested SHA digests before 
   assert.equal(built.independentAuthorityVerified, false);
 });
 
+test("standalone request transcript rejects whitespace-only scalar claims before correlation", () => {
+  const f = fixture();
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  const validDigest = digestForwardV02UntrustedRequest(built.request);
+  const mutations = [
+    ["freeze", "cohortId"],
+    ["freeze", "claimedFirstDecisionAt"],
+    ["freeze", "issuerId"],
+    ["freeze", "receiptId"],
+    ["freeze", "claimedReceiptAt"],
+    ["freeze", "claimedAnchorId"],
+    ["settlement", "sourceId"],
+    ["settlement", "claimedAnchorId"],
+    ["settlement", "terminalRevisionId"],
+    ["revision0", "revisionId"],
+    ["revision0", "claimedObservedAt"],
+    ["revision0", "claimedSourceFinality"],
+  ] as const;
+  for (const [target, field] of mutations) {
+    const copy = structuredClone(built.request) as unknown as Record<string, unknown>;
+    const settlement = copy.settlement as Record<string, unknown>;
+    const node = target === "freeze"
+      ? copy.freeze as Record<string, unknown>
+      : target === "settlement"
+        ? settlement
+        : (settlement.revisions as Record<string, unknown>[])[0]!;
+    node[field] = " \t ";
+    assert.throws(
+      () => digestForwardV02UntrustedRequest(copy as unknown as NonNullable<typeof built.request>),
+      /INVALID_UNTRUSTED_REQUEST/,
+      `${target}.${field} must be rejected rather than hashed`,
+    );
+  }
+  assert.equal(digestForwardV02UntrustedRequest(built.request), validDigest);
+  assert.equal(built.scoringAuthorized, false);
+  assert.equal(built.independentAuthorityVerified, false);
+});
+
 test("verifier response cannot hide an extra revision digest by changing array length between checks", () => {
   const f = fixture();
   let lengthReads = 0;
