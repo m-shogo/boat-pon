@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { verifyJsonReadback } from "./executorSdk.js";
+import { isolatedForwardVaultNodeChildEnv } from "./forwardEvaluationVault.nodeChildEnv.js";
 
 // Disposable synthetic process fixture. This models the normal post-link,
 // pre-unlink publication window; it is NOT the full SDK writer, an observed
@@ -38,7 +39,8 @@ describe("Forward Vault readback during normal publication (disposable fixture)"
     }
 
     const child = spawn(process.execPath, ["-e", childScript, temp, destination], {
-      stdio: ["pipe", "pipe", "pipe"],
+      env: isolatedForwardVaultNodeChildEnv(),
+    stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";

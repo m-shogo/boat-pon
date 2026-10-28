@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { verifyJsonReadback } from "./executorSdk.js";
+import { isolatedForwardVaultNodeChildEnv } from "./forwardEvaluationVault.nodeChildEnv.js";
 
 // Disposable synthetic harness of the SDK's linkSync no-replace publication
 // boundary. This is NOT an SDK writer invocation, native renameat2 probe,
@@ -22,6 +23,7 @@ const childScript = [
 
 function launchContender(temp: string, destination: string) {
   const child = spawn(process.execPath, ["-e", childScript, temp, destination], {
+    env: isolatedForwardVaultNodeChildEnv(),
     stdio: ["pipe", "pipe", "pipe"],
   });
   let stdout = "";

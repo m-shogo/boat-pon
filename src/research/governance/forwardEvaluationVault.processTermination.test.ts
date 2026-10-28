@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { atomicWriteJson, verifyJsonReadback } from "./executorSdk.js";
+import { isolatedForwardVaultNodeChildEnv } from "./forwardEvaluationVault.nodeChildEnv.js";
 
 describe("Forward Vault post-link process-termination boundary (disposable fixture)", () => {
   it("preserves published bytes but refuses orphan-hardlink readback after SIGKILL", { skip: process.platform === "win32", timeout: 20_000 }, async () => {
@@ -26,7 +27,8 @@ describe("Forward Vault post-link process-termination boundary (disposable fixtu
       'process.stdout.write("LINKED\\n", () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0));',
     ].join("\n");
     const child = spawn(process.execPath, ["-e", childScript, temp, destination, content], {
-      stdio: ["ignore", "pipe", "pipe"],
+      env: isolatedForwardVaultNodeChildEnv(),
+    stdio: ["ignore", "pipe", "pipe"],
     });
     let closed = false;
     child.once("close", () => { closed = true; });
