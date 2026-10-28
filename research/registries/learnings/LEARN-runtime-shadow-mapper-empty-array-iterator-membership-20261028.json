@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-empty-array-iterator-membership-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.shadow-mapper-empty-array-iterator-membership-and-denial-erasure",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "validate-source-fields-and-reconcile-shadow-source-rows",
+  "symptom": "A populated source-row array can be silently skipped by for-of when Array.prototype[Symbol.iterator] is replaced with an empty iterator, yielding PASS with sourceRows > 0 and mappedUnique 0. The same ambient iterator skips tuple-based source field checks and drops spread-based warning or unresolved reason details. Node 22.16.0 synthetic array-iteration reproduction confirmed zero visits for two own-index rows; no private evidence or production execution was involved.",
+  "rootCauseClass": "AMBIENT_ARRAY_ITERATOR_ERASES_SHADOW_MEMBERSHIP_AND_SOURCE_DENIALS",
+  "attemptSignature": "pr2286-v420-empty-array-iterator-source-membership-denials-and-sparse-row-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@b04e1703/for-of-source-array-field-tuples-and-spread-diagnostics"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/90d40f274c6683a92229b4bce9b1be6a04b1eb8e",
+    "commit/087e1a3813614371c1ba3242de873a1338e453c3",
+    "research/registries/learnings/LEARN-runtime-ledger-ambient-array-admission-digest-drift-20261027.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-array-helper-membership-digest-20261028.json"
+  ],
+  "lesson": "Hardening downstream canonical record validation does not protect upstream source reconciliation if source rows or required fields are traversed using ambient Array.prototype iterators. A PASS with zero mapped rows despite nonzero sourceRows is not an acceptable research reconciliation outcome.",
+  "guardrail": "Use indexed own-data descriptors for source rows and fail closed on sparse/accessor slots. Validate source scalar fields without tuple for-of, avoid RegExp match destructuring and spread/Set iteration for diagnostics, and preserve baseline digest and reasons under a reversible empty array iterator. Do not infer source authenticity, scoring authority or production readiness.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T14:58:14.995Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T14:58:14.995Z",
+  "_digest": "910137f4617c3cdbce5a028d4517e0a6e442da3f4056962c7e53290e597b5b5d"
+}
