@@ -161,6 +161,20 @@ export function digestForwardV02UntrustedRequest(request: ForwardV02IndependentP
   const hash = createHash("sha256");
   hash.update("boat-pon.forward-v02.untrusted-request-transcript.v1\\0");
   const add = (value: string): void => {
+    // UTF-8 silently replaces unpaired UTF-16 surrogates with U+FFFD.
+    // Reject ill-formed caller strings so distinct metadata cannot share a
+    // correlation transcript without a cryptographic SHA-256 collision.
+    for (let i = 0; i < value.length; i++) {
+      const unit = value.charCodeAt(i);
+      if (unit >= 0xd800 && unit <= 0xdbff) {
+        const low = value.charCodeAt(++i);
+        if (!(low >= 0xdc00 && low <= 0xdfff)) {
+          throw new TypeError("INVALID_UNTRUSTED_REQUEST");
+        }
+      } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+        throw new TypeError("INVALID_UNTRUSTED_REQUEST");
+      }
+    }
     hash.update(String(Buffer.byteLength(value, "utf8")));
     hash.update(":");
     hash.update(value, "utf8");
