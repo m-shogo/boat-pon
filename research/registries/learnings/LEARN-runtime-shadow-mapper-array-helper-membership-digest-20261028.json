@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-array-helper-membership-digest-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.mapper-array-helper-reason-membership-digest-drift",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "parse-shadow-decision-reasons-and-order-reconciled-records",
+  "symptom": "The research-only mapper relied on mutable Array.prototype.some/map to validate and retain parsed decision reasons, and map/sort to assemble reconciled records and their digest. Synthetic no-op helpers can erase valid reasons, miss malformed reason entries, or report PASS with mappedUnique zero and an empty records digest despite valid source rows. Node 22.16.0 source-equivalent reproduction confirmed a two-entry Map collapses to zero ordered records. No private data or production systems were involved.",
+  "rootCauseClass": "MUTABLE_ARRAY_HELPERS_ERASE_MAPPER_REASONS_AND_RECONCILIATION_MEMBERSHIP",
+  "attemptSignature": "pr2286-v417-mapper-noop-some-map-sort-reason-membership-digest-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@48b2dcbf/parsed-reasons-some-map-and-reconcile-map-sort"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/d4750fe4748e8ae9b6630a9d98d5a76e8e936372",
+    "commit/0cfa6d14924c5c7d73be2201af0c51c160abac1e",
+    "research/registries/learnings/LEARN-runtime-ledger-ambient-array-admission-digest-drift-20261027.json",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-helpers-20261024.json"
+  ],
+  "lesson": "Even when record validation and hashing use own-descriptor canonicalization, an upstream reconciliation mapper can silently discard accepted records or reasons through mutable ambient array helpers. A PASS status without preserved membership and stable ordered digest is not a trustworthy research audit.",
+  "guardrail": "Parse JSON reason arrays with indexed own-descriptor checks and appendOwn; assemble reconciled records in deterministic recordId order using own-property writes, then compute digests with indexed iteration. Regression-test no-op Array.prototype.some/map/sort, reversed row order, malformed reasons and valid digest parity. This remains research-only and does not authenticate external source evidence or authorize promotion.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T14:05:44.911Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T14:05:44.911Z",
+  "_digest": "9eb609c50f92709d7c4d6af720e3ed0680761b47587bc3e31f24b145adbf938a"
+}
