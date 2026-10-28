@@ -167,3 +167,52 @@ test("Outcome Learning Ledger validation verdict and errors are immutable at run
     assert.deepEqual(result, { valid, errors });
   }
 });
+
+test("Outcome Learning Ledger rejects Proxy getter/descriptor disagreement without executing hooks", () => {
+  const good = validSettled();
+  const expectedDigest = outcomeLearningLedgerDigest(good);
+  const underlying = { ...good, payoutYen: -1 };
+  let reads = 0;
+  const disguised = new Proxy(underlying, {
+    get(target, key, receiver) {
+      if (key === "payoutYen") { reads += 1; return good.payoutYen; }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  assert.equal(validateOutcomeLearningLedgerRecord(disguised).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, disguised), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(disguised), TypeError);
+  assert.equal(reads, 0);
+
+  const revoked = Proxy.revocable({ ...good }, {});
+  revoked.revoke();
+  assert.equal(validateOutcomeLearningLedgerRecord(revoked.proxy).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, revoked.proxy), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(revoked.proxy), TypeError);
+  assert.equal(outcomeLearningLedgerDigest(good), expectedDigest);
+});
+
+test("Outcome Learning Ledger rejects nested Proxy evidence arrays without consulting traps", () => {
+  const good = validSettled();
+  const expectedDigest = outcomeLearningLedgerDigest(good);
+  let reads = 0;
+  const evidence = new Proxy([...good.sourceEvidenceDigests], {
+    get(target, key, receiver) {
+      reads += 1;
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const candidate = { ...good, sourceEvidenceDigests: evidence };
+  assert.equal(validateOutcomeLearningLedgerRecord(candidate).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, candidate), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(candidate), TypeError);
+  assert.equal(reads, 0);
+
+  const revoked = Proxy.revocable([...good.sourceEvidenceDigests], {});
+  revoked.revoke();
+  const invalid = { ...good, sourceEvidenceDigests: revoked.proxy };
+  assert.equal(validateOutcomeLearningLedgerRecord(invalid).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, invalid), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(invalid), TypeError);
+  assert.equal(outcomeLearningLedgerDigest(good), expectedDigest);
+});
