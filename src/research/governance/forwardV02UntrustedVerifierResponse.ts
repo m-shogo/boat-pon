@@ -63,6 +63,14 @@ function nonemptyStringFields(input: Record<string, unknown>, keys: readonly str
   return true;
 }
 
+function digestStringFields(input: Record<string, unknown>, keys: readonly string[]): boolean {
+  for (let i = 0; i < keys.length; i++) {
+    const value = input[keys[i]!];
+    if (typeof value !== "string" || !DIGEST.test(value)) return false;
+  }
+  return true;
+}
+
 /**
  * The digest helper is exported, so its TypeScript type alone cannot be a
  * runtime admission boundary. Pin the complete request graph before hashing:
@@ -79,8 +87,10 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
       !DIGEST.test(pinned.policySnapshotDigest) ||
       !exactOwnFields(pinned.freeze, REQUEST_FREEZE_FIELDS) ||
       !nonemptyStringFields(pinned.freeze, REQUEST_FREEZE_FIELDS) ||
+      !digestStringFields(pinned.freeze, ["protocolDigest", "membershipDigest", "witnessProofDigest"]) ||
       !exactOwnFields(pinned.settlement, REQUEST_SETTLEMENT_FIELDS) ||
-      !nonemptyStringFields(pinned.settlement, REQUEST_SETTLEMENT_SCALARS)) {
+      !nonemptyStringFields(pinned.settlement, REQUEST_SETTLEMENT_SCALARS) ||
+      !digestStringFields(pinned.settlement, ["settlementProofDigest"])) {
     throw new TypeError("INVALID_UNTRUSTED_REQUEST");
   }
   const revisions = pinned.settlement.revisions;
@@ -91,7 +101,9 @@ function pinnedRequestForDigest(input: unknown): ForwardV02IndependentProofReque
     const r: unknown = revisions[i];
     if (!exactOwnFields(r, REQUEST_REVISION_FIELDS) ||
         !nonemptyStringFields(r, ["revisionId", "contentDigest", "claimedObservedAt", "claimedSourceFinality"]) ||
-        (r.predecessorDigest !== null && typeof r.predecessorDigest !== "string") ||
+        typeof r.contentDigest !== "string" || !DIGEST.test(r.contentDigest) ||
+        (r.predecessorDigest !== null &&
+          (typeof r.predecessorDigest !== "string" || !DIGEST.test(r.predecessorDigest))) ||
         !Number.isSafeInteger(r.sequence) || (r.sequence as number) < 1) {
       throw new TypeError("INVALID_UNTRUSTED_REQUEST");
     }
