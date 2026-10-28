@@ -182,3 +182,57 @@ test("shadow mapper preserves source/PIT denials and conflict status under no-op
     assert.equal(valid.ledgerDigest, baseline.ledgerDigest);
   }
 });
+
+test("shadow mapper preserves reasons, membership and sorted digest under no-op array helpers", () => {
+  const sourceRows = [
+    row({ id: 1002, decision_reasons: null }),
+    row({ id: 1001, decision_reasons: null }),
+  ];
+  const baseline = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+  const baselineValid = mapDecisionHistoryRowToRuntimeLedger(row({ decision_reasons: '["synthetic reason"]' }), context);
+  const baselineMalformed = mapDecisionHistoryRowToRuntimeLedger(row({ decision_reasons: "[5]" }), context);
+  assert.equal(baseline.status, "PASS");
+  assert.equal(baseline.mappedUnique, 2);
+  assert.equal(baselineValid.status, "mapped");
+  assert.equal(baselineMalformed.status, "mapped");
+
+  const originalSome = Object.getOwnPropertyDescriptor(Array.prototype, "some")!;
+  const originalMap = Object.getOwnPropertyDescriptor(Array.prototype, "map")!;
+  const originalSort = Object.getOwnPropertyDescriptor(Array.prototype, "sort")!;
+  let observed: ReturnType<typeof reconcileDecisionHistoryRowsToRuntimeLedger> | undefined;
+  let valid: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  let malformed: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "some", {
+      configurable: true, writable: true, value() { return false; },
+    });
+    Object.defineProperty(Array.prototype, "map", {
+      configurable: true, writable: true, value() { return []; },
+    });
+    Object.defineProperty(Array.prototype, "sort", {
+      configurable: true, writable: true, value() { return this; },
+    });
+    observed = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+    valid = mapDecisionHistoryRowToRuntimeLedger(row({ decision_reasons: '["synthetic reason"]' }), context);
+    malformed = mapDecisionHistoryRowToRuntimeLedger(row({ decision_reasons: "[5]" }), context);
+  } finally {
+    Object.defineProperty(Array.prototype, "sort", originalSort);
+    Object.defineProperty(Array.prototype, "map", originalMap);
+    Object.defineProperty(Array.prototype, "some", originalSome);
+  }
+
+  assert.equal(observed?.status, "PASS");
+  assert.equal(observed?.mappedUnique, 2);
+  assert.equal(observed?.recordsDigest, baseline.recordsDigest);
+  assert.deepEqual(observed?.records.map((record) => record.recordId), baseline.records.map((record) => record.recordId));
+  assert.equal(valid?.status, "mapped");
+  assert.equal(malformed?.status, "mapped");
+  if (valid?.status === "mapped" && baselineValid.status === "mapped") {
+    assert.deepEqual(valid.record.reasons, baselineValid.record.reasons);
+    assert.equal(valid.ledgerDigest, baselineValid.ledgerDigest);
+  }
+  if (malformed?.status === "mapped" && baselineMalformed.status === "mapped") {
+    assert.deepEqual(malformed.record.warnings, baselineMalformed.record.warnings);
+    assert.ok(malformed.record.warnings.includes("decision_reasons_not_string_array"));
+  }
+});
