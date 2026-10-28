@@ -450,6 +450,48 @@ test("standalone request transcript rejects whitespace-only scalar claims before
   assert.equal(built.independentAuthorityVerified, false);
 });
 
+test("standalone request transcript rejects incoherent correction-chain claims before correlation", () => {
+  const f = fixture();
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  f.envelope.settlement.revisions.push({
+    revisionId: "synthetic-revision-2", contentDigest: h("f"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  });
+  f.refs.settlementRevisionId = "synthetic-revision-2";
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  const validDigest = digestForwardV02UntrustedRequest(built.request);
+  const mutations = [
+    ["revision0", "sequence", 2],
+    ["revision1", "sequence", 3],
+    ["revision0", "predecessorDigest", h("a")],
+    ["revision1", "predecessorDigest", null],
+    ["revision1", "revisionId", "synthetic-revision"],
+    ["revision1", "contentDigest", h("d")],
+    ["settlement", "terminalRevisionId", "synthetic-revision"],
+    ["revision0", "claimedSourceFinality", "INVENTED"],
+    ["revision1", "claimedSourceFinality", "PROVISIONAL"],
+  ] as const;
+  for (const [location, field, value] of mutations) {
+    const copy = structuredClone(built.request) as unknown as Record<string, unknown>;
+    const settlement = copy.settlement as Record<string, unknown>;
+    const revisions = settlement.revisions as Record<string, unknown>[];
+    const target = location === "settlement"
+      ? settlement
+      : revisions[location === "revision0" ? 0 : 1]!;
+    target[field] = value;
+    assert.throws(
+      () => digestForwardV02UntrustedRequest(copy as unknown as NonNullable<typeof built.request>),
+      /INVALID_UNTRUSTED_REQUEST/,
+      `${location}.${field} must not acquire a structural correlation digest`,
+    );
+  }
+  assert.equal(digestForwardV02UntrustedRequest(built.request), validDigest);
+  assert.equal(built.independentAuthorityVerified, false);
+  assert.equal(built.scoringAuthorized, false);
+});
+
 test("verifier response cannot hide an extra revision digest by changing array length between checks", () => {
   const f = fixture();
   let lengthReads = 0;
