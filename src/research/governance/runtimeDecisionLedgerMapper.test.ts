@@ -142,3 +142,43 @@ test("shadow mapper preserves distinct source-row digests under no-op Array.map/
   assert.equal(observed[0].ledgerDigest, baselineFirst.ledgerDigest);
   assert.equal(observed[1].ledgerDigest, baselineSecond.ledgerDigest);
 });
+
+test("shadow mapper preserves source/PIT denials and conflict status under no-op Array.push", () => {
+  // Synthetic-only: never access operational evidence or production persistence.
+  const invalidRace = row({ race_no: 0 });
+  const lateProgram = row({ program_imported_at: "2026-08-05 05:30:00" });
+  const conflicting = [row(), row({ current_odds: 7.1 })];
+  const baseline = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  assert.equal(baseline.status, "mapped");
+
+  const originalPush = Object.getOwnPropertyDescriptor(Array.prototype, "push")!;
+  let invalid: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  let late: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  let conflict: ReturnType<typeof reconcileDecisionHistoryRowsToRuntimeLedger> | undefined;
+  let valid: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "push", {
+      configurable: true, writable: true, value() { return this.length; },
+    });
+    invalid = mapDecisionHistoryRowToRuntimeLedger(invalidRace, context);
+    late = mapDecisionHistoryRowToRuntimeLedger(lateProgram, context);
+    conflict = reconcileDecisionHistoryRowsToRuntimeLedger(conflicting, context);
+    valid = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  } finally {
+    Object.defineProperty(Array.prototype, "push", originalPush);
+  }
+
+  assert.equal(invalid?.status, "rejected");
+  if (invalid?.status === "rejected") assert.ok(invalid.reasons.includes("race_no is invalid"));
+  assert.equal(late?.status, "unresolved");
+  if (late?.status === "unresolved") {
+    assert.ok(late.reasons.includes("close_time_not_proven_visible_at_decision"));
+  }
+  assert.equal(conflict?.status, "FAILED");
+  assert.equal(conflict?.conflictCount, 1);
+  assert.equal(conflict?.conflicts.length, 1);
+  assert.equal(valid?.status, "mapped");
+  if (valid?.status === "mapped" && baseline.status === "mapped") {
+    assert.equal(valid.ledgerDigest, baseline.ledgerDigest);
+  }
+});
