@@ -619,3 +619,51 @@ test("shadow evidence validation verdict and errors cannot be rewritten after re
   // an immutable evidence snapshot or an independent authority assertion.
   assert.equal(Object.isFrozen(accepted), false);
 });
+
+
+test("shadow evidence denies unknown top-level metadata under ambient Set.has allowlist forgery", () => {
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (evidence as unknown as Record<string, unknown>).unapprovedMetadata = "synthetic";
+  // Unknown top-level data is outside the canonical digestable field projection.
+  // Before the guardrail, a selective Set.has hook admitted this unapproved field.
+  const original = Object.getOwnPropertyDescriptor(Set.prototype, "has");
+  assert.ok(original);
+  let observed: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    const nativeHas = original.value as (this: Set<string>, key: string) => boolean;
+    Object.defineProperty(Set.prototype, "has", {
+      configurable: true,
+      writable: true,
+      value: function (this: Set<string>, key: string) {
+        if (key === "unapprovedMetadata" && nativeHas.call(this, "schemaVersion")) return true;
+        return nativeHas.call(this, key);
+      },
+    });
+    observed = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+  } finally {
+    Object.defineProperty(Set.prototype, "has", original);
+  }
+  assert.equal(observed?.valid, false);
+  assert.ok(observed?.errors.includes("unknown top-level field: unapprovedMetadata"));
+});
+
+test("shadow evidence denies missing privacy field under empty ambient Set iterator", () => {
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  delete (evidence.privacy as unknown as Record<string, unknown>).outcomeColumnsRead;
+  resign(evidence);
+  const original = Object.getOwnPropertyDescriptor(Set.prototype, Symbol.iterator);
+  assert.ok(original);
+  let observed: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    Object.defineProperty(Set.prototype, Symbol.iterator, {
+      configurable: true,
+      writable: true,
+      value: function* () {},
+    });
+    observed = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+  } finally {
+    Object.defineProperty(Set.prototype, Symbol.iterator, original);
+  }
+  assert.equal(observed?.valid, false);
+  assert.ok(observed?.errors.includes("missing own enumerable data field: privacy.outcomeColumnsRead"));
+});
