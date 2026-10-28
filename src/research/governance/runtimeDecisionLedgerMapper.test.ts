@@ -378,3 +378,50 @@ test("shadow reconciliation fails closed on sparse or accessor source rows", () 
   assert.equal(sparseResult.status, "CONDITIONAL");
   assert.equal(sparseResult.rejectedCount, 1);
 });
+
+test("shadow reconciliation preserves membership, exact duplicates and conflicts under ambient Map hooks", () => {
+  // Synthetic-only: Map.prototype hooks must not erase accepted shadow rows or
+  // turn a changed same-identity source row into an apparent PASS.
+  const sourceRows = [
+    row({ id: 1002 }),
+    row({ id: 1001 }),
+    row({ id: 1001 }),
+    row({ id: 1001, current_odds: 7.1 }),
+  ];
+  const baseline = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+  assert.equal(baseline.status, "FAILED");
+  assert.equal(baseline.sourceRows, 4);
+  assert.equal(baseline.mappedUnique, 2);
+  assert.equal(baseline.exactDuplicates, 1);
+  assert.equal(baseline.conflictCount, 1);
+
+  const originalGet = Object.getOwnPropertyDescriptor(Map.prototype, "get")!;
+  const originalSet = Object.getOwnPropertyDescriptor(Map.prototype, "set")!;
+  const originalValues = Object.getOwnPropertyDescriptor(Map.prototype, "values")!;
+  let observed: ReturnType<typeof reconcileDecisionHistoryRowsToRuntimeLedger> | undefined;
+  try {
+    Object.defineProperty(Map.prototype, "get", {
+      configurable: true, writable: true, value() { return undefined; },
+    });
+    Object.defineProperty(Map.prototype, "set", {
+      configurable: true, writable: true, value() { return this; },
+    });
+    Object.defineProperty(Map.prototype, "values", {
+      configurable: true, writable: true, value: function* () {},
+    });
+    observed = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+  } finally {
+    Object.defineProperty(Map.prototype, "values", originalValues);
+    Object.defineProperty(Map.prototype, "set", originalSet);
+    Object.defineProperty(Map.prototype, "get", originalGet);
+  }
+
+  assert.equal(observed?.status, baseline.status);
+  assert.equal(observed?.sourceRows, baseline.sourceRows);
+  assert.equal(observed?.mappedUnique, baseline.mappedUnique);
+  assert.equal(observed?.exactDuplicates, baseline.exactDuplicates);
+  assert.equal(observed?.conflictCount, baseline.conflictCount);
+  assert.equal(observed?.recordsDigest, baseline.recordsDigest);
+  assert.deepEqual(observed?.records.map((record) => record.recordId),
+    baseline.records.map((record) => record.recordId));
+});
