@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-unknown-offset-pit-laundering-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.mapper-unknown-utc-offset-pit-laundering",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "normalize-source-decision-and-observation-timestamps",
+  "symptom": "The research-only shadow mapper normalized RFC 3339 -00:00 (unknown local UTC offset) through Date.parse and toISOString, silently converting unproven source timestamps into canonical UTC decision, odds, program-import and close instants. Node 22.16.0 parses -00:00 and +00:00 to the same instant; the downstream ledger validator cannot recover the lost offset provenance. Synthetic source-only fixture; no private evidence or production impact observed.",
+  "rootCauseClass": "UNKNOWN_OFFSET_SOURCE_TIME_CANONICALIZATION_LOSES_PIT_PROVENANCE",
+  "attemptSignature": "pr2286-v418-four-source-timestamp-unknown-offset-denial-known-plus-zero-parity",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@783616d8/normalizeUtcTimestamp-Date.parse-unknown-offset"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/bc1455e414c7007e3a88e1da8f688d4f91228b09",
+    "commit/00135804ef14cb184d42631db52ebc4f23d70d95",
+    "research/registries/learnings/LEARN-forward-vault-schema-unknown-offset-parity-20261016.json",
+    "src/research/governance/runtimeDecisionLedgerExactInstant.test.ts"
+  ],
+  "lesson": "Known-offset validation must occur before source timestamp canonicalization: converting -00:00 to Z destroys the very uncertainty that a downstream exact-instant validator would otherwise reject. A normalized timestamp is not evidence that the source asserted a known UTC offset.",
+  "guardrail": "Reject source timestamps ending in -00:00 before Date.parse/ISO conversion, including decision createdAt, odds fetchedAt, program importedAt and absolute scheduled closeAt. Retain explicit +00:00 and Z paths; assert unresolved reason codes for all four synthetic fields. This is provenance preservation, not external timestamp attestation or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T14:10:51.860Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T14:10:51.860Z",
+  "_digest": "2e667f3a35f9fc0c16041627f3958da74bbf11be871a466b1dd4535f1d8365ec"
+}
