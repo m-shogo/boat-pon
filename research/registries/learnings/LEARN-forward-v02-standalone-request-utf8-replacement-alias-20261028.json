@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-request-utf8-replacement-alias-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-request-utf8-replacement-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "digest-forward-v02-untrusted-request-standalone",
+  "symptom": "Distinct caller-owned JavaScript strings containing an unpaired UTF-16 surrogate and U+FFFD produced identical UTF-8 byte sequences before SHA-256 transcript hashing. The exported standalone request digest could therefore assign the same correlation digest to different untrusted metadata without a cryptographic hash collision. This was reproduced with synthetic Node.js inputs only; no independent authority, production or private data was involved.",
+  "rootCauseClass": "UNPAIRED_UTF16_SURROGATE_UTF8_REPLACEMENT_TRANSCRIPT_ALIAS",
+  "attemptSignature": "pr2286-v410-synthetic-utf16-high-low-surrogate-alias-and-valid-pair-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22.16.0/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.ts@798d18f4/utf8-transcript-without-wellformed-utf16-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/5b1e9a06923c8f25de3c82d236069fbc9e68f696",
+    "commit/795f24ea4df324000ac42be28dd8b967f4c6ecee",
+    "research/registries/learnings/LEARN-forward-vault-schema-unicode-trim-parity-20261019.json"
+  ],
+  "lesson": "SHA-256 cannot distinguish different JavaScript strings if the UTF-8 encoder first replaces malformed UTF-16 with identical U+FFFD bytes. Reject unpaired surrogate code units at the standalone request transcript boundary; preserve valid surrogate pairs and unchanged valid transcript bytes.",
+  "guardrail": "Before length-prefixing and UTF-8 hashing each untrusted request metadata string, reject isolated high or low UTF-16 surrogates with INVALID_UNTRUSTED_REQUEST. Regression-test high-surrogate versus replacement-character byte alias, a low-surrogate settlement field, a malformed revision identifier, a valid surrogate pair and unchanged well-formed transcript digests. The digest remains an untrusted correlation ID, not evidence authentication or scoring authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T09:07:21.315Z",
+  "productionConnection": false,
+  "_digest": "f1dfd1418c3d3c7b7ca3616e59b36ee470d6efb45b57d9cb9d13cdc93a370c96",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T09:07:21.315Z"
+}
