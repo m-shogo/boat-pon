@@ -68,6 +68,22 @@ function exactInstant(value: unknown): value is string {
   return day >= 1 && day <= days[month - 1]! && Number.isFinite(Date.parse(value));
 }
 
+// Node's UTF-8 encoder replaces an unpaired UTF-16 surrogate with U+FFFD.
+// A manifest identifier must be a well-formed string before it participates in
+// a content-addressed reference; otherwise distinct IDs can share a digest.
+function wellFormedUtf16(value: string): boolean {
+  for (let i = 0; i < value.length; i++) {
+    const unit = value.charCodeAt(i);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const low = value.charCodeAt(++i);
+      if (!(low >= 0xdc00 && low <= 0xdfff)) return false;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function contentHash(domain: string, fields: readonly string[]): string {
   const h = createHash("sha256");
   const feed = (value: string): void => {
@@ -106,6 +122,7 @@ export function forwardV02SourceManifestReferenceDigest(value: unknown): string 
   if (!exactDataObject(value, MANIFEST_KEYS)) return null;
   if (value.schemaVersion !== "forward-source-manifest.0.2-candidate" ||
       typeof value.manifestId !== "string" || !value.manifestId.trim() ||
+      !wellFormedUtf16(value.manifestId) ||
       (value.evidenceStage !== "HISTORICAL" && value.evidenceStage !== "VALIDATION" &&
        value.evidenceStage !== "UNTOUCHED_HOLDOUT" && value.evidenceStage !== "SHADOW_FORWARD" &&
        value.evidenceStage !== "FUTURE_ONLY") ||
