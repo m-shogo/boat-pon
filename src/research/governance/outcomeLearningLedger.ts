@@ -189,7 +189,11 @@ export function classifyOutcomeReconciliation(input: {
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor) || typeof descriptor.value !== "boolean") {
         return "REJECTED_INVALID";
       }
-      flags[index] = descriptor.value;
+      // Define an own flag: an inherited Array.prototype numeric setter/getter
+      // must not turn a caller's false reconciliation claim into EXACT.
+      Object.defineProperty(flags, String(index), {
+        value: descriptor.value, enumerable: true, writable: true, configurable: true,
+      });
     }
   } catch {
     return "REJECTED_INVALID";
