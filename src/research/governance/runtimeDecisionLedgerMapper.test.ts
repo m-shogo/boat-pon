@@ -618,8 +618,8 @@ test("shadow mapper denies nested source-row and mapping-context Proxies before 
       return Reflect.get(target, key, receiver);
     },
   };
-  const proxyRow = new Proxy(row(), traps);
-  const proxyContext = new Proxy({ ...context }, traps);
+  const proxyRow = new Proxy<DecisionHistoryShadowRow>(row(), traps);
+  const proxyContext = new Proxy<RuntimeDecisionLedgerMappingContext>({ ...context }, traps);
   const rejectedRow = mapDecisionHistoryRowToRuntimeLedger(proxyRow, context);
   assert.equal(rejectedRow.status, "rejected");
   if (rejectedRow.status === "rejected") {
