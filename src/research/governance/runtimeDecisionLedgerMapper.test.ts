@@ -462,3 +462,48 @@ test("shadow mapper retains warning evidence and digest under ambient Set hooks"
   assert.deepEqual(observed.record.warnings, baseline.record.warnings);
   assert.equal(observed.ledgerDigest, baseline.ledgerDigest);
 });
+
+test("shadow mapper pins source-row descriptors before validation, audit digest and ledger mapping", () => {
+  const baseline = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  assert.equal(baseline.status, "mapped");
+  if (baseline.status !== "mapped") return;
+
+  // An accessor could return one value to validation and another to the
+  // audit/record. Reject it without invoking any caller-controlled getter.
+  const accessorRow = row();
+  let getterReads = 0;
+  Object.defineProperty(accessorRow, "current_odds", {
+    configurable: true, enumerable: true,
+    get() { getterReads++; return getterReads === 1 ? 6.4 : 7.1; },
+  });
+  const invalid = mapDecisionHistoryRowToRuntimeLedger(accessorRow, context);
+  assert.equal(invalid.status, "rejected");
+  assert.equal(getterReads, 0);
+  if (invalid.status === "rejected") {
+    assert.deepEqual(invalid.reasons, ["source_row_fields_not_own_data"]);
+  }
+  const reconciled = reconcileDecisionHistoryRowsToRuntimeLedger([row(), accessorRow], context);
+  assert.equal(reconciled.status, "CONDITIONAL");
+  assert.equal(reconciled.mappedUnique, 1);
+  assert.equal(reconciled.rejectedCount, 1);
+  assert.equal(getterReads, 0);
+
+  // The same descriptor-backed row must not be reread through a mutable
+  // Proxy get trap after validation; the mapped evidence stays identical.
+  let directReads = 0;
+  const proxyRow = new Proxy(row(), {
+    get(target, property, receiver) {
+      directReads++;
+      if (property === "current_odds") return 7.1;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const pinned = mapDecisionHistoryRowToRuntimeLedger(proxyRow, context);
+  assert.equal(pinned.status, "mapped");
+  assert.equal(directReads, 0);
+  if (pinned.status === "mapped") {
+    assert.equal(pinned.record.currentOdds, baseline.record.currentOdds);
+    assert.equal(pinned.record.sourceRowDigest, baseline.record.sourceRowDigest);
+    assert.equal(pinned.ledgerDigest, baseline.ledgerDigest);
+  }
+});
