@@ -425,3 +425,40 @@ test("shadow reconciliation preserves membership, exact duplicates and conflicts
   assert.deepEqual(observed?.records.map((record) => record.recordId),
     baseline.records.map((record) => record.recordId));
 });
+
+test("shadow mapper retains warning evidence and digest under ambient Set hooks", () => {
+  const source = row({
+    decision_reasons: "[5]",
+    feature_adjustment: null,
+    feature_adjustment_breakdown: "invalid-json",
+  });
+  const baseline = mapDecisionHistoryRowToRuntimeLedger(source, context);
+  assert.equal(baseline.status, "mapped");
+  if (baseline.status !== "mapped") return;
+  assert.deepEqual(baseline.record.warnings, [
+    "decision_reasons_not_string_array",
+    "feature_adjustment_unavailable",
+    "feature_adjustment_breakdown_invalid_json",
+  ]);
+
+  const originalHas = Object.getOwnPropertyDescriptor(Set.prototype, "has")!;
+  const originalAdd = Object.getOwnPropertyDescriptor(Set.prototype, "add")!;
+  let observed: ReturnType<typeof mapDecisionHistoryRowToRuntimeLedger> | undefined;
+  try {
+    Object.defineProperty(Set.prototype, "has", {
+      configurable: true, writable: true, value() { return true; },
+    });
+    Object.defineProperty(Set.prototype, "add", {
+      configurable: true, writable: true, value() { return this; },
+    });
+    observed = mapDecisionHistoryRowToRuntimeLedger(source, context);
+  } finally {
+    Object.defineProperty(Set.prototype, "add", originalAdd);
+    Object.defineProperty(Set.prototype, "has", originalHas);
+  }
+
+  assert.equal(observed?.status, "mapped");
+  if (observed?.status !== "mapped") return;
+  assert.deepEqual(observed.record.warnings, baseline.record.warnings);
+  assert.equal(observed.ledgerDigest, baseline.ledgerDigest);
+});
