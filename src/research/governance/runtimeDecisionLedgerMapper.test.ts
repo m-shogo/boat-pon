@@ -561,3 +561,42 @@ test("shadow mapper pins mapping context identity across row and reconciliation 
   assert.equal(observed.recordsDigest, expected.recordsDigest);
   assert.equal(directReads, 0);
 });
+
+test("shadow reconciliation rejects Proxy source-row containers before length or descriptor traps", () => {
+  const ordinary = [row({ id: 1001 }), row({ id: 1002 })];
+  const baseline = reconcileDecisionHistoryRowsToRuntimeLedger(ordinary, context);
+  assert.equal(baseline.status, "PASS");
+  assert.equal(baseline.sourceRows, 2);
+  assert.equal(baseline.mappedUnique, 2);
+
+  let lengthReads = 0;
+  let descriptorReads = 0;
+  const spoofed = new Proxy(ordinary, {
+    get(target, property, receiver) {
+      if (property === "length") {
+        lengthReads++;
+        return 0; // Previously produced PASS with zero visited rows.
+      }
+      return Reflect.get(target, property, receiver);
+    },
+    getOwnPropertyDescriptor(target, property) {
+      descriptorReads++;
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  });
+  const denied = reconcileDecisionHistoryRowsToRuntimeLedger(spoofed, context);
+  assert.equal(denied.status, "CONDITIONAL");
+  assert.equal(denied.sourceRows, 0); // Untrusted count, not an asserted empty cohort.
+  assert.equal(denied.mappedUnique, 0);
+  assert.equal(denied.rejectedCount, 1);
+  assert.deepEqual(denied.rejected[0]?.reasons, ["source_rows_proxy_not_admitted"]);
+  assert.equal(lengthReads, 0);
+  assert.equal(descriptorReads, 0);
+
+  // Node's isProxy guard must also reject revoked arrays without executing traps.
+  const revoked = Proxy.revocable([row()], {});
+  revoked.revoke();
+  const revokedResult = reconcileDecisionHistoryRowsToRuntimeLedger(revoked.proxy, context);
+  assert.equal(revokedResult.status, "CONDITIONAL");
+  assert.deepEqual(revokedResult.rejected[0]?.reasons, ["source_rows_proxy_not_admitted"]);
+});
