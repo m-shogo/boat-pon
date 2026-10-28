@@ -333,7 +333,7 @@ export function buildRuntimeDecisionLedgerShadowEvidence(
   };
 }
 
-const TOP_LEVEL_KEYS = new Set([
+const TOP_LEVEL_KEYS = [
   "schemaVersion",
   "generatedAt",
   "verdict",
@@ -346,10 +346,10 @@ const TOP_LEVEL_KEYS = new Set([
   "privacy",
   "safety",
   "contentDigest",
-]);
+] as const;
 
-const SCOPE_KEYS = new Set(["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"]);
-const SOURCE_KEYS = new Set([
+const SCOPE_KEYS = ["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"] as const;
+const SOURCE_KEYS = [
   "fileSizeBytes",
   "modifiedTimeMs",
   "sqliteSchemaVersion",
@@ -361,8 +361,8 @@ const SOURCE_KEYS = new Set([
   "walPresent",
   "readOnly",
   "queryOnly",
-]);
-const RECONCILIATION_KEYS = new Set([
+] as const;
+const RECONCILIATION_KEYS = [
   "status",
   "sourceRows",
   "mappedUnique",
@@ -371,8 +371,8 @@ const RECONCILIATION_KEYS = new Set([
   "rejectedCount",
   "conflictCount",
   "recordsDigest",
-]);
-const COMPLETENESS_KEYS = new Set([
+] as const;
+const COMPLETENESS_KEYS = [
   "mappedRate",
   "unresolvedRate",
   "rejectedRate",
@@ -380,8 +380,8 @@ const COMPLETENESS_KEYS = new Set([
   "unresolvedReasonCounts",
   "rejectedReasonCounts",
   "taxonomyCounts",
-]);
-const PRIVACY_KEYS = new Set([
+] as const;
+const PRIVACY_KEYS = [
   "rawRecordsIncluded",
   "sourceRowIdsIncluded",
   "raceIdsIncluded",
@@ -389,15 +389,15 @@ const PRIVACY_KEYS = new Set([
   "absolutePathsIncluded",
   "localDbPathIncluded",
   "outcomeColumnsRead",
-]);
-const SAFETY_KEYS = new Set([
+] as const;
+const SAFETY_KEYS = [
   "operationalDbWrites",
   "notificationWrites",
   "lineSends",
   "appSettingsReads",
   "publicWrites",
   "productionPromotion",
-]);
+] as const;
 
 // Avoid ambient Array.prototype.push and inherited numeric setters when collecting failures.
 function appendError(errors: string[], message: string): void {
@@ -409,7 +409,16 @@ function appendError(errors: string[], message: string): void {
   });
 }
 
-function requireExactObject(value: unknown, path: string, keys: Set<string>, errors: string[]): boolean {
+// Module-owned indexed allowlists must not depend on mutable Set.has or Set iterators.
+function includesOwn(keys: readonly string[], value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  for (let index = 0; index < keys.length; index++) {
+    if (keys[index] === value) return true;
+  }
+  return false;
+}
+
+function requireExactObject(value: unknown, path: string, keys: readonly string[], errors: string[]): boolean {
   if (!isRecord(value)) {
     appendError(errors,`${path} must be an object`);
     return false;
@@ -417,9 +426,10 @@ function requireExactObject(value: unknown, path: string, keys: Set<string>, err
   const ownKeys = Reflect.ownKeys(value);
   for (let index = 0; index < ownKeys.length; index++) {
     const key = ownKeys[index]!;
-    if (typeof key !== "string" || !keys.has(key)) appendError(errors,`unknown field: ${path}.${String(key)}`);
+    if (typeof key !== "string" || !includesOwn(keys, key)) appendError(errors,`unknown field: ${path}.${String(key)}`);
   }
-  for (const key of keys) {
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       appendError(errors,`missing own enumerable data field: ${path}.${key}`);
@@ -428,7 +438,7 @@ function requireExactObject(value: unknown, path: string, keys: Set<string>, err
   return true;
 }
 
-const FORBIDDEN_KEYS = new Set([
+const FORBIDDEN_KEYS = [
   "records",
   "record",
   "sourceDecisionHistoryId",
@@ -441,7 +451,7 @@ const FORBIDDEN_KEYS = new Set([
   "result",
   "payoutYen",
   "stakeYen",
-]);
+] as const;
 
 // Dynamic reason-count dictionaries are part of the public sanitized evidence shape.
 // Unlike the fixed schema objects, their keys must be validated individually.
@@ -467,7 +477,7 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
       appendError(errors, `${path}.${key} must be an own enumerable data field`);
       continue;
     }
-    if (FORBIDDEN_KEYS.has(key) || /^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(key) ||
+    if (includesOwn(FORBIDDEN_KEYS, key) || /^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(key) ||
       key.includes("/Users/") || key.includes("\\Users\\")) {
       appendError(errors, `${path} contains forbidden reason key`);
     }
@@ -533,7 +543,7 @@ function walk(value: unknown, path: string, errors: string[]): void {
     const pair = entries[index]!;
     const key = pair[0];
     const entry = pair[1];
-    if (FORBIDDEN_KEYS.has(key)) appendError(errors,`forbidden key at ${path}.${key}`);
+    if (includesOwn(FORBIDDEN_KEYS, key)) appendError(errors,`forbidden key at ${path}.${key}`);
     walk(entry, `${path}.${key}`, errors);
   }
 }
@@ -558,9 +568,10 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   const topLevelKeys = Reflect.ownKeys(value);
   for (let index = 0; index < topLevelKeys.length; index++) {
     const key = topLevelKeys[index]!;
-    if (typeof key !== "string" || !TOP_LEVEL_KEYS.has(key)) appendError(errors,`unknown top-level field: ${String(key)}`);
+    if (typeof key !== "string" || !includesOwn(TOP_LEVEL_KEYS, key)) appendError(errors,`unknown top-level field: ${String(key)}`);
   }
-  for (const key of TOP_LEVEL_KEYS) {
+  for (let index = 0; index < TOP_LEVEL_KEYS.length; index++) {
+    const key = TOP_LEVEL_KEYS[index]!;
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       appendError(errors,`missing own enumerable data top-level field: ${key}`);
@@ -581,7 +592,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     appendError(errors,`schemaVersion must be ${RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION}`);
   }
   if (!canonicalGeneratedAt(evidence.generatedAt)) appendError(errors,"generatedAt must be a canonical UTC date-time");
-  if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(evidence.verdict)) appendError(errors,"invalid verdict");
+  if (!includesOwn(["PASS", "CONDITIONAL", "FAILED"], evidence.verdict)) appendError(errors,"invalid verdict");
   const digestFields = [
     ["sourceDescriptorDigest", evidence.sourceDescriptorDigest],
     ["contextDigest", evidence.contextDigest],
@@ -627,7 +638,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (!r || !isRecord(r)) {
     appendError(errors,"reconciliation must be an object");
   } else {
-    if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(r.status)) {
+    if (!includesOwn(["PASS", "CONDITIONAL", "FAILED"], r.status)) {
       appendError(errors,"reconciliation.status is invalid");
     }
     const reconciliationCountFields = [
