@@ -47,7 +47,13 @@ const REQUIRED_FIELDS: ReadonlyArray<keyof OutcomeLearningLedgerRecord> = [
   "evaluable", "stakeYen", "payoutYen", "refundYen", "refundReason", "popularity",
   "sourceEvidenceDigests", "provenanceVersion",
 ];
-const ALLOWED_FIELDS = new Set<keyof OutcomeLearningLedgerRecord>(REQUIRED_FIELDS);
+// Module-owned indexed membership must not depend on ambient Set.prototype.has.
+function isAllowedField(field: string): boolean {
+  for (let index = 0; index < REQUIRED_FIELDS.length; index++) {
+    if (REQUIRED_FIELDS[index] === field) return true;
+  }
+  return false;
+}
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
@@ -227,7 +233,7 @@ export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLear
   const actualFields = Object.keys(value);
   for (let index = 0; index < actualFields.length; index++) {
     const field = actualFields[index]!;
-    if (!ALLOWED_FIELDS.has(field as keyof OutcomeLearningLedgerRecord)) appendError(`unknown field is not allowed: ${field}`);
+    if (!isAllowedField(field)) appendError(`unknown field is not allowed: ${field}`);
   }
   if (value.schemaVersion !== OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION) appendError(`schemaVersion must be ${OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION}`);
   const requiredStrings = ["outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId", "ticketType", "selection", "settlementId", "provenanceVersion"] as const;
@@ -251,14 +257,18 @@ export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLear
   if (!hasDenseDigestArray(value.sourceEvidenceDigests)) {
     appendError("sourceEvidenceDigests must contain one or more lowercase SHA-256 digests");
   } else {
-    const seen = new Set<string>();
+    // Null-prototype own-data keys preserve duplicate evidence detection even
+    // if Set.prototype.has/add are replaced by an ambient no-op.
+    const seen: Record<string, true> = Object.create(null);
     for (let index = 0; index < value.sourceEvidenceDigests.length; index++) {
       const descriptor = Object.getOwnPropertyDescriptor(value.sourceEvidenceDigests, String(index));
-      if (!descriptor || seen.has(descriptor.value as string)) {
+      if (!descriptor || Object.getOwnPropertyDescriptor(seen, descriptor.value as string)) {
         appendError("sourceEvidenceDigests must not contain duplicates");
         break;
       }
-      seen.add(descriptor.value as string);
+      Object.defineProperty(seen, descriptor.value as string, {
+        value: true, enumerable: true, writable: false, configurable: false,
+      });
     }
   }
 
