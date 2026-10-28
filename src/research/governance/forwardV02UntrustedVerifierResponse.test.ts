@@ -492,6 +492,50 @@ test("standalone request transcript rejects incoherent correction-chain claims b
   assert.equal(built.scoringAuthorized, false);
 });
 
+test("standalone request transcript shares strict claimed-instant and correction chronology admission", () => {
+  const f = fixture();
+  f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+  f.envelope.settlement.revisions.push({
+    revisionId: "synthetic-revision-2", contentDigest: h("f"),
+    predecessorDigest: h("d"), sequence: 2,
+    observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+  });
+  f.refs.settlementRevisionId = "synthetic-revision-2";
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  const validDigest = digestForwardV02UntrustedRequest(built.request);
+  const mutations = [
+    ["freeze", "claimedFirstDecisionAt", "not-an-instant"],
+    ["freeze", "claimedFirstDecisionAt", "2026-02-30T00:00:00Z"],
+    ["freeze", "claimedReceiptAt", "2026-10-24T24:00:00Z"],
+    ["freeze", "claimedReceiptAt", "2026-10-24T00:00:00.0002Z"],
+    ["freeze", "claimedReceiptAt", "2026-10-24T00:00:00.0003Z"],
+    ["revision0", "claimedObservedAt", "2026-10-24T00:00:00.0001Z"],
+    ["revision0", "claimedObservedAt", "2026-10-24T00:00:00.0002Z"],
+    ["revision1", "claimedObservedAt", "2026-10-24T00:00:01Z"],
+    ["revision1", "claimedObservedAt", "2026-10-24T00:00:00Z"],
+    ["revision1", "claimedObservedAt", "2026-10-24T00:00:02-00:00"],
+    ["revision1", "claimedObservedAt", "0000-10-24T00:00:02Z"],
+    ["revision1", "claimedObservedAt", "2026-10-24T00:00:02+24:00"],
+  ] as const;
+  for (const [location, field, value] of mutations) {
+    const copy = structuredClone(built.request) as unknown as Record<string, unknown>;
+    const settlement = copy.settlement as Record<string, unknown>;
+    const target = location === "freeze"
+      ? copy.freeze as Record<string, unknown>
+      : (settlement.revisions as Record<string, unknown>[])[location === "revision0" ? 0 : 1]!;
+    target[field] = value;
+    assert.throws(
+      () => digestForwardV02UntrustedRequest(copy as unknown as NonNullable<typeof built.request>),
+      /INVALID_UNTRUSTED_REQUEST/,
+      `${location}.${field}=${value} must not be hashed`,
+    );
+  }
+  assert.equal(digestForwardV02UntrustedRequest(built.request), validDigest);
+  assert.equal(built.independentAuthorityVerified, false);
+  assert.equal(built.scoringAuthorized, false);
+});
+
 test("verifier response cannot hide an extra revision digest by changing array length between checks", () => {
   const f = fixture();
   let lengthReads = 0;
