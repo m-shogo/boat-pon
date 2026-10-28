@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-ambient-push-denial-conflict-bypass-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.mapper-ambient-push-pit-and-conflict-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "map-and-reconcile-decision-history-shadow-rows",
+  "symptom": "The research-only shadow mapper collected source-shape errors, point-in-time unresolved reasons and reconciliation conflicts using Array.prototype.push. A synthetic no-op push can discard a bad race number or post-decision program-import warning and make conflicting mapped rows report PASS. A Node 22.16.0 source-equivalent sink probe reproduced erased denials and false PASS. No private rows or production system were used.",
+  "rootCauseClass": "AMBIENT_ARRAY_PUSH_DISCARDS_SOURCE_PIT_DENIAL_AND_CONFLICT",
+  "attemptSignature": "pr2286-v416-mapper-noop-push-source-pit-and-reconciliation-conflict-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@3ee98436/source-pit-and-reconciliation-array-push"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/3d9f33f1c25c0df1676cfc9a071ac65578c9ea93",
+    "commit/4f90f8aec90e43197a5b078b83401cd376d5e47b",
+    "research/registries/learnings/LEARN-ledger-validation-error-sink-push-bypass-20261022.json",
+    "research/registries/learnings/LEARN-forward-vault-validation-error-sink-inherited-index-setter-20261028.json"
+  ],
+  "lesson": "A mapper can silently convert missing or contradictory decision-time evidence into a positive reconciliation verdict when its diagnostics and conflicts are stored through mutable ambient array helpers. Downstream record validation does not necessarily cover source-only provenance or chronology fields.",
+  "guardrail": "Collect source validation errors, PIT unresolved reasons, warnings, rejected rows and reconciliation conflicts with own array data properties via Object.defineProperty. Regression-test malformed source identity, post-decision program visibility and conflicting identity under a reversible no-op Array.prototype.push, while checking valid digest parity. No evidence authentication, production apply or scoring authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T14:01:27.699Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T14:01:27.699Z",
+  "_digest": "e7b188b721040c8732656863c40c15f105f1ac3d7444261e25cbba485cf02709"
+}
