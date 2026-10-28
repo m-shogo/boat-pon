@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { types as nodeTypes } from "node:util";
 
 export const OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION = "outcome-learning-ledger.0.1" as const;
 
@@ -51,7 +52,7 @@ const SHA256_RE = /^[0-9a-f]{64}$/u;
 const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || Array.isArray(value)) return false;
   try {
     const proto = Object.getPrototypeOf(value);
     return (proto === Object.prototype || proto === null) && !("toJSON" in value);
@@ -74,7 +75,9 @@ function hasOwnEnumerableDataFields(value: Record<string, unknown>): boolean {
   } catch { return false; }
 }
 function hasDenseDigestArray(value: unknown): value is string[] {
-  if (!Array.isArray(value) || value.length === 0) return false;
+  // Caller-controlled Proxy arrays can disagree between validation and digest descriptors.
+  // Reject them (including revoked Proxies) before reading length or traps.
+  if (nodeTypes.isProxy(value) || !Array.isArray(value) || value.length === 0) return false;
   try {
     if (Object.getPrototypeOf(value) !== Array.prototype || "toJSON" in value ||
         Reflect.ownKeys(value).length !== value.length + 1) return false;
