@@ -90,6 +90,26 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
   reconciliation: RuntimeDecisionLedgerReconciliation;
 };
 
+// Inspect only own data descriptors: no Proxy traps or accessor getters execute.
+// Bound traversal so an unexpected cyclic/deep graph cannot become an unbounded preflight.
+function hasProxyInOwnData(value: unknown, visited: object[] = []): boolean {
+  if (isProxy(value)) return true;
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return false;
+  for (let index = 0; index < visited.length; index++) {
+    if (visited[index] === value) return false;
+  }
+  if (visited.length >= 10000) return true;
+  Object.defineProperty(visited, String(visited.length), {
+    value, writable: true, enumerable: true, configurable: true,
+  });
+  const keys = Reflect.ownKeys(value);
+  for (let index = 0; index < keys.length; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, keys[index]!);
+    if (descriptor && "value" in descriptor && hasProxyInOwnData(descriptor.value, visited)) return true;
+  }
+  return false;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !isProxy(value) && !Array.isArray(value);
 }
@@ -581,6 +601,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   value: unknown,
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const errors: string[] = [];
+  if (hasProxyInOwnData(value)) return immutableValidationResult(["proxy value forbidden in evidence graph"], null);
   if (!isRecord(value)) return immutableValidationResult(["evidence must be an object"], null);
   const topLevelKeys = Reflect.ownKeys(value);
   for (let index = 0; index < topLevelKeys.length; index++) {
