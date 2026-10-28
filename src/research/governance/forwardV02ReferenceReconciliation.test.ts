@@ -328,3 +328,36 @@ test("source manifest digest rejects malformed UTF-16 identifier aliases before 
   assert.notEqual(validPairDigest, replacementDigest);
   assert.equal(forwardV02SourceManifestReferenceDigest(manifest()), unchanged);
 });
+
+test("source manifest digest preserves decision and outcome identity under inherited numeric setters", () => {
+  const original = manifest();
+  const changedDecision = manifest();
+  changedDecision.decisionDigests[0] = h("e");
+  const changedOutcome = manifest();
+  changedOutcome.outcomeDigests[0] = h("f");
+  const digest = forwardV02SourceManifestReferenceDigest;
+  const baseline = [digest(original), digest(changedDecision), digest(changedOutcome)];
+  assert.ok(baseline.every((value) => typeof value === "string"));
+  assert.equal(new Set(baseline).size, 3);
+
+  // Seven literal fields precede the appended decision digests; the first
+  // outcome digest follows two decisions and its length marker (index 10).
+  for (const index of [7, 10]) {
+    const key = String(index);
+    const prior = Object.getOwnPropertyDescriptor(Array.prototype, key);
+    let setterCalls = 0;
+    let observed: Array<string | null> = [];
+    try {
+      Object.defineProperty(Array.prototype, key, {
+        configurable: true,
+        set(_value: unknown) { setterCalls++; },
+      });
+      observed = [digest(original), digest(changedDecision), digest(changedOutcome)];
+    } finally {
+      if (prior) Object.defineProperty(Array.prototype, key, prior);
+      else Reflect.deleteProperty(Array.prototype, key);
+    }
+    assert.deepEqual(observed, baseline);
+    assert.equal(setterCalls, 0, "all appended manifest digest fields must be own data properties");
+  }
+});
