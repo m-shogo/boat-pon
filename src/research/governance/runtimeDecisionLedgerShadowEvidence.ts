@@ -98,7 +98,7 @@ function hasProxyInOwnData(value: unknown, visited: object[] = []): boolean {
   for (let index = 0; index < visited.length; index++) {
     if (visited[index] === value) return false;
   }
-  if (visited.length >= 10000) return true;
+  if (visited.length >= 128) return true;
   Object.defineProperty(visited, String(visited.length), {
     value, writable: true, enumerable: true, configurable: true,
   });
