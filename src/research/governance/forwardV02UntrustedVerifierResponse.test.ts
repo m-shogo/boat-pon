@@ -791,3 +791,36 @@ test("strict Node response ingress rejects revoked Proxy and accessor without ex
   assert.equal(getterCalls, 0);
   assert.equal(r.scoringAuthorized, false);
 });
+
+
+test("standalone transcript rejects ill-formed UTF-16 aliases before UTF-8 hashing", () => {
+  const f = fixture();
+  const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+  assert.ok(built.request);
+  const base = structuredClone(built.request);
+  const replacement = { ...base, freeze: { ...base.freeze, cohortId: "\uFFFD" } };
+  const loneHigh = { ...base, freeze: { ...base.freeze, cohortId: "\uD800" } };
+  assert.notEqual(replacement.freeze.cohortId, loneHigh.freeze.cohortId);
+  assert.equal(
+    Buffer.from(replacement.freeze.cohortId, "utf8").toString("hex"),
+    Buffer.from(loneHigh.freeze.cohortId, "utf8").toString("hex"),
+    "Node UTF-8 replacement would otherwise alias distinct JS metadata",
+  );
+  assert.match(digestForwardV02UntrustedRequest(replacement), /^[0-9a-f]{64}$/u);
+  assert.throws(() => digestForwardV02UntrustedRequest(loneHigh), /INVALID_UNTRUSTED_REQUEST/);
+
+  const loneLow = { ...base, settlement: { ...base.settlement, sourceId: "\uDC00" } };
+  const revision = {
+    ...base, settlement: {
+      ...base.settlement, revisions: [
+        { ...base.settlement.revisions[0]!, revisionId: "synthetic-\uD800" },
+      ],
+    },
+  };
+  assert.throws(() => digestForwardV02UntrustedRequest(loneLow), /INVALID_UNTRUSTED_REQUEST/);
+  assert.throws(() => digestForwardV02UntrustedRequest(revision), /INVALID_UNTRUSTED_REQUEST/);
+
+  const validPair = { ...base, freeze: { ...base.freeze, cohortId: "synthetic-\uD83D\uDE80" } };
+  assert.match(digestForwardV02UntrustedRequest(validPair), /^[0-9a-f]{64}$/u);
+  assert.equal(digestForwardV02UntrustedRequest(base), digestForwardV02UntrustedRequest(built.request));
+});
