@@ -202,10 +202,19 @@ function parseReasons(value: string | null): { reasons: string[]; warnings: stri
   if (!value) return { reasons: [], warnings: [] };
   try {
     const parsed = JSON.parse(value) as unknown;
-    if (!Array.isArray(parsed) || parsed.some((entry) => !nonEmpty(entry))) {
+    if (!Array.isArray(parsed)) {
       return { reasons: [], warnings: ["decision_reasons_not_string_array"] };
     }
-    return { reasons: parsed.map((entry) => String(entry).trim()), warnings: [] };
+    const reasons: string[] = [];
+    // JSON.parse creates own array elements; do not trust ambient some/map.
+    for (let index = 0; index < parsed.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(parsed, String(index));
+      if (!descriptor || !("value" in descriptor) || !nonEmpty(descriptor.value)) {
+        return { reasons: [], warnings: ["decision_reasons_not_string_array"] };
+      }
+      appendOwn(reasons, descriptor.value.trim());
+    }
+    return { reasons, warnings: [] };
   } catch {
     return { reasons: [], warnings: ["decision_reasons_invalid_json"] };
   }
@@ -414,7 +423,25 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
     });
   }
 
-  const ordered = [...records.values()].map((entry) => entry.record).sort((a, b) => a.recordId.localeCompare(b.recordId));
+  // Keep mapped membership, stable identity ordering and digest input independent
+  // of mutable Array.map/sort and inherited numeric setters.
+  const ordered: RuntimeDecisionLedgerRecord[] = [];
+  for (const entry of records.values()) {
+    let index = ordered.length;
+    while (index > 0 && ordered[index - 1]!.recordId.localeCompare(entry.record.recordId) > 0) {
+      Object.defineProperty(ordered, String(index), {
+        value: ordered[index - 1]!, enumerable: true, writable: true, configurable: true,
+      });
+      index--;
+    }
+    Object.defineProperty(ordered, String(index), {
+      value: entry.record, enumerable: true, writable: true, configurable: true,
+    });
+  }
+  const recordDigests: string[] = [];
+  for (let index = 0; index < ordered.length; index++) {
+    appendOwn(recordDigests, runtimeDecisionLedgerDigest(ordered[index]!));
+  }
   const status = conflicts.length > 0
     ? "FAILED"
     : unresolved.length > 0 || rejected.length > 0
@@ -429,7 +456,7 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
     unresolvedCount: unresolved.length,
     rejectedCount: rejected.length,
     conflictCount: conflicts.length,
-    recordsDigest: digest(ordered.map((record) => runtimeDecisionLedgerDigest(record))),
+    recordsDigest: digest(recordDigests),
     records: ordered,
     unresolved,
     rejected,
