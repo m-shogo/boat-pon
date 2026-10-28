@@ -98,14 +98,18 @@ function appendOwn<T>(items: T[], value: T): void {
 // iterators: an empty replacement iterator can silently erase evidence.
 function uniqueOwn(values: string[]): string[] {
   const result: string[] = [];
-  const seen = new Set<string>();
+  // Keep diagnostic de-duplication independent of mutable Set.prototype.has/add.
+  // Null-prototype keys also preserve arbitrary reason text such as "__proto__".
+  const seen: Record<string, true> = Object.create(null);
   for (let index = 0; index < values.length; index++) {
     const descriptor = Object.getOwnPropertyDescriptor(values, String(index));
     if (!descriptor || !("value" in descriptor) || typeof descriptor.value !== "string") {
       throw new TypeError("invalid shadow diagnostic array");
     }
-    if (!seen.has(descriptor.value)) {
-      seen.add(descriptor.value);
+    if (!Object.getOwnPropertyDescriptor(seen, descriptor.value)) {
+      Object.defineProperty(seen, descriptor.value, {
+        value: true, enumerable: true, writable: false, configurable: false,
+      });
       appendOwn(result, descriptor.value);
     }
   }
