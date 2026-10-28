@@ -266,3 +266,40 @@ test("shadow mapper does not convert unknown -00:00 source offsets into proven P
     assert.equal(known.record.scheduledCloseAtSeen, "2026-08-05T05:32:00.000Z");
   }
 });
+
+test("shadow mapper preserves submillisecond PIT chronology before UTC canonicalization", () => {
+  const decision = "2026-08-05T05:26:30.0001000Z";
+  const later = "2026-08-05T05:26:30.0001001Z";
+  const earlier = "2026-08-05T05:26:30.0000999Z";
+  const oddsAfter = mapDecisionHistoryRowToRuntimeLedger(row({
+    created_at: decision,
+    fetched_at: later,
+  }), context);
+  assert.equal(oddsAfter.status, "unresolved");
+  if (oddsAfter.status === "unresolved") {
+    assert.ok(oddsAfter.reasons.includes("source_row_update_or_odds_observation_after_created_at"));
+  }
+
+  const programAfter = mapDecisionHistoryRowToRuntimeLedger(row({
+    created_at: decision,
+    fetched_at: earlier,
+    program_imported_at: later,
+  }), context);
+  assert.equal(programAfter.status, "unresolved");
+  if (programAfter.status === "unresolved") {
+    assert.ok(programAfter.reasons.includes("close_time_not_proven_visible_at_decision"));
+  }
+
+  const valid = mapDecisionHistoryRowToRuntimeLedger(row({
+    created_at: decision,
+    fetched_at: "2026-08-05T14:26:30.0000999+09:00",
+    program_imported_at: "2026-08-05 05:26:30.0000998",
+    close_at: "2026-08-05T05:32:00.0001001Z",
+  }), context);
+  assert.equal(valid.status, "mapped");
+  if (valid.status === "mapped") {
+    assert.equal(valid.record.decisionAt, decision);
+    assert.equal(valid.record.oddsObservedAt, earlier);
+    assert.equal(valid.record.scheduledCloseAtSeen, "2026-08-05T05:32:00.0001001Z");
+  }
+});
