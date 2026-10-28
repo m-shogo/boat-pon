@@ -495,13 +495,21 @@ function countMapTotal(counts: Record<string, number>): number {
   return total;
 }
 
+// Taxonomy admission must not depend on ambient Map.has/get/set hooks: a
+// re-digested count map with the wrong taxonomy key must still fail closed.
 function taxonomyMatches(
   actual: Record<string, number>,
   unresolved: Record<string, number>,
   rejected: Record<string, number>,
   conflictCount: number,
 ): boolean {
-  const expected = new Map<string, number>();
+  const expected: Record<string, number> = Object.create(null);
+  const addExpected = (key: string, count: number): void => {
+    Object.defineProperty(expected, key, {
+      value: (Object.getOwnPropertyDescriptor(expected, key)?.value as number | undefined ?? 0) + count,
+      enumerable: true, writable: true, configurable: true,
+    });
+  };
   const sources = [unresolved, rejected];
   for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
     const source = sources[sourceIndex]!;
@@ -509,17 +517,19 @@ function taxonomyMatches(
     for (let index = 0; index < keys.length; index++) {
       const reason = keys[index] as string;
       const taxonomy = taxonomyForReason(reason);
-      expected.set(taxonomy, (expected.get(taxonomy) ?? 0) + source[reason]!);
+      const descriptor = Object.getOwnPropertyDescriptor(source, reason);
+      if (!descriptor || !("value" in descriptor)) return false;
+      addExpected(taxonomy, descriptor.value as number);
     }
   }
-  if (conflictCount > 0) {
-    expected.set("identity_conflict", (expected.get("identity_conflict") ?? 0) + conflictCount);
-  }
+  if (conflictCount > 0) addExpected("identity_conflict", conflictCount);
   const keys = Reflect.ownKeys(actual);
-  if (keys.length !== expected.size) return false;
+  if (keys.length !== Reflect.ownKeys(expected).length) return false;
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index] as string;
-    if (!expected.has(key) || actual[key] !== expected.get(key)) return false;
+    const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key);
+    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key);
+    if (!actualDescriptor || !expectedDescriptor || actualDescriptor.value !== expectedDescriptor.value) return false;
   }
   return true;
 }
