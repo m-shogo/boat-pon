@@ -488,8 +488,8 @@ test("shadow mapper pins source-row descriptors before validation, audit digest 
   assert.equal(reconciled.rejectedCount, 1);
   assert.equal(getterReads, 0);
 
-  // The same descriptor-backed row must not be reread through a mutable
-  // Proxy get trap after validation; the mapped evidence stays identical.
+  // The source snapshot must reject a caller-controlled Proxy before
+  // reading descriptors; its get trap cannot change the audit identity.
   let directReads = 0;
   const proxyRow = new Proxy(row(), {
     get(target, property, receiver) {
@@ -499,13 +499,14 @@ test("shadow mapper pins source-row descriptors before validation, audit digest 
     },
   });
   const pinned = mapDecisionHistoryRowToRuntimeLedger(proxyRow, context);
-  assert.equal(pinned.status, "mapped");
-  assert.equal(directReads, 0);
-  if (pinned.status === "mapped") {
-    assert.equal(pinned.record.currentOdds, baseline.record.currentOdds);
-    assert.equal(pinned.record.sourceRowDigest, baseline.record.sourceRowDigest);
-    assert.equal(pinned.ledgerDigest, baseline.ledgerDigest);
+  assert.equal(pinned.status, "rejected");
+  if (pinned.status === "rejected") {
+    assert.deepEqual(pinned.reasons, ["source_row_fields_not_own_data"]);
   }
+  assert.equal(directReads, 0);
+  const ordinaryAfter = mapDecisionHistoryRowToRuntimeLedger(row(), context);
+  assert.equal(ordinaryAfter.status, "mapped");
+  if (ordinaryAfter.status === "mapped") assert.equal(ordinaryAfter.ledgerDigest, baseline.ledgerDigest);
 });
 
 test("shadow mapper pins mapping context identity across row and reconciliation digests", () => {
@@ -546,19 +547,19 @@ test("shadow mapper pins mapping context identity across row and reconciliation 
     },
   });
   const pinned = mapDecisionHistoryRowToRuntimeLedger(row(), proxyContext);
-  assert.equal(pinned.status, "mapped");
-  assert.equal(directReads, 0);
-  if (pinned.status === "mapped") {
-    assert.equal(pinned.record.recordId, baseline.record.recordId);
-    assert.equal(pinned.record.decisionSystem, baseline.record.decisionSystem);
-    assert.equal(pinned.ledgerDigest, baseline.ledgerDigest);
+  assert.equal(pinned.status, "rejected");
+  if (pinned.status === "rejected") {
+    assert.deepEqual(pinned.reasons, ["mapping_context_fields_not_own_data"]);
   }
+  assert.equal(directReads, 0);
   const sourceRows = [row({ id: 1001 }), row({ id: 1002 })];
   const expected = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, context);
+  assert.equal(expected.status, "PASS");
+  assert.equal(expected.mappedUnique, 2);
   const observed = reconcileDecisionHistoryRowsToRuntimeLedger(sourceRows, proxyContext);
-  assert.equal(observed.status, "PASS");
-  assert.equal(observed.mappedUnique, 2);
-  assert.equal(observed.recordsDigest, expected.recordsDigest);
+  assert.equal(observed.status, "CONDITIONAL");
+  assert.equal(observed.mappedUnique, 0);
+  assert.equal(observed.rejectedCount, 1);
   assert.equal(directReads, 0);
 });
 
