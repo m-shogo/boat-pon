@@ -587,7 +587,7 @@ export function reconcileDecisionHistoryRowsToRuntimeLedger(
   // is replaced, producing a false PASS with sourceRows > 0.
   for (let index = 0; index < sourceRows; index++) {
     const descriptor = Object.getOwnPropertyDescriptor(rows, String(index));
-    if (!descriptor || !("value" in descriptor) || !isRecord(descriptor.value)) {
+    if (!descriptor || !("value" in descriptor) || nodeTypes.isProxy(descriptor.value) || !isRecord(descriptor.value)) {
       appendOwn(rejected, { sourceDecisionHistoryId: null, reasons: ["source_row_not_own_data_object"] });
       continue;
     }
