@@ -17,6 +17,12 @@ const BUILTIN_REFLECT_APPLY = Reflect.apply;
 const BUILTIN_NUMBER_IS_FINITE = Number.isFinite;
 const BUILTIN_NUMBER_IS_SAFE_INTEGER = Number.isSafeInteger;
 const BUILTIN_OBJECT_IS = Object.is;
+// Bind structural inspection to the same native own-key, descriptor and
+// prototype authority used for shadow evidence admission and canonical hashes.
+// Caller-realm overrides must not hide metadata or disguise accessors.
+const BUILTIN_REFLECT_OWN_KEYS = Reflect.ownKeys;
+const BUILTIN_OBJECT_GET_PROTOTYPE_OF = Object.getPrototypeOf;
+const BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescriptor;
 // Snapshot date parsing/formatting intrinsics for untrusted evidence validation.
 // Ambient Date.parse or Date.prototype.toISOString changes must not relabel
 // noncanonical caller time strings as canonical UTC (still NOT trusted time).
@@ -148,7 +154,7 @@ function inspectOwnDataGraph(
   // A fixed-schema object with inherited metadata can pass own-key admission,
   // then either be accepted without that metadata (root) or throw during digest.
   // Deny exotic prototypes before any semantic reads or canonical hashing.
-  const prototype = Object.getPrototypeOf(value);
+  const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
   if (Array.isArray(value)) {
     if (prototype !== Array.prototype && prototype !== null) return "prototype";
   } else if (prototype !== Object.prototype && prototype !== null) {
@@ -162,9 +168,9 @@ function inspectOwnDataGraph(
     value, writable: true, enumerable: true, configurable: true,
   });
   try {
-    const keys = Reflect.ownKeys(value);
+    const keys = BUILTIN_REFLECT_OWN_KEYS(value);
     for (let index = 0; index < keys.length; index++) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, keys[index]!);
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, keys[index]!);
       if (descriptor && "value" in descriptor) {
         const issue = inspectOwnDataGraph(descriptor.value, visited, ancestors);
         if (issue) return issue;
@@ -198,11 +204,11 @@ function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) {
     // JSON serialization omits extra own array keys (including symbols) and
     // projects sparse slots as null. Bind the admitted array shape to its digest.
-    const prototype = Object.getPrototypeOf(value);
+    const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
     if (prototype !== Array.prototype && prototype !== null) {
       throw new TypeError("invalid canonical shadow evidence array prototype");
     }
-    const ownKeys = Reflect.ownKeys(value);
+    const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
     if (ownKeys.length !== value.length + 1) {
       throw new TypeError("invalid canonical shadow evidence array own shape");
     }
@@ -214,7 +220,7 @@ function canonicalize(value: unknown): unknown {
           numericIndex >= value.length || String(numericIndex) !== key) {
         throw new TypeError("invalid canonical shadow evidence array own shape");
       }
-      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
         throw new TypeError("invalid canonical shadow evidence array");
       }
@@ -222,7 +228,7 @@ function canonicalize(value: unknown): unknown {
     const result: unknown[] = [];
     Object.setPrototypeOf(result, null);
     for (let index = 0; index < value.length; index++) {
-      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, String(index));
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
         throw new TypeError("invalid canonical shadow evidence array");
       }
@@ -236,20 +242,20 @@ function canonicalize(value: unknown): unknown {
   // The source/context digest must cover the exact accepted own-data shape.
   // JSON.stringify silently ignores symbol keys, hidden properties and
   // inherited fields; a non-plain object can also project to an empty object.
-  const prototype = Object.getPrototypeOf(value);
+  const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
   if (prototype !== Object.prototype && prototype !== null) {
     throw new TypeError("invalid canonical shadow evidence object prototype");
   }
   // An ambient Object.keys override must not erase all digest fields.
   // Admit only own enumerable string-keyed data before sorting descriptors.
   const keys: string[] = [];
-  const ownKeys = Reflect.ownKeys(value);
+  const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
   for (let index = 0; index < ownKeys.length; index++) {
     const key = ownKeys[index]!;
     if (typeof key !== "string") {
       throw new TypeError("invalid canonical shadow evidence symbol key");
     }
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       throw new TypeError("invalid canonical shadow evidence non-data property");
     }
@@ -270,7 +276,7 @@ function canonicalize(value: unknown): unknown {
   const result: Record<string, unknown> = Object.create(null);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       throw new TypeError("invalid canonical shadow evidence object");
     }
@@ -290,7 +296,7 @@ function digest(value: unknown): string {
 // Build sanitized reason maps without mutable ambient Map methods or iterators.
 // A null-prototype accumulator prevents inherited names from changing membership.
 function addCount(counts: Record<string, number>, key: string, increment: number): void {
-  const previous = Object.getOwnPropertyDescriptor(counts, key);
+  const previous = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(counts, key);
   Object.defineProperty(counts, key, {
     value: (previous?.value as number | undefined ?? 0) + increment,
     enumerable: true, writable: true, configurable: true,
@@ -298,7 +304,7 @@ function addCount(counts: Record<string, number>, key: string, increment: number
 }
 
 function orderedCountMap(counts: Record<string, number>): Record<string, number> {
-  const keys = Reflect.ownKeys(counts) as string[];
+  const keys = BUILTIN_REFLECT_OWN_KEYS(counts) as string[];
   for (let index = 1; index < keys.length; index++) {
     const key = keys[index]!;
     let previous = index - 1;
@@ -311,7 +317,7 @@ function orderedCountMap(counts: Record<string, number>): Record<string, number>
   const result: Record<string, number> = {};
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
-    const descriptor = Object.getOwnPropertyDescriptor(counts, key);
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(counts, key);
     if (!descriptor || !("value" in descriptor)) throw new TypeError("invalid reason count");
     Object.defineProperty(result, key, {
       value: descriptor.value as number, enumerable: true, writable: true, configurable: true,
@@ -380,10 +386,10 @@ function taxonomyCounts(
   const sources = [unresolved, rejected];
   for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
     const source = sources[sourceIndex]!;
-    const keys = Reflect.ownKeys(source);
+    const keys = BUILTIN_REFLECT_OWN_KEYS(source);
     for (let index = 0; index < keys.length; index++) {
       const reason = keys[index] as string;
-      const descriptor = Object.getOwnPropertyDescriptor(source, reason);
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(source, reason);
       if (!descriptor || !("value" in descriptor)) throw new TypeError("invalid reason count");
       addCount(counts, taxonomyForReason(reason), descriptor.value as number);
     }
@@ -604,14 +610,14 @@ function requireExactObject(value: unknown, path: string, keys: readonly string[
     appendError(errors,`${path} must be an object`);
     return false;
   }
-  const ownKeys = Reflect.ownKeys(value);
+  const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
   for (let index = 0; index < ownKeys.length; index++) {
     const key = ownKeys[index]!;
     if (typeof key !== "string" || !includesOwn(keys, key)) appendError(errors,`unknown field: ${path}.${String(key)}`);
   }
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       appendError(errors,`missing own enumerable data field: ${path}.${key}`);
     }
@@ -642,18 +648,18 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
     return null;
   }
   const initialErrors = errors.length;
-  const prototype = Object.getPrototypeOf(value);
+  const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
   if (prototype !== Object.prototype && prototype !== null) {
     appendError(errors, `${path} must have a plain object prototype`);
   }
-  const keys = Reflect.ownKeys(value);
+  const keys = BUILTIN_REFLECT_OWN_KEYS(value);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
     if (typeof key !== "string") {
       appendError(errors, `${path} must not contain symbol keys`);
       continue;
     }
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       appendError(errors, `${path}.${key} must be an own enumerable data field`);
       continue;
@@ -674,7 +680,7 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
 
 function countMapTotal(counts: Record<string, number>): number {
   let total = 0;
-  const keys = Reflect.ownKeys(counts);
+  const keys = BUILTIN_REFLECT_OWN_KEYS(counts);
   for (let index = 0; index < keys.length; index++) total += counts[keys[index] as string]!;
   return total;
 }
@@ -690,29 +696,29 @@ function taxonomyMatches(
   const expected: Record<string, number> = Object.create(null);
   const addExpected = (key: string, count: number): void => {
     Object.defineProperty(expected, key, {
-      value: (Object.getOwnPropertyDescriptor(expected, key)?.value as number | undefined ?? 0) + count,
+      value: (BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(expected, key)?.value as number | undefined ?? 0) + count,
       enumerable: true, writable: true, configurable: true,
     });
   };
   const sources = [unresolved, rejected];
   for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
     const source = sources[sourceIndex]!;
-    const keys = Reflect.ownKeys(source);
+    const keys = BUILTIN_REFLECT_OWN_KEYS(source);
     for (let index = 0; index < keys.length; index++) {
       const reason = keys[index] as string;
       const taxonomy = taxonomyForReason(reason);
-      const descriptor = Object.getOwnPropertyDescriptor(source, reason);
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(source, reason);
       if (!descriptor || !("value" in descriptor)) return false;
       addExpected(taxonomy, descriptor.value as number);
     }
   }
   if (conflictCount > 0) addExpected("identity_conflict", conflictCount);
-  const keys = Reflect.ownKeys(actual);
-  if (keys.length !== Reflect.ownKeys(expected).length) return false;
+  const keys = BUILTIN_REFLECT_OWN_KEYS(actual);
+  if (keys.length !== BUILTIN_REFLECT_OWN_KEYS(expected).length) return false;
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index] as string;
-    const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key);
-    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key);
+    const actualDescriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(actual, key);
+    const expectedDescriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(expected, key);
     if (!actualDescriptor || !expectedDescriptor || actualDescriptor.value !== expectedDescriptor.value) return false;
   }
   return true;
@@ -738,10 +744,10 @@ function walk(value: unknown, path: string, errors: string[]): void {
   if (!isRecord(value)) return;
   // A mutable Object.entries hook must not erase path/forbidden-field diagnostics.
   // Own descriptors also avoid invoking an untrusted accessor while walking.
-  const keys = Reflect.ownKeys(value);
+  const keys = BUILTIN_REFLECT_OWN_KEYS(value);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       appendError(errors, `non-data field at ${path}.${String(key)}`);
       continue;
@@ -782,14 +788,14 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     return immutableValidationResult([message], null);
   }
   if (!isRecord(value)) return immutableValidationResult(["evidence must be an object"], null);
-  const topLevelKeys = Reflect.ownKeys(value);
+  const topLevelKeys = BUILTIN_REFLECT_OWN_KEYS(value);
   for (let index = 0; index < topLevelKeys.length; index++) {
     const key = topLevelKeys[index]!;
     if (typeof key !== "string" || !includesOwn(TOP_LEVEL_KEYS, key)) appendError(errors,`unknown top-level field: ${String(key)}`);
   }
   for (let index = 0; index < TOP_LEVEL_KEYS.length; index++) {
     const key = TOP_LEVEL_KEYS[index]!;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       appendError(errors,`missing own enumerable data top-level field: ${key}`);
     }
