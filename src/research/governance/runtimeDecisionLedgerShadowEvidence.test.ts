@@ -530,7 +530,7 @@ test("shadow evidence rejects inherited, hidden, accessor and symbol fields desp
         delete privacy.rawRecordsIncluded;
         Object.setPrototypeOf(privacy, { rawRecordsIncluded: false });
       },
-      expected: /missing own enumerable data field: privacy.rawRecordsIncluded/,
+      expected: /non-plain prototype forbidden in evidence graph/,
     },
     {
       label: "inherited top-level timestamp",
@@ -540,7 +540,7 @@ test("shadow evidence rejects inherited, hidden, accessor and symbol fields desp
         delete record.generatedAt;
         Object.setPrototypeOf(record, { generatedAt: timestamp });
       },
-      expected: /missing own enumerable data top-level field: generatedAt/,
+      expected: /non-plain prototype forbidden in evidence graph/,
     },
     {
       label: "non-enumerable nested privacy flag",
@@ -654,7 +654,7 @@ test("shadow evidence rejects hidden, symbol, inherited and accessor reason-coun
       change: (evidence) => {
         Object.setPrototypeOf(evidence.completeness.unresolvedReasonCounts, { hidden: 1 });
       },
-      expected: /unresolvedReasonCounts must have a plain object prototype/,
+      expected: /non-plain prototype forbidden in evidence graph/,
     },
     {
       label: "accessor property",
