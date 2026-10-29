@@ -162,8 +162,18 @@ function digest(value: unknown): string {
 
 // Do not feed an array to Object.fromEntries: an ambient empty Array iterator
 // can silently erase the complete reason/taxonomy map.
-function orderedCountMap(counts: Map<string, number>): Record<string, number> {
-  const keys = [...counts.keys()];
+// Build sanitized reason maps without mutable ambient Map methods or iterators.
+// A null-prototype accumulator prevents inherited names from changing membership.
+function addCount(counts: Record<string, number>, key: string, increment: number): void {
+  const previous = Object.getOwnPropertyDescriptor(counts, key);
+  Object.defineProperty(counts, key, {
+    value: (previous?.value as number | undefined ?? 0) + increment,
+    enumerable: true, writable: true, configurable: true,
+  });
+}
+
+function orderedCountMap(counts: Record<string, number>): Record<string, number> {
+  const keys = Reflect.ownKeys(counts) as string[];
   for (let index = 1; index < keys.length; index++) {
     const key = keys[index]!;
     let previous = index - 1;
@@ -176,20 +186,21 @@ function orderedCountMap(counts: Map<string, number>): Record<string, number> {
   const result: Record<string, number> = {};
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
+    const descriptor = Object.getOwnPropertyDescriptor(counts, key);
+    if (!descriptor || !("value" in descriptor)) throw new TypeError("invalid reason count");
     Object.defineProperty(result, key, {
-      value: counts.get(key)!, enumerable: true, writable: true, configurable: true,
+      value: descriptor.value as number, enumerable: true, writable: true, configurable: true,
     });
   }
   return result;
 }
 
 function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number> {
-  const counts = new Map<string, number>();
+  const counts: Record<string, number> = Object.create(null);
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const reasons = rows[rowIndex]!.reasons;
     for (let index = 0; index < reasons.length; index++) {
-      const reason = reasons[index]!;
-      counts.set(reason, (counts.get(reason) ?? 0) + 1);
+      addCount(counts, reasons[index]!, 1);
     }
   }
   return orderedCountMap(counts);
@@ -216,19 +227,19 @@ function taxonomyCounts(
   rejected: Record<string, number>,
   conflictCount: number,
 ): Record<string, number> {
-  const counts = new Map<string, number>();
+  const counts: Record<string, number> = Object.create(null);
   const sources = [unresolved, rejected];
   for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
-    const entries = Object.entries(sources[sourceIndex]!);
-    for (let index = 0; index < entries.length; index++) {
-      const pair = entries[index]!;
-      const reason = pair[0];
-      const count = pair[1];
-      const taxonomy = taxonomyForReason(reason);
-      counts.set(taxonomy, (counts.get(taxonomy) ?? 0) + count);
+    const source = sources[sourceIndex]!;
+    const keys = Reflect.ownKeys(source);
+    for (let index = 0; index < keys.length; index++) {
+      const reason = keys[index] as string;
+      const descriptor = Object.getOwnPropertyDescriptor(source, reason);
+      if (!descriptor || !("value" in descriptor)) throw new TypeError("invalid reason count");
+      addCount(counts, taxonomyForReason(reason), descriptor.value as number);
     }
   }
-  if (conflictCount > 0) counts.set("identity_conflict", (counts.get("identity_conflict") ?? 0) + conflictCount);
+  if (conflictCount > 0) addCount(counts, "identity_conflict", conflictCount);
   return orderedCountMap(counts);
 }
 
