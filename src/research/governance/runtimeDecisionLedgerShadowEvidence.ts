@@ -766,6 +766,12 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   const taxonomies = validateCountMap(
     evidence.completeness.taxonomyCounts, "completeness.taxonomyCounts", errors,
   );
+  // A malformed dynamic count map may contain an enumerable accessor.
+  // Do not canonicalize or walk it after its descriptor has already failed
+  // admission: JSON serialization would execute caller-owned getters.
+  if (!unresolvedCounts || !rejectedCounts || !taxonomies) {
+    return immutableValidationResult(errors, null);
+  }
   if (unresolvedCounts && rejectedCounts && taxonomies) {
     if (!Number.isSafeInteger(countMapTotal(unresolvedCounts)) ||
       countMapTotal(unresolvedCounts) < r.unresolvedCount) {
