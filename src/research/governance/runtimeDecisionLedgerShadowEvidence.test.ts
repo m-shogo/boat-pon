@@ -925,3 +925,43 @@ test("shadow evidence builder preserves duplicate reason counts under ambient Ma
   assert.equal(observed?.contentDigest, baseline.contentDigest);
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed).valid, true);
 });
+
+
+test("shadow evidence preflight denies cyclic own-data before canonical digest, preserving shared acyclic references", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const baselineDigest = baseline.contentDigest;
+  const selfCycle: Record<string, unknown> = {};
+  selfCycle.self = selfCycle;
+
+  const cyclicScope = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (cyclicScope.scope as unknown as Record<string, unknown>).runKind = selfCycle;
+  const scopeResult = validateRuntimeDecisionLedgerShadowEvidence(cyclicScope);
+  assert.equal(scopeResult.valid, false);
+  assert.equal(scopeResult.evidence, null);
+  assert.ok(scopeResult.errors.includes("cyclic reference forbidden in evidence graph"));
+
+  const cyclicCountMap = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (cyclicCountMap.completeness.unresolvedReasonCounts as Record<string, unknown>).loop = selfCycle;
+  const countResult = validateRuntimeDecisionLedgerShadowEvidence(cyclicCountMap);
+  assert.equal(countResult.valid, false);
+  assert.ok(countResult.errors.includes("cyclic reference forbidden in evidence graph"));
+
+  const clean = input();
+  const shared = buildRuntimeDecisionLedgerShadowEvidence({
+    ...clean,
+    scope: { ...clean.scope, returnedRows: 1 },
+    reconciliation: {
+      ...clean.reconciliation,
+      status: "PASS",
+      sourceRows: 1,
+      mappedUnique: 1,
+      unresolvedCount: 0,
+      unresolved: [],
+    },
+  });
+  shared.completeness.rejectedReasonCounts = shared.completeness.unresolvedReasonCounts;
+  const sharedResult = validateRuntimeDecisionLedgerShadowEvidence(shared);
+  assert.equal(sharedResult.valid, true, sharedResult.errors.join("; "));
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+  assert.equal(baseline.contentDigest, baselineDigest);
+});
