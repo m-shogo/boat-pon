@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-structural-inspection-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-structural-inspection-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-shadow-own-key-descriptor-and-prototype-authority-under-caller-realm-overrides",
+  "symptom": "Node 22.16.0 synthetic tests confirmed that mutable Reflect.ownKeys can omit hidden own properties, Object.getPrototypeOf can mislabel an inherited prototype as plain, and Object.getOwnPropertyDescriptor can disguise an accessor as an own data field. Static review of the v457 research-only shadow evidence validator found all three mutable methods used in preflight, canonical digests and field admission. No private data or production execution was used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_STRUCTURAL_REFLECTION_ADMISSION",
+  "attemptSignature": "pr2286-v458-pin-ownkeys-getprototypeof-getownpropertydescriptor-for-shadow-admission-and-digest",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@8d99a969/ambient-Reflect.ownKeys-Object.getPrototypeOf-Object.getOwnPropertyDescriptor"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/74d5343dbb15e77b5fbd0cf015027c7ad16140cf",
+    "commit/698abbb38e504165b490230f567f2e2480e4a86c",
+    "research/registries/learnings/LEARN-shadow-evidence-canonical-own-property-shape-alias-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-exotic-prototype-validator-ingress-20261030.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-number-object-numeric-admission-20261030.json"
+  ],
+  "lesson": "Own-data structural checks do not protect a canonical digest if their reflection primitives remain mutable after module initialization. Hiding own keys, spoofing prototype identity or disguising accessors can detach evidence admission from the actual caller-owned object. Synthetic validation does not authenticate K source rights, independent time, finality or scoring.",
+  "guardrail": "Pin Reflect.ownKeys, Object.getPrototypeOf and Object.getOwnPropertyDescriptor at research module initialization; reuse the captured references consistently in bounded preflight, source/context canonicalization, fixed-schema checks, reason-map validation and privacy walk. Regression-test valid evidence plus hidden own key, inherited prototype and accessor getter nonexecution under reversible ambient overrides. Preserve current digests and research/production isolation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T22:05:24.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T22:05:24.000Z",
+  "_digest": "eb5249fc234a672d7470a4712f49c2c0d1621ce049fe3475ca4c4bf334a17a74"
+}
