@@ -555,6 +555,43 @@ test("shadow evidence retains multi-reason row coverage without requiring one re
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(evidence).valid, true);
 });
 
+test("shadow evidence preserves privacy and path denials under empty Object.entries", () => {
+  const good = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const badPrivacy = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (badPrivacy.privacy as { rawRecordsIncluded: boolean }).rawRecordsIncluded = true;
+  resign(badPrivacy);
+
+  const badPath = buildRuntimeDecisionLedgerShadowEvidence(input());
+  badPath.scope.modelVersion = "/synthetic/not-a-real-path";
+  resign(badPath);
+
+  const original = Object.getOwnPropertyDescriptor(Object, "entries");
+  let observed: {
+    good: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    privacy: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    path: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+  } | undefined;
+  try {
+    Object.defineProperty(Object, "entries", {
+      configurable: true, writable: true, value() { return []; },
+    });
+    observed = {
+      good: validateRuntimeDecisionLedgerShadowEvidence(good),
+      privacy: validateRuntimeDecisionLedgerShadowEvidence(badPrivacy),
+      path: validateRuntimeDecisionLedgerShadowEvidence(badPath),
+    };
+  } finally {
+    if (original) Object.defineProperty(Object, "entries", original);
+    else Reflect.deleteProperty(Object, "entries");
+  }
+
+  assert.equal(observed?.good.valid, true);
+  assert.equal(observed?.privacy.valid, false);
+  assert.ok(observed?.privacy.errors.includes("privacy.rawRecordsIncluded must be false"));
+  assert.equal(observed?.path.valid, false);
+  assert.ok(observed?.path.errors.includes("absolute path-like value at $.scope.modelVersion"));
+});
+
 test("shadow evidence cannot skip admission checks under an empty Array iterator", () => {
   const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
   const privacyDrift = buildRuntimeDecisionLedgerShadowEvidence(input());
