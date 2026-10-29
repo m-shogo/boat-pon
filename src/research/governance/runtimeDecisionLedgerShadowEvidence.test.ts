@@ -101,6 +101,56 @@ test("content digest is stable across generatedAt changes", () => {
   assert.equal(first.contentDigest, second.contentDigest);
 });
 
+test("shadow evidence digest identity survives ambient JSON.stringify replacement", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const changedInput = input();
+  changedInput.source.fileSizeBytes += 1;
+  changedInput.context.manifestId = "decision-history-shadow-manifest:changed";
+  const expectedChanged = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+  assert.notEqual(expectedChanged.sourceDescriptorDigest, baseline.sourceDescriptorDigest);
+  assert.notEqual(expectedChanged.contextDigest, baseline.contextDigest);
+  assert.notEqual(expectedChanged.contentDigest, baseline.contentDigest);
+
+  // Before the guardrail, a caller-replaced serializer made all three digests
+  // SHA-256("{}") and could make a forged, re-digested source appear consistent.
+  const forged = structuredClone(baseline);
+  forged.source.fileSizeBytes += 1;
+  const constantDigest = createHash("sha256").update("{}").digest("hex");
+  forged.sourceDescriptorDigest = constantDigest;
+  forged.contentDigest = constantDigest;
+
+  const original = Object.getOwnPropertyDescriptor(JSON, "stringify")!;
+  let observed: {
+    changed: RuntimeDecisionLedgerShadowEvidence;
+    changedValidation: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    baselineValidation: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    forgedValidation: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+  } | undefined;
+  try {
+    Object.defineProperty(JSON, "stringify", {
+      configurable: true, writable: true, value: () => "{}",
+    });
+    const changed = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+    observed = {
+      changed,
+      changedValidation: validateRuntimeDecisionLedgerShadowEvidence(changed),
+      baselineValidation: validateRuntimeDecisionLedgerShadowEvidence(baseline),
+      forgedValidation: validateRuntimeDecisionLedgerShadowEvidence(forged),
+    };
+  } finally {
+    Object.defineProperty(JSON, "stringify", original);
+  }
+
+  assert.equal(observed?.changed.sourceDescriptorDigest, expectedChanged.sourceDescriptorDigest);
+  assert.equal(observed?.changed.contextDigest, expectedChanged.contextDigest);
+  assert.equal(observed?.changed.contentDigest, expectedChanged.contentDigest);
+  assert.equal(observed?.changedValidation.valid, true, observed?.changedValidation.errors.join("; "));
+  assert.equal(observed?.baselineValidation.valid, true);
+  assert.equal(observed?.forgedValidation.valid, false);
+  assert.ok(observed?.forgedValidation.errors.includes("sourceDescriptorDigest mismatch"));
+  assert.ok(observed?.forgedValidation.errors.includes("contentDigest mismatch"));
+});
+
 test("limit reached remains conditional even when every returned row maps", () => {
   const base = input();
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input({
