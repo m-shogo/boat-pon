@@ -1268,3 +1268,42 @@ test("shadow evidence denies embedded absolute path tokens without rejecting ord
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(ordinary).valid, true);
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
+
+
+test("shadow canonical digest rejects own callable toJSON and isolates arrays from ambient toJSON", () => {
+  const baselineInput = input();
+  let hooksCalled = 0;
+  const forgedContext = { ...baselineInput.context };
+  Object.defineProperty(forgedContext, "toJSON", {
+    enumerable: true, configurable: true,
+    value() { hooksCalled++; return { decisionSystem: "synthetic-forgery" }; },
+  });
+  assert.throws(
+    () => buildRuntimeDecisionLedgerShadowEvidence(input({ context: forgedContext })),
+    /invalid canonical shadow evidence function/,
+  );
+  assert.equal(hooksCalled, 0, "caller-owned toJSON must not execute");
+
+  // A deliberately extra synthetic array probes the digest boundary, not a
+  // claim that an array is a valid mapping-context field.
+  const contextWithArray = {
+    ...baselineInput.context,
+    syntheticDigestProbe: ["synthetic-marker"],
+  } as typeof baselineInput.context;
+  const stable = buildRuntimeDecisionLedgerShadowEvidence(input({ context: contextWithArray }));
+  const original = Object.getOwnPropertyDescriptor(Array.prototype, "toJSON");
+  try {
+    Object.defineProperty(Array.prototype, "toJSON", {
+      configurable: true, writable: true,
+      value() { hooksCalled++; return ["synthetic-forgery"]; },
+    });
+    const observed = buildRuntimeDecisionLedgerShadowEvidence(input({ context: contextWithArray }));
+    assert.equal(observed.contextDigest, stable.contextDigest);
+    assert.equal(observed.contentDigest, stable.contentDigest);
+    assert.equal(hooksCalled, 0, "ambient array toJSON must not execute");
+  } finally {
+    if (original) Object.defineProperty(Array.prototype, "toJSON", original);
+    else delete (Array.prototype as unknown as { toJSON?: unknown }).toJSON;
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(buildRuntimeDecisionLedgerShadowEvidence(input())).valid, true);
+});
