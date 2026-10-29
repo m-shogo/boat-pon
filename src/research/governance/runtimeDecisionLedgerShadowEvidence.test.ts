@@ -297,6 +297,62 @@ test("shadow date admission ignores ambient Date.parse and Date.prototype.toISOS
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
 
+test("shadow admission is stable when ambient Reflect.apply is replaced", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const embeddedPath = structuredClone(baseline);
+  embeddedPath.scope.modelVersion = "diagnostic=/opt/synthetic-fixture";
+  resign(embeddedPath);
+  const invalidHex = structuredClone(baseline);
+  invalidHex.contextDigest = "not-a-sha256";
+  resign(invalidHex);
+  const invalidInstant = "2026-08-05T08:10:00+00:00";
+  const invalidDay = "2026-02-30";
+  const forgedInstant = structuredClone(baseline);
+  forgedInstant.generatedAt = invalidInstant;
+  const forgedDay = structuredClone(baseline);
+  forgedDay.scope.from = invalidDay;
+  resign(forgedDay);
+
+  const originalApply = Reflect.apply;
+  const nativeExec = RegExp.prototype.exec;
+  const nativeParse = Date.parse;
+  const nativeIso = Date.prototype.toISOString;
+  let observed: Array<ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>> = [];
+  try {
+    Reflect.apply = ((target: Function, receiver: unknown, args: ArrayLike<unknown>) => {
+      if (target === nativeExec && args[0] === embeddedPath.scope.modelVersion) return null;
+      if (target === nativeExec && args[0] === invalidHex.contextDigest) return ["synthetic-match"];
+      if (target === nativeParse && args[0] === invalidInstant) return 0;
+      if (target === nativeParse && args[0] === `${invalidDay}T00:00:00.000Z`) return 1;
+      if (target === nativeIso && receiver instanceof Date) {
+        if (receiver.getTime() === 0) return invalidInstant;
+        if (receiver.getTime() === 1) return `${invalidDay}T00:00:00.000Z`;
+      }
+      return originalApply(target, receiver, args);
+    }) as typeof Reflect.apply;
+    observed = [
+      validateRuntimeDecisionLedgerShadowEvidence(baseline),
+      validateRuntimeDecisionLedgerShadowEvidence(embeddedPath),
+      validateRuntimeDecisionLedgerShadowEvidence(invalidHex),
+      validateRuntimeDecisionLedgerShadowEvidence(forgedInstant),
+      validateRuntimeDecisionLedgerShadowEvidence(forgedDay),
+    ];
+  } finally {
+    Reflect.apply = originalApply;
+  }
+  assert.equal(observed.length, 5);
+  assert.equal(observed[0]!.valid, true);
+  for (const result of observed.slice(1)) {
+    assert.equal(result.valid, false);
+    assert.equal(result.evidence, null);
+  }
+  assert.ok(observed[1]!.errors.includes("absolute path-like value at $.scope.modelVersion"));
+  assert.ok(observed[2]!.errors.includes("contextDigest must be sha256 hex"));
+  assert.ok(observed[3]!.errors.includes("generatedAt must be a canonical UTC date-time"));
+  assert.ok(observed[4]!.errors.includes("bounded scope requires canonical from/to dates"));
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
+
 test("validator rejects rehashed impossible source descriptor values", () => {
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
   evidence.source.fileSizeBytes = -1;
