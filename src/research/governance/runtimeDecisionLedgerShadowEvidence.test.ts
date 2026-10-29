@@ -1113,3 +1113,35 @@ test("shadow evidence rejects bigint fields before JSON digest without throwing"
   assert.equal(ordinary.contentDigest, baseline.contentDigest);
   assert.equal(ordinary.sourceDescriptorDigest, baseline.sourceDescriptorDigest);
 });
+
+test("shadow evidence denies embedded absolute path tokens without rejecting ordinary HTTPS metadata", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const pathMarkers = [
+    "diagnostic /home/synthetic-fixture/trace.log",
+    "diagnostic C:\\synthetic-fixture\\trace.log",
+    "diagnostic \\\\synthetic-fixture\\share\\trace.log",
+    "diagnostic file:///synthetic-fixture/trace.log",
+  ];
+  for (const marker of pathMarkers) {
+    const scopeEvidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    scopeEvidence.scope.modelVersion = marker;
+    resign(scopeEvidence);
+    const scopeResult = validateRuntimeDecisionLedgerShadowEvidence(scopeEvidence);
+    assert.equal(scopeResult.valid, false, marker);
+    assert.ok(scopeResult.errors.includes("absolute path-like value at $.scope.modelVersion"), marker);
+
+    const reasonEvidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    reasonEvidence.completeness.unresolvedReasonCounts = { [marker]: 1 };
+    reasonEvidence.completeness.taxonomyCounts = { schema_or_value: 1 };
+    resign(reasonEvidence);
+    const reasonResult = validateRuntimeDecisionLedgerShadowEvidence(reasonEvidence);
+    assert.equal(reasonResult.valid, false, marker);
+    assert.ok(reasonResult.errors.includes("completeness.unresolvedReasonCounts contains forbidden reason key"), marker);
+  }
+
+  const ordinary = buildRuntimeDecisionLedgerShadowEvidence(input());
+  ordinary.scope.modelVersion = "https://example.test/research";
+  resign(ordinary);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(ordinary).valid, true);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
