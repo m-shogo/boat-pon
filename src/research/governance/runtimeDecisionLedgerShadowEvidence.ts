@@ -23,6 +23,9 @@ const BUILTIN_OBJECT_IS = Object.is;
 const BUILTIN_REFLECT_OWN_KEYS = Reflect.ownKeys;
 const BUILTIN_OBJECT_GET_PROTOTYPE_OF = Object.getPrototypeOf;
 const BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescriptor;
+// Canonical evidence digests must not depend on a caller-replaced JSON.stringify.
+// Capture the native serializer after module load, alongside other digest intrinsics.
+const BUILTIN_JSON_STRINGIFY = JSON.stringify;
 // Snapshot date parsing/formatting intrinsics for untrusted evidence validation.
 // Ambient Date.parse or Date.prototype.toISOString changes must not relabel
 // noncanonical caller time strings as canonical UTC (still NOT trusted time).
@@ -288,7 +291,7 @@ function canonicalize(value: unknown): unknown {
 }
 
 function digest(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
+  return createHash("sha256").update(BUILTIN_JSON_STRINGIFY(canonicalize(value))).digest("hex");
 }
 
 // Do not feed an array to Object.fromEntries: an ambient empty Array iterator
