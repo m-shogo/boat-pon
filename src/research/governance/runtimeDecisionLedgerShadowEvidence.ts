@@ -175,19 +175,29 @@ function canonicalize(value: unknown): unknown {
     return result;
   }
   if (!isRecord(value)) return value;
+  // The source/context digest must cover the exact accepted own-data shape.
+  // JSON.stringify silently ignores symbol keys, hidden properties and
+  // inherited fields; a non-plain object can also project to an empty object.
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError("invalid canonical shadow evidence object prototype");
+  }
   // An ambient Object.keys override must not erase all digest fields.
-  // Match Object.keys' enumerable string-key projection through own descriptors.
+  // Admit only own enumerable string-keyed data before sorting descriptors.
   const keys: string[] = [];
   const ownKeys = Reflect.ownKeys(value);
   for (let index = 0; index < ownKeys.length; index++) {
     const key = ownKeys[index]!;
-    if (typeof key !== "string") continue;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (descriptor?.enumerable) {
-      Object.defineProperty(keys, String(keys.length), {
-        value: key, writable: true, enumerable: true, configurable: true,
-      });
+    if (typeof key !== "string") {
+      throw new TypeError("invalid canonical shadow evidence symbol key");
     }
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      throw new TypeError("invalid canonical shadow evidence non-data property");
+    }
+    Object.defineProperty(keys, String(keys.length), {
+      value: key, writable: true, enumerable: true, configurable: true,
+    });
   }
   // Source and content digests must not depend on mutable Array.map/sort.
   for (let index = 1; index < keys.length; index++) {
