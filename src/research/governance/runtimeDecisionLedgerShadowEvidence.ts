@@ -94,13 +94,15 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
 // Track active ancestors separately from visited aliases: cycles must be denied
 // before canonicalization, but shared acyclic objects are not cycles.
 // Bound traversal so an unexpected deep graph cannot become an unbounded preflight.
-type OwnDataGraphIssue = "proxy" | "cycle" | "limit";
+type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint";
 function inspectOwnDataGraph(
   value: unknown,
   visited: object[] = [],
   ancestors: object[] = [],
 ): OwnDataGraphIssue | null {
   if (isProxy(value)) return "proxy";
+  // JSON.stringify throws for bigint before the validator can report invalid fields.
+  if (typeof value === "bigint") return "bigint";
   if (value === null || (typeof value !== "object" && typeof value !== "function")) return null;
   for (let index = 0; index < ancestors.length; index++) {
     if (ancestors[index] === value) return "cycle";
@@ -672,6 +674,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (graphIssue) {
     const message = graphIssue === "proxy" ? "proxy value forbidden in evidence graph"
       : graphIssue === "cycle" ? "cyclic reference forbidden in evidence graph"
+      : graphIssue === "bigint" ? "non-JSON bigint forbidden in evidence graph"
       : "evidence graph exceeds preflight bound";
     return immutableValidationResult([message], null);
   }
