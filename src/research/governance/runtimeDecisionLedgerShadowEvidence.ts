@@ -102,7 +102,7 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
 // Track active ancestors separately from visited aliases: cycles must be denied
 // before canonicalization, but shared acyclic objects are not cycles.
 // Bound traversal so an unexpected deep graph cannot become an unbounded preflight.
-type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint" | "function" | "undefined" | "symbol" | "nonfinite";
+type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint" | "function" | "undefined" | "symbol" | "nonfinite" | "negativezero";
 function inspectOwnDataGraph(
   value: unknown,
   visited: object[] = [],
@@ -115,6 +115,8 @@ function inspectOwnDataGraph(
   if (value === undefined) return "undefined";
   if (typeof value === "symbol") return "symbol";
   if (typeof value === "number" && !Number.isFinite(value)) return "nonfinite";
+  // JSON.stringify(-0) produces 0, erasing a distinct numeric input state.
+  if (typeof value === "number" && Object.is(value, -0)) return "negativezero";
   if (value === null || (typeof value !== "object" && typeof value !== "function")) return null;
   for (let index = 0; index < ancestors.length; index++) {
     if (ancestors[index] === value) return "cycle";
@@ -159,6 +161,10 @@ function canonicalize(value: unknown): unknown {
   if (value === undefined || typeof value === "symbol" ||
       (typeof value === "number" && !Number.isFinite(value))) {
     throw new TypeError("invalid canonical shadow evidence non-JSON primitive");
+  }
+  // Preserve source/context digest identity: JSON serializes -0 exactly as 0.
+  if (typeof value === "number" && Object.is(value, -0)) {
+    throw new TypeError("invalid canonical shadow evidence negative zero");
   }
   if (Array.isArray(value)) {
     // JSON serialization omits extra own array keys (including symbols) and
@@ -743,6 +749,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       : graphIssue === "undefined" ? "non-JSON undefined forbidden in evidence graph"
       : graphIssue === "symbol" ? "non-JSON symbol forbidden in evidence graph"
       : graphIssue === "nonfinite" ? "non-finite number forbidden in evidence graph"
+      : graphIssue === "negativezero" ? "negative zero forbidden in evidence graph"
       : "evidence graph exceeds preflight bound";
     return immutableValidationResult([message], null);
   }
