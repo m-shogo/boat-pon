@@ -756,3 +756,55 @@ test("shadow evidence denies root, nested and revoked Proxies without executing 
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
   assert.equal(baseline.contentDigest, expectedDigest);
 });
+
+test("shadow evidence builder preserves reason maps and digest under empty ambient Map keys iterator", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const original = Object.getOwnPropertyDescriptor(Map.prototype, "keys");
+  assert.ok(original);
+  let observed: RuntimeDecisionLedgerShadowEvidence | undefined;
+  try {
+    Object.defineProperty(Map.prototype, "keys", {
+      configurable: true, writable: true,
+      value: function* () { /* synthetic empty Map iterator */ },
+    });
+    observed = buildRuntimeDecisionLedgerShadowEvidence(input());
+  } finally {
+    Object.defineProperty(Map.prototype, "keys", original);
+  }
+  assert.deepEqual(observed?.completeness.unresolvedReasonCounts, baseline.completeness.unresolvedReasonCounts);
+  assert.deepEqual(observed?.completeness.taxonomyCounts, baseline.completeness.taxonomyCounts);
+  assert.equal(observed?.contentDigest, baseline.contentDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed).valid, true);
+});
+
+test("shadow evidence builder preserves duplicate reason counts under ambient Map get forgery", () => {
+  const scenario = input();
+  scenario.reconciliation.mappedUnique = 0;
+  scenario.reconciliation.unresolvedCount = 2;
+  scenario.reconciliation.unresolved = [
+    { sourceDecisionHistoryId: 98, reasons: ["close_time_not_proven_visible_at_decision"] },
+    { sourceDecisionHistoryId: 99, reasons: ["close_time_not_proven_visible_at_decision"] },
+  ];
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(scenario);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+  const original = Object.getOwnPropertyDescriptor(Map.prototype, "get");
+  assert.ok(original);
+  let observed: RuntimeDecisionLedgerShadowEvidence | undefined;
+  try {
+    const nativeGet = original.value as (this: Map<string, number>, key: string) => number | undefined;
+    Object.defineProperty(Map.prototype, "get", {
+      configurable: true, writable: true,
+      value: function (this: Map<string, number>, key: string) {
+        if (key === "close_time_not_proven_visible_at_decision" || key === "temporal_provenance") return 0;
+        return nativeGet.call(this, key);
+      },
+    });
+    observed = buildRuntimeDecisionLedgerShadowEvidence(scenario);
+  } finally {
+    Object.defineProperty(Map.prototype, "get", original);
+  }
+  assert.deepEqual(observed?.completeness.unresolvedReasonCounts, { close_time_not_proven_visible_at_decision: 2 });
+  assert.deepEqual(observed?.completeness.taxonomyCounts, { temporal_provenance: 2 });
+  assert.equal(observed?.contentDigest, baseline.contentDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed).valid, true);
+});
