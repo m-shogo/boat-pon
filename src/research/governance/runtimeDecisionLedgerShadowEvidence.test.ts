@@ -154,6 +154,24 @@ test("validator rejects count mismatch, active WAL and private fields", () => {
   assert.match(validation.errors.join("\n"), /unknown top-level field: records/);
 });
 
+test("shadow evidence rejects non-boolean WAL absence claims even with consistent digests", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  for (const claim of [0, "", null, undefined, true]) {
+    const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    (evidence.source as unknown as Record<string, unknown>).walPresent = claim;
+    evidence.sourceDescriptorDigest = sha256(evidence.source);
+    resign(evidence);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(result.valid, false, `walPresent=${String(claim)}`);
+    assert.equal(result.evidence, null);
+    assert.ok(result.errors.includes("source.walPresent must be false"));
+  }
+
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
+
 test("validator rejects rehashed semantic verdict, completeness and safety drift", () => {
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
   evidence.verdict = "PASS";
