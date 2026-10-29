@@ -259,6 +259,13 @@ function containsLiteral(haystack: string, needle: string): boolean {
   return false;
 }
 
+// Reject embedded filesystem path tokens in diagnostic strings and reason keys.
+// Do not confuse HTTPS scheme separators with absolute local paths.
+function containsAbsolutePathLike(value: string): boolean {
+  return /(?:^|[\s"'(=:])(?:file:\/\/|\/(?!\/|\s)|[A-Za-z]:[\\/]|\\\\[^\\\s])/u.test(value) ||
+    containsLiteral(value, "/Users/") || containsLiteral(value, "\\Users\\");
+}
+
 function taxonomyForReason(reason: string): string {
   if (reason === "source_row_update_or_odds_observation_after_created_at") return "source_mutability";
   if (
@@ -564,8 +571,7 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
       appendError(errors, `${path}.${key} must be an own enumerable data field`);
       continue;
     }
-    if (includesOwn(FORBIDDEN_KEYS, key) || /^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(key) ||
-      containsLiteral(key, "/Users/") || containsLiteral(key, "\\Users\\")) {
+    if (includesOwn(FORBIDDEN_KEYS, key) || containsAbsolutePathLike(key)) {
       appendError(errors, `${path} contains forbidden reason key`);
     }
     if (!nonNegativeSafeInteger(descriptor.value)) {
@@ -627,7 +633,7 @@ function walk(value: unknown, path: string, errors: string[]): void {
     return;
   }
   if (typeof value === "string") {
-    if (/^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(value) || containsLiteral(value, "/Users/") || containsLiteral(value, "\\Users\\")) {
+    if (containsAbsolutePathLike(value)) {
       appendError(errors,`absolute path-like value at ${path}`);
     }
     return;
