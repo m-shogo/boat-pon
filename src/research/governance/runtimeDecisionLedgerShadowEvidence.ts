@@ -9,6 +9,9 @@ import type {
 // delegates to mutable RegExp.prototype.exec and can be bypassed by callers.
 // These fixed, non-global patterns never rely on lastIndex or caller hooks.
 const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
+// Capturing a native method is insufficient if the call dispatcher is mutable.
+// Keep Reflect.apply itself stable for the captured regex/date intrinsics.
+const BUILTIN_REFLECT_APPLY = Reflect.apply;
 // Snapshot date parsing/formatting intrinsics for untrusted evidence validation.
 // Ambient Date.parse or Date.prototype.toISOString changes must not relabel
 // noncanonical caller time strings as canonical UTC (still NOT trusted time).
@@ -16,13 +19,13 @@ const BUILTIN_DATE = Date;
 const BUILTIN_DATE_PARSE = Date.parse;
 const BUILTIN_DATE_TO_ISO_STRING = Date.prototype.toISOString;
 function stableCanonicalIso(value: string): string | null {
-  const parsed = Reflect.apply(BUILTIN_DATE_PARSE, BUILTIN_DATE, [value]) as number;
+  const parsed = BUILTIN_REFLECT_APPLY(BUILTIN_DATE_PARSE, BUILTIN_DATE, [value]) as number;
   return Number.isFinite(parsed)
-    ? Reflect.apply(BUILTIN_DATE_TO_ISO_STRING, new BUILTIN_DATE(parsed), []) as string
+    ? BUILTIN_REFLECT_APPLY(BUILTIN_DATE_TO_ISO_STRING, new BUILTIN_DATE(parsed), []) as string
     : null;
 }
 function stableRegexTest(pattern: RegExp, value: string): boolean {
-  return Reflect.apply(BUILTIN_REGEXP_EXEC, pattern, [value]) !== null;
+  return BUILTIN_REFLECT_APPLY(BUILTIN_REGEXP_EXEC, pattern, [value]) !== null;
 }
 
 export const RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION =
