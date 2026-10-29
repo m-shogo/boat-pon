@@ -516,6 +516,27 @@ test("shadow evidence rejects hidden, symbol, inherited and accessor reason-coun
   }
 });
 
+test("shadow evidence rejects enumerable reason-count accessors before digest without running getters", () => {
+  const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  let getterCalls = 0;
+  Object.defineProperty(evidence.completeness.unresolvedReasonCounts, "close_time_not_proven_visible_at_decision", {
+    enumerable: true,
+    configurable: true,
+    get() {
+      getterCalls++;
+      throw new Error("untrusted enumerable reason getter must not execute");
+    },
+  });
+
+  const validation = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+  assert.equal(validation.valid, false);
+  assert.equal(validation.evidence, null);
+  assert.equal(getterCalls, 0);
+  assert.ok(validation.errors.includes(
+    "completeness.unresolvedReasonCounts.close_time_not_proven_visible_at_decision must be an own enumerable data field",
+  ));
+});
+
 test("shadow evidence retains multi-reason row coverage without requiring one reason per row", () => {
   const original = input();
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input({
