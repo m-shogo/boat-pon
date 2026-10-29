@@ -186,7 +186,11 @@ test("shadow evidence rejects non-boolean WAL absence claims even with consisten
     const result = validateRuntimeDecisionLedgerShadowEvidence(evidence);
     assert.equal(result.valid, false, `walPresent=${String(claim)}`);
     assert.equal(result.evidence, null);
-    assert.ok(result.errors.includes("source.walPresent must be false"));
+    // Undefined is rejected by the earlier non-JSON graph preflight; the other
+    // invalid values still reach the field-specific WAL denial.
+    assert.ok(result.errors.includes(claim === undefined
+      ? "non-JSON undefined forbidden in evidence graph"
+      : "source.walPresent must be false"));
   }
 
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
@@ -251,7 +255,7 @@ test("validator rejects rehashed impossible source descriptor values", () => {
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
   evidence.source.fileSizeBytes = -1;
   evidence.source.pageSizeBytes = 0;
-  evidence.source.modifiedTimeMs = Number.POSITIVE_INFINITY;
+  evidence.source.modifiedTimeMs = -1;
   evidence.source.journalMode = "";
   evidence.sourceDescriptorDigest = sha256(evidence.source);
   resign(evidence);
@@ -262,6 +266,14 @@ test("validator rejects rehashed impossible source descriptor values", () => {
   assert.ok(validation.errors.includes("source.pageSizeBytes must be a positive safe integer"));
   assert.ok(validation.errors.includes("source.modifiedTimeMs must be a non-negative finite number"));
   assert.ok(validation.errors.includes("source.journalMode must be a non-empty string"));
+
+  const nonfinite = buildRuntimeDecisionLedgerShadowEvidence(input());
+  nonfinite.source.modifiedTimeMs = Number.POSITIVE_INFINITY;
+  nonfinite.sourceDescriptorDigest = sha256(nonfinite.source);
+  resign(nonfinite);
+  const nonfiniteResult = validateRuntimeDecisionLedgerShadowEvidence(nonfinite);
+  assert.equal(nonfiniteResult.valid, false);
+  assert.ok(nonfiniteResult.errors.includes("non-finite number forbidden in evidence graph"));
 });
 
 test("shadow evidence regex admission is stable under ambient RegExp.prototype.test mutation", () => {
