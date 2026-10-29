@@ -102,7 +102,7 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
 // Track active ancestors separately from visited aliases: cycles must be denied
 // before canonicalization, but shared acyclic objects are not cycles.
 // Bound traversal so an unexpected deep graph cannot become an unbounded preflight.
-type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint" | "function" | "undefined" | "symbol" | "nonfinite" | "negativezero";
+type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint" | "function" | "undefined" | "symbol" | "nonfinite" | "negativezero" | "prototype";
 function inspectOwnDataGraph(
   value: unknown,
   visited: object[] = [],
@@ -125,6 +125,15 @@ function inspectOwnDataGraph(
     if (visited[index] === value) return null;
   }
   if (visited.length >= 128) return "limit";
+  // A fixed-schema object with inherited metadata can pass own-key admission,
+  // then either be accepted without that metadata (root) or throw during digest.
+  // Deny exotic prototypes before any semantic reads or canonical hashing.
+  const prototype = Object.getPrototypeOf(value);
+  if (Array.isArray(value)) {
+    if (prototype !== Array.prototype && prototype !== null) return "prototype";
+  } else if (prototype !== Object.prototype && prototype !== null) {
+    return "prototype";
+  }
   Object.defineProperty(visited, String(visited.length), {
     value, writable: true, enumerable: true, configurable: true,
   });
@@ -750,6 +759,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       : graphIssue === "symbol" ? "non-JSON symbol forbidden in evidence graph"
       : graphIssue === "nonfinite" ? "non-finite number forbidden in evidence graph"
       : graphIssue === "negativezero" ? "negative zero forbidden in evidence graph"
+      : graphIssue === "prototype" ? "non-plain prototype forbidden in evidence graph"
       : "evidence graph exceeds preflight bound";
     return immutableValidationResult([message], null);
   }
