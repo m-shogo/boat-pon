@@ -9,6 +9,18 @@ import type {
 // delegates to mutable RegExp.prototype.exec and can be bypassed by callers.
 // These fixed, non-global patterns never rely on lastIndex or caller hooks.
 const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
+// Snapshot date parsing/formatting intrinsics for untrusted evidence validation.
+// Ambient Date.parse or Date.prototype.toISOString changes must not relabel
+// noncanonical caller time strings as canonical UTC (still NOT trusted time).
+const BUILTIN_DATE = Date;
+const BUILTIN_DATE_PARSE = Date.parse;
+const BUILTIN_DATE_TO_ISO_STRING = Date.prototype.toISOString;
+function stableCanonicalIso(value: string): string | null {
+  const parsed = Reflect.apply(BUILTIN_DATE_PARSE, BUILTIN_DATE, [value]) as number;
+  return Number.isFinite(parsed)
+    ? Reflect.apply(BUILTIN_DATE_TO_ISO_STRING, new BUILTIN_DATE(parsed), []) as string
+    : null;
+}
 function stableRegexTest(pattern: RegExp, value: string): boolean {
   return Reflect.apply(BUILTIN_REGEXP_EXEC, pattern, [value]) !== null;
 }
@@ -406,15 +418,13 @@ function nonNegativeSafeInteger(value: unknown): value is number {
 }
 
 function canonicalGeneratedAt(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+  return typeof value === "string" && stableCanonicalIso(value) === value;
 }
 
 function canonicalDate(value: unknown): value is string {
-  if (typeof value !== "string" || !stableRegexTest(/^\d{4}-\d{2}-\d{2}$/, value)) return false;
-  const parsed = Date.parse(`${value}T00:00:00.000Z`);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+  return typeof value === "string"
+    && stableRegexTest(/^\d{4}-\d{2}-\d{2}$/, value)
+    && stableCanonicalIso(`${value}T00:00:00.000Z`) === `${value}T00:00:00.000Z`;
 }
 
 function canonicalNonEmpty(value: unknown): value is string {
