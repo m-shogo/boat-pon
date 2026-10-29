@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-builder-map-prototype-reason-erasure-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.builder-ambient-map-reason-count-erasure",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "build-sanitized-shadow-evidence-reason-and-taxonomy-counts",
+  "symptom": "A synthetic empty Map.prototype.keys iterator erases unresolved/rejected reason and taxonomy maps during shadow evidence generation even when reconciliation reports unresolved rows. A selective Map.prototype.get override can undercount repeated reasons. The resulting generated evidence and content digest no longer reflect the reconciled reasons; semantic validation may reject the inconsistent evidence, but generation itself is not stable. No real race, private odds or production evidence was involved.",
+  "rootCauseClass": "AMBIENT_MAP_ITERATOR_AND_GET_MUTATE_SHADOW_EVIDENCE_GENERATOR_COUNTS",
+  "attemptSignature": "pr2286-v434-shadow-evidence-builder-own-data-counts-two-ambient-map-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@a53e3fa9/Map-get-set-keys-in-builder-countReasons-taxonomyCounts"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/eb0cf1f9376d1603c2fa6e5a3032c7ed05ca0593",
+    "commit/51d95e2eb9865a1c0a81c60487167292430fbdcf",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-map-prototype-membership-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-map-prototype-taxonomy-relabel-20261029.json"
+  ],
+  "lesson": "Hardening shadow-evidence taxonomy validation does not protect the builder: mutable ambient Map methods can erase or undercount reason metadata before the content digest is constructed.",
+  "guardrail": "Aggregate unresolved/rejected reasons and taxonomy with null-prototype own-data count dictionaries, Reflect.ownKeys and own-descriptor reads. Preserve the ordinary serialized map shape and digest. Regress empty Map.keys and selective Map.get overrides; never interpret synthetic evidence as real K-source authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T00:09:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T00:09:00.000Z",
+  "_digest": "0414e13c9aa1627456084123926338d0a181f9db5650981e8bbe37220a37c391"
+}
