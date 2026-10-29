@@ -1386,8 +1386,7 @@ test("shadow canonical digest denies omitted own property keys and exotic protot
   Object.defineProperty(symbolContext, Symbol("syntheticHidden"), {
     value: "synthetic-different", enumerable: true, configurable: true,
   });
-  const inheritedContext = Object.create({ syntheticInherited: "synthetic-different" })
-    as typeof baseContext;
+  const inheritedContext = Object.create({ syntheticInherited: "synthetic-different" }) as typeof baseContext;
   Object.assign(inheritedContext, baseContext);
 
   for (const [context, denial] of [
@@ -1403,8 +1402,7 @@ test("shadow canonical digest denies omitted own property keys and exotic protot
     );
   }
 
-  const exoticContext = new Date("2026-08-05T00:00:00.000Z")
-    as unknown as typeof baseContext;
+  const exoticContext = new Date("2026-08-05T00:00:00.000Z") as unknown as typeof baseContext;
   assert.throws(
     () => buildRuntimeDecisionLedgerShadowEvidence(input({ context: exoticContext })),
     /invalid canonical shadow evidence object prototype/,
