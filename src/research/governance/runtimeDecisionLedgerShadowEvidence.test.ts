@@ -1576,3 +1576,79 @@ test("shadow numeric admission ignores ambient Number and Object.is replacements
   assert.ok(observed[4]!.errors.includes("negative zero forbidden in evidence graph"));
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
+
+
+test("shadow structural inspection ignores ambient ownKeys omissions", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const altered = structuredClone(baseline);
+  Object.defineProperty(altered.source, "syntheticHidden", {
+    value: "synthetic-marker", enumerable: false, configurable: true,
+  });
+  const nativeOwnKeys = Reflect.ownKeys;
+  try {
+    Reflect.ownKeys = ((target: object) => nativeOwnKeys(target).filter((key) =>
+      Object.getOwnPropertyDescriptor(target, key)?.enumerable === true
+    )) as typeof Reflect.ownKeys;
+    assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(altered);
+    assert.equal(result.valid, false);
+    assert.equal(result.evidence, null);
+    assert.ok(result.errors.includes("unknown field: source.syntheticHidden"));
+  } finally {
+    Reflect.ownKeys = nativeOwnKeys;
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
+
+test("shadow prototype inspection ignores ambient getPrototypeOf overrides", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const altered = structuredClone(baseline);
+  Object.setPrototypeOf(altered, { syntheticInherited: "synthetic-marker" });
+  const nativeGetPrototypeOf = Object.getPrototypeOf;
+  try {
+    Object.getPrototypeOf = (() => Object.prototype) as typeof Object.getPrototypeOf;
+    assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(altered);
+    assert.equal(result.valid, false);
+    assert.equal(result.evidence, null);
+    assert.ok(result.errors.includes("non-plain prototype forbidden in evidence graph"));
+  } finally {
+    Object.getPrototypeOf = nativeGetPrototypeOf;
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
+
+test("shadow descriptor inspection rejects accessor masked by ambient descriptor override", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const altered = structuredClone(baseline);
+  let getterCalls = 0;
+  Object.defineProperty(altered, "generatedAt", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      throw new Error("synthetic getter must never execute");
+    },
+  });
+  const nativeGetDescriptor = Object.getOwnPropertyDescriptor;
+  try {
+    Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+      if (target === altered && key === "generatedAt") {
+        return {
+          value: "2026-08-05T08:10:00.000Z",
+          enumerable: true, configurable: true, writable: true,
+        };
+      }
+      return nativeGetDescriptor(target, key);
+    }) as typeof Object.getOwnPropertyDescriptor;
+    assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(altered);
+    assert.equal(result.valid, false);
+    assert.equal(result.evidence, null);
+    assert.equal(getterCalls, 0);
+    assert.ok(result.errors.includes("missing own enumerable data top-level field: generatedAt"));
+  } finally {
+    Object.getOwnPropertyDescriptor = nativeGetDescriptor;
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
