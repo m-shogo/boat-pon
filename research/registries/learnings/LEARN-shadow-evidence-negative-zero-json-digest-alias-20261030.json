@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-shadow-evidence-negative-zero-json-digest-alias-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.negative-zero-json-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "shadow-source-context-digest-and-validator-numeric-ingress",
+  "symptom": "Node 22.16.0 synthetic reproduction showed JSON.stringify converts negative zero to 0, yielding identical SHA-256 input for distinguishable numeric states. The shadow builder accepted -0 in source.fileSizeBytes and context values; the validator's non-negative safe-integer check also admitted -0 and a re-digested evidence envelope could pass. No real DB, odds, private paths, secrets or production records were accessed.",
+  "rootCauseClass": "SHADOW_EVIDENCE_NEGATIVE_ZERO_JSON_NUMERIC_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v452-deny-negative-zero-in-shadow-canonical-source-context-and-validator-graph",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@23499b5a/negative-zero-admitted-by-nonnegative-integer-and-json-normalization"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.negativeZero.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-nonjson-primitive-digest-alias-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-canonical-own-property-shape-alias-20261029.json"
+  ],
+  "lesson": "Reject negative zero at the canonical digest boundary and at the validator's own-data graph preflight. Non-finite and omitted primitive guards do not cover this finite, JSON-representable but lossy numeric case. JSON Schema minimum:0 cannot distinguish the JavaScript -0 value; enforce this runtime-only admission invariant before digest comparison.",
+  "guardrail": "For research-only shadow source/context canonicalization, deny Object.is(number,-0) before JSON.stringify. In evidence validation, return a frozen fail-closed negative-zero graph result before digest evaluation. Regression-test source count and context numeric aliases, a re-digested validator input and ordinary zero digest compatibility. Do not infer K issuer/rights, source finality, scoring, merge or production authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T16:05:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T16:05:00.000Z",
+  "_digest": "8d3ebd123b8351c896f291179a228f9f6d6511445ea043a666c707a3463a1bc3"
+}
