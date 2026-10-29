@@ -88,7 +88,8 @@ test("shadow validator fails closed on re-digested negative-zero fields", () => 
 test("shadow context digest rejects negative-zero probe without changing normal digests", () => {
   const withProbe = (probe: number) => {
     const value = input(0);
-    value.context = { ...value.context, syntheticDigestProbe: probe };
+    const contextWithProbe = { ...value.context, syntheticDigestProbe: probe };
+    value.context = contextWithProbe;
     return value;
   };
   assert.equal(JSON.stringify(withProbe(-0).context), JSON.stringify(withProbe(0).context));
