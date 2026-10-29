@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-zero-row-positive-reason-count-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.zero-row-positive-reason-count-contradiction",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-zero-row-reason-count-consistency",
+  "symptom": "Synthetic re-digested shadow evidence could claim PASS with zero unresolved/rejected rows while retaining positive reason counts in the corresponding category. The validator enforced only a lower bound on reason coverage, so a zero-row category could contain contradictory reason evidence. No actual SQLite, K-source or production data was involved.",
+  "rootCauseClass": "ZERO_ROW_REASON_COUNTS_ACCEPTED_BY_LOWER_BOUND_ONLY_VALIDATION",
+  "attemptSignature": "pr2286-v439-zero-row-positive-reason-count-coherence-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@cf402455/lower-bound-only-reason-count-coverage"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/f06c00bd54762ca68c5c59bc48ddd0ce5277b918",
+    "commit/231926491ef3b0aac34c92dfccd5a8ba3abbe5ab",
+    "research/registries/learnings/LEARN-shadow-evidence-reason-count-map-admission-20261027.json"
+  ],
+  "lesson": "Reason coverage lower bounds preserve legitimate multi-reason rows but do not enforce the zero-row boundary. When a category contains no rows, its own reason-count total must be exactly zero even if a recomputed digest and taxonomy are internally consistent.",
+  "guardrail": "Validate unresolved and rejected reason totals as exactly zero when their corresponding row counts are zero; preserve lower-bound coverage for nonzero counts and multi-reason rows. Regress re-digested positive reason maps against zero-row PASS evidence without using private or production inputs.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T03:02:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T03:02:00.000Z",
+  "_digest": "1079715919221e7273ee72634f7aa687e8f66ca08e465b0576048b4002f7a555"
+}
