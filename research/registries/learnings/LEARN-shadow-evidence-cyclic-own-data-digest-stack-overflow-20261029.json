@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-cyclic-own-data-digest-stack-overflow-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.cyclic-own-data-preflight-digest-stack-overflow",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-own-data-graph-before-canonical-digest",
+  "symptom": "The bounded Proxy preflight treated a repeated object reference as safe even when it was an active ancestor. A synthetic self-referential own-data object passed preflight and caused recursive canonicalization to throw RangeError instead of returning a fail-closed validation result. This was reproduced offline with Node 22.16.0; no real SQLite or production evidence was accessed.",
+  "rootCauseClass": "CYCLIC_OWN_DATA_REFERENCE_SKIPS_PREFLIGHT_AND_RECURSES_IN_CANONICAL_DIGEST",
+  "attemptSignature": "pr2286-v438-ancestor-aware-cycle-denial-and-acyclic-alias-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@c9dc172b/visited-repeat-accepted-without-active-ancestor-check"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/42b80f1626b2e323728fb9e04fd06cb6f622206a",
+    "commit/24eccb5967e6b210a93210584822b138c63c4b34",
+    "research/registries/learnings/LEARN-shadow-evidence-partial-proxy-guard-nested-countmap-20261029.json"
+  ],
+  "lesson": "A visited-set check is not a cycle detector. Repeated acyclic aliases and active ancestor references must be distinguished before canonical recursive hashing.",
+  "guardrail": "Use an active-ancestor stack plus a separate bounded visited list for own-data preflight; deny cycles before canonical digest, preserve shared acyclic references, and regress both with synthetic inputs. No external issuer, settlement, scoring or production authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T02:07:14.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T02:07:14.000Z",
+  "_digest": "964685a171ecfbd5af25de07133ba3d8ede138ea66439df30983ecd8a1ded49b"
+}
