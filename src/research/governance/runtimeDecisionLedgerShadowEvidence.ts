@@ -240,19 +240,19 @@ function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number
   return orderedCountMap(counts);
 }
 
-function taxonomyForReason(reason: string): string {
+// Inspect literal UTF-16 substrings without mutable ambient String.prototype.includes.\n// Taxonomy and privacy/path admission must agree even if that prototype is changed.\nfunction containsLiteral(haystack: string, needle: string): boolean {\n  if (needle.length === 0) return true;\n  for (let start = 0; start + needle.length <= haystack.length; start++) {\n    let matched = true;\n    for (let offset = 0; offset < needle.length; offset++) {\n      if (haystack[start + offset] !== needle[offset]) {\n        matched = false;\n        break;\n      }\n    }\n    if (matched) return true;\n  }\n  return false;\n}\n\nfunction taxonomyForReason(reason: string): string {
   if (reason === "source_row_update_or_odds_observation_after_created_at") return "source_mutability";
   if (
-    reason.includes("timezone") ||
-    reason.includes("timestamp") ||
-    reason.includes("scheduled_close") ||
-    reason.includes("program_import") ||
-    reason.includes("close_time") ||
-    reason.includes("decision occurs after") ||
-    reason.includes("odds observation occurs after")
+    containsLiteral(reason, "timezone") ||
+    containsLiteral(reason, "timestamp") ||
+    containsLiteral(reason, "scheduled_close") ||
+    containsLiteral(reason, "program_import") ||
+    containsLiteral(reason, "close_time") ||
+    containsLiteral(reason, "decision occurs after") ||
+    containsLiteral(reason, "odds observation occurs after")
   ) return "temporal_provenance";
-  if (reason.includes("model_version") || reason.includes("identity")) return "identity_completeness";
-  if (reason.includes("conflict")) return "identity_conflict";
+  if (containsLiteral(reason, "model_version") || containsLiteral(reason, "identity")) return "identity_completeness";
+  if (containsLiteral(reason, "conflict")) return "identity_conflict";
   return "schema_or_value";
 }
 
@@ -546,7 +546,7 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
       continue;
     }
     if (includesOwn(FORBIDDEN_KEYS, key) || /^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(key) ||
-      key.includes("/Users/") || key.includes("\\Users\\")) {
+      containsLiteral(key, "/Users/") || containsLiteral(key, "\\Users\\")) {
       appendError(errors, `${path} contains forbidden reason key`);
     }
     if (!nonNegativeSafeInteger(descriptor.value)) {
@@ -608,7 +608,7 @@ function walk(value: unknown, path: string, errors: string[]): void {
     return;
   }
   if (typeof value === "string") {
-    if (/^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(value) || value.includes("/Users/") || value.includes("\\Users\\")) {
+    if (/^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(value) || containsLiteral(value, "/Users/") || containsLiteral(value, "\\Users\\")) {
       appendError(errors,`absolute path-like value at ${path}`);
     }
     return;
