@@ -1524,3 +1524,55 @@ test("shadow canonical digest denies omitted own property keys and exotic protot
   assert.equal(unchanged.contentDigest, baseline.contentDigest);
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(unchanged).valid, true);
 });
+
+
+test("shadow numeric admission ignores ambient Number and Object.is replacements", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  const fractionalSource = structuredClone(baseline);
+  fractionalSource.source.pageCount = 1.5;
+  fractionalSource.sourceDescriptorDigest = sha256(fractionalSource.source);
+  resign(fractionalSource);
+
+  const fractionalScope = structuredClone(baseline);
+  fractionalScope.scope.limit = 500.5;
+  resign(fractionalScope);
+
+  const nonfiniteSource = structuredClone(baseline);
+  nonfiniteSource.source.modifiedTimeMs = Number.NaN;
+  nonfiniteSource.sourceDescriptorDigest = sha256(nonfiniteSource.source);
+  resign(nonfiniteSource);
+
+  const negativeZeroSource = structuredClone(baseline);
+  negativeZeroSource.source.pageCount = -0;
+  negativeZeroSource.sourceDescriptorDigest = sha256(negativeZeroSource.source);
+  resign(negativeZeroSource);
+
+  const originalFinite = Number.isFinite;
+  const originalSafeInteger = Number.isSafeInteger;
+  const originalObjectIs = Object.is;
+  let observed: Array<ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>> = [];
+  try {
+    Number.isFinite = (() => true) as typeof Number.isFinite;
+    Number.isSafeInteger = (() => true) as typeof Number.isSafeInteger;
+    Object.is = (() => false) as typeof Object.is;
+    observed = [baseline, fractionalSource, fractionalScope, nonfiniteSource, negativeZeroSource]
+      .map((evidence) => validateRuntimeDecisionLedgerShadowEvidence(evidence));
+  } finally {
+    Number.isFinite = originalFinite;
+    Number.isSafeInteger = originalSafeInteger;
+    Object.is = originalObjectIs;
+  }
+
+  assert.equal(observed[0]!.valid, true);
+  for (const result of observed.slice(1)) {
+    assert.equal(result.valid, false);
+    assert.equal(result.evidence, null);
+  }
+  assert.ok(observed[1]!.errors.includes("source.pageCount must be a non-negative safe integer"));
+  assert.ok(observed[2]!.errors.includes("scope.limit must be an integer between 1 and 5000"));
+  assert.ok(observed[3]!.errors.includes("non-finite number forbidden in evidence graph"));
+  assert.ok(observed[4]!.errors.includes("negative zero forbidden in evidence graph"));
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
