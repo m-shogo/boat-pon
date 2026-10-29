@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-embedded-absolute-path-token-admission-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.embedded-absolute-path-token-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-embedded-path-tokens",
+  "symptom": "A synthetic re-digested shadow-evidence modelVersion or reason-count key containing an absolute POSIX, drive-letter, UNC, or file-URL path after a diagnostic prefix was accepted by the leading-only path check. Existing embedded /Users/ markers were denied, but other embedded absolute path tokens were not. No real private path, database, odds, or production evidence was used.",
+  "rootCauseClass": "PREFIX_ONLY_ABSOLUTE_PATH_REJECTION_OMITTED_EMBEDDED_PATH_TOKENS",
+  "attemptSignature": "pr2286-v445-embedded-path-token-sanitization-with-https-negative-control",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/actions-node24+synthetic-node22.16.0",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@c7e00376/leading-only-absolute-path-pattern"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/03bace1a44a07ca6247cb6e40627ee26ad88cbe8",
+    "commit/a9ac33f7584c5a33f9def7442bd03bd25bb3cab3",
+    "research/registries/learnings/LEARN-shadow-evidence-string-includes-taxonomy-privacy-bypass-20261029.json"
+  ],
+  "lesson": "A leading-only absolute-path test does not sanitize diagnostic strings or reason keys that prefix local filesystem paths with human-readable text. Embedded path detection must preserve legitimate HTTPS metadata and remain independent of mutable ambient String.includes.",
+  "guardrail": "Use one indexed/regex path-token admission helper for both recursive value walking and dynamic reason-count keys. Reject synthetic embedded POSIX, Windows drive, UNC and file-URL tokens, preserve benign HTTPS strings and valid digest compatibility, and keep all evidence research-only.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T09:07:21.000Z",
+  "productionConnection": false,
+  "_digest": "bfd26522a87f879d100ef87de7b6606bf4779ccd92ae48950a3bb1f75b4255fb",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T09:07:21.000Z"
+}
