@@ -586,13 +586,18 @@ function walk(value: unknown, path: string, errors: string[]): void {
     return;
   }
   if (!isRecord(value)) return;
-  const entries = Object.entries(value);
-  for (let index = 0; index < entries.length; index++) {
-    const pair = entries[index]!;
-    const key = pair[0];
-    const entry = pair[1];
-    if (includesOwn(FORBIDDEN_KEYS, key)) appendError(errors,`forbidden key at ${path}.${key}`);
-    walk(entry, `${path}.${key}`, errors);
+  // A mutable Object.entries hook must not erase path/forbidden-field diagnostics.
+  // Own descriptors also avoid invoking an untrusted accessor while walking.
+  const keys = Reflect.ownKeys(value);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors, `non-data field at ${path}.${String(key)}`);
+      continue;
+    }
+    if (includesOwn(FORBIDDEN_KEYS, key)) appendError(errors,`forbidden key at ${path}.${String(key)}`);
+    walk(descriptor.value, `${path}.${String(key)}`, errors);
   }
 }
 
@@ -786,12 +791,10 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     }
   }
 
-  const privacyFields = Object.entries(evidence.privacy);
-  for (let index = 0; index < privacyFields.length; index++) {
-    const pair = privacyFields[index]!;
-    const name = pair[0];
-    const actual = pair[1];
-    if (actual !== false) appendError(errors,`privacy.${name} must be false`);
+  // Fixed privacy flags must not depend on ambient Object.entries enumeration.
+  for (let index = 0; index < PRIVACY_KEYS.length; index++) {
+    const name = PRIVACY_KEYS[index]!;
+    if (evidence.privacy[name] !== false) appendError(errors,`privacy.${name} must be false`);
   }
   const zeroWriteFields = ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const;
   for (let index = 0; index < zeroWriteFields.length; index++) {
