@@ -161,6 +161,29 @@ function canonicalize(value: unknown): unknown {
     throw new TypeError("invalid canonical shadow evidence non-JSON primitive");
   }
   if (Array.isArray(value)) {
+    // JSON serialization omits extra own array keys (including symbols) and
+    // projects sparse slots as null. Bind the admitted array shape to its digest.
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Array.prototype && prototype !== null) {
+      throw new TypeError("invalid canonical shadow evidence array prototype");
+    }
+    const ownKeys = Reflect.ownKeys(value);
+    if (ownKeys.length !== value.length + 1) {
+      throw new TypeError("invalid canonical shadow evidence array own shape");
+    }
+    for (let index = 0; index < ownKeys.length; index++) {
+      const key = ownKeys[index]!;
+      if (key === "length") continue;
+      const numericIndex = typeof key === "string" ? Number(key) : Number.NaN;
+      if (!Number.isSafeInteger(numericIndex) || numericIndex < 0 ||
+          numericIndex >= value.length || String(numericIndex) !== key) {
+        throw new TypeError("invalid canonical shadow evidence array own shape");
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+        throw new TypeError("invalid canonical shadow evidence array");
+      }
+    }
     const result: unknown[] = [];
     Object.setPrototypeOf(result, null);
     for (let index = 0; index < value.length; index++) {
