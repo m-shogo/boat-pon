@@ -826,6 +826,14 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       countMapTotal(rejectedCounts) < r.rejectedCount) {
       appendError(errors, "completeness.rejectedReasonCounts does not cover rejected rows");
     }
+    // A positive reason count cannot describe zero rows in its own category.
+    // Multi-reason rows remain valid: only the zero-row boundary is exact.
+    if (r.unresolvedCount === 0 && countMapTotal(unresolvedCounts) !== 0) {
+      appendError(errors, "completeness.unresolvedReasonCounts must be empty when unresolvedCount is zero");
+    }
+    if (r.rejectedCount === 0 && countMapTotal(rejectedCounts) !== 0) {
+      appendError(errors, "completeness.rejectedReasonCounts must be empty when rejectedCount is zero");
+    }
     if (!taxonomyMatches(taxonomies, unresolvedCounts, rejectedCounts, r.conflictCount)) {
       appendError(errors, "completeness.taxonomyCounts mismatch");
     }
