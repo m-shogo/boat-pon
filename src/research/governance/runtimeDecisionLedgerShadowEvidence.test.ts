@@ -1371,3 +1371,56 @@ test("shadow validator denies non-JSON scalar evidence before digest evaluation"
   }
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
+
+test("shadow canonical digest denies omitted own property keys and exotic prototypes", () => {
+  const baselineInput = input();
+  const baseContext = { ...baselineInput.context };
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(baselineInput);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  const hiddenContext = { ...baseContext };
+  Object.defineProperty(hiddenContext, "syntheticHidden", {
+    value: "synthetic-different", enumerable: false, configurable: true,
+  });
+  const symbolContext = { ...baseContext };
+  Object.defineProperty(symbolContext, Symbol("syntheticHidden"), {
+    value: "synthetic-different", enumerable: true, configurable: true,
+  });
+  const inheritedContext = Object.create({ syntheticInherited: "synthetic-different" })
+    as typeof baseContext;
+  Object.assign(inheritedContext, baseContext);
+
+  for (const [context, denial] of [
+    [hiddenContext, /invalid canonical shadow evidence non-data property/],
+    [symbolContext, /invalid canonical shadow evidence symbol key/],
+    [inheritedContext, /invalid canonical shadow evidence object prototype/],
+  ] as const) {
+    // This reproduces the old JSON projection alias with synthetic metadata.
+    assert.equal(sha256(context), sha256(baseContext));
+    assert.throws(
+      () => buildRuntimeDecisionLedgerShadowEvidence(input({ context })),
+      denial,
+    );
+  }
+
+  const exoticContext = new Date("2026-08-05T00:00:00.000Z")
+    as unknown as typeof baseContext;
+  assert.throws(
+    () => buildRuntimeDecisionLedgerShadowEvidence(input({ context: exoticContext })),
+    /invalid canonical shadow evidence object prototype/,
+  );
+
+  const hiddenSource = { ...baselineInput.source };
+  Object.defineProperty(hiddenSource, "syntheticHidden", {
+    value: "synthetic-different", enumerable: false, configurable: true,
+  });
+  assert.throws(
+    () => buildRuntimeDecisionLedgerShadowEvidence(input({ source: hiddenSource })),
+    /invalid canonical shadow evidence non-data property/,
+  );
+
+  const unchanged = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(unchanged.contextDigest, baseline.contextDigest);
+  assert.equal(unchanged.contentDigest, baseline.contentDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(unchanged).valid, true);
+});
