@@ -1003,3 +1003,54 @@ test("shadow evidence rejects rehashed positive reason counts for zero-row categ
   }
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(clean).valid, true);
 });
+
+test("shadow evidence taxonomy is stable under ambient String.includes forgery", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.deepEqual(baseline.completeness.taxonomyCounts, { temporal_provenance: 1 });
+  const original = Object.getOwnPropertyDescriptor(String.prototype, "includes");
+  assert.ok(original);
+  let observed: RuntimeDecisionLedgerShadowEvidence | undefined;
+  let validation: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    Object.defineProperty(String.prototype, "includes", {
+      configurable: true, writable: true, value() { return false; },
+    });
+    observed = buildRuntimeDecisionLedgerShadowEvidence(input());
+    validation = validateRuntimeDecisionLedgerShadowEvidence(observed);
+  } finally {
+    Object.defineProperty(String.prototype, "includes", original);
+  }
+  assert.deepEqual(observed?.completeness.taxonomyCounts, baseline.completeness.taxonomyCounts);
+  assert.equal(observed?.contentDigest, baseline.contentDigest);
+  assert.equal(validation?.valid, true, validation?.errors.join("; "));
+});
+
+test("shadow evidence denies embedded synthetic path markers despite String.includes forgery", () => {
+  const scopePath = buildRuntimeDecisionLedgerShadowEvidence(input());
+  scopePath.scope.modelVersion = "synthetic/Users/placeholder";
+  resign(scopePath);
+  const reasonPath = buildRuntimeDecisionLedgerShadowEvidence(input());
+  reasonPath.completeness.unresolvedReasonCounts = { "synthetic/Users/placeholder": 1 };
+  reasonPath.completeness.taxonomyCounts = { schema_or_value: 1 };
+  resign(reasonPath);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(scopePath).valid, false);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(reasonPath).valid, false);
+
+  const original = Object.getOwnPropertyDescriptor(String.prototype, "includes");
+  assert.ok(original);
+  let scopeResult: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  let reasonResult: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    Object.defineProperty(String.prototype, "includes", {
+      configurable: true, writable: true, value() { return false; },
+    });
+    scopeResult = validateRuntimeDecisionLedgerShadowEvidence(scopePath);
+    reasonResult = validateRuntimeDecisionLedgerShadowEvidence(reasonPath);
+  } finally {
+    Object.defineProperty(String.prototype, "includes", original);
+  }
+  assert.equal(scopeResult?.valid, false);
+  assert.ok(scopeResult?.errors.some((message) => message.includes("absolute path-like value")));
+  assert.equal(reasonResult?.valid, false);
+  assert.ok(reasonResult?.errors.includes("completeness.unresolvedReasonCounts contains forbidden reason key"));
+});
