@@ -131,7 +131,20 @@ function canonicalize(value: unknown): unknown {
     return result;
   }
   if (!isRecord(value)) return value;
-  const keys = Object.keys(value);
+  // An ambient Object.keys override must not erase all digest fields.
+  // Match Object.keys' enumerable string-key projection through own descriptors.
+  const keys: string[] = [];
+  const ownKeys = Reflect.ownKeys(value);
+  for (let index = 0; index < ownKeys.length; index++) {
+    const key = ownKeys[index]!;
+    if (typeof key !== "string") continue;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor?.enumerable) {
+      Object.defineProperty(keys, String(keys.length), {
+        value: key, writable: true, enumerable: true, configurable: true,
+      });
+    }
+  }
   // Source and content digests must not depend on mutable Array.map/sort.
   for (let index = 1; index < keys.length; index++) {
     const key = keys[index]!;
