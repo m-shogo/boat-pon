@@ -754,7 +754,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (evidence.scope.limitReached && evidence.scope.returnedRows !== evidence.scope.limit) {
     appendError(errors,"limitReached requires returnedRows to equal limit");
   }
-  if (evidence.source.walPresent) appendError(errors,"bounded evidence requires walPresent=false");
+  if (evidence.source.walPresent !== false) appendError(errors,"source.walPresent must be false");
   if (evidence.source.readOnly !== true || evidence.source.queryOnly !== true) {
     appendError(errors,"source must be readOnly and queryOnly");
   }
