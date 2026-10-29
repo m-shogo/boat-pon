@@ -12,6 +12,11 @@ const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
 // Capturing a native method is insufficient if the call dispatcher is mutable.
 // Keep Reflect.apply itself stable for the captured regex/date intrinsics.
 const BUILTIN_REFLECT_APPLY = Reflect.apply;
+// Numeric integrity checks must not be redirected by mutable caller-realm
+// Number/Object helpers after this research module is initialized.
+const BUILTIN_NUMBER_IS_FINITE = Number.isFinite;
+const BUILTIN_NUMBER_IS_SAFE_INTEGER = Number.isSafeInteger;
+const BUILTIN_OBJECT_IS = Object.is;
 // Snapshot date parsing/formatting intrinsics for untrusted evidence validation.
 // Ambient Date.parse or Date.prototype.toISOString changes must not relabel
 // noncanonical caller time strings as canonical UTC (still NOT trusted time).
@@ -20,7 +25,7 @@ const BUILTIN_DATE_PARSE = Date.parse;
 const BUILTIN_DATE_TO_ISO_STRING = Date.prototype.toISOString;
 function stableCanonicalIso(value: string): string | null {
   const parsed = BUILTIN_REFLECT_APPLY(BUILTIN_DATE_PARSE, BUILTIN_DATE, [value]) as number;
-  return Number.isFinite(parsed)
+  return BUILTIN_NUMBER_IS_FINITE(parsed)
     ? BUILTIN_REFLECT_APPLY(BUILTIN_DATE_TO_ISO_STRING, new BUILTIN_DATE(parsed), []) as string
     : null;
 }
@@ -129,9 +134,9 @@ function inspectOwnDataGraph(
   if (typeof value === "function") return "function";
   if (value === undefined) return "undefined";
   if (typeof value === "symbol") return "symbol";
-  if (typeof value === "number" && !Number.isFinite(value)) return "nonfinite";
+  if (typeof value === "number" && !BUILTIN_NUMBER_IS_FINITE(value)) return "nonfinite";
   // JSON.stringify(-0) produces 0, erasing a distinct numeric input state.
-  if (typeof value === "number" && Object.is(value, -0)) return "negativezero";
+  if (typeof value === "number" && BUILTIN_OBJECT_IS(value, -0)) return "negativezero";
   if (value === null || (typeof value !== "object" && typeof value !== "function")) return null;
   for (let index = 0; index < ancestors.length; index++) {
     if (ancestors[index] === value) return "cycle";
@@ -183,11 +188,11 @@ function canonicalize(value: unknown): unknown {
   // JSON.stringify drops undefined/symbol object values and converts NaN/Infinity to null.
   // Reject before hashing so distinct malformed research contexts cannot alias.
   if (value === undefined || typeof value === "symbol" ||
-      (typeof value === "number" && !Number.isFinite(value))) {
+      (typeof value === "number" && !BUILTIN_NUMBER_IS_FINITE(value))) {
     throw new TypeError("invalid canonical shadow evidence non-JSON primitive");
   }
   // Preserve source/context digest identity: JSON serializes -0 exactly as 0.
-  if (typeof value === "number" && Object.is(value, -0)) {
+  if (typeof value === "number" && BUILTIN_OBJECT_IS(value, -0)) {
     throw new TypeError("invalid canonical shadow evidence negative zero");
   }
   if (Array.isArray(value)) {
@@ -205,7 +210,7 @@ function canonicalize(value: unknown): unknown {
       const key = ownKeys[index]!;
       if (key === "length") continue;
       const numericIndex = typeof key === "string" ? Number(key) : Number.NaN;
-      if (!Number.isSafeInteger(numericIndex) || numericIndex < 0 ||
+      if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(numericIndex) || numericIndex < 0 ||
           numericIndex >= value.length || String(numericIndex) !== key) {
         throw new TypeError("invalid canonical shadow evidence array own shape");
       }
@@ -417,7 +422,7 @@ function expectedEvidenceVerdict(evidence: RuntimeDecisionLedgerShadowEvidence):
 }
 
 function nonNegativeSafeInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+  return typeof value === "number" && BUILTIN_NUMBER_IS_SAFE_INTEGER(value) && value >= 0;
 }
 
 function canonicalGeneratedAt(value: unknown): value is string {
@@ -836,10 +841,10 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     const count = pair[1];
     if (!nonNegativeSafeInteger(count)) appendError(errors,`source.${name} must be a non-negative safe integer`);
   }
-  if (!Number.isSafeInteger(source.pageSizeBytes) || source.pageSizeBytes < 1) {
+  if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(source.pageSizeBytes) || source.pageSizeBytes < 1) {
     appendError(errors,"source.pageSizeBytes must be a positive safe integer");
   }
-  if (!Number.isFinite(source.modifiedTimeMs) || source.modifiedTimeMs < 0) {
+  if (!BUILTIN_NUMBER_IS_FINITE(source.modifiedTimeMs) || source.modifiedTimeMs < 0) {
     appendError(errors,"source.modifiedTimeMs must be a non-negative finite number");
   }
   if (typeof source.journalMode !== "string" || source.journalMode.trim().length === 0) {
@@ -890,7 +895,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   } else if (evidence.scope.from > evidence.scope.to) {
     appendError(errors,"scope.from must not be after scope.to");
   }
-  if (!Number.isSafeInteger(evidence.scope.limit) || evidence.scope.limit < 1 || evidence.scope.limit > 5000) {
+  if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(evidence.scope.limit) || evidence.scope.limit < 1 || evidence.scope.limit > 5000) {
     appendError(errors,"scope.limit must be an integer between 1 and 5000");
   }
   if (!nonNegativeSafeInteger(evidence.scope.returnedRows)) {
@@ -898,7 +903,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   }
   if (evidence.scope.bounded !== true) appendError(errors,"scope.bounded must be true");
   if (typeof evidence.scope.limitReached !== "boolean") appendError(errors,"scope.limitReached must be boolean");
-  if (Number.isSafeInteger(evidence.scope.limit)
+  if (BUILTIN_NUMBER_IS_SAFE_INTEGER(evidence.scope.limit)
     && nonNegativeSafeInteger(evidence.scope.returnedRows)
     && evidence.scope.returnedRows > evidence.scope.limit) {
     appendError(errors,"scope.returnedRows must not exceed scope.limit");
@@ -946,11 +951,11 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     return immutableValidationResult(errors, null);
   }
   if (unresolvedCounts && rejectedCounts && taxonomies) {
-    if (!Number.isSafeInteger(countMapTotal(unresolvedCounts)) ||
+    if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(countMapTotal(unresolvedCounts)) ||
       countMapTotal(unresolvedCounts) < r.unresolvedCount) {
       appendError(errors, "completeness.unresolvedReasonCounts does not cover unresolved rows");
     }
-    if (!Number.isSafeInteger(countMapTotal(rejectedCounts)) ||
+    if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(countMapTotal(rejectedCounts)) ||
       countMapTotal(rejectedCounts) < r.rejectedCount) {
       appendError(errors, "completeness.rejectedReasonCounts does not cover rejected rows");
     }
