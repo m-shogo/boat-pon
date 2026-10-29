@@ -91,23 +91,44 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
 };
 
 // Inspect only own data descriptors: no Proxy traps or accessor getters execute.
-// Bound traversal so an unexpected cyclic/deep graph cannot become an unbounded preflight.
-function hasProxyInOwnData(value: unknown, visited: object[] = []): boolean {
-  if (isProxy(value)) return true;
-  if (value === null || (typeof value !== "object" && typeof value !== "function")) return false;
-  for (let index = 0; index < visited.length; index++) {
-    if (visited[index] === value) return false;
+// Track active ancestors separately from visited aliases: cycles must be denied
+// before canonicalization, but shared acyclic objects are not cycles.
+// Bound traversal so an unexpected deep graph cannot become an unbounded preflight.
+type OwnDataGraphIssue = "proxy" | "cycle" | "limit";
+function inspectOwnDataGraph(
+  value: unknown,
+  visited: object[] = [],
+  ancestors: object[] = [],
+): OwnDataGraphIssue | null {
+  if (isProxy(value)) return "proxy";
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return null;
+  for (let index = 0; index < ancestors.length; index++) {
+    if (ancestors[index] === value) return "cycle";
   }
-  if (visited.length >= 128) return true;
+  for (let index = 0; index < visited.length; index++) {
+    if (visited[index] === value) return null;
+  }
+  if (visited.length >= 128) return "limit";
   Object.defineProperty(visited, String(visited.length), {
     value, writable: true, enumerable: true, configurable: true,
   });
-  const keys = Reflect.ownKeys(value);
-  for (let index = 0; index < keys.length; index++) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, keys[index]!);
-    if (descriptor && "value" in descriptor && hasProxyInOwnData(descriptor.value, visited)) return true;
+  const depth = ancestors.length;
+  Object.defineProperty(ancestors, String(depth), {
+    value, writable: true, enumerable: true, configurable: true,
+  });
+  try {
+    const keys = Reflect.ownKeys(value);
+    for (let index = 0; index < keys.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, keys[index]!);
+      if (descriptor && "value" in descriptor) {
+        const issue = inspectOwnDataGraph(descriptor.value, visited, ancestors);
+        if (issue) return issue;
+      }
+    }
+    return null;
+  } finally {
+    ancestors.length = depth;
   }
-  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -630,7 +651,13 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   value: unknown,
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const errors: string[] = [];
-  if (hasProxyInOwnData(value)) return immutableValidationResult(["proxy value forbidden in evidence graph"], null);
+  const graphIssue = inspectOwnDataGraph(value);
+  if (graphIssue) {
+    const message = graphIssue === "proxy" ? "proxy value forbidden in evidence graph"
+      : graphIssue === "cycle" ? "cyclic reference forbidden in evidence graph"
+      : "evidence graph exceeds preflight bound";
+    return immutableValidationResult([message], null);
+  }
   if (!isRecord(value)) return immutableValidationResult(["evidence must be an object"], null);
   const topLevelKeys = Reflect.ownKeys(value);
   for (let index = 0; index < topLevelKeys.length; index++) {
