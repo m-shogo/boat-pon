@@ -20,7 +20,7 @@
   ],
   "properties": {
     "schemaVersion": { "const": "runtime-decision-ledger-shadow-evidence.0.1" },
-    "generatedAt": { "type": "string", "format": "date-time" },
+    "generatedAt": { "type": "string", "format": "date-time", "description": "Caller-supplied report generation time; canonical syntax only. Intentionally excluded from contentDigest and not a trusted clock, predecision witness, source timestamp, or independent finality proof." },
     "verdict": { "enum": ["PASS", "CONDITIONAL", "FAILED"] },
     "sourceDescriptorDigest": { "$ref": "#/$defs/sha256" },
     "contextDigest": { "$ref": "#/$defs/sha256" },
@@ -157,7 +157,7 @@
         "productionPromotion": { "const": false }
       }
     },
-    "contentDigest": { "$ref": "#/$defs/sha256" }
+    "contentDigest": { "$ref": "#/$defs/sha256", "description": "Canonical digest of sanitized evidence content excluding generatedAt and contentDigest itself; content identity only, not proof of capture time, issuer, rights, correction completeness, or scoring authorization." }
   },
   "$defs": {
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
