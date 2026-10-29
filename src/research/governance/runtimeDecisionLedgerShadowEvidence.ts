@@ -240,7 +240,24 @@ function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number
   return orderedCountMap(counts);
 }
 
-// Inspect literal UTF-16 substrings without mutable ambient String.prototype.includes.\n// Taxonomy and privacy/path admission must agree even if that prototype is changed.\nfunction containsLiteral(haystack: string, needle: string): boolean {\n  if (needle.length === 0) return true;\n  for (let start = 0; start + needle.length <= haystack.length; start++) {\n    let matched = true;\n    for (let offset = 0; offset < needle.length; offset++) {\n      if (haystack[start + offset] !== needle[offset]) {\n        matched = false;\n        break;\n      }\n    }\n    if (matched) return true;\n  }\n  return false;\n}\n\nfunction taxonomyForReason(reason: string): string {
+// Inspect literal UTF-16 substrings without mutable ambient String.prototype.includes.
+// Taxonomy and privacy/path admission must agree even if that prototype is changed.
+function containsLiteral(haystack: string, needle: string): boolean {
+  if (needle.length === 0) return true;
+  for (let start = 0; start + needle.length <= haystack.length; start++) {
+    let matched = true;
+    for (let offset = 0; offset < needle.length; offset++) {
+      if (haystack[start + offset] !== needle[offset]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) return true;
+  }
+  return false;
+}
+
+function taxonomyForReason(reason: string): string {
   if (reason === "source_row_update_or_odds_observation_after_created_at") return "source_mutability";
   if (
     containsLiteral(reason, "timezone") ||
