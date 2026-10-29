@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-exotic-prototype-validator-ingress-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.exotic-prototype-validator-ingress",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-own-data-prototype-before-digest",
+  "symptom": "Synthetic Node 22.16.0 JSON projection showed that adding inherited metadata to the root or source object does not change JSON bytes. The pre-v453 shadow validator's own-data graph preflight did not inspect object prototypes. An exotic root could pass own-key checks without binding inherited metadata; an exotic source passed preflight but the later canonical digest rejected its prototype by throwing instead of returning a fail-closed result. This is a research-only code-integrity finding, not a production incident or authenticated K evidence.",
+  "rootCauseClass": "SHADOW_EVIDENCE_VALIDATOR_EXOTIC_PROTOTYPE_PREFLIGHT_OMISSION",
+  "attemptSignature": "pr2286-v453-deny-exotic-prototypes-in-shadow-graph-preflight-before-digest",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@fc883db4/graph-preflight-omits-object-prototype"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.prototypeIngress.test.ts",
+    "commit/3db79b6b165a4a84e1e3d775ca6c872cfd0ccb77",
+    "commit/a04662f7d1006cc37b7f1162ff2c50b4342526c2",
+    "research/registries/learnings/LEARN-shadow-evidence-canonical-own-property-shape-alias-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-partial-proxy-guard-nested-countmap-20261029.json"
+  ],
+  "lesson": "Checking only own data descriptors is insufficient for fixed-schema evidence: an exotic prototype can carry unbound inherited state. The builder's existing canonical prototype rejection does not make the validator fail closed, because root objects can bypass canonicalization and nested objects can throw after admission.",
+  "guardrail": "Before reading fixed evidence fields or computing any digest, reject object prototypes other than Object.prototype/null and array prototypes other than Array.prototype/null in the bounded own-data graph preflight. Return a frozen denial result. Regress inherited root/source metadata with unchanged JSON and null-prototype valid compatibility. No K-source rights, finality, scoring, merge or production authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T17:02:19.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T17:02:19.000Z",
+  "_digest": "c734c7563b4f97e10658a913aa2d4615e2b1ae2c2ed7095525483e6b08b768e8"
+}
