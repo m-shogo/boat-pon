@@ -251,6 +251,52 @@ test("validator rejects non-canonical generatedAt even though it is outside cont
   }
 });
 
+test("shadow date admission ignores ambient Date.parse and Date.prototype.toISOString", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  const invalidInstant = "2026-08-05T08:10:00+00:00";
+  const invalidDay = "2026-02-30";
+  const forgedInstant = structuredClone(baseline);
+  forgedInstant.generatedAt = invalidInstant;
+  const forgedDay = structuredClone(baseline);
+  forgedDay.scope.from = invalidDay;
+  resign(forgedDay);
+
+  const originalParse = Date.parse;
+  const originalIso = Object.getOwnPropertyDescriptor(Date.prototype, "toISOString")!;
+  try {
+    Date.parse = (value: string) => {
+      if (value === invalidInstant) return 0;
+      if (value === `${invalidDay}T00:00:00.000Z`) return 1;
+      return Reflect.apply(originalParse, Date, [value]) as number;
+    };
+    Object.defineProperty(Date.prototype, "toISOString", {
+      configurable: true, writable: true,
+      value(this: Date) {
+        if (this.getTime() === 0) return invalidInstant;
+        if (this.getTime() === 1) return `${invalidDay}T00:00:00.000Z`;
+        return Reflect.apply(originalIso.value, this, []);
+      },
+    });
+
+    assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+    const instantResult = validateRuntimeDecisionLedgerShadowEvidence(forgedInstant);
+    assert.equal(instantResult.valid, false);
+    assert.equal(instantResult.evidence, null);
+    assert.ok(instantResult.errors.includes("generatedAt must be a canonical UTC date-time"));
+
+    const dayResult = validateRuntimeDecisionLedgerShadowEvidence(forgedDay);
+    assert.equal(dayResult.valid, false);
+    assert.equal(dayResult.evidence, null);
+    assert.ok(dayResult.errors.includes("scope.from must be a canonical date"));
+  } finally {
+    Date.parse = originalParse;
+    Object.defineProperty(Date.prototype, "toISOString", originalIso);
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
+
 test("validator rejects rehashed impossible source descriptor values", () => {
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
   evidence.source.fileSizeBytes = -1;
