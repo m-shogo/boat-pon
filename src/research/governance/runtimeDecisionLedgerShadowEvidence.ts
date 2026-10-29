@@ -102,7 +102,7 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
 // Track active ancestors separately from visited aliases: cycles must be denied
 // before canonicalization, but shared acyclic objects are not cycles.
 // Bound traversal so an unexpected deep graph cannot become an unbounded preflight.
-type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint" | "function";
+type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint" | "function" | "undefined" | "symbol" | "nonfinite";
 function inspectOwnDataGraph(
   value: unknown,
   visited: object[] = [],
@@ -112,6 +112,9 @@ function inspectOwnDataGraph(
   // JSON.stringify throws for bigint before the validator can report invalid fields.
   if (typeof value === "bigint") return "bigint";
   if (typeof value === "function") return "function";
+  if (value === undefined) return "undefined";
+  if (typeof value === "symbol") return "symbol";
+  if (typeof value === "number" && !Number.isFinite(value)) return "nonfinite";
   if (value === null || (typeof value !== "object" && typeof value !== "function")) return null;
   for (let index = 0; index < ancestors.length; index++) {
     if (ancestors[index] === value) return "cycle";
@@ -151,6 +154,12 @@ function canonicalize(value: unknown): unknown {
   // Deny callable scalar fields and isolate canonical arrays from ambient hooks.
   if (isProxy(value)) throw new TypeError("invalid canonical shadow evidence proxy");
   if (typeof value === "function") throw new TypeError("invalid canonical shadow evidence function");
+  // JSON.stringify drops undefined/symbol object values and converts NaN/Infinity to null.
+  // Reject before hashing so distinct malformed research contexts cannot alias.
+  if (value === undefined || typeof value === "symbol" ||
+      (typeof value === "number" && !Number.isFinite(value))) {
+    throw new TypeError("invalid canonical shadow evidence non-JSON primitive");
+  }
   if (Array.isArray(value)) {
     const result: unknown[] = [];
     Object.setPrototypeOf(result, null);
@@ -698,6 +707,9 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       : graphIssue === "cycle" ? "cyclic reference forbidden in evidence graph"
       : graphIssue === "bigint" ? "non-JSON bigint forbidden in evidence graph"
       : graphIssue === "function" ? "non-JSON function forbidden in evidence graph"
+      : graphIssue === "undefined" ? "non-JSON undefined forbidden in evidence graph"
+      : graphIssue === "symbol" ? "non-JSON symbol forbidden in evidence graph"
+      : graphIssue === "nonfinite" ? "non-finite number forbidden in evidence graph"
       : "evidence graph exceeds preflight bound";
     return immutableValidationResult([message], null);
   }

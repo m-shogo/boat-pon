@@ -1314,3 +1314,48 @@ test("shadow canonical digest rejects own callable toJSON and isolates arrays fr
   }
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(buildRuntimeDecisionLedgerShadowEvidence(input())).valid, true);
 });
+
+test("shadow canonical builder denies silent non-JSON scalar digest aliases", () => {
+  // The old JSON projection dropped undefined/symbol and coerced non-finite numbers to null.
+  assert.equal(sha256({ manifestId: undefined }), sha256({}));
+  assert.equal(sha256({ manifestId: Symbol("synthetic") }), sha256({}));
+  assert.equal(sha256({ manifestId: Number.NaN }), sha256({ manifestId: null }));
+  assert.equal(sha256({ manifestId: Number.POSITIVE_INFINITY }), sha256({ manifestId: null }));
+
+  const baselineInput = input();
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(baselineInput);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+  for (const malformed of [undefined, Symbol("synthetic"), Number.NaN, Number.POSITIVE_INFINITY]) {
+    const context = { ...baselineInput.context, manifestId: malformed as unknown as string };
+    assert.throws(
+      () => buildRuntimeDecisionLedgerShadowEvidence(input({ context })),
+      /invalid canonical shadow evidence non-JSON primitive/,
+    );
+  }
+  assert.throws(
+    () => buildRuntimeDecisionLedgerShadowEvidence(input({
+      source: { ...baselineInput.source, modifiedTimeMs: Number.NaN },
+    })),
+    /invalid canonical shadow evidence non-JSON primitive/,
+  );
+  assert.equal(buildRuntimeDecisionLedgerShadowEvidence(input()).contentDigest, baseline.contentDigest);
+});
+
+test("shadow validator denies non-JSON scalar evidence before digest evaluation", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  for (const [malformed, expected] of [
+    [undefined, "non-JSON undefined forbidden in evidence graph"],
+    [Symbol("synthetic"), "non-JSON symbol forbidden in evidence graph"],
+    [Number.NaN, "non-finite number forbidden in evidence graph"],
+    [Number.POSITIVE_INFINITY, "non-finite number forbidden in evidence graph"],
+  ] as const) {
+    const evidence = structuredClone(baseline);
+    (evidence.scope as unknown as Record<string, unknown>).modelVersion = malformed;
+    const result = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(result.valid, false);
+    assert.equal(result.evidence, null);
+    assert.ok(result.errors.includes(expected));
+    assert.equal(Object.isFrozen(result), true);
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
