@@ -289,7 +289,7 @@ test("shadow date admission ignores ambient Date.parse and Date.prototype.toISOS
     const dayResult = validateRuntimeDecisionLedgerShadowEvidence(forgedDay);
     assert.equal(dayResult.valid, false);
     assert.equal(dayResult.evidence, null);
-    assert.ok(dayResult.errors.includes("scope.from must be a canonical date"));
+    assert.ok(dayResult.errors.includes("bounded scope requires canonical from/to dates"));
   } finally {
     Date.parse = originalParse;
     Object.defineProperty(Date.prototype, "toISOString", originalIso);
