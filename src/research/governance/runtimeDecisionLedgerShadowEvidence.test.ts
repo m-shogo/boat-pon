@@ -1054,3 +1054,42 @@ test("shadow evidence denies embedded synthetic path markers despite String.incl
   assert.equal(reasonResult?.valid, false);
   assert.ok(reasonResult?.errors.includes("completeness.unresolvedReasonCounts contains forbidden reason key"));
 });
+
+test("shadow evidence rejects bigint fields before JSON digest without throwing", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const cases: Array<{
+    label: string;
+    mutate: (evidence: RuntimeDecisionLedgerShadowEvidence) => void;
+  }> = [
+    {
+      label: "source descriptor bigint",
+      mutate: (evidence) => {
+        (evidence.source as unknown as Record<string, unknown>).fileSizeBytes = 1n;
+      },
+    },
+    {
+      label: "scope limit bigint",
+      mutate: (evidence) => {
+        (evidence.scope as unknown as Record<string, unknown>).limit = 1n;
+      },
+    },
+    {
+      label: "privacy flag bigint",
+      mutate: (evidence) => {
+        (evidence.privacy as unknown as Record<string, unknown>).rawRecordsIncluded = 1n;
+      },
+    },
+  ];
+  for (const scenario of cases) {
+    const evidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+    scenario.mutate(evidence);
+    const observed = validateRuntimeDecisionLedgerShadowEvidence(evidence);
+    assert.equal(observed.valid, false, scenario.label);
+    assert.equal(observed.evidence, null, scenario.label);
+    assert.ok(observed.errors.includes("non-JSON bigint forbidden in evidence graph"), scenario.label);
+  }
+  const ordinary = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(ordinary).valid, true);
+  assert.equal(ordinary.contentDigest, baseline.contentDigest);
+  assert.equal(ordinary.sourceDescriptorDigest, baseline.sourceDescriptorDigest);
+});
