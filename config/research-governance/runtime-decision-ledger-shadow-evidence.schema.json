@@ -169,7 +169,7 @@
     },
     "countMap": {
       "type": "object",
-      "additionalProperties": { "type": "integer", "minimum": 0 }
+      "additionalProperties": { "type": "integer", "minimum": 1 }
     }
   }
 }

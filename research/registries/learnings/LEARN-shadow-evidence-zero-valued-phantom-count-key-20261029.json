@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-zero-valued-phantom-count-key-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.zero-valued-phantom-count-key-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-positive-reason-and-taxonomy-count-entries",
+  "symptom": "A synthetic re-digested evidence map could include an extra reason key with count 0 and a matching taxonomy key with count 0 while preserving all aggregate counts. The runtime and JSON Schema allowed non-negative values, although the builder emits keys only after observing at least one reason or conflict. No actual database, K archive, odds, or production records were used.",
+  "rootCauseClass": "ZERO_VALUED_PHANTOM_COUNT_KEYS_ACCEPTED_AS_OBSERVED_REASON_EVIDENCE",
+  "attemptSignature": "pr2286-v446-redigested-zero-valued-phantom-reason-and-taxonomy-key-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/actions-node24+synthetic-json-fixture",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@d97310c3/nonnegative-count-map-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "research/registries/learnings/LEARN-shadow-evidence-reason-count-map-admission-20261027.json",
+    "research/registries/learnings/LEARN-shadow-evidence-zero-row-positive-reason-count-20261029.json"
+  ],
+  "lesson": "An aggregate count sum and exact taxonomy match do not imply that each serialized reason/taxonomy key represents an observed event: matching zero-valued phantom keys can be added without changing any total or the content digest's semantic checks.",
+  "guardrail": "Require strictly positive safe-integer values for every own reason-count and taxonomy-count entry in both runtime admission and JSON Schema. Preserve empty maps for zero observations and multi-reason row coverage; reject re-digested zero-valued keys while retaining valid evidence digest compatibility.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T10:03:07.000Z",
+  "productionConnection": false,
+  "_digest": "b3c7f81981af34ef4d1313689df90254c55e2b341c1283bd9f6d81b2843d7831",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T10:03:07.000Z"
+}

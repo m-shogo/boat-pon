@@ -576,6 +576,10 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
     }
     if (!nonNegativeSafeInteger(descriptor.value)) {
       appendError(errors, `${path}.${key} must be a non-negative safe integer`);
+    } else if (descriptor.value === 0) {
+      // The builder emits a count-map key only for an observed reason or conflict.
+      // Zero-valued phantom keys can otherwise survive total and taxonomy checks.
+      appendError(errors, `${path}.${key} must be positive`);
     }
   }
   return errors.length === initialErrors ? value as Record<string, number> : null;

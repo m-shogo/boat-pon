@@ -272,6 +272,7 @@ test("JSON Schema is aligned with the runtime version and privacy constants", ()
   const schema = JSON.parse(readFileSync(schemaUrl, "utf8")) as Record<string, any>;
   assert.equal(schema.properties.schemaVersion.const, RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION);
   assert.equal(schema.properties.source.properties.walPresent.const, false);
+  assert.equal(schema.$defs.countMap.additionalProperties.minimum, 1);
   assert.equal(schema.properties.privacy.properties.rawRecordsIncluded.const, false);
   assert.equal(schema.properties.safety.properties.operationalDbWrites.const, 0);
 });
@@ -1022,6 +1023,58 @@ test("shadow evidence rejects rehashed positive reason counts for zero-row categ
     ));
   }
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(clean).valid, true);
+});
+
+test("shadow evidence rejects re-digested zero-valued phantom reason and taxonomy keys", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  const forgedUnresolved = structuredClone(baseline);
+  forgedUnresolved.completeness.unresolvedReasonCounts = {
+    ...forgedUnresolved.completeness.unresolvedReasonCounts,
+    synthetic_phantom: 0,
+  };
+  forgedUnresolved.completeness.taxonomyCounts = {
+    ...forgedUnresolved.completeness.taxonomyCounts,
+    schema_or_value: 0,
+  };
+  resign(forgedUnresolved);
+  const unresolvedResult = validateRuntimeDecisionLedgerShadowEvidence(forgedUnresolved);
+  assert.equal(unresolvedResult.valid, false);
+  assert.equal(unresolvedResult.evidence, null);
+  assert.ok(unresolvedResult.errors.includes(
+    "completeness.unresolvedReasonCounts.synthetic_phantom must be positive",
+  ));
+  assert.ok(unresolvedResult.errors.includes(
+    "completeness.taxonomyCounts.schema_or_value must be positive",
+  ));
+
+  const forgedRejected = structuredClone(baseline);
+  forgedRejected.completeness.rejectedReasonCounts = { synthetic_phantom: 0 };
+  forgedRejected.completeness.taxonomyCounts = {
+    ...forgedRejected.completeness.taxonomyCounts,
+    schema_or_value: 0,
+  };
+  resign(forgedRejected);
+  const rejectedResult = validateRuntimeDecisionLedgerShadowEvidence(forgedRejected);
+  assert.equal(rejectedResult.valid, false);
+  assert.ok(rejectedResult.errors.includes(
+    "completeness.rejectedReasonCounts.synthetic_phantom must be positive",
+  ));
+
+  const forgedTaxonomy = structuredClone(baseline);
+  forgedTaxonomy.completeness.taxonomyCounts = {
+    ...forgedTaxonomy.completeness.taxonomyCounts,
+    identity_conflict: 0,
+  };
+  resign(forgedTaxonomy);
+  const taxonomyResult = validateRuntimeDecisionLedgerShadowEvidence(forgedTaxonomy);
+  assert.equal(taxonomyResult.valid, false);
+  assert.ok(taxonomyResult.errors.includes(
+    "completeness.taxonomyCounts.identity_conflict must be positive",
+  ));
+
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
 
 test("shadow evidence taxonomy is stable under ambient String.includes forgery", () => {
