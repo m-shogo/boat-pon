@@ -308,7 +308,7 @@ test("shadow evidence rejects nested arrays even with a no-op Array.forEach", ()
 
   assert.equal(observed?.valid, false);
   assert.equal(observed?.evidence, null);
-  assert.ok(observed?.errors.includes("unexpected array at $.completeness.unresolvedReasonCounts"));
+  assert.ok(observed?.errors.includes("completeness.unresolvedReasonCounts must be a count map"));
 });
 
 test("shadow evidence binds distinct source and content digests under no-op Array.map/sort", () => {
