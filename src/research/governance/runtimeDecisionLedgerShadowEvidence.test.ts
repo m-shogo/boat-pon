@@ -965,3 +965,41 @@ test("shadow evidence preflight denies cyclic own-data before canonical digest, 
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
   assert.equal(baseline.contentDigest, baselineDigest);
 });
+
+test("shadow evidence rejects rehashed positive reason counts for zero-row categories", () => {
+  const baseline = input();
+  const cleanInput = input({
+    scope: { ...baseline.scope, returnedRows: 1 },
+    reconciliation: {
+      ...baseline.reconciliation,
+      status: "PASS",
+      sourceRows: 1,
+      mappedUnique: 1,
+      unresolvedCount: 0,
+      rejectedCount: 0,
+      unresolved: [],
+      rejected: [],
+    },
+  });
+  const clean = buildRuntimeDecisionLedgerShadowEvidence(cleanInput);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(clean).valid, true);
+  assert.equal(clean.verdict, "PASS");
+
+  for (const category of ["unresolved", "rejected"] as const) {
+    const forged = buildRuntimeDecisionLedgerShadowEvidence(cleanInput);
+    if (category === "unresolved") {
+      forged.completeness.unresolvedReasonCounts = { synthetic_reason: 1 };
+    } else {
+      forged.completeness.rejectedReasonCounts = { synthetic_reason: 1 };
+    }
+    forged.completeness.taxonomyCounts = { schema_or_value: 1 };
+    resign(forged);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(forged);
+    assert.equal(result.valid, false, category);
+    assert.equal(result.evidence, null);
+    assert.ok(result.errors.includes(
+      `completeness.${category}ReasonCounts must be empty when ${category}Count is zero`,
+    ));
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(clean).valid, true);
+});
