@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-bigint-preflight-json-digest-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.bigint-preflight-json-digest-throw",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-nonjson-primitive-before-canonical-digest",
+  "symptom": "A synthetic Node 22.16.0 BigInt value is not JSON-serializable: JSON.stringify throws TypeError. The shadow evidence validator previously computed sourceDescriptorDigest before checking numeric source fields, and the own-data graph preflight did not reject BigInt primitives, allowing an invalid synthetic source, scope, or privacy value to throw instead of returning a fail-closed result. No actual SQLite, K issuer evidence, or production data was accessed.",
+  "rootCauseClass": "BIGINT_INVALID_PRIMITIVE_REACHES_CANONICAL_JSON_DIGEST_BEFORE_SEMANTIC_DENIAL",
+  "attemptSignature": "pr2286-v441-own-data-bigint-preflight-before-digest-with-three-synthetic-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@4b28f11b/own-data-preflight-skips-bigint-primitive-before-json-digest"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/e2104891102b145191ca5fb5242a54bfb6e7c8bf",
+    "commit/cff30f646a0a4eefc91bda78739b29ada597228e",
+    "research/registries/learnings/LEARN-forward-vault-nonjson-data-properties-20261008.json",
+    "research/registries/learnings/LEARN-shadow-evidence-enumerable-count-accessor-digest-20261029.json"
+  ],
+  "lesson": "Own-data shape and cycle checks are insufficient for canonical JSON safety when a scalar can be BigInt. Digest evaluation before field-level type checks must have a primitive-serializability preflight to return a denial result rather than throw.",
+  "guardrail": "Reject BigInt anywhere in the bounded own-data evidence graph before any digest or JSON.stringify. Regress synthetic BigInt source, scope, and privacy fields with a stable invalid envelope and preserve ordinary evidence digests. Keep the research-only isolation and do not infer K rights or production readiness.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T05:02:44.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T05:02:44.000Z",
+  "_digest": "0c5714966934170869e3a3bd1c9675733edad9db38acdf29f3cf5ad0a929ee87"
+}
