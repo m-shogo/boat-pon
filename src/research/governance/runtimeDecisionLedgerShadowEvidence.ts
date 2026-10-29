@@ -146,10 +146,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function canonicalize(value: unknown): unknown {
-  // Never serialize a caller-controlled Proxy through its traps as canonical evidence.
+  // JSON.stringify invokes callable own toJSON and inherited Array.prototype.toJSON.
+  // Deny callable scalar fields and isolate canonical arrays from ambient hooks.
   if (isProxy(value)) throw new TypeError("invalid canonical shadow evidence proxy");
+  if (typeof value === "function") throw new TypeError("invalid canonical shadow evidence function");
   if (Array.isArray(value)) {
     const result: unknown[] = [];
+    Object.setPrototypeOf(result, null);
     for (let index = 0; index < value.length; index++) {
       const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
