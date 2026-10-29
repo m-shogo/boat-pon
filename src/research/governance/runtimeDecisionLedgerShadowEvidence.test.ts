@@ -1284,6 +1284,13 @@ test("shadow canonical digest rejects own callable toJSON and isolates arrays fr
   );
   assert.equal(hooksCalled, 0, "caller-owned toJSON must not execute");
 
+  const invalidEvidence = buildRuntimeDecisionLedgerShadowEvidence(input());
+  (invalidEvidence.scope as unknown as Record<string, unknown>).runKind = () => "synthetic";
+  const denial = validateRuntimeDecisionLedgerShadowEvidence(invalidEvidence);
+  assert.equal(denial.valid, false);
+  assert.equal(denial.evidence, null);
+  assert.ok(denial.errors.includes("non-JSON function forbidden in evidence graph"));
+
   // A deliberately extra synthetic array probes the digest boundary, not a
   // claim that an array is a valid mapping-context field.
   const contextWithArray = {
