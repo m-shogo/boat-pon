@@ -311,6 +311,47 @@ test("shadow evidence rejects nested arrays even with a no-op Array.forEach", ()
   assert.ok(observed?.errors.includes("completeness.unresolvedReasonCounts must be a count map"));
 });
 
+test("shadow evidence preserves distinct canonical digests under empty Object.keys", () => {
+  const firstInput = input();
+  const secondInput = input({
+    source: { ...firstInput.source, fileSizeBytes: firstInput.source.fileSizeBytes + 1 },
+  });
+  const baselineFirst = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+  const baselineSecond = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+  assert.notEqual(baselineFirst.sourceDescriptorDigest, baselineSecond.sourceDescriptorDigest);
+
+  const original = Object.getOwnPropertyDescriptor(Object, "keys");
+  let observed: {
+    first: RuntimeDecisionLedgerShadowEvidence;
+    second: RuntimeDecisionLedgerShadowEvidence;
+    validFirst: boolean;
+    validSecond: boolean;
+  } | undefined;
+  try {
+    Object.defineProperty(Object, "keys", {
+      configurable: true, writable: true, value() { return []; },
+    });
+    const first = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+    const second = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+    observed = {
+      first, second,
+      validFirst: validateRuntimeDecisionLedgerShadowEvidence(first).valid,
+      validSecond: validateRuntimeDecisionLedgerShadowEvidence(second).valid,
+    };
+  } finally {
+    if (original) Object.defineProperty(Object, "keys", original);
+    else Reflect.deleteProperty(Object, "keys");
+  }
+
+  assert.equal(observed?.validFirst, true);
+  assert.equal(observed?.validSecond, true);
+  assert.equal(observed?.first.sourceDescriptorDigest, baselineFirst.sourceDescriptorDigest);
+  assert.equal(observed?.second.sourceDescriptorDigest, baselineSecond.sourceDescriptorDigest);
+  assert.equal(observed?.first.contentDigest, baselineFirst.contentDigest);
+  assert.equal(observed?.second.contentDigest, baselineSecond.contentDigest);
+  assert.notEqual(observed?.first.contentDigest, observed?.second.contentDigest);
+});
+
 test("shadow evidence binds distinct source and content digests under no-op Array.map/sort", () => {
   const firstInput = input();
   const secondInput = input({ source: { ...firstInput.source, fileSizeBytes: 8192 } });
