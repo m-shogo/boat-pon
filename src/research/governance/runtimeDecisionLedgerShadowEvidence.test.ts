@@ -300,6 +300,40 @@ test("shadow evidence regex admission is stable under ambient RegExp.prototype.t
   }
 });
 
+test("shadow evidence ignores ambient RegExp.prototype.exec for path and digest admission", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const embeddedPath = structuredClone(baseline);
+  embeddedPath.scope.modelVersion = "diagnostic=/opt/synthetic-fixture";
+  resign(embeddedPath);
+  const invalidHex = structuredClone(baseline);
+  invalidHex.contextDigest = "not-a-sha256";
+  resign(invalidHex);
+
+  const original = Object.getOwnPropertyDescriptor(RegExp.prototype, "exec")!;
+  try {
+    Object.defineProperty(RegExp.prototype, "exec", {
+      configurable: true, writable: true,
+      value(this: RegExp, value: string) {
+        if (value === "diagnostic=/opt/synthetic-fixture") return null;
+        if (value === "not-a-sha256") return ["synthetic-match"];
+        return Reflect.apply(original.value, this, [value]);
+      },
+    });
+    assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+    const pathResult = validateRuntimeDecisionLedgerShadowEvidence(embeddedPath);
+    assert.equal(pathResult.valid, false);
+    assert.equal(pathResult.evidence, null);
+    assert.ok(pathResult.errors.includes("absolute path-like value at $.scope.modelVersion"));
+
+    const digestResult = validateRuntimeDecisionLedgerShadowEvidence(invalidHex);
+    assert.equal(digestResult.valid, false);
+    assert.equal(digestResult.evidence, null);
+    assert.ok(digestResult.errors.includes("contextDigest must be sha256 hex"));
+  } finally {
+    Object.defineProperty(RegExp.prototype, "exec", original);
+  }
+});
+
 test("JSON Schema is aligned with the runtime version and privacy constants", () => {
   const schemaUrl = new URL(
     "../../../config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",

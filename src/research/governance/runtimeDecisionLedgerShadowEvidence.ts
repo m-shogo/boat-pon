@@ -5,12 +5,12 @@ import type {
   RuntimeDecisionLedgerReconciliation,
 } from "./runtimeDecisionLedgerMapper";
 
-// Capture the built-in regex matcher before caller code can mutate its prototype.
-// Validation of digests, canonical dates and sanitized path tokens must agree
-// with the builder even under reversible ambient RegExp.prototype.test hooks.
-const BUILTIN_REGEXP_TEST = RegExp.prototype.test;
+// Call the captured native regex executor directly: a captured .test still
+// delegates to mutable RegExp.prototype.exec and can be bypassed by callers.
+// These fixed, non-global patterns never rely on lastIndex or caller hooks.
+const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
 function stableRegexTest(pattern: RegExp, value: string): boolean {
-  return Reflect.apply(BUILTIN_REGEXP_TEST, pattern, [value]);
+  return Reflect.apply(BUILTIN_REGEXP_EXEC, pattern, [value]) !== null;
 }
 
 export const RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION =
