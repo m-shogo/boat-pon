@@ -264,6 +264,42 @@ test("validator rejects rehashed impossible source descriptor values", () => {
   assert.ok(validation.errors.includes("source.journalMode must be a non-empty string"));
 });
 
+test("shadow evidence regex admission is stable under ambient RegExp.prototype.test mutation", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  const embeddedPath = structuredClone(baseline);
+  embeddedPath.scope.modelVersion = "diagnostic=/opt/synthetic-fixture";
+  resign(embeddedPath);
+
+  const invalidHex = structuredClone(baseline);
+  invalidHex.contextDigest = "not-a-sha256";
+  resign(invalidHex);
+
+  const original = Object.getOwnPropertyDescriptor(RegExp.prototype, "test")!;
+  try {
+    Object.defineProperty(RegExp.prototype, "test", {
+      configurable: true, writable: true, value() { return false; },
+    });
+    assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+    const pathResult = validateRuntimeDecisionLedgerShadowEvidence(embeddedPath);
+    assert.equal(pathResult.valid, false);
+    assert.equal(pathResult.evidence, null);
+    assert.ok(pathResult.errors.includes("absolute path-like value at $.scope.modelVersion"));
+
+    Object.defineProperty(RegExp.prototype, "test", {
+      configurable: true, writable: true, value() { return true; },
+    });
+    assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+    const digestResult = validateRuntimeDecisionLedgerShadowEvidence(invalidHex);
+    assert.equal(digestResult.valid, false);
+    assert.equal(digestResult.evidence, null);
+    assert.ok(digestResult.errors.includes("contextDigest must be sha256 hex"));
+  } finally {
+    Object.defineProperty(RegExp.prototype, "test", original);
+  }
+});
+
 test("JSON Schema is aligned with the runtime version and privacy constants", () => {
   const schemaUrl = new URL(
     "../../../config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",

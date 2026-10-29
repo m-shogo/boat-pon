@@ -5,6 +5,14 @@ import type {
   RuntimeDecisionLedgerReconciliation,
 } from "./runtimeDecisionLedgerMapper";
 
+// Capture the built-in regex matcher before caller code can mutate its prototype.
+// Validation of digests, canonical dates and sanitized path tokens must agree
+// with the builder even under reversible ambient RegExp.prototype.test hooks.
+const BUILTIN_REGEXP_TEST = RegExp.prototype.test;
+function stableRegexTest(pattern: RegExp, value: string): boolean {
+  return Reflect.apply(BUILTIN_REGEXP_TEST, pattern, [value]);
+}
+
 export const RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION =
   "runtime-decision-ledger-shadow-evidence.0.1";
 
@@ -262,7 +270,7 @@ function containsLiteral(haystack: string, needle: string): boolean {
 // Reject embedded filesystem path tokens in diagnostic strings and reason keys.
 // Do not confuse HTTPS scheme separators with absolute local paths.
 function containsAbsolutePathLike(value: string): boolean {
-  return /(?:^|[\s"'(=:])(?:file:\/\/|\/(?!\/|\s)|[A-Za-z]:[\\/]|\\\\[^\\\s])/u.test(value) ||
+  return stableRegexTest(/(?:^|[\s"'(=:])(?:file:\/\/|\/(?!\/|\s)|[A-Za-z]:[\\/]|\\\\[^\\\s])/u, value) ||
     containsLiteral(value, "/Users/") || containsLiteral(value, "\\Users\\");
 }
 
@@ -343,7 +351,7 @@ function canonicalGeneratedAt(value: unknown): value is string {
 }
 
 function canonicalDate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (typeof value !== "string" || !stableRegexTest(/^\d{4}-\d{2}-\d{2}$/, value)) return false;
   const parsed = Date.parse(`${value}T00:00:00.000Z`);
   return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
 }
@@ -727,7 +735,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     const pair = digestFields[index]!;
     const name = pair[0];
     const valueToCheck = pair[1];
-    if (typeof valueToCheck !== "string" || !/^[0-9a-f]{64}$/.test(valueToCheck)) appendError(errors,`${name} must be sha256 hex`);
+    if (typeof valueToCheck !== "string" || !stableRegexTest(/^[0-9a-f]{64}$/, valueToCheck)) appendError(errors,`${name} must be sha256 hex`);
   }
 
   if (evidence.sourceDescriptorDigest !== digest(evidence.source)) {
