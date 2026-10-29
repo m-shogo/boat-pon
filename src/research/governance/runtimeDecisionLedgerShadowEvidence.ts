@@ -769,6 +769,16 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
       const count = pair[1];
       if (!nonNegativeSafeInteger(count)) appendError(errors,`${name} must be a non-negative safe integer`);
     }
+    // The mapper derives reconciliation.status from conflict/unresolved/rejected counts.
+    // A re-digested outer verdict must not launder a contradictory inner status.
+    if (nonNegativeSafeInteger(r.conflictCount) &&
+        nonNegativeSafeInteger(r.unresolvedCount) && nonNegativeSafeInteger(r.rejectedCount)) {
+      const expectedStatus = r.conflictCount > 0 ? "FAILED"
+        : r.unresolvedCount > 0 || r.rejectedCount > 0 ? "CONDITIONAL" : "PASS";
+      if (r.status !== expectedStatus) {
+        appendError(errors,`reconciliation.status must be ${expectedStatus}`);
+      }
+    }
     if (
       nonNegativeSafeInteger(r.sourceRows) &&
       r.sourceRows !== r.mappedUnique + r.exactDuplicates + r.unresolvedCount + r.rejectedCount + r.conflictCount

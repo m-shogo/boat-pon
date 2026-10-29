@@ -142,6 +142,26 @@ test("identity conflict fails the evidence verdict", () => {
   assert.deepEqual(evidence.completeness.taxonomyCounts, { identity_conflict: 1 });
 });
 
+test("shadow evidence rejects re-digested reconciliation status/count contradictions", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  const falsePass = structuredClone(baseline);
+  falsePass.reconciliation.status = "PASS"; // unresolvedCount remains positive
+  resign(falsePass);
+  const passResult = validateRuntimeDecisionLedgerShadowEvidence(falsePass);
+  assert.equal(passResult.valid, false);
+  assert.ok(passResult.errors.includes("reconciliation.status must be CONDITIONAL"));
+
+  const falseFailure = structuredClone(baseline);
+  falseFailure.reconciliation.status = "FAILED"; // conflictCount remains zero
+  falseFailure.verdict = "FAILED";
+  resign(falseFailure);
+  const failureResult = validateRuntimeDecisionLedgerShadowEvidence(falseFailure);
+  assert.equal(failureResult.valid, false);
+  assert.ok(failureResult.errors.includes("reconciliation.status must be CONDITIONAL"));
+});
+
 test("validator rejects count mismatch, active WAL and private fields", () => {
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input()) as unknown as Record<string, unknown>;
   const reconciliation = evidence.reconciliation as Record<string, unknown>;
