@@ -34,6 +34,9 @@ const BUILTIN_OBJECT_SET_PROTOTYPE_OF = Object.setPrototypeOf;
 // Numeric index materialization must not be redirected by a caller-replaced
 // global String constructor; doing so can collapse multiple canonical keys.
 const BUILTIN_STRING = String;
+// Validation result and error arrays must stay immutable even when a caller
+// replaces the ambient Object.freeze after module initialization.
+const BUILTIN_OBJECT_FREEZE = Object.freeze;
 // Nonblank admission must not trust a caller-replaced String.prototype.trim.
 const BUILTIN_STRING_TRIM = String.prototype.trim;
 function stableTrim(value: string): string {
@@ -784,8 +787,8 @@ function immutableValidationResult(
   evidence: RuntimeDecisionLedgerShadowEvidence | null,
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const valid = errors.length === 0;
-  Object.freeze(errors);
-  return Object.freeze({ valid, errors, evidence: valid ? evidence : null });
+  BUILTIN_OBJECT_FREEZE(errors);
+  return BUILTIN_OBJECT_FREEZE({ valid, errors, evidence: valid ? evidence : null });
 }
 
 export function validateRuntimeDecisionLedgerShadowEvidence(
