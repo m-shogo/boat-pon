@@ -1979,6 +1979,6 @@ test("shadow canonical array indices ignore ambient Number constructor replaceme
 
 test("shadow source guards against reintroduced ambient array and numeric-index calls", () => {
   const source = readFileSync(new URL("./runtimeDecisionLedgerShadowEvidence.ts", import.meta.url), "utf8");
-  assert.doesNotMatch(source, /\\bArray\\.isArray\\s*\\(/);
-  assert.doesNotMatch(source, /\\bNumber\\s*\\(/);
+  assert.doesNotMatch(source, /\bArray\.isArray\s*\(/);
+  assert.doesNotMatch(source, /\bNumber\s*\(/);
 });
