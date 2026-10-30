@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * decision_history からルール見直し候補を出す read-only レポート。
  *
@@ -18,7 +19,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-rule-candidates] RULE_CANDIDATES_REPORT_PRIMARY_DB_MISSING");
@@ -306,6 +307,20 @@ function environmentBandSql() {
 }
 
 function printRows(rows: SuggestionRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`検討候補 ${rows.length}件。提案の表示のみで、ルールの自動採用はしません。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("ルール検討候補", rows, [
+      ["提案", (r) => r.suggestion],
+      ["条件", (r) => `${r.metric}: ${r.band} / ${r.decision}`],
+      ["確定", (r) => r.settled],
+      ["ROI", (r) => r.roi],
+      ["理由", (r) => r.reason],
+    ]);
+    return;
+  }
+
   console.log("=== rule candidates report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -383,5 +398,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-rule-candidates.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--min-settled 30] [--json]\n\nRead-only. No external access. Suggestions are for review only.\nROI uses complete canonical official winning settlements for every non-empty settled denominator row; current_odds remains a banding feature only.`);
+  pnpm exec tsx scripts/report-rule-candidates.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--min-settled 30] [--detail] [--json]\n\nRead-only. No external access. Suggestions are for review only.\nROI uses complete canonical official winning settlements for every non-empty settled denominator row; current_odds remains a banding feature only.`);
 }

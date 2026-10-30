@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * オッズ帯ごとの decision 結果を見る read-only レポート。
  *
@@ -19,7 +20,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-odds-band-outcomes] DB not found");
@@ -256,6 +257,19 @@ function oddsRatioBandSql() {
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`オッズ条件 ${rows.length}区分を確認。区分が重なるため件数は合算しません。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("オッズ帯別", rows, [
+      ["条件", (r) => `${r.metric}: ${r.band} / ${r.decision}`],
+      ["確定", (r) => r.settled],
+      ["的中", (r) => r.hits],
+      ["ROI", (r) => r.roi],
+    ]);
+    return;
+  }
+
   console.log("=== odds band outcomes report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -321,5 +335,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-odds-band-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]\n\nRead-only. No external access. Unsupported decision bet types fail closed before aggregation; every non-empty settled row must map to exactly one positive non-refund canonical official winning settlement before payout-derived metrics are generated.`);
+  pnpm exec tsx scripts/report-odds-band-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--detail] [--json]\n\nRead-only. No external access. Unsupported decision bet types fail closed before aggregation; every non-empty settled row must map to exactly one positive non-refund canonical official winning settlement before payout-derived metrics are generated.`);
 }

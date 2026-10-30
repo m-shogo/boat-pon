@@ -1,3 +1,4 @@
+import { compactTable, outcomeConclusion } from "../src/presentation/reviewReportText";
 /**
  * decision_history の decision 別結果比較レポート。
  *
@@ -16,7 +17,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-decision-outcomes] DB not found");
@@ -219,6 +220,20 @@ END
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(outcomeConclusion(rows));
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("判定別成績", rows, [
+      ["判定", (r) => r.decision],
+      ["確定", (r) => r.settled],
+      ["的中", (r) => r.hits],
+      ["払戻欠損", (r) => r.missingPayoutHits],
+      ["ROI", (r) => r.roi],
+    ]);
+    return;
+  }
+
   console.log("=== decision outcomes report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -281,5 +296,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-decision-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. No external access. ROI uses complete canonical official winning settlements for every non-empty settled denominator row before payout-derived metrics are generated.`);
+  pnpm exec tsx scripts/report-decision-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--model-version X] [--run-kind paper-live] [--detail] [--json]\n\nRead-only. No external access. ROI uses complete canonical official winning settlements for every non-empty settled denominator row before payout-derived metrics are generated.`);
 }

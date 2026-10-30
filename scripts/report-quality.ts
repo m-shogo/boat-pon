@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
@@ -19,7 +20,7 @@ type QualityReport = {
 };
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const rawArgs = process.argv.slice(2);
+const rawArgs = process.argv.slice(2).filter((arg) => arg !== "--detail");
 if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
   console.log("Usage: npm run report:quality -- --days 7 [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--json]");
   process.exit(0);
@@ -234,6 +235,18 @@ function buildRuleSuggestions(report: Omit<QualityReport, "ruleSuggestions">) {
 }
 
 function printReport(from: string, to: string, report: QualityReport) {
+  if (!process.argv.includes("--detail")) {
+    const s = report.summary;
+    console.log(`今期の結論（${from}〜${to}）：BUY確定 ${s.settledBuy}件 → 的中 ${s.hits}件。`);
+    console.log(`実払戻ROI ${pct(s.roi)}。弱い傾向 ${report.weakSignals.length}件（ルール変更なし）。`);
+    console.log("予想との差の判定は report:miss-review を参照。表のROIは倍率（1 = 100%）。");
+    for (const [title, rows] of [["シグナル別", report.byBand], ["会場別", report.byVenue], ["レース番号別", report.byRaceNo]] as const) {
+      compactTable(title, rows, [["区分", (r) => r.key], ["BUY確定", (r) => r.settledBuy], ["的中", (r) => r.hits], ["ROI", (r) => r.roi]]);
+    }
+    compactTable("弱い傾向", report.weakSignals, [["区分", (r) => r.key], ["理由", (r) => r.reason], ["確定", (r) => r.settledBuy], ["ROI", (r) => r.roi]]);
+    compactTable("検討事項", report.ruleSuggestions, [["内容", (r) => r]]);
+    return;
+  }
   console.log("# Boat Pon quality report");
   console.log(`period: ${from}..${to}`);
   console.log("roiSource: official race_payouts.payout_yen");

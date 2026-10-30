@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * 最大配当依存をより厳しく見る read-only レポート。
  *
@@ -18,7 +19,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-payout-sensitivity] DB not found");
@@ -242,6 +243,20 @@ function groupByExpr(groupBy: string) {
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`高配当依存を ${rows.length}区分で確認。通常ROIと高配当除外後を比較してください。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("高配当への依存", rows, [
+      ["区分", (r) => r.groupKey],
+      ["確定", (r) => r.settled],
+      ["ROI", (r) => r.roi],
+      ["最大払戻除外ROI", (r) => r.roiExTop1],
+      ["上位3払戻除外ROI", (r) => r.roiExTop3],
+    ]);
+    return;
+  }
+
   console.log("=== payout sensitivity report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} groupBy=${args.groupBy}`);
@@ -313,5 +328,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-payout-sensitivity.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--group-by decision|venue|month|venue-month|all] [--json]\n\nRead-only. No external access. ROI uses complete mapped official winning settlements for every non-empty settled denominator row before payout sensitivity metrics are generated.`);
+  pnpm exec tsx scripts/report-payout-sensitivity.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--group-by decision|venue|month|venue-month|all] [--detail] [--json]\n\nRead-only. No external access. ROI uses complete mapped official winning settlements for every non-empty settled denominator row before payout sensitivity metrics are generated.`);
 }

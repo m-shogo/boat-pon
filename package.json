@@ -75,6 +75,7 @@
     "report:venue-monthly": "tsx scripts/report-venue-monthly.ts",
     "report:decision-outcomes": "tsx scripts/report-decision-outcomes.ts",
     "report:missed-hits": "tsx scripts/report-missed-hits.ts",
+    "report:miss-review": "tsx scripts/report-miss-review.ts",
     "report:buy-misses": "tsx scripts/report-buy-misses.ts",
     "report:review-summary": "tsx scripts/report-review-summary.ts",
     "report:data-quality-outcomes": "tsx scripts/report-data-quality-outcomes.ts",

@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * WATCH / SKIP で結果的に的中していた行を確認する read-only レポート。
  *
@@ -16,7 +17,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("MISSED_HITS_REPORT_PRIMARY_DB_MISSING");
@@ -99,6 +100,19 @@ LIMIT ?
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`取得範囲のWATCH/SKIP的中 ${rows.length}件（取得上限 ${args.limit}件）。見送り条件の良否はこの一覧だけでは判断できません。`);
+    console.log("一覧は既存の並び順。全期間の件数とは異なります。");
+    compactTable("見送った的中", rows, [
+      ["レース", (r) => `${r.date} ${r.venue} ${r.raceNo}R`],
+      ["判定", (r) => r.decision],
+      ["候補＝結果", (r) => r.selection],
+      ["オッズ", (r) => r.currentOdds],
+    ]);
+    return;
+  }
+
   console.log("=== missed hits report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "WATCH/SKIP"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -182,7 +196,7 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-missed-hits.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision WATCH|SKIP] [--venue 蒲郡] [--limit 100] [--json]
+  pnpm exec tsx scripts/report-missed-hits.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision WATCH|SKIP] [--venue 蒲郡] [--limit 100] [--detail] [--json]
 
 Read-only. No external access.`);
 }

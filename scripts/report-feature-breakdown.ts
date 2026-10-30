@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * feature_adjustment_breakdown の読み取り専用レポート。
  * 外部アクセスなし。DB内容を集計して、補正値の分布と結果を確認する。
@@ -23,7 +24,7 @@ const FACTORS = [
   "secondLocalFactor",
   "thirdClassFactor",
 ] as const;
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-feature-breakdown] DB not found");
@@ -232,6 +233,19 @@ ORDER BY factor, band
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`特徴量 ${rows.length}区分を確認。同じ判定が複数区分に入るため合算しません。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("特徴量別", rows, [
+      ["条件", (r) => `${r.factor}: ${r.band}`],
+      ["確定", (r) => r.settled],
+      ["的中", (r) => r.hits],
+      ["ROI", (r) => r.roi],
+    ]);
+    return;
+  }
+
   console.log("=== feature breakdown report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -294,5 +308,5 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. Unsupported decision bet types and blank settled results fail closed before aggregation; ROI uses canonical official race_payouts.payout_yen with canonical bet-type mapping and current_odds is not used as realized return.`);
+  pnpm report:feature-breakdown -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--detail] [--json]\n\nRead-only. Unsupported decision bet types and blank settled results fail closed before aggregation; ROI uses canonical official race_payouts.payout_yen with canonical bet-type mapping and current_odds is not used as realized return.`);
 }

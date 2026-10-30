@@ -6,7 +6,7 @@ const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "RESEARCH_D
 const childEnv = { ...process.env, BOAT_PON_DB_PATH: verifiedDbPath };
 const forwardedArgs = process.argv.slice(2);
 
-const audit = spawnSync(process.execPath, ["--import", "tsx", "scripts/audit-review-summary-payout-integrity.ts", ...forwardedArgs], {
+const audit = spawnSync(process.execPath, ["--import", "tsx", "scripts/audit-review-summary-payout-integrity.ts", ...forwardedArgs.filter((arg) => arg !== "--detail")], {
   stdio: "inherit",
   env: childEnv,
 });
