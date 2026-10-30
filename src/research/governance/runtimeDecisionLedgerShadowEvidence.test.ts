@@ -151,6 +151,39 @@ test("shadow evidence digest identity survives ambient JSON.stringify replacemen
   assert.ok(observed?.forgedValidation.errors.includes("contentDigest mismatch"));
 });
 
+test("shadow validation result freeze survives ambient Object.freeze replacement", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const malformed = structuredClone(baseline);
+  malformed.source.walPresent = true;
+
+  const original = Object.getOwnPropertyDescriptor(Object, "freeze")!;
+  let accepted: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  let rejected: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    // A caller-replaced no-op freeze previously left both verdicts and error
+    // arrays mutable, despite the validation envelope's immutable contract.
+    Object.defineProperty(Object, "freeze", {
+      configurable: true, writable: true, value: <T>(value: T): T => value,
+    });
+    accepted = validateRuntimeDecisionLedgerShadowEvidence(baseline);
+    rejected = validateRuntimeDecisionLedgerShadowEvidence(malformed);
+  } finally {
+    Object.defineProperty(Object, "freeze", original);
+  }
+
+  assert.ok(accepted);
+  assert.ok(rejected);
+  assert.equal(accepted.valid, true, accepted.errors.join("; "));
+  assert.equal(rejected.valid, false);
+  assert.ok(rejected.errors.includes("source.walPresent must be false"));
+  assert.equal(Object.isFrozen(accepted), true);
+  assert.equal(Object.isFrozen(accepted.errors), true);
+  assert.equal(Object.isFrozen(rejected), true);
+  assert.equal(Object.isFrozen(rejected.errors), true);
+  assert.throws(() => { rejected.valid = true; }, TypeError);
+  assert.throws(() => { rejected.errors.push("forged"); }, TypeError);
+});
+
 test("limit reached remains conditional even when every returned row maps", () => {
   const base = input();
   const evidence = buildRuntimeDecisionLedgerShadowEvidence(input({
