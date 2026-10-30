@@ -26,6 +26,11 @@ const BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescript
 // Error collection and canonical materialization must not rely on an ambient
 // Object.defineProperty replacement that can silently discard own data fields.
 const BUILTIN_OBJECT_DEFINE_PROPERTY = Object.defineProperty;
+// Canonical objects and arrays must keep their null prototypes even if the
+// caller later replaces the realm's object construction/prototype helpers.
+// Otherwise inherited toJSON hooks can rewrite otherwise distinct digest inputs.
+const BUILTIN_OBJECT_CREATE = Object.create;
+const BUILTIN_OBJECT_SET_PROTOTYPE_OF = Object.setPrototypeOf;
 // Canonical evidence digests must not depend on a caller-replaced JSON.stringify.
 // Capture the native serializer after module load, alongside other digest intrinsics.
 const BUILTIN_JSON_STRINGIFY = JSON.stringify;
@@ -232,7 +237,7 @@ function canonicalize(value: unknown): unknown {
       }
     }
     const result: unknown[] = [];
-    Object.setPrototypeOf(result, null);
+    BUILTIN_OBJECT_SET_PROTOTYPE_OF(result, null);
     for (let index = 0; index < value.length; index++) {
       const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, String(index));
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
@@ -279,7 +284,7 @@ function canonicalize(value: unknown): unknown {
     }
     keys[previous + 1] = key;
   }
-  const result: Record<string, unknown> = Object.create(null);
+  const result: Record<string, unknown> = BUILTIN_OBJECT_CREATE(null);
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
     const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
@@ -333,7 +338,7 @@ function orderedCountMap(counts: Record<string, number>): Record<string, number>
 }
 
 function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number> {
-  const counts: Record<string, number> = Object.create(null);
+  const counts: Record<string, number> = BUILTIN_OBJECT_CREATE(null);
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const reasons = rows[rowIndex]!.reasons;
     for (let index = 0; index < reasons.length; index++) {
@@ -388,7 +393,7 @@ function taxonomyCounts(
   rejected: Record<string, number>,
   conflictCount: number,
 ): Record<string, number> {
-  const counts: Record<string, number> = Object.create(null);
+  const counts: Record<string, number> = BUILTIN_OBJECT_CREATE(null);
   const sources = [unresolved, rejected];
   for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
     const source = sources[sourceIndex]!;
@@ -699,7 +704,7 @@ function taxonomyMatches(
   rejected: Record<string, number>,
   conflictCount: number,
 ): boolean {
-  const expected: Record<string, number> = Object.create(null);
+  const expected: Record<string, number> = BUILTIN_OBJECT_CREATE(null);
   const addExpected = (key: string, count: number): void => {
     BUILTIN_OBJECT_DEFINE_PROPERTY(expected, key, {
       value: (BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(expected, key)?.value as number | undefined ?? 0) + count,
