@@ -95,3 +95,20 @@ test("deprecated and unknown modes reject without any legacy policy or request f
     rmSync(isolated, { recursive: true, force: true });
   }
 });
+
+test("denied legacy modes never eagerly load the N2 executor module graph", () => {
+  // Source-order assertion only: no valid request, N2 dispatch, or executor invocation.
+  const source = readFileSync(runner, "utf8");
+  const gate = source.indexOf('if (mode === "task") {');
+  const unknownGate = source.indexOf('if (mode !== "validate-request" &&');
+  const policyRead = source.indexOf("const policy = JSON.parse(");
+  const requestParse = source.indexOf('const requestPath = arg("request");');
+  const taskStatusGate = source.indexOf('if (task.status !== "READY") {');
+  const lazyExecutorImport = source.indexOf('await import("../src/automation/taskExecutors")');
+  const executorResolve = source.indexOf('const { executor, code } = resolveExecutor(');
+
+  assert.doesNotMatch(source, /^import\\s+(?!type\\b)[^\\n]*taskExecutors["'];/mu);
+  assert.ok(gate >= 0 && unknownGate > gate && policyRead > unknownGate);
+  assert.ok(requestParse > policyRead && taskStatusGate > requestParse);
+  assert.ok(lazyExecutorImport > taskStatusGate && executorResolve > lazyExecutorImport);
+});
