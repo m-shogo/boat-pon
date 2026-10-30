@@ -2038,3 +2038,49 @@ test("shadow SHA-256 source/context/content digests survive ambient Hash method 
     }
   }
 });
+
+
+test("prototype admission survives ambient Array/Object constructor replacement", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+
+  // The shadow context is hashed, not published in the sanitized evidence.
+  // A synthetic array extension exercises canonical array prototype admission.
+  const scenario = input();
+  Object.defineProperty(scenario.context, "syntheticTags", {
+    value: ["alpha", "beta"], enumerable: true, configurable: true,
+  });
+  const expected = buildRuntimeDecisionLedgerShadowEvidence(scenario);
+  const defineProperty = Object.defineProperty;
+  const originalArray = Object.getOwnPropertyDescriptor(globalThis, "Array")!;
+  const originalObject = Object.getOwnPropertyDescriptor(globalThis, "Object")!;
+  let observedArray: RuntimeDecisionLedgerShadowEvidence | undefined;
+  let observedObject: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+
+  try {
+    // Before the guardrail, canonicalize compared ordinary array prototypes
+    // against this caller-replaced constructor's unrelated .prototype.
+    defineProperty(globalThis, "Array", {
+      ...originalArray, value: function SyntheticArrayConstructor() {},
+    });
+    observedArray = buildRuntimeDecisionLedgerShadowEvidence(scenario);
+  } finally {
+    defineProperty(globalThis, "Array", originalArray);
+  }
+  try {
+    // Before the guardrail, the graph preflight rejected ordinary plain
+    // evidence because it compared against the spoofed Object.prototype.
+    defineProperty(globalThis, "Object", {
+      ...originalObject, value: function SyntheticObjectConstructor() {},
+    });
+    observedObject = validateRuntimeDecisionLedgerShadowEvidence(baseline);
+  } finally {
+    defineProperty(globalThis, "Object", originalObject);
+  }
+
+  assert.equal(observedArray?.contextDigest, expected.contextDigest);
+  assert.equal(observedArray?.contentDigest, expected.contentDigest);
+  assert.equal(observedObject?.valid, true, observedObject?.errors.join("; "));
+  assert.equal(observedObject?.evidence, baseline);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
