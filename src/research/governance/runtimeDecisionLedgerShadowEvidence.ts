@@ -34,6 +34,11 @@ const BUILTIN_OBJECT_SET_PROTOTYPE_OF = Object.setPrototypeOf;
 // Numeric index materialization must not be redirected by a caller-replaced
 // global String constructor; doing so can collapse multiple canonical keys.
 const BUILTIN_STRING = String;
+// Nonblank admission must not trust a caller-replaced String.prototype.trim.
+const BUILTIN_STRING_TRIM = String.prototype.trim;
+function stableTrim(value: string): string {
+  return BUILTIN_REFLECT_APPLY(BUILTIN_STRING_TRIM, value, []) as string;
+}
 // Canonical evidence digests must not depend on a caller-replaced JSON.stringify.
 // Capture the native serializer after module load, alongside other digest intrinsics.
 const BUILTIN_JSON_STRINGIFY = JSON.stringify;
@@ -456,7 +461,7 @@ function canonicalDate(value: unknown): value is string {
 }
 
 function canonicalNonEmpty(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value.trim() === value;
+  return typeof value === "string" && value.length > 0 && stableTrim(value) === value;
 }
 
 function expectedRate(count: number, total: number): number | null {
@@ -867,7 +872,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   if (!BUILTIN_NUMBER_IS_FINITE(source.modifiedTimeMs) || source.modifiedTimeMs < 0) {
     appendError(errors,"source.modifiedTimeMs must be a non-negative finite number");
   }
-  if (typeof source.journalMode !== "string" || source.journalMode.trim().length === 0) {
+  if (typeof source.journalMode !== "string" || stableTrim(source.journalMode).length === 0) {
     appendError(errors,"source.journalMode must be a non-empty string");
   }
 
