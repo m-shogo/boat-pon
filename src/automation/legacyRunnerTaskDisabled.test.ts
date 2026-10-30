@@ -107,7 +107,7 @@ test("denied legacy modes never eagerly load the N2 executor module graph", () =
   const lazyExecutorImport = source.indexOf('await import("../src/automation/taskExecutors")');
   const executorResolve = source.indexOf('const { executor, code } = resolveExecutor(');
 
-  assert.doesNotMatch(source, /^import\\s+(?!type\\b)[^\\n]*taskExecutors["'];/mu);
+  assert.doesNotMatch(source, /^import\s+(?!type\b)[^\n]*taskExecutors["'];/mu);
   assert.ok(gate >= 0 && unknownGate > gate && policyRead > unknownGate);
   assert.ok(requestParse > policyRead && taskStatusGate > requestParse);
   assert.ok(lazyExecutorImport > taskStatusGate && executorResolve > lazyExecutorImport);
