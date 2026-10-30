@@ -1709,7 +1709,7 @@ test("shadow evidence keeps denial errors and digest identity under ambient Obje
   changedInput.source.fileSizeBytes += 1;
   changedInput.context.manifestId += ":different";
   const invalid = structuredClone(baseline);
-  invalid.safety.publicWrites = 1;
+  (invalid.safety as { publicWrites: number }).publicWrites = 1;
 
   // Before pinning, the error sink silently dropped both semantic and digest
   // denials, so an invalid record could be reported as valid. A no-op also
