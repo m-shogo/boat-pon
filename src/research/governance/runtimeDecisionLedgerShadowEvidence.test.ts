@@ -1809,3 +1809,34 @@ test("shadow canonical arrays ignore ambient Object.setPrototypeOf no-op and toJ
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observedFirst).valid, true);
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observedSecond).valid, true);
 });
+
+test("shadow digests preserve all own keys under ambient String constructor replacement", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const changedInput = input();
+  changedInput.source.fileSizeBytes += 1;
+  changedInput.context.manifestId += ":changed";
+  const expected = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+  assert.notEqual(expected.sourceDescriptorDigest, baseline.sourceDescriptorDigest);
+  assert.notEqual(expected.contextDigest, baseline.contextDigest);
+  assert.notEqual(expected.contentDigest, baseline.contentDigest);
+
+  // A caller-replaced String(number) that always returns "0" previously
+  // overwrote the first canonical key repeatedly, erasing earlier fields.
+  const nativeString = globalThis.String;
+  let observed: RuntimeDecisionLedgerShadowEvidence | undefined;
+  try {
+    globalThis.String = ((value?: unknown) =>
+      typeof value === "number" ? "0" : nativeString(value)) as StringConstructor;
+    observed = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+  } finally {
+    globalThis.String = nativeString;
+  }
+
+  assert.equal(observed?.sourceDescriptorDigest, expected.sourceDescriptorDigest);
+  assert.equal(observed?.contextDigest, expected.contextDigest);
+  assert.equal(observed?.contentDigest, expected.contentDigest);
+  assert.notEqual(observed?.sourceDescriptorDigest, baseline.sourceDescriptorDigest);
+  assert.notEqual(observed?.contextDigest, baseline.contextDigest);
+  assert.notEqual(observed?.contentDigest, baseline.contentDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed).valid, true);
+});
