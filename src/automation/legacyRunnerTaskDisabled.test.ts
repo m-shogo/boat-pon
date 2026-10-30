@@ -1,0 +1,38 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import test from "node:test";
+
+const root = resolve(process.cwd());
+const runner = resolve(root, "scripts/run-research-task.ts");
+
+test("deprecated request-file task mode exits before request parsing or any executor path", () => {
+  const source = readFileSync(runner, "utf8");
+  const taskGate = source.indexOf('if (mode === "task") {');
+  const requestParse = source.indexOf('const requestPath = arg("request");');
+  const lock = source.indexOf('if (!acquireLock(');
+  const executor = source.indexOf('const { executor, code } = resolveExecutor(');
+
+  assert.ok(taskGate >= 0 && requestParse > taskGate);
+  const preRequestGate = source.slice(taskGate, requestParse);
+  assert.match(preRequestGate, /DEPRECATED_DISABLED/u);
+  assert.match(preRequestGate, /process\\.exit\\(3\\);/u);
+  assert.ok(lock > requestParse);
+  assert.ok(executor > lock);
+});
+
+test("deprecated task invocation without a request fails closed with exit 3", () => {
+  // No request, queue mutation, workflow dispatch, private evidence or N2 executor.
+  // If the guard regresses, the missing-request path fails before preflight.
+  const child = spawnSync(process.execPath, ["--import", "tsx", runner, "task"], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: 15_000,
+    env: { ...process.env, NODE_OPTIONS: "" },
+  });
+  assert.equal(child.error, undefined);
+  assert.equal(child.status, 3, child.stderr);
+  assert.match(child.stderr, /DEPRECATED_DISABLED: request-file task execution is disabled/u);
+  assert.doesNotMatch(child.stderr, /--request=<request\\.json>/u);
+});
