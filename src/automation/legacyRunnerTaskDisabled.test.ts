@@ -45,6 +45,7 @@ test("unknown legacy modes are denied before parsing a request or reaching an ex
   const taskGate = source.indexOf('if (mode === "task") {');
   const unknownGate = source.indexOf('if (mode !== "validate-request" &&');
   const requestParse = source.indexOf('const requestPath = arg("request");');
+  const policyRead = source.indexOf("const policy = JSON.parse(");
   assert.ok(taskGate >= 0 && unknownGate > taskGate && policyRead > unknownGate && requestParse > policyRead);
   const preRequestGate = source.slice(unknownGate, requestParse);
   assert.ok(preRequestGate.includes("UNSUPPORTED_MODE"));
