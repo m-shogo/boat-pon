@@ -1702,3 +1702,42 @@ test("shadow descriptor inspection rejects accessor masked by ambient descriptor
   }
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
+
+test("shadow evidence keeps denial errors and digest identity under ambient Object.defineProperty no-op", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const changedInput = input();
+  changedInput.source.fileSizeBytes += 1;
+  changedInput.context.manifestId += ":different";
+  const invalid = structuredClone(baseline);
+  invalid.safety.publicWrites = 1;
+
+  // Before pinning, the error sink silently dropped both semantic and digest
+  // denials, so an invalid record could be reported as valid. A no-op also
+  // discarded canonical own properties and aliased distinct source digests.
+  const original = Object.defineProperty;
+  let observed: {
+    valid: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    invalid: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    changed: RuntimeDecisionLedgerShadowEvidence;
+  } | undefined;
+  try {
+    Object.defineProperty = ((target: object) => target) as typeof Object.defineProperty;
+    observed = {
+      valid: validateRuntimeDecisionLedgerShadowEvidence(baseline),
+      invalid: validateRuntimeDecisionLedgerShadowEvidence(invalid),
+      changed: buildRuntimeDecisionLedgerShadowEvidence(changedInput),
+    };
+  } finally {
+    Object.defineProperty = original;
+  }
+
+  assert.equal(observed?.valid.valid, true, observed?.valid.errors.join("; "));
+  assert.equal(observed?.invalid.valid, false);
+  assert.equal(observed?.invalid.evidence, null);
+  assert.ok(observed?.invalid.errors.includes("safety.publicWrites must be 0"));
+  assert.ok(observed?.invalid.errors.includes("contentDigest mismatch"));
+  assert.notEqual(observed?.changed.sourceDescriptorDigest, baseline.sourceDescriptorDigest);
+  assert.notEqual(observed?.changed.contextDigest, baseline.contextDigest);
+  assert.notEqual(observed?.changed.contentDigest, baseline.contentDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed!.changed).valid, true);
+});
