@@ -31,6 +31,9 @@ const BUILTIN_OBJECT_DEFINE_PROPERTY = Object.defineProperty;
 // Otherwise inherited toJSON hooks can rewrite otherwise distinct digest inputs.
 const BUILTIN_OBJECT_CREATE = Object.create;
 const BUILTIN_OBJECT_SET_PROTOTYPE_OF = Object.setPrototypeOf;
+// Numeric index materialization must not be redirected by a caller-replaced
+// global String constructor; doing so can collapse multiple canonical keys.
+const BUILTIN_STRING = String;
 // Canonical evidence digests must not depend on a caller-replaced JSON.stringify.
 // Capture the native serializer after module load, alongside other digest intrinsics.
 const BUILTIN_JSON_STRINGIFY = JSON.stringify;
@@ -171,11 +174,11 @@ function inspectOwnDataGraph(
   } else if (prototype !== Object.prototype && prototype !== null) {
     return "prototype";
   }
-  BUILTIN_OBJECT_DEFINE_PROPERTY(visited, String(visited.length), {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(visited, BUILTIN_STRING(visited.length), {
     value, writable: true, enumerable: true, configurable: true,
   });
   const depth = ancestors.length;
-  BUILTIN_OBJECT_DEFINE_PROPERTY(ancestors, String(depth), {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(ancestors, BUILTIN_STRING(depth), {
     value, writable: true, enumerable: true, configurable: true,
   });
   try {
@@ -228,7 +231,7 @@ function canonicalize(value: unknown): unknown {
       if (key === "length") continue;
       const numericIndex = typeof key === "string" ? Number(key) : Number.NaN;
       if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(numericIndex) || numericIndex < 0 ||
-          numericIndex >= value.length || String(numericIndex) !== key) {
+          numericIndex >= value.length || BUILTIN_STRING(numericIndex) !== key) {
         throw new TypeError("invalid canonical shadow evidence array own shape");
       }
       const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
@@ -239,11 +242,11 @@ function canonicalize(value: unknown): unknown {
     const result: unknown[] = [];
     BUILTIN_OBJECT_SET_PROTOTYPE_OF(result, null);
     for (let index = 0; index < value.length; index++) {
-      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, String(index));
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, BUILTIN_STRING(index));
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
         throw new TypeError("invalid canonical shadow evidence array");
       }
-      BUILTIN_OBJECT_DEFINE_PROPERTY(result, String(index), {
+      BUILTIN_OBJECT_DEFINE_PROPERTY(result, BUILTIN_STRING(index), {
         value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
       });
     }
@@ -270,7 +273,7 @@ function canonicalize(value: unknown): unknown {
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       throw new TypeError("invalid canonical shadow evidence non-data property");
     }
-    BUILTIN_OBJECT_DEFINE_PROPERTY(keys, String(keys.length), {
+    BUILTIN_OBJECT_DEFINE_PROPERTY(keys, BUILTIN_STRING(keys.length), {
       value: key, writable: true, enumerable: true, configurable: true,
     });
   }
@@ -599,7 +602,7 @@ const SAFETY_KEYS = [
 
 // Avoid ambient Array.prototype.push and inherited numeric setters when collecting failures.
 function appendError(errors: string[], message: string): void {
-  BUILTIN_OBJECT_DEFINE_PROPERTY(errors, String(errors.length), {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(errors, BUILTIN_STRING(errors.length), {
     value: message,
     writable: true,
     enumerable: true,
@@ -624,7 +627,7 @@ function requireExactObject(value: unknown, path: string, keys: readonly string[
   const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
   for (let index = 0; index < ownKeys.length; index++) {
     const key = ownKeys[index]!;
-    if (typeof key !== "string" || !includesOwn(keys, key)) appendError(errors,`unknown field: ${path}.${String(key)}`);
+    if (typeof key !== "string" || !includesOwn(keys, key)) appendError(errors,`unknown field: ${path}.${BUILTIN_STRING(key)}`);
   }
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]!;
@@ -760,11 +763,11 @@ function walk(value: unknown, path: string, errors: string[]): void {
     const key = keys[index]!;
     const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
-      appendError(errors, `non-data field at ${path}.${String(key)}`);
+      appendError(errors, `non-data field at ${path}.${BUILTIN_STRING(key)}`);
       continue;
     }
-    if (includesOwn(FORBIDDEN_KEYS, key)) appendError(errors,`forbidden key at ${path}.${String(key)}`);
-    walk(descriptor.value, `${path}.${String(key)}`, errors);
+    if (includesOwn(FORBIDDEN_KEYS, key)) appendError(errors,`forbidden key at ${path}.${BUILTIN_STRING(key)}`);
+    walk(descriptor.value, `${path}.${BUILTIN_STRING(key)}`, errors);
   }
 }
 
@@ -802,7 +805,7 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   const topLevelKeys = BUILTIN_REFLECT_OWN_KEYS(value);
   for (let index = 0; index < topLevelKeys.length; index++) {
     const key = topLevelKeys[index]!;
-    if (typeof key !== "string" || !includesOwn(TOP_LEVEL_KEYS, key)) appendError(errors,`unknown top-level field: ${String(key)}`);
+    if (typeof key !== "string" || !includesOwn(TOP_LEVEL_KEYS, key)) appendError(errors,`unknown top-level field: ${BUILTIN_STRING(key)}`);
   }
   for (let index = 0; index < TOP_LEVEL_KEYS.length; index++) {
     const key = TOP_LEVEL_KEYS[index]!;
