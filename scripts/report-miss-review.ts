@@ -25,7 +25,7 @@ try {
         ELSE dh.bet_type END AS payout_type
       FROM decision_history dh WHERE dh.decision = 'BUY' AND dh.date >= ? AND dh.date <= ?
     )
-    SELECT dh.race_id AS raceId, dh.venue, dh.race_no AS raceNo, dh.bet_type AS betType,
+    SELECT dh.id, dh.race_id AS raceId, dh.venue, dh.race_no AS raceNo, dh.bet_type AS betType,
       dh.selection, rr.trifecta AS result, dh.returned, rr.returned AS officialReturned,
       dh.estimated_hit_rate AS estimatedHitRate, dh.current_odds AS currentOdds, dh.ev,
       dh.recommended_stake_yen AS recommendedStakeYen, dh.actually_bought AS actuallyBought,
@@ -45,11 +45,12 @@ function printReport(report: ReturnType<typeof buildMissReview>) {
   const s = report.summary;
   const percent = (value: number | null) => value == null ? "未算出" : `${(value * 100).toFixed(2)}%`;
   const amount = (value: number | null) => value == null ? "未確定" : `${value.toLocaleString("ja-JP")}円`;
-  console.log(`${report.from}〜${report.to} BUY確定 ${s.count}件 / 的中 ${s.hits}件（予想 ${s.expectedHits?.toFixed(2) ?? "算出不可"}件）。`);
-  console.log(`この的中数以下の確率 ${percent(s.lowerTailProbability)} → ${s.judgement}（独立・同率の二項近似）。`);
+  console.log(`${report.from}〜${report.to} 保存BUY ${report.queriedBuyCount}件 → 重複集約後 ${report.deduplicatedBuyCount}件 / BUY確定 ${s.count}件 / 的中 ${s.hits}件（予想 ${s.expectedHits?.toFixed(2) ?? "算出不可"}件）。`);
+  console.log(`この的中数以下の確率 ${percent(s.lowerTailProbability)} → ${s.judgement}（レース単位のPoisson二項分布：${report.raceSummary.count}レース / 的中 ${report.raceSummary.hits} / 予想 ${report.raceSummary.expectedHits?.toFixed(2) ?? "算出不可"}）。`);
   console.log(`仮想投入 ${amount(report.money.paper.investedYen)} / 実払戻換算 ${amount(report.money.paper.payoutYen)} / ROI ${percent(report.money.paper.roi)}。`);
+  compactTable("モデル・実行種別（重複集約後・確定BUY）", report.cohorts, [["model / run_kind", (r) => r.label], ["件数", (r) => r.count]]);
   console.log(`\n${report.probabilityEvidence}\n${report.method}`);
-  console.log(`対象は保存BUY判定行（同一レースの複数判定を含み得る）。確定レース ${report.uniqueRaces}件。`);
+  console.log(`対象は(race_id, bet_type, selection)ごとに最新idを代表行とした保存BUY。確定レース ${report.uniqueRaces}件。`);
   console.log(`対象外：返還 ${report.excluded.returned}件 / 公式結果未確定 ${report.excluded.pending}件 / 券種未対応 ${report.excluded.unsupportedBetType}件 / 買い目不正 ${report.excluded.invalidSelection}件。予想率不正 ${s.invalidProbabilities}件。`);
   if (argv.includes("--detail")) { console.log(JSON.stringify(report, null, 2)); return; }
   compactTable("的中率の当たり具合", report.calibration, [
@@ -59,7 +60,7 @@ function printReport(report: ReturnType<typeof buildMissReview>) {
     { label: "1着から違う", count: report.missPatterns.first }, { label: "1着一致・2着違い", count: report.missPatterns.second },
     { label: "2着まで一致・3着違い", count: report.missPatterns.third }, { label: "他券種", count: report.missPatterns.other },
   ], [["外れ方", (r) => r.label], ["件数", (r) => r.count]]);
-  for (const [title, rows] of [["会場別", report.conditions.venue], ["オッズ帯別", report.conditions.odds], ["EV帯別", report.conditions.ev], ["レース番号別", report.conditions.raceNo], ["モデル・実行種別", report.cohorts]] as const) {
+  for (const [title, rows] of [["会場別", report.conditions.venue], ["オッズ帯別", report.conditions.odds], ["EV帯別", report.conditions.ev], ["レース番号別", report.conditions.raceNo]] as const) {
     compactTable(title, rows, [["条件", (r) => r.label], ["件数", (r) => r.count], ["的中", (r) => r.hits], ["予想的中", (r) => r.expectedHits], ["扱い", (r) => r.smallSample ? "少数・参考（結論に使わない）" : "記述集計"]]);
   }
   console.log(`\n${report.money.basis}`);

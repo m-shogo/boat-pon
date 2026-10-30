@@ -1,6 +1,6 @@
 /** Read-only analysis of saved BUY probabilities and official settlement. */
 export type MissReviewRow = {
-  raceId: string; venue: string; raceNo: number; betType: string; selection: string;
+  id: number; raceId: string; venue: string; raceNo: number; betType: string; selection: string;
   result: string | null; returned: number; officialReturned: number | null;
   estimatedHitRate: number | null; currentOdds: number | null; ev: number | null;
   recommendedStakeYen: number; actuallyBought: number; stakeYen: number;
@@ -8,19 +8,15 @@ export type MissReviewRow = {
   payoutMatches: number; officialPayoutYen: number | null; validPayoutRows: number;
 };
 
-export function binomialLowerTail(n: number, hits: number, probability: number): number {
-  if (!Number.isSafeInteger(n) || n < 0 || !Number.isSafeInteger(hits) || hits < 0 || hits > n || !Number.isFinite(probability) || probability < 0 || probability > 1) throw new Error("invalid binomial inputs");
-  if (hits === n || probability === 0) return 1;
-  if (probability === 1) return 0;
-  // Log-sum-exp prevents underflow when P(X=0) is tiny for large n.
-  let logTerm = n * Math.log1p(-probability);
-  let logSum = logTerm;
-  for (let k = 1; k <= hits; k += 1) {
-    logTerm += Math.log(n - k + 1) - Math.log(k) + Math.log(probability) - Math.log1p(-probability);
-    const max = Math.max(logSum, logTerm);
-    logSum = max + Math.log(Math.exp(logSum - max) + Math.exp(logTerm - max));
+export function poissonBinomialLowerTail(probabilities: readonly number[], hits: number): number {
+  if (!Number.isSafeInteger(hits) || hits < 0 || hits > probabilities.length || probabilities.some((p) => !Number.isFinite(p) || p < 0 || p > 1)) throw new Error("invalid Poisson binomial inputs");
+  // DP stores P(X=k); descending updates preserve the previous trial's values.
+  const dp = Array<number>(hits + 1).fill(0);
+  dp[0] = 1;
+  for (const p of probabilities) {
+    for (let k = hits; k >= 0; k -= 1) dp[k] = dp[k] * (1 - p) + (k ? dp[k - 1] * p : 0);
   }
-  return Math.min(1, Math.exp(logSum));
+  return Math.min(1, dp.reduce((sum, p) => sum + p, 0));
 }
 
 const betTypes: Record<string, string> = { "3連単": "trifecta", trifecta: "trifecta", "3連複": "trio", trio: "trio", "2連単": "exacta", exacta: "exacta", "2連複": "quinella", quinella: "quinella", "拡連複": "wide", wide: "wide" };
@@ -44,8 +40,8 @@ function money(rows: readonly Settled[], stake: (r: MissReviewRow) => number) {
     if (!validStake(amount)) { invalidStakes += 1; continue; }
     investedYen += amount;
     if (amount === 0) continue;
-    // Even a loss needs official settlement coverage; no odds-based fallback.
-    if (!row.validPayoutRows || (hit && (row.payoutMatches !== 1 || row.officialPayoutYen == null || row.officialPayoutYen <= 0))) missingPayouts += 1;
+    // A confirmed loss settles at zero; only winners require official payout coverage.
+    if (hit && (!row.validPayoutRows || row.payoutMatches !== 1 || row.officialPayoutYen == null || !Number.isFinite(row.officialPayoutYen) || row.officialPayoutYen <= 0)) missingPayouts += 1;
     else if (hit) payoutYen += amount / 100 * row.officialPayoutYen!;
     if (hit) {
       if (row.currentOdds == null || !Number.isFinite(row.currentOdds) || row.currentOdds <= 0) missingOdds += 1;
@@ -68,7 +64,14 @@ function groups(rows: readonly Settled[], key: (r: MissReviewRow) => string) {
 export function buildMissReview(rows: readonly MissReviewRow[], from: string, to: string) {
   const settled: Settled[] = [];
   const excluded = { returned: 0, pending: 0, unsupportedBetType: 0, invalidSelection: 0 };
+  const unique = new Map<string, MissReviewRow>();
   for (const row of rows) {
+    const key = JSON.stringify([row.raceId, row.betType, row.selection]);
+    // The latest decision_history id represents each (race_id, bet_type, selection).
+    const previous = unique.get(key);
+    if (!previous || row.id > previous.id) unique.set(key, row);
+  }
+  for (const row of unique.values()) {
     if (row.returned !== 0 || (row.officialReturned != null && row.officialReturned !== 0)) { excluded.returned += 1; continue; }
     const type = betTypes[row.betType];
     if (!type) { excluded.unsupportedBetType += 1; continue; }
@@ -88,7 +91,16 @@ export function buildMissReview(rows: readonly MissReviewRow[], from: string, to
     settled.push({ row, hit, pattern });
   }
   const summary = summarize(settled);
-  const lowerTailProbability = summary.count && summary.expectedHits != null ? binomialLowerTail(summary.count, summary.hits, summary.expectedHits / summary.count) : null;
+  const races = new Map<string, { probability: number; hit: boolean }>();
+  for (const { row, hit } of settled) {
+    const race = races.get(row.raceId) ?? { probability: 0, hit: false };
+    race.probability = Math.min(1, race.probability + (validProbability(row.estimatedHitRate) ? row.estimatedHitRate : 0));
+    race.hit ||= hit;
+    races.set(row.raceId, race);
+  }
+  const raceHits = [...races.values()].filter((r) => r.hit).length;
+  const raceExpectedHits = summary.invalidProbabilities ? null : [...races.values()].reduce((sum, r) => sum + r.probability, 0);
+  const lowerTailProbability = races.size && !summary.invalidProbabilities ? poissonBinomialLowerTail([...races.values()].map((r) => r.probability), raceHits) : null;
   const calibration = [["0–5%", 0, .05], ["5–10%", .05, .1], ["10–20%", .1, .2], ["20%以上", .2, Infinity]].map(([label, min, max]) => {
     const items = settled.filter(({ row }) => validProbability(row.estimatedHitRate) && row.estimatedHitRate >= Number(min) && row.estimatedHitRate < Number(max));
     const s = summarize(items);
@@ -99,9 +111,9 @@ export function buildMissReview(rows: readonly MissReviewRow[], from: string, to
   return {
     from, to, source: "decision_history saved BUY + official race_results / race_payouts",
     probabilityEvidence: "保存された推定率を使用。通知時点の不変スナップショットとの一致は未確認。再推定は行わない。",
-    queriedBuyCount: rows.length, excluded, summary: { ...summary, lowerTailProbability,
+    queriedBuyCount: rows.length, deduplicatedBuyCount: unique.size, excluded, raceSummary: { count: races.size, hits: raceHits, expectedHits: raceExpectedHits }, summary: { ...summary, lowerTailProbability,
       judgement: lowerTailProbability == null ? "判定不可" : lowerTailProbability < .05 ? "想定より明らかに悪い" : "想定の範囲内" },
-    method: "二項分布 Binomial(n, sum(estimatedHitRate)/n) の下側確率。独立・同率近似であり、個別確率差や同一レースの相関は反映しない。",
+    method: "同一レースの推定率を合算（上限1）し、レース間の独立を仮定したPoisson二項分布の下側確率を動的計画法で厳密計算。実的中もレース内でどれか的中を1件とする。券種間の重なりは合算で近似。",
     uniqueRaces: new Set(settled.map(({ row }) => row.raceId)).size,
     cohorts: groups(settled, (r) => `${r.modelVersion ?? "不明"} / ${r.runKind}`),
     calibration, missPatterns,
