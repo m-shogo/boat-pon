@@ -127,6 +127,12 @@ if (mode === "task") {
   console.error("DEPRECATED_DISABLED: request-file task execution is disabled; use the canonical intent dispatch.");
   process.exit(3);
 }
+// Only validation may reach the request-file parser. Unknown subcommands must not
+// fall through into the deprecated task executor, even with a valid request.
+if (mode !== "validate-request") {
+  console.error("UNSUPPORTED_MODE: only validate-request may parse a legacy request file.");
+  process.exit(3);
+}
 const requestPath = arg("request");
 if (!requestPath) throw new Error("--request=<request.json> は必須です");
 const raw = JSON.parse(readFileSync(resolve(requestPath), "utf8"));
