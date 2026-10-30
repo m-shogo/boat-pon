@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-research-automation-legacy-task-fail-closed-verified-20261031",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-automation.legacy-task-mode.warning-only-deprecation",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "fail-close-deprecated-request-file-task-before-request-and-executor",
+  "symptom": "The deprecated request-file task mode previously emitted a warning but remained executable. A research-only Draft PR change now exits 3 before request parsing, lock, ledger/queue mutation and executor resolution. A non-executing no-request Node 24 CLI regression and static source-order check both passed official CI. The workflow YAML remains present; this does not prove platform disablement or authorize a dispatch.",
+  "rootCauseClass": "LEGACY_DEPRECATION_WARNING_WITHOUT_FAIL_CLOSED_TERMINATION",
+  "attemptSignature": "pr2286-v477-early-exit-before-request-parse-and-no-request-cli-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-ubuntu-node24/no-request-cli-regression",
+    "materialStateKey": "legacy-runner-b33083d/legacy-task-test-8a44b6a"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/0d4d552b18fbcf9d3dbc2f2e0a114fe1fd334d6f",
+    "commit/944ba5370f8ab0c29df57920d1508821c177cb2b",
+    "actions/runs/41095489946",
+    "scripts/run-research-task.ts",
+    "src/automation/legacyRunnerTaskDisabled.test.ts",
+    "reports/research/forward-v02-pr2286-legacy-task-mode-fail-closed-remediation-20261031.md",
+    "research/registries/learnings/LEARN-research-automation-legacy-task-mode-warning-only-20261030.json"
+  ],
+  "lesson": "A deprecated research execution route is frozen only when it terminates before reading a request and entering the executor/queue path; a warning and green unrelated CI are insufficient. A non-executing CLI exit-code regression plus a source-order assertion can verify the guard without consuming protected N2 or private evidence.",
+  "guardrail": "Keep request-file task mode terminally disabled with exit 3 before request parsing and task state changes. Preserve the no-request subprocess regression and source-order assertion in CI. Do not restore execution to satisfy legacy commit-helper provenance, do not dispatch N2 for diagnosis, and seek separate operational review for disabling the legacy workflow itself.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-30T17:09:46.741Z",
+  "productionConnection": false,
+  "_digest": "995ec49b5ce1a8aec3be3c2793858a6e34759d5bd6672155b67b6738b2ca6237",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T17:09:46.741Z"
+}
