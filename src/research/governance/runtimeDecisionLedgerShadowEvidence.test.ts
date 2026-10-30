@@ -1926,7 +1926,7 @@ test("shadow evidence pins Array.isArray for canonical context arrays and admiss
     arrayEvidence: RuntimeDecisionLedgerShadowEvidence;
   } | undefined;
   try {
-    Array.isArray = (() => false) as typeof Array.isArray;
+    Array.isArray = ((_value: unknown): _value is unknown[] => false) as typeof Array.isArray;
     observed = {
       baseline: validateRuntimeDecisionLedgerShadowEvidence(baseline),
       invalid: validateRuntimeDecisionLedgerShadowEvidence(invalid),
