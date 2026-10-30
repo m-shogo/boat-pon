@@ -1840,3 +1840,40 @@ test("shadow digests preserve all own keys under ambient String constructor repl
   assert.notEqual(observed?.contentDigest, baseline.contentDigest);
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed).valid, true);
 });
+
+test("shadow evidence rejects noncanonical strings under ambient String.prototype.trim override", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const badInput = input();
+  badInput.scope.runKind = " ";
+  badInput.scope.modelVersion = " v4-conservative ";
+  badInput.source.journalMode = " ";
+  // A matching content digest does not make whitespace-only or padded fields valid.
+  const forged = buildRuntimeDecisionLedgerShadowEvidence(badInput);
+  const originalTrim = Object.getOwnPropertyDescriptor(String.prototype, "trim")!;
+  let observed: {
+    baseline: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    forged: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+  } | undefined;
+  try {
+    // Before the guardrail, this mutable method made nonblank/canonical
+    // checks accept invalid source and scope strings.
+    Object.defineProperty(String.prototype, "trim", {
+      configurable: true,
+      writable: true,
+      value: function (this: string) { return String(this); },
+    });
+    observed = {
+      baseline: validateRuntimeDecisionLedgerShadowEvidence(baseline),
+      forged: validateRuntimeDecisionLedgerShadowEvidence(forged),
+    };
+  } finally {
+    Object.defineProperty(String.prototype, "trim", originalTrim);
+  }
+  assert.equal(observed?.baseline.valid, true, observed?.baseline.errors.join("; "));
+  assert.equal(observed?.forged.valid, false);
+  assert.equal(observed?.forged.evidence, null);
+  assert.ok(observed?.forged.errors.includes("scope.runKind must be a canonical non-empty string"));
+  assert.ok(observed?.forged.errors.includes("scope.modelVersion must be a canonical non-empty string"));
+  assert.ok(observed?.forged.errors.includes("source.journalMode must be a non-empty string"));
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
