@@ -10,7 +10,7 @@ import {
   ORCHESTRATOR_VERSION, STATUS_SCHEMA_VERSION, canTransition, classifyFailure, decideSafety, foreignDirtyPaths, preflight, validateRequest,
   type SafetyLevel, type TaskRequest, type TaskStatus,
 } from "../src/automation/researchOrchestrator";
-import { resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";
+import type { ExecutorResult } from "../src/automation/taskExecutors";
 
 const root = resolve(process.cwd());
 const arg = (n: string): string | null => {
@@ -231,6 +231,9 @@ try {
   // 実タスク実行は allowlist registry の executor のみ（arbitrary shell / free-form command 禁止）。
   const runId = process.env.GITHUB_RUN_ID ?? `local-${Date.now()}`;
   mkdirSync(HISTORY_DIR, { recursive: true });
+  // Do not evaluate the executor/N2 import graph for denied or validation-only CLI modes.
+  // The legacy execution branch is unreachable while task/unknown modes fail closed.
+  const { resolveExecutor } = await import("../src/automation/taskExecutors");
   const { executor, code } = resolveExecutor(task.taskType);
   if (!executor) {
     // 未登録 taskType は BLOCK。queue は READY のまま維持し、NO_CHANGE を成功扱いにしない。
