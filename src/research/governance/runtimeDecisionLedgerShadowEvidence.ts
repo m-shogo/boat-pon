@@ -12,6 +12,12 @@ const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
 // Capturing a native method is insufficient if the call dispatcher is mutable.
 // Keep Reflect.apply itself stable for the captured regex/date intrinsics.
 const BUILTIN_REFLECT_APPLY = Reflect.apply;
+// Array classification and canonical numeric-index parsing must not depend on
+// caller-replaced global helpers after this research module initializes.
+// This also preserves valid synthetic evidence under ambient helper drift.
+const BUILTIN_ARRAY_IS_ARRAY = Array.isArray;
+const BUILTIN_NUMBER = Number;
+const BUILTIN_NUMBER_NAN = Number.NaN;
 // Numeric integrity checks must not be redirected by mutable caller-realm
 // Number/Object helpers after this research module is initialized.
 const BUILTIN_NUMBER_IS_FINITE = Number.isFinite;
@@ -177,7 +183,7 @@ function inspectOwnDataGraph(
   // then either be accepted without that metadata (root) or throw during digest.
   // Deny exotic prototypes before any semantic reads or canonical hashing.
   const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
-  if (Array.isArray(value)) {
+  if (BUILTIN_ARRAY_IS_ARRAY(value)) {
     if (prototype !== Array.prototype && prototype !== null) return "prototype";
   } else if (prototype !== Object.prototype && prototype !== null) {
     return "prototype";
@@ -205,7 +211,7 @@ function inspectOwnDataGraph(
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !isProxy(value) && !Array.isArray(value);
+  return value !== null && typeof value === "object" && !isProxy(value) && !BUILTIN_ARRAY_IS_ARRAY(value);
 }
 
 function canonicalize(value: unknown): unknown {
@@ -223,7 +229,7 @@ function canonicalize(value: unknown): unknown {
   if (typeof value === "number" && BUILTIN_OBJECT_IS(value, -0)) {
     throw new TypeError("invalid canonical shadow evidence negative zero");
   }
-  if (Array.isArray(value)) {
+  if (BUILTIN_ARRAY_IS_ARRAY(value)) {
     // JSON serialization omits extra own array keys (including symbols) and
     // projects sparse slots as null. Bind the admitted array shape to its digest.
     const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
@@ -237,7 +243,7 @@ function canonicalize(value: unknown): unknown {
     for (let index = 0; index < ownKeys.length; index++) {
       const key = ownKeys[index]!;
       if (key === "length") continue;
-      const numericIndex = typeof key === "string" ? Number(key) : Number.NaN;
+      const numericIndex = typeof key === "string" ? BUILTIN_NUMBER(key) : BUILTIN_NUMBER_NAN;
       if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(numericIndex) || numericIndex < 0 ||
           numericIndex >= value.length || BUILTIN_STRING(numericIndex) !== key) {
         throw new TypeError("invalid canonical shadow evidence array own shape");
@@ -757,7 +763,7 @@ function walk(value: unknown, path: string, errors: string[]): void {
     }
     return;
   }
-  if (Array.isArray(value)) {
+  if (BUILTIN_ARRAY_IS_ARRAY(value)) {
     // The sanitized shadow-evidence schema contains no arrays at any depth.
     // Reject them rather than trusting mutable Array.prototype.forEach to inspect contents.
     appendError(errors, `unexpected array at ${path}`);
