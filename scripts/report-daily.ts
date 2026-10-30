@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 import { existsSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
@@ -404,7 +405,7 @@ function statusByCount(countValue: number, okThreshold: number) {
 }
 
 function printMissingDb(report: { dbPath: string; alerts: DailyAlert[]; nextCommands: string[] }) {
-  console.error("Boat Pon daily report");
+  console.error("今日の結論：DBが見つからないため診断できません。");
   console.error(`db=${report.dbPath}`);
   for (const alert of report.alerts) console.error(`ERROR\t${alert.code}\t${alert.message}`);
   console.error("\nNext commands:");
@@ -412,6 +413,15 @@ function printMissingDb(report: { dbPath: string; alerts: DailyAlert[]; nextComm
 }
 
 function printReport(report: ReturnType<typeof buildReport>) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`今日の結論（${report.date}）：${report.ok ? "重大エラーなし" : "確認が必要"}。警告 ${report.warningCount}件 / エラー ${report.errorCount}件。`);
+    console.log(`判定 BUY ${report.today.decisions.BUY}件 / WATCH ${report.today.decisions.WATCH}件 / SKIP ${report.today.decisions.SKIP}件。`);
+    console.log(`直前情報の取得 ${report.beforeInfoCoverage.fullRaces}/${report.beforeInfoCoverage.totalRaces}レース。診断のみ・設定変更なし。`);
+    compactTable("確認事項", report.alerts, [["重要度", (r) => ({ ok: "正常", warning: "注意", error: "要確認" })[r.severity]], ["内容", (r) => r.message], ["確認コマンド", (r) => r.action]]);
+    compactTable("データ更新", Object.entries(report.freshness), [["対象", ([key]) => ({ raceResults: "結果", officialPrograms: "番組", decisionHistory: "判定履歴", oddsSnapshots: "オッズ", racerProfiles: "選手情報", racerCourseStats: "コース成績" })[key]], ["最新", ([, r]) => r.latest], ["経過日数", ([, r]) => r.ageDays]]);
+    compactTable("次の確認", report.nextCommands, [["コマンド", (r) => r]]);
+    return;
+  }
   console.log("Boat Pon daily report");
   console.log(`date=${report.date} model=${report.modelVersion}`);
   console.log(`db=${report.dbPath}`);

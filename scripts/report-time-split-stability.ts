@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * 時系列分割でルール候補の安定性を見る read-only レポート。
  *
@@ -18,7 +19,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-time-split-stability] DB not found");
@@ -355,6 +356,21 @@ function columnExists(column: string): boolean {
 }
 
 function printRows(rows: StabilityRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`期間分割で ${rows.length}区分を確認。前期と後期の両方を見て判断してください。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("期間を分けた安定性", rows, [
+      ["判定", (r) => r.stability],
+      ["条件", (r) => `${r.metric}: ${r.band} / ${r.decision}`],
+      ["前期確定", (r) => r.beforeSettled],
+      ["前期ROI", (r) => r.beforeRoi],
+      ["後期確定", (r) => r.afterSettled],
+      ["後期ROI", (r) => r.afterRoi],
+    ]);
+    return;
+  }
+
   console.log("=== time split stability report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} split=${args.splitDate} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"}`);
@@ -438,7 +454,7 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-time-split-stability.ts -- --from YYYY-MM-DD --split-date YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--min-settled 30] [--json]
+  pnpm exec tsx scripts/report-time-split-stability.ts -- --from YYYY-MM-DD --split-date YYYY-MM-DD --to YYYY-MM-DD [--decision BUY] [--min-settled 30] [--detail] [--json]
 
 Read-only. No external access. ROI uses official race_payouts.payout_yen; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement before window aggregation.`);
 }

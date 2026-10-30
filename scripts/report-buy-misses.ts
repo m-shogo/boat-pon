@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * BUY にしたが的中しなかった行を確認する read-only レポート。
  *
@@ -16,7 +17,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-buy-misses] BUY_MISSES_REPORT_PRIMARY_DB_MISSING");
@@ -96,6 +97,20 @@ LIMIT ?
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`取得範囲のBUY外れ ${rows.length}件（取得上限 ${args.limit}件）。外れだけの一覧では過不足を判定できません。`);
+    console.log("一覧は既存の並び順。全期間の件数とは異なります。");
+    compactTable("BUYの外れ", rows, [
+      ["レース", (r) => `${r.date} ${r.venue} ${r.raceNo}R`],
+      ["候補", (r) => r.selection],
+      ["結果", (r) => r.result],
+      ["オッズ", (r) => r.currentOdds],
+      ["EV", (r) => r.ev],
+    ]);
+    return;
+  }
+
   console.log("=== BUY misses report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -174,7 +189,7 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-buy-misses.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--limit 100] [--json]
+  pnpm exec tsx scripts/report-buy-misses.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--limit 100] [--detail] [--json]
 
 Read-only. No external access.`);
 }

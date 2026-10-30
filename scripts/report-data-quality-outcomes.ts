@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * データ品質と結果の関係を見る read-only レポート。
  *
@@ -16,7 +17,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-data-quality-outcomes] DATA_QUALITY_OUTCOMES_PRIMARY_DB_MISSING");
@@ -256,6 +257,19 @@ function sampleBandSql() {
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`データ品質 ${rows.length}区分を確認。区分が重なるため件数は合算しません。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("データ品質別", rows, [
+      ["条件", (r) => `${r.metric}: ${r.band} / ${r.decision}`],
+      ["確定", (r) => r.settled],
+      ["的中", (r) => r.hits],
+      ["ROI", (r) => r.roi],
+    ]);
+    return;
+  }
+
   console.log("=== data quality outcomes report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -324,7 +338,7 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-data-quality-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
+  pnpm exec tsx scripts/report-data-quality-outcomes.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--detail] [--json]
 
 Read-only. No external access. ROI uses official race_payouts.payout_yen; blank settled results fail closed and every remaining settled denominator must reconcile to exactly one positive non-refund official winning-result settlement before payout-derived metrics are generated.`);
 }

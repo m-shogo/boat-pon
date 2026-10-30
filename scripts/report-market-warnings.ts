@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * 市場の逆行・追認を確認する read-only 警告レポート。
  *
@@ -17,7 +18,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 const verifiedDbPath = assertCanonicalSingleLinkRegularFile(DB_PATH, "market warnings primary database");
 const db = new DatabaseSync(verifiedDbPath, { readOnly: true });
@@ -187,6 +188,20 @@ LIMIT ?
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`取得範囲の市場警告 ${rows.length}件（取得上限 ${args.limit}件）。警告だけで購入判断は変更しません。`);
+    console.log("一覧は既存の並び順。全期間の件数とは異なります。");
+    compactTable("市場の注意点", rows, [
+      ["注意", (r) => r.warning],
+      ["レース", (r) => `${r.date} ${r.venue} ${r.raceNo}R`],
+      ["判定", (r) => r.decision],
+      ["オッズ変化率", (r) => r.oddsChangeRate],
+      ["人気変化", (r) => r.popularityDelta],
+    ]);
+    return;
+  }
+
   console.log("=== market warnings report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"} limit=${args.limit}`);
@@ -251,7 +266,7 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-market-warnings.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--limit 100] [--json]
+  pnpm exec tsx scripts/report-market-warnings.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--limit 100] [--detail] [--json]
 
 Read-only. Unsupported decision bet types fail closed; checkpoint movement is matched by canonical bet type + selection. Row-level private checkpoint odds/popularity are not emitted. No external access.`);
 }

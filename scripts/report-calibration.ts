@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * decision_history の校正確認レポート。
  *
@@ -18,7 +19,7 @@ import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/res
 import { parseDecisionHistoryReportOptions } from "../src/research-replay/decisionHistoryReportOptions";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const rawArgs = process.argv.slice(2);
+const rawArgs = process.argv.slice(2).filter((arg) => arg !== "--detail");
 if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
   printHelp();
   process.exit(0);
@@ -267,6 +268,20 @@ function oddsBandSql(column: string) {
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`予想率・オッズ ${rows.length}区分を確認。区分が重なるため件数は合算しません。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("予想的中率の確認", rows, [
+      ["条件", (r) => `${r.metric}: ${r.band} / ${r.decision}`],
+      ["確定", (r) => r.settled],
+      ["実際の的中率", (r) => r.actualHitRate],
+      ["平均予想率", (r) => r.avgEstimatedHitRate],
+      ["ROI", (r) => r.roi],
+    ]);
+    return;
+  }
+
   console.log("=== calibration report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -297,5 +312,5 @@ function format(value: number | null) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-calibration.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]\n\nRead-only. Unknown return states fail closed before aggregation. ROI uses complete canonical official winning settlements for non-empty settled rows; current_odds remains a banding/quote feature only.`);
+  pnpm exec tsx scripts/report-calibration.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--detail] [--json]\n\nRead-only. Unknown return states fail closed before aggregation. ROI uses complete canonical official winning settlements for non-empty settled rows; current_odds remains a banding/quote feature only.`);
 }

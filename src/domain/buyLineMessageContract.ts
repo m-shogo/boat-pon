@@ -1,4 +1,4 @@
-export const BUY_LINE_MESSAGE_SCHEMA_VERSION = "buy-line-message-v1" as const;
+export const BUY_LINE_MESSAGE_SCHEMA_VERSION = "buy-line-message-v2" as const;
 
 export type BuyLineDataStatus = "complete" | "partial" | "blocked";
 
@@ -57,9 +57,9 @@ function formatExpectedValue(value: number | null): string {
 }
 
 function statusLabel(status: BuyLineDataStatus): string {
-  if (status === "complete") return "COMPLETE";
-  if (status === "partial") return "PARTIAL";
-  return "BLOCKED";
+  if (status === "complete") return "完全";
+  if (status === "partial") return "一部欠け";
+  return "取得不可";
 }
 
 export function buildBuyLineMessage(input: BuyLineMessageInput): BuyLineMessage {
@@ -100,30 +100,30 @@ export function buildBuyLineMessage(input: BuyLineMessageInput): BuyLineMessage 
   const voteUrl = input.voteUrl?.trim() || null;
 
   const body = [
-    `race: ${raceId}`,
-    `候補: ${selection}（${betType}）`,
-    `締切: ${closeAtJst}`,
-    `観測時刻: ${observedAt}`,
-    `取得オッズ: ${formatOdds(input.currentOdds)}`,
-    `必要オッズ: ${input.requiredOdds.toFixed(1)}倍以上`,
-    `推定的中率: ${(input.estimatedHitRate * 100).toFixed(1)}%`,
-    `EV: ${formatExpectedValue(input.expectedValue)}`,
-    `推奨stake: ${input.recommendedStakeYen}円`,
-    `sample: n=${input.sampleSize}`,
-    `data: ${statusLabel(input.dataStatus)}`,
-    `model: ${modelVersion} / ${runKind}`,
-    reasons.length > 0 ? `理由: ${reasons.join(" / ")}` : "理由: なし",
-    warnings.length > 0 ? `警告: ${warnings.join(" / ")}` : "警告: なし",
-    `公式オッズ: ${officialOddsUrl}`,
-    voteUrl ? `投票サイト: ${voteUrl}` : null,
+    `${betType} ${selection}`,
     "",
-    "※paper検証候補。自動投票なし。公式オッズと締切を確認して手動で判断してください。",
+    input.dataStatus !== "complete" ? "⚠️ データが不完全です" : null,
+    `⏰ 締切 ${closeAtJst}（確認 ${observedAt}）`,
+    `💴 推奨 ${input.recommendedStakeYen}円`,
+    `📈 オッズ ${formatOdds(input.currentOdds)}（必要 ${input.requiredOdds.toFixed(1)}倍以上）`,
+    `🎲 的中率 ${(input.estimatedHitRate * 100).toFixed(1)}%　EV ${formatExpectedValue(input.expectedValue)}`,
+    ...(reasons.length > 0 ? ["", "✅ 理由", ...reasons.map((reason) => `・${reason}`)] : []),
+    ...(warnings.length > 0 ? ["", "⚠️ 注意", ...warnings.map((warning) => `・${warning}`)] : []),
+    "",
+    "🔗 公式オッズ",
+    officialOddsUrl,
+    ...(voteUrl ? ["", "投票サイト", voteUrl] : []),
+    "",
+    "―――",
+    "検証用の候補です。自動投票はしません。",
+    "公式オッズと締切を確認して、自分で判断してください。",
+    `（race ${raceId} / n=${input.sampleSize} / data ${statusLabel(input.dataStatus)} / model ${modelVersion} ${runKind}）`,
   ].filter((line): line is string => line != null).join("\n");
 
   return {
     schemaVersion: BUY_LINE_MESSAGE_SCHEMA_VERSION,
     dedupeKey: `buy:${decisionId}`,
-    title: `🎯 BUY候補: ${venue} ${input.raceNo}R`,
+    title: `🎯 BUY候補 ${venue} ${input.raceNo}R`,
     body,
     freshness: { observedAt, closeAtJst },
   };

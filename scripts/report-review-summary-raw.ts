@@ -1,3 +1,4 @@
+import { compactTable, outcomeConclusion } from "../src/presentation/reviewReportText";
 /**
  * boat-pon の期間レビューを一発で見る read-only サマリー。
  *
@@ -16,7 +17,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("[report-review-summary] DB not found");
@@ -283,6 +284,18 @@ function printSummary(summary: {
   topBuyMisses: DetailRow[];
   topMissedHits: DetailRow[];
 }) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：${outcomeConclusion(summary.byDecision)}`);
+    console.log(`BUY外れ ${summary.totals.buyMisses}件 / WATCH・SKIP的中 ${summary.totals.missedHits}件。`);
+    console.log("ROIは公式実払戻の倍率（1 = 100%）。予想との差の判定は report:miss-review を参照。");
+    compactTable("判定別", summary.byDecision, [
+      ["判定", (r) => r.decision], ["確定", (r) => r.settled], ["的中", (r) => r.hits], ["ROI", (r) => r.roi],
+    ]);
+    for (const [title, rows] of [["BUY外れ", summary.topBuyMisses], ["見送った的中", summary.topMissedHits]] as const) {
+      compactTable(title, rows, [["レース", (r) => `${r.date} ${r.venue} ${r.raceNo}R`], ["候補", (r) => r.selection], ["結果", (r) => r.result]]);
+    }
+    return;
+  }
   console.log("=== boat-pon review summary ===");
   console.log(`generated: ${summary.generatedAt}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);

@@ -1,3 +1,4 @@
+import { compactTable } from "../src/presentation/reviewReportText";
 /**
  * 人気順位の時系列変化を見る read-only レポート。
  *
@@ -18,7 +19,7 @@ import { DatabaseSync } from "node:sqlite";
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(process.argv.slice(2).filter((arg) => arg !== "--detail"));
 
 if (!existsSync(DB_PATH)) {
   console.error("POPULARITY_MOVEMENT_REPORT_DB_MISSING");
@@ -281,6 +282,19 @@ CASE decision WHEN 'BUY' THEN 1 WHEN 'WATCH' THEN 2 WHEN 'SKIP' THEN 3 ELSE 4 EN
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(`人気変動 ${rows.length}区分を確認。実払戻で比較してください。`);
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("人気変動別", rows, [
+      ["変動・判定", (r) => `${r.movement} / ${r.decision}`],
+      ["確定", (r) => r.settled],
+      ["的中", (r) => r.hits],
+      ["ROI", (r) => r.roi],
+    ]);
+    return;
+  }
+
   console.log("=== popularity movement report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} venue=${args.venue ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -346,7 +360,7 @@ function normalizeDate(value: string | undefined) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-popularity-movement.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--json]
+  pnpm exec tsx scripts/report-popularity-movement.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--venue 蒲郡] [--decision BUY|WATCH|SKIP] [--detail] [--json]
 
 Read-only. Unsupported decision bet types fail closed before popularity/ROI aggregation; every settled denominator must reconcile to exactly one positive non-refund official winning-result settlement, popularity checkpoints are matched by canonical bet type + selection, and ROI uses mapped canonical official race_payouts.payout_yen.`);
 }

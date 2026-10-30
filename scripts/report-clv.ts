@@ -1,3 +1,4 @@
+import { compactTable, outcomeConclusion } from "../src/presentation/reviewReportText";
 /**
  * odds_timeseries_snapshots と decision_history を使った CLV 確認レポート。
  *
@@ -15,7 +16,7 @@ import { parseDecisionHistoryReportOptions } from "../src/research-replay/decisi
 import { assertCanonicalSingleLinkRegularFile } from "../src/research-replay/researchFileIdentity";
 
 const DB_PATH = process.env.BOAT_PON_DB_PATH ?? "data/boat.sqlite";
-const rawArgs = process.argv.slice(2);
+const rawArgs = process.argv.slice(2).filter((arg) => arg !== "--detail");
 if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
   printHelp();
   process.exit(0);
@@ -248,6 +249,20 @@ ORDER BY decision
 }
 
 function printRows(rows: ReportRow[]) {
+  if (!process.argv.includes("--detail")) {
+    console.log(`期間の結論（${args.from ?? "全期間"}〜${args.to ?? "最新"}）：`);
+    console.log(outcomeConclusion(rows));
+    console.log("ROI・率は倍率表示（1 = 100%）。ROIは公式実払戻ベース。");
+    compactTable("締切前オッズ変動", rows, [
+      ["判定", (r) => r.decision],
+      ["確定", (r) => r.settled],
+      ["的中", (r) => r.hits],
+      ["オッズ低下率", (r) => r.avgClvDrop],
+      ["ROI", (r) => r.roi],
+    ]);
+    return;
+  }
+
   console.log("=== CLV report ===");
   console.log(`generated: ${new Date().toISOString()}`);
   console.log(`filters: from=${args.from ?? "-"} to=${args.to ?? "-"} decision=${args.decision ?? "-"} model=${args.modelVersion ?? "-"} runKind=${args.runKind ?? "-"}`);
@@ -276,7 +291,7 @@ function format(value: number | null) {
 
 function printHelp() {
   console.log(`Usage:
-  pnpm exec tsx scripts/report-clv.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--json]
+  pnpm exec tsx scripts/report-clv.ts -- --from YYYY-MM-DD --to YYYY-MM-DD [--decision BUY|WATCH|SKIP] [--model-version X] [--run-kind paper-live] [--detail] [--json]
 
 Read-only. Unsupported decision bet types or incomplete canonical official winning settlements fail closed before CLV/ROI aggregation; CLV checkpoints are matched by canonical bet type + selection and ROI uses mapped canonical official race_payouts.payout_yen.`);
 }
