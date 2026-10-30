@@ -51,6 +51,12 @@ function stableTrim(value: string): string {
 // Canonical evidence digests must not depend on a caller-replaced JSON.stringify.
 // Capture the native serializer after module load, alongside other digest intrinsics.
 const BUILTIN_JSON_STRINGIFY = JSON.stringify;
+// A caller can also replace Hash.prototype.update/digest after module load.
+// Capture both native hash operations so the source/context/content SHA-256
+// identities do not collapse under ambient crypto prototype changes.
+const HASH_METHOD_SNAPSHOT = createHash("sha256");
+const BUILTIN_HASH_UPDATE = HASH_METHOD_SNAPSHOT.update;
+const BUILTIN_HASH_DIGEST = HASH_METHOD_SNAPSHOT.digest;
 // Snapshot date parsing/formatting intrinsics for untrusted evidence validation.
 // Ambient Date.parse or Date.prototype.toISOString changes must not relabel
 // noncanonical caller time strings as canonical UTC (still NOT trusted time).
@@ -316,7 +322,9 @@ function canonicalize(value: unknown): unknown {
 }
 
 function digest(value: unknown): string {
-  return createHash("sha256").update(BUILTIN_JSON_STRINGIFY(canonicalize(value))).digest("hex");
+  const hash = createHash("sha256");
+  BUILTIN_REFLECT_APPLY(BUILTIN_HASH_UPDATE, hash, [BUILTIN_JSON_STRINGIFY(canonicalize(value))]);
+  return BUILTIN_REFLECT_APPLY(BUILTIN_HASH_DIGEST, hash, ["hex"]) as string;
 }
 
 // Do not feed an array to Object.fromEntries: an ambient empty Array iterator
