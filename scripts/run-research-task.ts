@@ -122,7 +122,10 @@ if (mode === "clear-emergency-stop") { rmSync(EMERGENCY, { force: true }); conso
 // NOTE: task/validate-request モードは request-file 経路（DEPRECATED）用。
 // 現行の正式経路は scripts/run-intent-task.ts（intent 方式・automation branch 状態）。
 if (mode === "task") {
-  console.error("DEPRECATED: use run-intent-task.ts (intent dispatch). request-file task mode は凍結。");
+  // Fail closed before reading a request, acquiring a lock, recording an outcome,
+  // mutating a queue, or resolving any executor. The canonical intent path is separate.
+  console.error("DEPRECATED_DISABLED: request-file task execution is disabled; use the canonical intent dispatch.");
+  process.exit(3);
 }
 const requestPath = arg("request");
 if (!requestPath) throw new Error("--request=<request.json> は必須です");
