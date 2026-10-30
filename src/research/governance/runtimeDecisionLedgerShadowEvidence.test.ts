@@ -1910,3 +1910,75 @@ test("shadow evidence rejects noncanonical strings under ambient String.prototyp
   assert.ok(observed?.forged.errors.includes("source.journalMode must be a non-empty string"));
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
+
+test("shadow evidence pins Array.isArray for canonical context arrays and admission", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const arrayInput = input();
+  (arrayInput.context as unknown as Record<string, unknown>).syntheticAuditTags = ["alpha", "beta"];
+  const expected = buildRuntimeDecisionLedgerShadowEvidence(arrayInput);
+  const invalid = structuredClone(baseline);
+  (invalid.completeness as unknown as Record<string, unknown>).unresolvedReasonCounts = ["synthetic"];
+
+  const nativeIsArray = Array.isArray;
+  let observed: {
+    baseline: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    invalid: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence>;
+    arrayEvidence: RuntimeDecisionLedgerShadowEvidence;
+  } | undefined;
+  try {
+    Array.isArray = (() => false) as typeof Array.isArray;
+    observed = {
+      baseline: validateRuntimeDecisionLedgerShadowEvidence(baseline),
+      invalid: validateRuntimeDecisionLedgerShadowEvidence(invalid),
+      arrayEvidence: buildRuntimeDecisionLedgerShadowEvidence(arrayInput),
+    };
+  } finally {
+    Array.isArray = nativeIsArray;
+  }
+
+  assert.equal(observed?.baseline.valid, true, observed?.baseline.errors.join("; "));
+  assert.equal(observed?.invalid.valid, false);
+  assert.equal(observed?.invalid.evidence, null);
+  assert.equal(observed?.arrayEvidence.contextDigest, expected.contextDigest);
+  assert.equal(observed?.arrayEvidence.contentDigest, expected.contentDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed!.arrayEvidence).valid, true);
+});
+
+test("shadow canonical array indices ignore ambient Number constructor replacement", () => {
+  const firstInput = input();
+  const secondInput = input();
+  (firstInput.context as unknown as Record<string, unknown>).syntheticAuditTags = ["alpha", "beta"];
+  (secondInput.context as unknown as Record<string, unknown>).syntheticAuditTags = ["alpha", "gamma"];
+  const expectedFirst = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+  const expectedSecond = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+  assert.notEqual(expectedFirst.contextDigest, expectedSecond.contextDigest);
+
+  const nativeNumber = globalThis.Number;
+  const forgedNumber = new Proxy(nativeNumber, {
+    apply(target, thisArg, args: unknown[]) {
+      if (args[0] === "1") return 0;
+      return Reflect.apply(target, thisArg, args);
+    },
+  });
+  let observedFirst: RuntimeDecisionLedgerShadowEvidence | undefined;
+  let observedSecond: RuntimeDecisionLedgerShadowEvidence | undefined;
+  try {
+    globalThis.Number = forgedNumber;
+    observedFirst = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+    observedSecond = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+  } finally {
+    globalThis.Number = nativeNumber;
+  }
+
+  assert.equal(observedFirst?.contextDigest, expectedFirst.contextDigest);
+  assert.equal(observedSecond?.contextDigest, expectedSecond.contextDigest);
+  assert.notEqual(observedFirst?.contextDigest, observedSecond?.contextDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observedFirst).valid, true);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observedSecond).valid, true);
+});
+
+test("shadow source guards against reintroduced ambient array and numeric-index calls", () => {
+  const source = readFileSync(new URL("./runtimeDecisionLedgerShadowEvidence.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /\\bArray\\.isArray\\s*\\(/);
+  assert.doesNotMatch(source, /\\bNumber\\s*\\(/);
+});
