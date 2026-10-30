@@ -46,6 +46,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Test bounded AI collaboration (offline)
+        run: npm run test:ai-collaboration
+
       - name: Verify Research Replay golden fixture
         run: npm run research:golden:verify
 
