@@ -29,6 +29,10 @@ const BUILTIN_OBJECT_IS = Object.is;
 const BUILTIN_REFLECT_OWN_KEYS = Reflect.ownKeys;
 const BUILTIN_OBJECT_GET_PROTOTYPE_OF = Object.getPrototypeOf;
 const BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescriptor;
+// Prototype admission must use the module-load intrinsic identities, not
+// global Array/Object constructors that callers can replace after import.
+const BUILTIN_ARRAY_PROTOTYPE = Array.prototype;
+const BUILTIN_OBJECT_PROTOTYPE = Object.prototype;
 // Error collection and canonical materialization must not rely on an ambient
 // Object.defineProperty replacement that can silently discard own data fields.
 const BUILTIN_OBJECT_DEFINE_PROPERTY = Object.defineProperty;
@@ -190,8 +194,8 @@ function inspectOwnDataGraph(
   // Deny exotic prototypes before any semantic reads or canonical hashing.
   const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
   if (BUILTIN_ARRAY_IS_ARRAY(value)) {
-    if (prototype !== Array.prototype && prototype !== null) return "prototype";
-  } else if (prototype !== Object.prototype && prototype !== null) {
+    if (prototype !== BUILTIN_ARRAY_PROTOTYPE && prototype !== null) return "prototype";
+  } else if (prototype !== BUILTIN_OBJECT_PROTOTYPE && prototype !== null) {
     return "prototype";
   }
   BUILTIN_OBJECT_DEFINE_PROPERTY(visited, BUILTIN_STRING(visited.length), {
@@ -239,7 +243,7 @@ function canonicalize(value: unknown): unknown {
     // JSON serialization omits extra own array keys (including symbols) and
     // projects sparse slots as null. Bind the admitted array shape to its digest.
     const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
-    if (prototype !== Array.prototype && prototype !== null) {
+    if (prototype !== BUILTIN_ARRAY_PROTOTYPE && prototype !== null) {
       throw new TypeError("invalid canonical shadow evidence array prototype");
     }
     const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
@@ -277,7 +281,7 @@ function canonicalize(value: unknown): unknown {
   // JSON.stringify silently ignores symbol keys, hidden properties and
   // inherited fields; a non-plain object can also project to an empty object.
   const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
-  if (prototype !== Object.prototype && prototype !== null) {
+  if (prototype !== BUILTIN_OBJECT_PROTOTYPE && prototype !== null) {
     throw new TypeError("invalid canonical shadow evidence object prototype");
   }
   // An ambient Object.keys override must not erase all digest fields.
@@ -685,7 +689,7 @@ function validateCountMap(value: unknown, path: string, errors: string[]): Recor
   }
   const initialErrors = errors.length;
   const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
-  if (prototype !== Object.prototype && prototype !== null) {
+  if (prototype !== BUILTIN_OBJECT_PROTOTYPE && prototype !== null) {
     appendError(errors, `${path} must have a plain object prototype`);
   }
   const keys = BUILTIN_REFLECT_OWN_KEYS(value);
