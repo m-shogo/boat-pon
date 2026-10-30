@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-research-automation-legacy-lazy-executor-import-verified-20261031",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-automation.legacy-cli-denial.eager-executor-module-load",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "defer-executor-module-graph-until-legacy-task-claim",
+  "symptom": "The deprecated request-file CLI had a static runtime import of the executor facade, so even rejected task and unknown modes would evaluate the executor/N2 import graph before the fail-closed gate. The Draft branch now retains only a type import and defers runtime import until after mode denial, request validation and READY task checks. Official CI verified the source-order regression and existing no-request denials. No executor invocation or prior import side effect was observed.",
+  "rootCauseClass": "EAGER_EXECUTOR_IMPORT_BEFORE_DISABLED_MODE_GUARD",
+  "attemptSignature": "pr2286-v482-type-only-executor-import-lazy-post-task-ready",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-ubuntu-node24-tsx/no-request-source-order",
+    "materialStateKey": "legacy-runner-04113e1c/test-9a989b9c/executor-facade-6413ef98"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/55c8a9cac1cdaa1be9f5dae9e5922039b75a4194",
+    "commit/2b58681f8cfd3ea65f775c7110f54e56dbd2006a",
+    "commit/2daf191fefb3a3aad3619fec2fe44102fa728758",
+    "actions/runs/41130076465",
+    "scripts/run-research-task.ts",
+    "src/automation/legacyRunnerTaskDisabled.test.ts",
+    "research/registries/learnings/LEARN-research-automation-legacy-prepolicy-denial-verified-20261031.json"
+  ],
+  "lesson": "A terminal CLI mode guard does not prevent eager ESM import evaluation. Keep optional executor and protected-research module graphs behind the already verified fail-closed mode and request gates, using type-only imports for compile-time references.",
+  "guardrail": "Preserve the type-only executor import and post-READY dynamic import, plus source-order and synthetic no-policy/no-request exit-3 regressions. A green test does not establish live workflow disablement, prove a historical import side effect, activate N2, or authorize any production connection.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-30T21:23:12.000Z",
+  "productionConnection": false,
+  "_digest": "aedd20ea6d323c9e135d50c7c4e5b9664d518154c15a35b0af9693afa0a2e4e1",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T21:23:12.000Z"
+}
