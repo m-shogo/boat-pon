@@ -22,6 +22,20 @@ const arg = (n: string): string | null => {
 const hasFlag = (n: string): boolean => process.argv.includes(`--${n}`);
 const mode = process.argv[2] && !process.argv[2].startsWith("--") ? process.argv[2] : "task";
 
+// Reject deprecated execution and unsupported positional modes before loading
+// even the legacy policy. This is a research-only dispatch boundary; it does
+// not disable GitHub Actions workflows or change canonical intent dispatch.
+if (mode === "task") {
+  console.error("DEPRECATED_DISABLED: request-file task execution is disabled; use the canonical intent dispatch.");
+  process.exit(3);
+}
+if (mode !== "validate-request" &&
+    mode !== "status" && mode !== "pause" && mode !== "resume" &&
+    mode !== "emergency-stop" && mode !== "clear-emergency-stop") {
+  console.error("UNSUPPORTED_MODE: only validate-request may parse a legacy request file.");
+  process.exit(3);
+}
+
 const policy = JSON.parse(readFileSync(join(root, "config/research-automation-policy.json"), "utf8"));
 const LOCK_PATH = join(root, policy.lock.path);
 const STATUS_JSON = join(root, "reports/automation/current-status.json");
@@ -121,18 +135,7 @@ if (mode === "clear-emergency-stop") { rmSync(EMERGENCY, { force: true }); conso
 // ---- validate-request / task ----
 // NOTE: task/validate-request モードは request-file 経路（DEPRECATED）用。
 // 現行の正式経路は scripts/run-intent-task.ts（intent 方式・automation branch 状態）。
-if (mode === "task") {
-  // Fail closed before reading a request, acquiring a lock, recording an outcome,
-  // mutating a queue, or resolving any executor. The canonical intent path is separate.
-  console.error("DEPRECATED_DISABLED: request-file task execution is disabled; use the canonical intent dispatch.");
-  process.exit(3);
-}
-// Only validation may reach the request-file parser. Unknown subcommands must not
-// fall through into the deprecated task executor, even with a valid request.
-if (mode !== "validate-request") {
-  console.error("UNSUPPORTED_MODE: only validate-request may parse a legacy request file.");
-  process.exit(3);
-}
+// Only validate-request reaches this legacy request parser.
 const requestPath = arg("request");
 if (!requestPath) throw new Error("--request=<request.json> は必須です");
 const raw = JSON.parse(readFileSync(resolve(requestPath), "utf8"));
