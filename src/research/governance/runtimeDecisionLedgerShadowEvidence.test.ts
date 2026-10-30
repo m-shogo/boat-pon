@@ -1982,3 +1982,59 @@ test("shadow source guards against reintroduced ambient array and numeric-index 
   assert.doesNotMatch(source, /\bArray\.isArray\s*\(/);
   assert.doesNotMatch(source, /\bNumber\s*\(/);
 });
+
+test("shadow SHA-256 source/context/content digests survive ambient Hash method replacement", () => {
+  const originalInput = input();
+  const changedInput = input();
+  changedInput.source.fileSizeBytes += 1;
+  changedInput.context.manifestId = "decision-history-shadow-manifest:changed-hash";
+  const original = buildRuntimeDecisionLedgerShadowEvidence(originalInput);
+  const changed = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+  assert.notEqual(original.sourceDescriptorDigest, changed.sourceDescriptorDigest);
+  assert.notEqual(original.contextDigest, changed.contextDigest);
+  assert.notEqual(original.contentDigest, changed.contentDigest);
+
+  // A changed source with the original digest must remain invalid even while
+  // caller-realm crypto.Hash methods are replaced. No private inputs involved.
+  const forged = structuredClone(original);
+  forged.source.fileSizeBytes += 1;
+
+  const hashPrototype = Object.getPrototypeOf(createHash("sha256")) as object;
+  const nativeUpdate = Object.getOwnPropertyDescriptor(hashPrototype, "update");
+  const nativeDigest = Object.getOwnPropertyDescriptor(hashPrototype, "digest");
+  assert.ok(nativeUpdate);
+  assert.ok(nativeDigest);
+  for (const method of ["update", "digest"] as const) {
+    try {
+      if (method === "update") {
+        Object.defineProperty(hashPrototype, "update", {
+          ...nativeUpdate,
+          value(this: ReturnType<typeof createHash>) { return this; },
+        });
+      } else {
+        Object.defineProperty(hashPrototype, "digest", {
+          ...nativeDigest,
+          value() { return "0".repeat(64); },
+        });
+      }
+      const observedOriginal = buildRuntimeDecisionLedgerShadowEvidence(originalInput);
+      const observedChanged = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+      assert.equal(observedOriginal.sourceDescriptorDigest, original.sourceDescriptorDigest, method);
+      assert.equal(observedChanged.sourceDescriptorDigest, changed.sourceDescriptorDigest, method);
+      assert.equal(observedOriginal.contextDigest, original.contextDigest, method);
+      assert.equal(observedChanged.contextDigest, changed.contextDigest, method);
+      assert.equal(observedOriginal.contentDigest, original.contentDigest, method);
+      assert.equal(observedChanged.contentDigest, changed.contentDigest, method);
+      assert.notEqual(observedOriginal.contentDigest, observedChanged.contentDigest, method);
+      assert.equal(validateRuntimeDecisionLedgerShadowEvidence(original).valid, true, method);
+      assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observedChanged).valid, true, method);
+      const denial = validateRuntimeDecisionLedgerShadowEvidence(forged);
+      assert.equal(denial.valid, false, method);
+      assert.equal(denial.evidence, null, method);
+      assert.ok(denial.errors.includes("sourceDescriptorDigest mismatch"), method);
+    } finally {
+      Object.defineProperty(hashPrototype, "update", nativeUpdate);
+      Object.defineProperty(hashPrototype, "digest", nativeDigest);
+    }
+  }
+});
