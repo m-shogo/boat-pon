@@ -23,6 +23,9 @@ const BUILTIN_OBJECT_IS = Object.is;
 const BUILTIN_REFLECT_OWN_KEYS = Reflect.ownKeys;
 const BUILTIN_OBJECT_GET_PROTOTYPE_OF = Object.getPrototypeOf;
 const BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescriptor;
+// Error collection and canonical materialization must not rely on an ambient
+// Object.defineProperty replacement that can silently discard own data fields.
+const BUILTIN_OBJECT_DEFINE_PROPERTY = Object.defineProperty;
 // Canonical evidence digests must not depend on a caller-replaced JSON.stringify.
 // Capture the native serializer after module load, alongside other digest intrinsics.
 const BUILTIN_JSON_STRINGIFY = JSON.stringify;
@@ -163,11 +166,11 @@ function inspectOwnDataGraph(
   } else if (prototype !== Object.prototype && prototype !== null) {
     return "prototype";
   }
-  Object.defineProperty(visited, String(visited.length), {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(visited, String(visited.length), {
     value, writable: true, enumerable: true, configurable: true,
   });
   const depth = ancestors.length;
-  Object.defineProperty(ancestors, String(depth), {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(ancestors, String(depth), {
     value, writable: true, enumerable: true, configurable: true,
   });
   try {
@@ -235,7 +238,7 @@ function canonicalize(value: unknown): unknown {
       if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
         throw new TypeError("invalid canonical shadow evidence array");
       }
-      Object.defineProperty(result, String(index), {
+      BUILTIN_OBJECT_DEFINE_PROPERTY(result, String(index), {
         value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
       });
     }
@@ -262,7 +265,7 @@ function canonicalize(value: unknown): unknown {
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       throw new TypeError("invalid canonical shadow evidence non-data property");
     }
-    Object.defineProperty(keys, String(keys.length), {
+    BUILTIN_OBJECT_DEFINE_PROPERTY(keys, String(keys.length), {
       value: key, writable: true, enumerable: true, configurable: true,
     });
   }
@@ -283,7 +286,7 @@ function canonicalize(value: unknown): unknown {
     if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
       throw new TypeError("invalid canonical shadow evidence object");
     }
-    Object.defineProperty(result, key, {
+    BUILTIN_OBJECT_DEFINE_PROPERTY(result, key, {
       value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
     });
   }
@@ -300,7 +303,7 @@ function digest(value: unknown): string {
 // A null-prototype accumulator prevents inherited names from changing membership.
 function addCount(counts: Record<string, number>, key: string, increment: number): void {
   const previous = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(counts, key);
-  Object.defineProperty(counts, key, {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(counts, key, {
     value: (previous?.value as number | undefined ?? 0) + increment,
     enumerable: true, writable: true, configurable: true,
   });
@@ -322,7 +325,7 @@ function orderedCountMap(counts: Record<string, number>): Record<string, number>
     const key = keys[index]!;
     const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(counts, key);
     if (!descriptor || !("value" in descriptor)) throw new TypeError("invalid reason count");
-    Object.defineProperty(result, key, {
+    BUILTIN_OBJECT_DEFINE_PROPERTY(result, key, {
       value: descriptor.value as number, enumerable: true, writable: true, configurable: true,
     });
   }
@@ -591,7 +594,7 @@ const SAFETY_KEYS = [
 
 // Avoid ambient Array.prototype.push and inherited numeric setters when collecting failures.
 function appendError(errors: string[], message: string): void {
-  Object.defineProperty(errors, String(errors.length), {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(errors, String(errors.length), {
     value: message,
     writable: true,
     enumerable: true,
@@ -698,7 +701,7 @@ function taxonomyMatches(
 ): boolean {
   const expected: Record<string, number> = Object.create(null);
   const addExpected = (key: string, count: number): void => {
-    Object.defineProperty(expected, key, {
+    BUILTIN_OBJECT_DEFINE_PROPERTY(expected, key, {
       value: (BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(expected, key)?.value as number | undefined ?? 0) + count,
       enumerable: true, writable: true, configurable: true,
     });
