@@ -17,7 +17,7 @@ test("deprecated request-file task mode exits before request parsing or any exec
   assert.ok(taskGate >= 0 && requestParse > taskGate);
   const preRequestGate = source.slice(taskGate, requestParse);
   assert.match(preRequestGate, /DEPRECATED_DISABLED/u);
-  assert.match(preRequestGate, /process\\.exit\\(3\\);/u);
+  assert.ok(preRequestGate.includes("process.exit(3);"));
   assert.ok(lock > requestParse);
   assert.ok(executor > lock);
 });
@@ -34,5 +34,5 @@ test("deprecated task invocation without a request fails closed with exit 3", ()
   assert.equal(child.error, undefined);
   assert.equal(child.status, 3, child.stderr);
   assert.match(child.stderr, /DEPRECATED_DISABLED: request-file task execution is disabled/u);
-  assert.doesNotMatch(child.stderr, /--request=<request\\.json>/u);
+  assert.ok(!child.stderr.includes("--request=<request.json>"));
 });
