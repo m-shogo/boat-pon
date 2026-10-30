@@ -35,6 +35,8 @@ export function diagnose({ root = process.cwd(), platform = process.platform, ru
   if (!checks.claudeInstalled) blockers.push('CLAUDE_CODE_NOT_INSTALLED');
   else if (!checks.claudeAuthenticated) blockers.push('CLAUDE_LOGIN_REQUIRED');
   return { version: 1, state: blockers.length ? 'SETUP_REQUIRED' : 'CLI_PREREQUISITES_PRESENT', checks, blockers,
+    codexAppRoute: { claudePrerequisitesPresent: checks.claudeInstalled && checks.claudeAuthenticated,
+      codexCliRequired: false, next: 'docs/ai-collaboration/local-app.md' },
     collaborationConnected: false,
     note: 'CLIの存在・ログイン確認だけ。プランの利用枠、隔離実行、AI連携の成功を保証しない。DB・runner設定の変更やAIへの依頼送信は行わない。' };
 }
