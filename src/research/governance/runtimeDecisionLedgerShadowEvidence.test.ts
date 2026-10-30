@@ -1741,3 +1741,71 @@ test("shadow evidence keeps denial errors and digest identity under ambient Obje
   assert.notEqual(observed?.changed.contentDigest, baseline.contentDigest);
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed!.changed).valid, true);
 });
+
+
+test("shadow canonical container creation ignores ambient Object.create with inherited toJSON", () => {
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(input());
+  const changedInput = input();
+  changedInput.source.fileSizeBytes += 1;
+  changedInput.context.manifestId += ":changed";
+  const expected = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+  const nativeCreate = Object.create;
+  let hookCalls = 0;
+  let observed: RuntimeDecisionLedgerShadowEvidence | undefined;
+  let baselineValidation: ReturnType<typeof validateRuntimeDecisionLedgerShadowEvidence> | undefined;
+  try {
+    // Without the captured constructor, an inherited toJSON hook can replace
+    // every canonical object with one constant JSON string before hashing.
+    Object.create = ((prototype: object | null) => prototype === null
+      ? { toJSON() { hookCalls += 1; return "synthetic-constant"; } }
+      : nativeCreate(prototype)) as typeof Object.create;
+    observed = buildRuntimeDecisionLedgerShadowEvidence(changedInput);
+    baselineValidation = validateRuntimeDecisionLedgerShadowEvidence(baseline);
+  } finally {
+    Object.create = nativeCreate;
+  }
+  assert.equal(hookCalls, 0);
+  assert.equal(baselineValidation?.valid, true, baselineValidation?.errors.join("; "));
+  assert.equal(observed?.sourceDescriptorDigest, expected.sourceDescriptorDigest);
+  assert.equal(observed?.contextDigest, expected.contextDigest);
+  assert.equal(observed?.contentDigest, expected.contentDigest);
+  assert.notEqual(observed?.sourceDescriptorDigest, baseline.sourceDescriptorDigest);
+  assert.notEqual(observed?.contextDigest, baseline.contextDigest);
+  assert.notEqual(observed?.contentDigest, baseline.contentDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observed).valid, true);
+});
+
+test("shadow canonical arrays ignore ambient Object.setPrototypeOf no-op and toJSON", () => {
+  const firstInput = input();
+  const secondInput = input();
+  (firstInput.context as unknown as Record<string, unknown>).syntheticAuditTags = ["alpha"];
+  (secondInput.context as unknown as Record<string, unknown>).syntheticAuditTags = ["beta"];
+  const first = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+  const second = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+  assert.notEqual(first.contextDigest, second.contextDigest);
+  const nativeSetPrototypeOf = Object.setPrototypeOf;
+  const originalToJson = Object.getOwnPropertyDescriptor(Array.prototype, "toJSON");
+  let hookCalls = 0;
+  let observedFirst: RuntimeDecisionLedgerShadowEvidence | undefined;
+  let observedSecond: RuntimeDecisionLedgerShadowEvidence | undefined;
+  try {
+    Object.defineProperty(Array.prototype, "toJSON", {
+      configurable: true, value() { hookCalls += 1; return ["synthetic-constant"]; },
+    });
+    // Without the captured setter, the canonical array retains the ambient
+    // Array.prototype.toJSON hook and distinct context arrays hash alike.
+    Object.setPrototypeOf = ((target: object) => target) as typeof Object.setPrototypeOf;
+    observedFirst = buildRuntimeDecisionLedgerShadowEvidence(firstInput);
+    observedSecond = buildRuntimeDecisionLedgerShadowEvidence(secondInput);
+  } finally {
+    Object.setPrototypeOf = nativeSetPrototypeOf;
+    if (originalToJson) Object.defineProperty(Array.prototype, "toJSON", originalToJson);
+    else delete (Array.prototype as unknown as Record<string, unknown>).toJSON;
+  }
+  assert.equal(hookCalls, 0);
+  assert.equal(observedFirst?.contextDigest, first.contextDigest);
+  assert.equal(observedSecond?.contextDigest, second.contextDigest);
+  assert.notEqual(observedFirst?.contextDigest, observedSecond?.contextDigest);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observedFirst).valid, true);
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(observedSecond).valid, true);
+});
