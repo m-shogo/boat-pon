@@ -854,14 +854,14 @@ test("proof-request privacy guard bypasses ambient Reflect.apply dispatch substi
   const originalExec = RegExp.prototype.exec;
   let intercepted = 0;
   try {
-    Reflect.apply = function (target: Function, thisArg: unknown, args: ArrayLike<unknown>): unknown {
+    Reflect.apply = (function (target: Function, thisArg: unknown, args: ArrayLike<unknown>): unknown {
       if (target === originalExec && thisArg instanceof RegExp &&
           (thisArg.source.includes("A-Za-z") || thisArg.source === "%[0-9a-f]{2}")) {
         intercepted++;
         return null; // Forge a negative privacy-pattern match if dispatched here.
       }
       return originalApply(target, thisArg, args);
-    };
+    }) as typeof Reflect.apply;
     for (const id of [
       "synthetic=/placeholder/private",
       "synthetic%3D%2Fplaceholder%2Fprivate",
