@@ -114,6 +114,18 @@ function snapshotRejected(reason: string): ForwardV02ProofRequestAssessment {
 }
 
 /**
+ * Deny local-path-looking tokens in the *exported* request's caller-controlled
+ * identifiers. This is a bounded lexical privacy guard, not a general-purpose
+ * secret scanner or proof of issuer authority. Preserve benign URI metadata
+ * and namespace-style IDs while rejecting synthetic embedded POSIX, Windows,
+ * UNC and file-URL paths without reflecting the input in a blocker.
+ */
+const LOCAL_PATH_TOKEN = /(?:^|[\\s=:(\\[{,"'])(?:file:\\/\\/|\\\\\\\\|[A-Za-z]:[\\\\/]|\\/(?!\\/)[^\\s/]+)/iu;
+function containsLocalPathToken(value: string): boolean {
+  return LOCAL_PATH_TOKEN.test(value);
+}
+
+/**
  * Returns only an allowlisted immutable metadata request after existing
  * structural preflight. Even a successful request remains UNVERIFIED and
  * UNSCORABLE. No caller-supplied verifier result or trust root is accepted.
@@ -156,6 +168,19 @@ export function buildForwardV02IndependentProofRequest(
   const refs = refsSnapshot as Refs;
   const witness = envelope.freeze.witness;
   const settlement = envelope.settlement;
+  const identifiers = [
+    envelope.freeze.cohortId, witness.issuerId, witness.receiptId,
+    witness.trustAnchorId, settlement.sourceId, settlement.trustAnchorId,
+    refs.settlementRevisionId,
+  ];
+  for (let i = 0; i < identifiers.length; i++) {
+    if (containsLocalPathToken(identifiers[i]!)) return snapshotRejected("PRIVATE_PATH_METADATA");
+  }
+  for (let i = 0; i < settlement.revisions.length; i++) {
+    if (containsLocalPathToken(settlement.revisions[i]!.revisionId)) {
+      return snapshotRejected("PRIVATE_PATH_METADATA");
+    }
+  }
   const revisions: ForwardV02ClaimedRevision[] = [];
   for (let i = 0; i < settlement.revisions.length; i++) {
     const r = settlement.revisions[i]!;
