@@ -841,3 +841,54 @@ test("proof-request local-path privacy guard bypasses ambient RegExp.test and ex
     }
   }
 });
+
+test("proof-request privacy guard bypasses ambient Reflect.apply dispatch substitution", () => {
+  // Reuse LEARN-shadow-evidence-ambient-reflect-apply-dispatch-admission-20261030.
+  // A captured RegExp.exec is insufficient if its dispatcher stays mutable.
+  type F = ReturnType<typeof fixture>;
+  const builders = [
+    (f: F) => buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs),
+    (f: F) => buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs),
+  ];
+  const originalApply = Reflect.apply;
+  const originalExec = RegExp.prototype.exec;
+  let intercepted = 0;
+  try {
+    Reflect.apply = function (target: Function, thisArg: unknown, args: ArrayLike<unknown>): unknown {
+      if (target === originalExec && thisArg instanceof RegExp &&
+          (thisArg.source.includes("A-Za-z") || thisArg.source === "%[0-9a-f]{2}")) {
+        intercepted++;
+        return null; // Forge a negative privacy-pattern match if dispatched here.
+      }
+      return originalApply(target, thisArg, args);
+    };
+    for (const id of [
+      "synthetic=/placeholder/private",
+      "synthetic%3D%2Fplaceholder%2Fprivate",
+    ]) {
+      for (const build of builders) {
+        const f = fixture();
+        f.envelope.freeze.cohortId = id;
+        const result = build(f);
+        assert.equal(result.metadataConsistent, false);
+        assert.equal(result.request, null);
+        assert.deepEqual(result.blockers, ["PRIVATE_PATH_METADATA"]);
+        assert.equal(result.independentAuthorityVerified, false);
+        assert.equal(result.scoringAuthorized, false);
+        assert.equal(JSON.stringify(result).includes("placeholder"), false);
+      }
+    }
+    for (const build of builders) {
+      const f = fixture();
+      f.envelope.freeze.cohortId = "https%3A%2F%2Fexample.invalid%2Fresearch%2Fcohort";
+      const result = build(f);
+      assert.equal(result.metadataConsistent, true);
+      assert.equal(result.request?.freeze.cohortId, f.envelope.freeze.cohortId);
+      assert.equal(result.independentAuthorityVerified, false);
+      assert.equal(result.scoringAuthorized, false);
+    }
+    assert.equal(intercepted, 0, "privacy patterns must bypass mutable Reflect.apply");
+  } finally {
+    Reflect.apply = originalApply;
+  }
+});
