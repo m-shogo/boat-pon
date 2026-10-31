@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-signature-cross-input-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-signature-claim-cross-input-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-synthetic-ed25519-claim",
+  "symptom": "The standalone deny-only signature math helper captured the caller claim before policy and proof references. A claim descriptor or ownKeys Proxy trap could repair an initially revoked policy anchor or mismatched policy snapshot digest before the request builder captured those graphs, making requestMetadataConsistent and signatureMathConsistent true for a changed claim context. This never established external authority or scoring.",
+  "rootCauseClass": "STANDALONE_SIGNATURE_CLAIM_PROXY_REPAIRS_UNSNAPSHOTTED_POLICY_OR_REFS",
+  "attemptSignature": "pr2286-v326-pin-policy-refs-before-standalone-claim-and-envelope",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticEd25519Claim.0.1-untrusted/pr2286-9c8d34d5/claim-before-policy-refs"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/482fb86d7e45ef56ef9d35f271bf5116a26a433d",
+    "commit/b3f29d5bed93604b354597a59ad5d8fe0642b4c2",
+    "research/registries/learnings/LEARN-forward-v02-standalone-signature-claim-late-snapshot-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-claim-policy-cross-input-repair-20261025.json"
+  ],
+  "lesson": "Pinning a standalone signature claim before request preflight prevents envelope-to-claim mutation but leaves the opposite claim-to-policy/refs phase vulnerable. Snapshot ordering must protect the other untrusted inputs before executing claim Proxy traps, while still pinning the claim before envelope traversal.",
+  "guardrail": "For the standalone synthetic signature math helper, detach policy and proof refs before claim traversal; detach claim before envelope traversal; pass detached policy and refs into the request builder without rereading caller originals. Negative tests must execute claim descriptor and ownKeys traps, show repair of original revoked/mismatched inputs, and still return REQUEST_NOT_READY with literal independentAuthorityVerified=false and scoringAuthorized=false. No atomic multi-Proxy guarantee or trust promotion.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T09:03:50.000Z",
+  "productionConnection": false,
+  "_digest": "3110b98469df8fde637c3e4aab52dd38ee8e49527ffe7be61b86c1886c9746cc",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T09:03:50.000Z"
+}

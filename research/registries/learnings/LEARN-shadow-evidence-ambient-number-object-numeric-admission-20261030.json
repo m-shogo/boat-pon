@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-number-object-numeric-admission-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-number-object-numeric-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-shadow-source-and-scope-numeric-integrity-under-ambient-intrinsic-replacement",
+  "symptom": "Node 22.16.0 synthetic intrinsic substitution confirmed that ambient Number.isFinite, Number.isSafeInteger and Object.is can report altered answers for NaN, fractional integers and negative zero. Static review of the v456 shadow evidence validator found that it invoked these mutable methods in numeric graph admission, source descriptor and bounded scope checks, allowing re-digested malformed numeric claims to evade the intended type/range guards. No private evidence or production execution was used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_NUMBER_OBJECT_NUMERIC_ADMISSION",
+  "attemptSignature": "pr2286-v457-pin-number-isfinite-issafeinteger-object-is-in-shadow-evidence-validation",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@ac978fb99a44/ambient-Number.isFinite-Number.isSafeInteger-Object.is"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/1a23abf329ea2b66f99952d6fa1cd742d5c8ba9a",
+    "commit/e5f3131504a491fc9ec9d2497ce07a8f69898247",
+    "research/registries/learnings/LEARN-shadow-evidence-negative-zero-json-digest-alias-20261030.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-reflect-apply-dispatch-admission-20261030.json"
+  ],
+  "lesson": "Pinned RegExp/Date dispatch does not stabilize independent numeric admission checks. Mutable caller-realm Number.isFinite, Number.isSafeInteger and Object.is can change the acceptance of non-finite, fractional and negative-zero input while JSON hashing aliases NaN to null and negative zero to zero. This is a research-only integrity concern, not independent K-source proof.",
+  "guardrail": "Capture the native Number.isFinite, Number.isSafeInteger and Object.is references when the research module initializes, and use those captured methods consistently in preflight, canonicalization and field validation. Regress a valid baseline and re-digested fractional source/scope, NaN source timestamp and negative-zero source count under reversible ambient overrides. Do not infer rights, trusted time, terminality, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T20:59:02.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T20:59:02.000Z",
+  "_digest": "41997a4a0153c2fd611c00031b9d81d5e5ffb97217135eeb5dbe89c5f568b195"
+}

@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-v02-catalog-unknown-property-closure-narrowing-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-catalog-unknown-property-closure-narrowing",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "typecheck-static-negative-catalog-policy-guard",
+  "symptom": "CI #40283770521 research-governance Typecheck failed TS18046 in forwardV02IndependentVerifierNegativeCatalog.test.ts at the usageRules comparison callback. The code narrowed input.usageRules with Array.isArray, then accessed the same mutable record property inside Array.some; TypeScript did not preserve that property narrowing across the closure. Process exited 1; checkout post-job succeeded; no runner failure was demonstrated. This is a typecheck failure, not a verifier failure.",
+  "rootCauseClass": "TYPESCRIPT_UNKNOWN_RECORD_PROPERTY_NARROWING_LOST_ACROSS_CALLBACK",
+  "attemptSignature": "pr2286-v353-pin-catalog-authority-separation-and-usage-rules-with-mutation-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-negative-fixtures.0.1-spec/pr2286-v353-direct-input-usageRules-property-in-some-callback"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "actions/runs/40283770521",
+    "src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts",
+    "commit/f796b56e9da00acdcf6336f248a9614bd665af9a"
+  ],
+  "lesson": "Narrowing a property of a mutable Record<string, unknown> outside a callback does not guarantee that the property is narrowed inside the callback; TypeScript correctly treats the property access as potentially changed.",
+  "guardrail": "Capture the unknown record property in a local const before Array.isArray narrowing, then use that narrowed local inside Array.some/every callbacks. Verify the actual CI typecheck and do not attribute TS18046 to test payload or runner infrastructure.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T07:08:15.011Z",
+  "productionConnection": false,
+  "_digest": "3e211d7fc5be8aa459d6363fe750da10d9ffd5214403e786f0b96c4bfcf44091",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T07:08:15.011Z"
+}

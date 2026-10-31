@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-partial-verifier-request-binding-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-partial-verifier-request-binding",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-untrusted-verifier-response",
+  "symptom": "A synthetic verifier response could be marked metadata-consistent after changing protocol, membership, issuer, source or revision timestamp in the request while preserving the previously compared receipt, policy, proof and terminal digest claims. This did not authenticate any evidence or permit scoring.",
+  "rootCauseClass": "PARTIAL_RESPONSE_BINDING_OMITS_FULL_REQUEST_TRANSCRIPT",
+  "attemptSignature": "pr2286-v298-domain-separated-sha256-complete-untrusted-request-transcript",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.0.1-untrusted/pr2286-64099b44/partial-request-field-comparison"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/14f32e7554a1dbb7ad4c3ea556a180e21771ad68",
+    "commit/10240b6bef6d209f679d14714a59c168dc2b44d3",
+    "github-actions/run-40100840486"
+  ],
+  "lesson": "Checking selected IDs and correction content digests does not bind the complete future-verifier request: unchanged fields can mask changes in frozen protocol, eligible membership, issuer, source and claimed clocks. A self-reported VERIFIED status is never independent proof, even with a matching SHA-256 transcript.",
+  "guardrail": "Require a domain-separated length-prefixed SHA-256 correlation digest covering every allowlisted request field and each correction revision, reject absent/malformed/stale digests, and test drift in previously omitted metadata. Keep the digest explicitly untrusted: a caller can recompute it, and it cannot establish source authenticity, approved protocol, finality or scoring authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T14:04:32.000Z",
+  "productionConnection": false,
+  "_digest": "45c2fe56b1311aa10dae5a4212c42bbeebea4cff1841e0f7ae75f96a51c2638c",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T14:04:32.000Z"
+}

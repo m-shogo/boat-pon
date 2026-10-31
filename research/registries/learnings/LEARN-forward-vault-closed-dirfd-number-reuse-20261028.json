@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-closed-dirfd-number-reuse-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.closed-dirfd-number-reuse-wrong-publisher",
+  "subsystem": "research-governance-forward-vault-linux-directory-fd-lifecycle",
+  "operation": "disposable-closed-directory-fd-integer-reuse-vs-live-dup-no-replace-publication",
+  "symptom": "In a disposable Linux synthetic probe, closing a previously correct final-directory FD and retaining only its integer allowed a later unrelated directory open to reuse that integer. RENAME_NOREPLACE using the stale integer published the decoy JSON, not the originally authorized JSON. Keeping a live dup of the original FD instead published the original and left the decoy staged bytes unchanged. This is a candidate-design counterexample, not a production incident.",
+  "rootCauseClass": "CLOSED_DIRECTORY_FD_INTEGER_REUSE_REDIRECTS_PUBLICATION",
+  "attemptSignature": "pr2286-v390-disposable-closed-fd-integer-reuse-vs-live-dup-no-replace",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-node22-python3-glibc+github-actions-linux-node24-python3",
+    "materialStateKey": "executor-sdk-v3/pr2286-v389-pinned-final-fd-bootstrap-no-lifetime-check"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.dirfdLifetimeLinux.test.ts",
+    "reports/research/forward-vault-closed-dirfd-number-reuse-lifetime-20261028.md",
+    "commit/4d71777ca7e7a136b50e9fe36598535b00ce5be1",
+    "commit/183b6351cd512944c7e050152b75cf912acf35be"
+  ],
+  "lesson": "A numeric file descriptor is only a process-local index while its kernel handle remains open. Once closed, the same number may refer to a different directory; using it as a stored publisher capability can redirect an otherwise atomic no-replace publication. A live dup retains the original directory object in this bounded fixture but does not authenticate how that object was bootstrapped or guarantee pathname reachability.",
+  "guardrail": "Do not cache or hand off bare numeric directory FD values beyond their live ownership lifetime. Keep a live owned FD (or explicitly managed dup) throughout each FD-relative publish/read transaction, check its identity and ownership under a separately reviewed bootstrap, and fail closed on lost ownership. Reuse existing parent-swap, openat2 and reachability guardrails; do not treat dup or st_dev/st_ino as independent authority, introduce automatic recovery or deletion, connect Current BUY/LINE/public/production, activate protected N2, or claim power-loss durability.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T15:03:11.322Z",
+  "productionConnection": false,
+  "_digest": "b2e22f496a982b4a0d327aa52499306e6d1cf0fb5004c2c89f8d0bbf8cbfa30a",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T15:03:11.322Z"
+}

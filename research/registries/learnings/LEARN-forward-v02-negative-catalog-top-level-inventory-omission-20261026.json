@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-negative-catalog-top-level-inventory-omission-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-negative-catalog-top-level-inventory-omission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "close-negative-catalog-top-level-vocabulary",
+  "symptom": "CI #40290475168 verify failed one catalog contract test after adding a closed top-level key list: the independent fixture JSON already had sourceRefs, but the newly written expected list omitted it. The 18-case static test reported top-level catalog fields drift on unchanged valid fixture data. Test process exited 1, verify job/workflow failed, research-governance succeeded and post-checkout cleanup succeeded; no verifier execution or runner failure was demonstrated.",
+  "rootCauseClass": "STATIC_CATALOG_CLOSED_KEY_INVENTORY_OMITTED_EXISTING_SOURCE_REFS",
+  "attemptSignature": "pr2286-v354-close-negative-catalog-top-level-vocabulary-and-test-authority-injection",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-negative-fixtures.0.1-spec/pr2286-v354-incomplete-top-level-key-list"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "actions/runs/40290475168",
+    "reports/research/forward-v02-independent-verifier-negative-vectors-20261026.json",
+    "src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts",
+    "commit/47bf1275f601eb79169a2ccc73c550cb0e46e3dc"
+  ],
+  "lesson": "When closing a previously open JSON vocabulary, derive the complete existing key inventory from the canonical fixture before freezing expectations. A forgotten legitimate field causes a false-positive regression despite correctly detecting newly injected fields.",
+  "guardrail": "Inventory Object.keys of the canonical JSON first, pin all existing top-level keys including sourceRefs, and retain explicit negative mutations for unauthorized additions. Treat a red static contract assertion as a fixture/expectation mismatch until full logs distinguish it from verifier behavior, build failure or runner infrastructure.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T08:15:45.000Z",
+  "productionConnection": false,
+  "_digest": "181b21fc29197f24fdec5d2c2964987f8a865dc968944de317b307e0d8269a36",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T08:15:45.000Z"
+}

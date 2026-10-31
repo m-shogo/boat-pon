@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   RUNTIME_DECISION_LEDGER_SCHEMA_VERSION,
+  runtimeDecisionLedgerDigest,
   validateRuntimeDecisionLedgerRecord,
   type RuntimeDecisionLedgerRecord,
 } from "./runtimeDecisionLedger";
@@ -63,4 +64,80 @@ test("Runtime Decision Ledger accepts explicit UTC offsets as exact instants", (
   candidate.decisionAt = "2026-08-05T14:26:30+09:00";
   candidate.scheduledCloseAtSeen = "2026-08-05T14:32:00+09:00";
   assert.deepEqual(validateRuntimeDecisionLedgerRecord(candidate), { valid: true, errors: [] });
+});
+
+// Exact chronology cannot be established from millisecond-truncated Date.parse alone.
+test("Runtime Decision Ledger compares submillisecond PIT timestamps", () => {
+  const candidate = record();
+  candidate.decisionAt = "2026-10-19T01:00:00.0001000Z";
+  candidate.oddsObservedAt = "2026-10-19T10:00:00.0000999+09:00";
+  candidate.scheduledCloseAtSeen = "2026-10-19T01:00:00.0001001Z";
+  assert.equal(validateRuntimeDecisionLedgerRecord(candidate).valid, true);
+  candidate.oddsObservedAt = "2026-10-19T01:00:00.0001001Z";
+  assert.ok(validateRuntimeDecisionLedgerRecord(candidate).errors.includes("oddsObservedAt must not be after decisionAt"));
+  candidate.oddsObservedAt = "2026-10-19T01:00:00.0000999Z";
+  candidate.scheduledCloseAtSeen = "2026-10-19T01:00:00.0000999Z";
+  assert.ok(validateRuntimeDecisionLedgerRecord(candidate).errors.includes("decisionAt must not be after scheduledCloseAtSeen"));
+});
+
+test("Runtime Decision Ledger rejects unknown UTC offsets and year zero", () => {
+  for (const field of ["decisionAt", "oddsObservedAt", "scheduledCloseAtSeen"] as const) {
+    const candidate = record();
+    candidate[field] = "2026-10-19T01:00:00-00:00";
+    assert.equal(validateRuntimeDecisionLedgerRecord(candidate).valid, false, field);
+  }
+  const candidate = record();
+  candidate.decisionAt = "0000-01-01T00:00:01Z";
+  candidate.oddsObservedAt = "0000-01-01T00:00:00Z";
+  candidate.scheduledCloseAtSeen = "0000-01-01T00:00:02Z";
+  assert.equal(validateRuntimeDecisionLedgerRecord(candidate).valid, false);
+});
+
+test("Runtime Decision Ledger preserves known UTC offsets and equal submillisecond instants", () => {
+  const candidate = record();
+  candidate.oddsObservedAt = "2026-10-19T10:00:00.0001+09:00";
+  candidate.decisionAt = "2026-10-19T01:00:00.0001000Z";
+  candidate.scheduledCloseAtSeen = "2026-10-19T01:00:00.0001001+00:00";
+  assert.deepEqual(validateRuntimeDecisionLedgerRecord(candidate), { valid: true, errors: [] });
+});
+
+test("Runtime Decision Ledger date validation ignores a hostile array iterator", () => {
+  const previous = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator);
+  let observed: { good: boolean; invalid: boolean; errors: string[]; digestRejected: boolean; invalidId: boolean; unknownField: boolean; invalidOdds: boolean; hiddenSymbol: boolean };
+  try {
+    Object.defineProperty(Array.prototype, Symbol.iterator, {
+      configurable: true, writable: true,
+      value: function* () { /* synthetic empty iterator */ },
+    });
+    const good = record();
+    const impossible = record();
+    impossible.decisionAt = "2026-02-30T05:26:30Z";
+    impossible.oddsObservedAt = null;
+    impossible.scheduledCloseAtSeen = "2026-03-03T05:32:00Z";
+    const result = validateRuntimeDecisionLedgerRecord(impossible);
+    let digestRejected = false;
+    try { runtimeDecisionLedgerDigest(impossible); }
+    catch (error) { digestRejected = error instanceof TypeError; }
+    observed = {
+      good: validateRuntimeDecisionLedgerRecord(good).valid,
+      invalid: result.valid,
+      errors: result.errors,
+      digestRejected,
+      invalidId: validateRuntimeDecisionLedgerRecord({ ...record(), recordId: "" }).valid,
+      unknownField: validateRuntimeDecisionLedgerRecord({ ...record(), unexpected: "research-only" }).valid,
+      invalidOdds: validateRuntimeDecisionLedgerRecord({ ...record(), currentOdds: "not-a-number" }).valid,
+      hiddenSymbol: validateRuntimeDecisionLedgerRecord({ ...record(), [Symbol("hidden")]: "not-json" }).valid,
+    };
+  } finally {
+    if (previous) Object.defineProperty(Array.prototype, Symbol.iterator, previous);
+    else Reflect.deleteProperty(Array.prototype, Symbol.iterator);
+  }
+  assert.equal(observed.good, true);
+  assert.equal(observed.invalid, false);
+  assert.ok(observed.errors.includes("decisionAt must be a valid timezone-bound ISO timestamp"));
+  assert.equal(observed.digestRejected, true);
+  assert.equal(observed.invalidId, false);
+  assert.equal(observed.unknownField, false);
+  assert.equal(observed.invalidOdds, false);
+  assert.equal(observed.hiddenSymbol, false);
 });

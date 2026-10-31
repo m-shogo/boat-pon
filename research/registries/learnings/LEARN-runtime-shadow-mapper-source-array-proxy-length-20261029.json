@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-source-array-proxy-length-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.shadow-mapper-source-array-proxy-length-membership-erasure",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "reconcile-decision-history-source-array-membership",
+  "symptom": "The research-only reconciliation loop used rows.length repeatedly and returned rows.length as sourceRows. A Node 22.16.0 synthetic two-row Proxy with a length getter returning zero visited zero own-index rows; the pre-fix mapper had the same live-length loop and could therefore report PASS with no mapped records despite a populated underlying array. This is synthetic metadata behavior, not a production incident or independently authenticated source evidence.",
+  "rootCauseClass": "UNTRUSTED_SOURCE_ARRAY_PROXY_LENGTH_ERASES_RECONCILIATION_MEMBERSHIP",
+  "attemptSignature": "pr2286-v425-node-proxy-source-array-length-trap-denial",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@bd9172fe/live-source-rows-length-and-index-proxy-traps"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/4e38e7171001ccffe27e6ca0319039c0e2ad74d3",
+    "commit/a196c3b07861f8ae0d08a7b13cf052b8dd989769",
+    "research/registries/learnings/LEARN-forward-v02-node-proxy-rejecting-ingress-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-verifier-revision-array-length-spoof-20261025.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-empty-array-iterator-membership-20261028.json"
+  ],
+  "lesson": "Own-index iteration alone does not establish source-array membership if the loop bound and final count are reread through a caller-controlled Proxy length getter. A false zero length can silently turn a nonempty research source into an apparent empty PASS.",
+  "guardrail": "At the Node-only research reconciliation ingress, reject Proxy source-array containers, including revoked Proxies, before consulting length, own-index descriptors or caller traps. For ordinary arrays, pin the own length descriptor once for loop bounds and result counts, fail closed on sparse/accessor elements, and preserve baseline valid records and digests. A rejected untrusted container uses an explicit CONDITIONAL denial; its zero sourceRows means not counted, never an authenticated empty cohort. This does not change production or authenticate source data.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T18:01:51.504Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T18:01:51.504Z",
+  "_digest": "3bf444c2d7fb7c5575322eabbc5c4a9bafb8e4be94dfab232807ecf73fc30a57"
+}

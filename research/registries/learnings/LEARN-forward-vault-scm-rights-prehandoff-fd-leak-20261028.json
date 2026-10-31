@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-scm-rights-prehandoff-fd-leak-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.scm-rights-prehandoff-rejection-fd-ownership-gap",
+  "subsystem": "research-governance-forward-vault-linux-scm-rights-synthetic-receiver",
+  "operation": "disposable-two-socket-received-fd-rejection-before-ownership-return",
+  "symptom": "The research-only two-socket fixture received an SCM_RIGHTS descriptor, then asserted payload and object admission before returning the FD. On a mismatched expected frame the assertion could raise while the received FD remained open, bypassing caller-side finally cleanup. An isolated Linux reproduction observed fstat succeeding on the received FD after the rejection. The patched receive-local finally closes it and a new live-process regression checks EBADF before exit. No production leak or attack is claimed.",
+  "rootCauseClass": "SCM_RIGHTS_PREHANDOFF_EXCEPTION_BYPASSES_CALLER_FD_CLEANUP",
+  "attemptSignature": "pr2286-v396-disposable-receiver-prehandoff-frame-mismatch-ebadf-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-python3.13-node22+github-actions-linux-node24-python3",
+    "materialStateKey": "pr2286-v395-two-socket-helper-caller-finally-only-v396-receive-local-fd-finally"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.scmRightsCrossConnectionLinux.test.ts",
+    "reports/research/forward-vault-scm-rights-prehandoff-fd-ownership-20261028.md",
+    "commit/87834c250b378197307b7cf14b7e1e0ff70a1892",
+    "actions/runs/40582562002"
+  ],
+  "lesson": "SCM_RIGHTS descriptors are already installed in the receiver when recvmsg returns. If a helper checks flags, payload or identity and raises before returning the descriptor, cleanup in the caller after receive() is never reached. Process teardown masks this live-process descriptor leak. A receive-local ownership scope must close all parsed FDs on every failed admission before ownership is transferred.",
+  "guardrail": "Wrap ancillary parsing and every pre-return admission check in exception-safe receive-local FD ownership; close all received descriptors on denial, and transfer ownership only after validation. Test an intentionally mismatched frame with fstat -> EBADF while the process remains alive. Reuse the existing SCM_RIGHTS close-on-reject, fd-lifetime and embedded-Python String.raw guardrails. Research-only; never connect production, Current BUY, LINE, public publishing, automated betting, Owner Dashboard, protected N2 or private raw evidence.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T20:58:30.000Z",
+  "productionConnection": false,
+  "_digest": "a2b2f38ec21658fbe10b676fe39c270b658279529db6f4160e4500083bcd10b2",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T20:58:30.000Z"
+}

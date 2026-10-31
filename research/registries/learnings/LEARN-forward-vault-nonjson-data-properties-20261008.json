@@ -1,0 +1,27 @@
+{
+  "learningId": "LEARN-forward-vault-nonjson-data-properties-20261008",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.non-json-data-properties-digest-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-record-and-append-classification",
+  "symptom": "Inherited required fields and non-enumerable own fields can be accepted by validation while canonical JSON digest ignores them; accessor fields may throw during validation.",
+  "rootCauseClass": "VALIDATION_CANONICALIZATION_PROPERTY_SHAPE_MISMATCH",
+  "attemptSignature": "forward-vault-own-enumerable-property-canonicalization",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-canonical-main/research-governance",
+    "materialStateKey": "forward-evaluation-vault.0.1/required-field-own-data-unchecked"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "pull/2286"
+  ],
+  "lesson": "Validation and canonical hashing must agree on exactly which fields exist and which values are hashed.",
+  "guardrail": "Require every record field to be an enumerable own data property with a string key; require all kind-specific fields and finite metrics data fields to satisfy the same shape before append classification.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-08T14:05:25.000Z",
+  "productionConnection": false,
+  "_digest": "9b56dd1e6cc3f0efa111d9387b6a414c1f17175cb19bd2e38b4a4751c552afa2",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-08T14:05:25.000Z"
+}

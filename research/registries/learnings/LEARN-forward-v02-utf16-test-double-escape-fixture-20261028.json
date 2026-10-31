@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-utf16-test-double-escape-fixture-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-utf16-negative-test-double-escaped-literals",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "forward-v02-source-manifest-utf16-regression-fixture",
+  "symptom": "An intermediate PR test commit serialized JavaScript Unicode escape sequences with two literal backslashes. The test therefore compared a literal backslash-u string rather than an unpaired surrogate against U+FFFD. Official CI verify failed one synthetic regression assertion (false !== true) while research-governance/typecheck passed; this was a fixture-construction error, not a research payload or runner failure.",
+  "rootCauseClass": "GENERATED_TEST_SOURCE_DOUBLE_ESCAPES_UNICODE_CODE_UNIT_FIXTURES",
+  "attemptSignature": "pr2286-v411-generated-unicode-literal-test-fixture-source-and-readback-correction",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02ReferenceReconciliation.test.ts@238a94aa/double-backslash-u-source-fixture"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/238a94aacab48d496f05d5972023e79e05d46548",
+    "commit/032e21489e3ff632a45ae28a88b678bb4afb6b06",
+    "github-actions/run-40669162423",
+    "src/research/governance/forwardV02ReferenceReconciliation.test.ts"
+  ],
+  "lesson": "When generating TypeScript test source from another JavaScript string, double escaping can accidentally turn a Unicode code-unit fixture into a literal backslash-u sequence. A green typecheck cannot detect a semantically wrong fixture; verify the exact emitted source and runtime bytes before relying on negative tests.",
+  "guardrail": "For generated malformed UTF-16 fixtures, read back the emitted test source and confirm it contains one JavaScript Unicode escape before the u; assert Buffer UTF-8 equivalence against the U+FFFD counterpart and require the named regression to execute in CI. Distinguish test-fixture assertion failure, process exit 1, workflow failure, successful post-job cleanup and healthy runner state. Do not attribute this failure to the research digest implementation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T10:08:39.341Z",
+  "productionConnection": false,
+  "_digest": "7ec685ed20897f83c42148eff2eed88497846a97db91b3090eaf76e026542365",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T10:08:39.341Z"
+}

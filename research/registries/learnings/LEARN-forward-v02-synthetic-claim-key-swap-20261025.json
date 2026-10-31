@@ -1,0 +1,36 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-claim-key-swap-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-synthetic-claim-public-key-swap-after-signature-math",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-synthetic-claimed-anchor-and-reference",
+  "symptom": "A caller-controlled descriptor proxy could expose one Ed25519 public key during mathematical signature verification and a different public key during later claimed-anchor or synthetic-reference key-digest correlation. Both metadata correlation flags could otherwise describe a key that did not verify the signature. Independent authority and scoring were never granted.",
+  "rootCauseClass": "UNTRUSTED_CLAIM_PUBLIC_KEY_REREAD_AFTER_SIGNATURE_MATH",
+  "attemptSignature": "pr2286-v304-pin-strict-claim-snapshot-across-signature-anchor-reference",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticClaimedAnchorBinding.0.1-untrusted/pr2286-2fa5a07f/claim-public-key-reread-after-math"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.ts",
+    "src/research/governance/forwardV02SyntheticClaimedAnchorBinding.ts",
+    "src/research/governance/forwardV02SyntheticReferenceAnchorConflict.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/259e47fc35645ad7cd944d1336f0077bb4c5fa27",
+    "commit/4d387e8e705441241df61d82c253de10339df591",
+    "commit/4d50698f5524e27ebaeb74c0b48159e4a546ebc4",
+    "commit/272d9b04a86635076f9a1573d3109fd470aae29e",
+    "github-actions/run-40123140795",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-reference-request-rebuild-drift-20261025.json"
+  ],
+  "lesson": "Rebinding a rebuilt request transcript is not sufficient when the Ed25519 claim itself is read again. A proxy can change claimedPublicKeySpkiPem after signature verification, so later role/key or reference comparisons must use the same claim snapshot that was mathematically checked.",
+  "guardrail": "Take a strict own-data-descriptor snapshot of the complete untrusted signature claim before the first math check; pass that immutable primitive-value snapshot through claimed-anchor and synthetic-reference correlation. Do not reread the original caller claim after verification. Preserve literal independentAuthorityVerified=false and scoringAuthorized=false on all paths.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T18:59:24.656Z",
+  "productionConnection": false,
+  "_digest": "6db58ace14ec604fe660f26a2a803b961443a3549c08473484dc7aba8e77bddc",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T18:59:24.656Z"
+}

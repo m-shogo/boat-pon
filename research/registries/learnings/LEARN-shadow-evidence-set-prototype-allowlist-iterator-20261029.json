@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-set-prototype-allowlist-iterator-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-set-allowlist-iterator-admission-bypass",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-exact-object-fields",
+  "symptom": "Research-only synthetic Node 22.16.0 audit found that the shadow-evidence validator relied on mutable Set.prototype.has for allowed-field admission and on Set.prototype[Symbol.iterator] for required-field admission. A selective Set.has hook could admit unapproved top-level metadata; an empty Set iterator could skip a missing required privacy field after the evidence was re-digested. No production data or actual source evidence was involved.",
+  "rootCauseClass": "AMBIENT_SET_MEMBERSHIP_AND_ITERATOR_SHADOW_EVIDENCE_ADMISSION_BYPASS",
+  "attemptSignature": "pr2286-v431-shadow-evidence-set-has-iterator-required-fields-failclosed-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@f73f8ab6/Set.has-and-for-of-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/23a4755011f6eb1dd9fbc2251073ff4e3c53fcb3",
+    "commit/dc4ffe1ef6b9ec009362092fa864fc717c27ba70",
+    "research/registries/learnings/LEARN-runtime-ledger-set-prototype-admission-bypass-20261029.json",
+    "research/registries/learnings/LEARN-outcome-ledger-set-prototype-allowlist-duplicate-evidence-20261029.json"
+  ],
+  "lesson": "A reusable Set-admission guardrail must also cover sanitized shadow-evidence validation. Fixed-schema required-field loops and unknown-field membership checks are both part of the fail-closed evidence boundary, even when a content digest is valid.",
+  "guardrail": "Use module-owned indexed literal allowlists and index-based required-field loops, including forbidden metadata checks and verdict membership, rather than mutable Set.has or Set iteration. Regression-test selective unknown-field Set.has forgery and empty Set iterator missing-privacy-field admission; retain canonical digest and production isolation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T22:05:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T22:05:00.000Z",
+  "_digest": "271b234850c27fe443c696e1fad9caad5983b0cd25caff518a503f0e1f705199"
+}

@@ -1,0 +1,34 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-prototype-ownkeys-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-synthetic-prototype-ownkeys-pre-descriptor-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "snapshot-forward-v02-synthetic-claim-and-reference",
+  "symptom": "Standalone synthetic claim and reference snapshots invoked caller-controlled getPrototypeOf and ownKeys Proxy traps before copying expected data descriptors. A trap could repair an initially invalid Ed25519 signature or revoked reference before capture, laundering a later deny-only consistency flag. This never conferred independent trust or scoring authority.",
+  "rootCauseClass": "SYNTHETIC_PRE_DESCRIPTOR_PROTOTYPE_OR_OWNKEYS_PROXY_REPAIR",
+  "attemptSignature": "pr2286-v324-pin-synthetic-descriptors-before-prototype-ownkeys-four-negative-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticClaimAndReference.0.1-untrusted/pr2286-d882a48d/prototype-ownkeys-before-descriptor-capture"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.ts",
+    "src/research/governance/forwardV02SyntheticReferenceAnchorConflict.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/fdf0e42c0dd6720c4642c87300c084ec5fdefa55",
+    "commit/23bc192f3106853e863bdf70e6bd9ebf4c6036e9",
+    "commit/4f592fbf840e32ca94e98caa90dcdbf528d07dc3",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-pre-snapshot-membership-repair-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-reference-late-mutation-20261025.json"
+  ],
+  "lesson": "Removing live toJSON membership probes did not remove all pre-descriptor mutation surfaces: prototype and own-key enumeration Proxy traps still ran before the fields were captured. Snapshot ordering inside each helper matters independently of cross-input ordering.",
+  "guardrail": "For deny-only synthetic claim/reference snapshots, read all expected own enumerable data descriptors first; then validate prototype and exact own-key count without rereading mutable values. Regressions must fire getPrototypeOf and ownKeys traps, demonstrate that caller data was repaired after capture, and still reject the original invalid signature or revoked reference. Keep independentAuthorityVerified=false and scoringAuthorized=false; do not claim atomic snapshots across separate malicious inputs.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T08:04:00.000Z",
+  "productionConnection": false,
+  "_digest": "eee04c269bc14a22bcb386eb96eaa2473b1ffbafe3d88b5cf1657da787cbfef1",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T08:04:00.000Z"
+}

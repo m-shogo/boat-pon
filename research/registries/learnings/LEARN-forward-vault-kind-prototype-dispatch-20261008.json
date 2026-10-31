@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-kind-prototype-dispatch-20261008",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.kind-prototype-dispatch",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-record-and-append-classification",
+  "symptom": "Malformed kind values toString, constructor and __proto__ pass the inherited-property membership check and throw TypeError during field dispatch instead of returning invalid-kind classification.",
+  "rootCauseClass": "INHERITED_KIND_DISPATCH_TYPEERROR",
+  "attemptSignature": "forward-vault-kind-in-fields-prototype-inheritance",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-canonical-main/research-governance",
+    "materialStateKey": "forward-evaluation-vault.0.1/in-operator-kind-dispatch"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "docs/architecture/forward-evaluation-vault.md",
+    "pull/2286"
+  ],
+  "lesson": "Using the in operator for record-kind dispatch accepts inherited Object.prototype names. An invalid JSON record can crash the TypeScript validator and append classifier rather than being rejected as REJECTED_INVALID; schema validation elsewhere does not make this path safe.",
+  "guardrail": "Use an own-property check such as Object.hasOwn for record-kind lookup. Regression-test toString, constructor and __proto__ through both validateForwardVaultRecord and classifyForwardVaultAppend. Do not treat a thrown exception as a valid vault record or authorize production changes.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-08T00:07:03.000Z",
+  "productionConnection": false,
+  "_digest": "1b4f0d6a6419c916bf7aeb62bcdf0c550924c777a1bc7e9887dddb31a926f6af",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-08T00:07:03.000Z"
+}

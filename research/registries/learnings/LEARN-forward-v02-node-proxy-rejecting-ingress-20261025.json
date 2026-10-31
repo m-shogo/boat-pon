@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-node-proxy-rejecting-ingress-20261025",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-vault.v02-node-proxy-rejecting-ingress",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "snapshot-forward-v02-untrusted-graph-opt-in-node-proxy-rejection",
+  "symptom": "Deep-first and shallow-first descriptor traversal each admit a different malicious Proxy mutation order. An opt-in Node.js ingress prototype must deny nested and revoked Proxies before any caller trap while preserving the established legacy research snapshot and its regression suite.",
+  "rootCauseClass": "MALICIOUS_PROXY_GRAPH_NONATOMIC_DESCRIPTOR_CAPTURE",
+  "attemptSignature": "pr2286-v333-opt-in-node-util-types-isProxy-before-traps-five-negative-and-positive-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedSnapshot.0.1/pr2286-v332-reverted-deep-first-plus-v333-strict-opt-in"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/2e93d76bedb90d7ae84db172e322ab8e8b953e50",
+    "commit/8e47b982a6e8dcc30557dd474c0db300807616e4",
+    "actions/runs/40195978187",
+    "src/research/governance/forwardV02UntrustedSnapshot.ts",
+    "src/research/governance/forwardV02UntrustedSnapshot.strictProxyBoundary.test.ts",
+    "research/registries/learnings/LEARN-forward-v02-two-phase-sibling-pin-deep-capture-regression-20261025.json"
+  ],
+  "lesson": "A trusted Node.js util.types.isProxy check can reject caller-owned Proxy nodes, including revoked and nested proxies, before running descriptor, prototype or ownKeys traps. This is a distinct fail-closed trust-boundary method, not another traversal-order rearrangement. It is only a reusable opt-in research ingress primitive, not an integrated verifier or an atomic snapshot guarantee for arbitrary concurrent actors.",
+  "guardrail": "For future Node-only, untrusted-metadata admission, prefer a reviewed opt-in proxy-rejecting boundary and test both nested-child-to-later-sibling and later-descriptor-to-earlier-child mutation families, revoked proxies, ordinary detached objects and accessor rejection. Preserve existing legacy snapshot callers and tests until individually migrated and independently verified. Do not claim independent authority, scoring permission or portable browser guarantees.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-25T13:06:24.274Z",
+  "productionConnection": false,
+  "_digest": "c6301dd27f890f17e0ce096d427d5f9c9603ac80d0a339f2ce0bd29e5dfa265e",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T13:06:24.274Z"
+}

@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-outcome-ledger-schema-unicode-nonblank-parity-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.schema-unicode-nonblank-parity",
+  "subsystem": "research-governance-outcome-ledger",
+  "operation": "validate-outcome-ledger-schema-nonblank-strings",
+  "symptom": "Outcome Ledger JSON Schema minLength:1 admits whitespace-only identity and refundReason strings that the TypeScript runtime rejects; a generic \\S would also disagree across ECMAScript and Python on U+FEFF/U+0085.",
+  "rootCauseClass": "SCHEMA_RUNTIME_UNICODE_NONBLANK_ADMISSION_DRIFT",
+  "attemptSignature": "outcome-schema-nine-nonblank-fields-unicode-parity-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-pr2286/node22-python-jsonschema4.26/research-only",
+    "materialStateKey": "outcome-learning-ledger.0.1/schema-minLength-only-vs-runtime-trim@d9e6a427"
+  },
+  "evidenceRefs": [
+    "config/research-governance/outcome-learning-ledger.schema.json",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedgerSchemaNonblankParity.test.ts",
+    "pull/2286"
+  ],
+  "lesson": "JSON Schema minLength:1 does not enforce the ECMAScript trim-based nonblank runtime contract; explicit code-point ranges avoid cross-validator \\S divergence.",
+  "guardrail": "For Outcome Ledger identity and refundReason fields, use the exact ECMAScript trim whitespace complement pattern; test U+FEFF, U+0085 and all whitespace code points against runtime and JSON Schema. Reuse the Forward Vault unicode parity guardrail.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-20T02:12:40.000Z",
+  "productionConnection": false,
+  "_digest": "da07fb628063d584eb5edc1c6aaca875c6a559e2877175a24b22e1b0c89a4129",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-20T02:12:40.000Z"
+}

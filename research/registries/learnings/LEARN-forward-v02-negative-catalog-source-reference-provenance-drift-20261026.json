@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-negative-catalog-source-reference-provenance-drift-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-negative-catalog-source-reference-provenance-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-offline-independent-verifier-negative-catalog-source-references",
+  "symptom": "The v354 deny-only catalog test pinned top-level field names, global custody rules and 18 denial cases but did not validate sourceRefs values. A catalog with a deleted, duplicated, replaced or authority-looking injected evidence reference would still satisfy the existing static contract test. This was a specification provenance-integrity gap, not executed verifier evidence or production/scoring authorization.",
+  "rootCauseClass": "NEGATIVE_CATALOG_SOURCE_REFERENCES_UNPINNED",
+  "attemptSignature": "pr2286-v355-pin-source-reference-set-and-mutation-test",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-negative-fixtures.0.1-spec/pr2286-v354-closed-root-unpinned-sourceRefs"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "reports/research/forward-v02-independent-verifier-negative-vectors-20261026.json",
+    "src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts",
+    "commit/22781fbc822b0b7222a0c0a35b582078638ced35",
+    "actions/runs/40297073494"
+  ],
+  "lesson": "A closed JSON top-level key vocabulary does not validate the meaning of a nested provenance list. Reviewers can be misled by substituted or forged evidence references even when every negative vector remains unscorable.",
+  "guardrail": "Pin the exact reviewed sourceRefs set independently in a static contract test; reject deletion, duplication, substitution and appended authority-looking references. References remain navigation only, never independent proof or an authorization gate; reviewed additions require an explicit synchronized test update.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T09:07:29.372Z",
+  "productionConnection": false,
+  "_digest": "2a83956943fee9440d5424bd5d845845324d6e160b3e5e2efb0256f23e908ad3",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T09:07:29.372Z"
+}

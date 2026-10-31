@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
+import { isolatedResearchNodeChildEnv } from "./researchNodeChildEnv.js";
 
 const HELPER_URL = pathToFileURL(resolve(process.cwd(), "scripts/read-safe-utf8.mjs")).href;
 const EVAL = `import { readSafeUtf8 } from ${JSON.stringify(HELPER_URL)};\nconst options = { label: "test file" }; if (process.argv[2] !== "-") options.maxBytes = Number(process.argv[2]); if (process.argv[3]) options.baseDir = process.argv[3]; try { process.stdout.write(readSafeUtf8(process.argv[1], options)); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exit(1); }`;
@@ -12,7 +13,7 @@ const EVAL = `import { readSafeUtf8 } from ${JSON.stringify(HELPER_URL)};\nconst
 function readViaHelper(path: string, maxBytes?: number, baseDir?: string): { status: number; output: string } {
   try {
     const args = ["--input-type=module", "--eval", EVAL, path, maxBytes === undefined ? "-" : String(maxBytes), baseDir ?? ""];
-    const stdout = execFileSync(process.execPath, args, { encoding: "utf8", stdio: "pipe" });
+    const stdout = execFileSync(process.execPath, args, { encoding: "utf8", stdio: "pipe", env: isolatedResearchNodeChildEnv() });
     return { status: 0, output: stdout };
   } catch (error) {
     const failed = error as { status?: number; stdout?: string; stderr?: string };

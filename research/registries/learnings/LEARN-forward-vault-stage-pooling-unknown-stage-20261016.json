@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-stage-pooling-unknown-stage-20261016",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.stage-pool-unknown-stage-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "canPoolStages-runtime-stage-admission",
+  "symptom": "In the v96 offline candidate, canPoolStages returned true for a singleton unknown stage, undefined, or a sparse array, because it only compared Set cardinality. The negative fixture failed before the guard.",
+  "rootCauseClass": "STAGE_POOL_HELPER_CHECKED_CARDINALITY_WITHOUT_ENUM_OR_ARRAY_VALIDATION",
+  "attemptSignature": "v96-stage-pool-unknown-stage-and-malformed-array-negative-fixture",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/typescript-nodenext/offline-pr2286-v96",
+    "materialStateKey": "pr2286-e95df064-plus-v96-canPoolStages-set-size-only"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.stageAdmissionBoundary.test.ts"
+  ],
+  "lesson": "A single unknown evidence stage is not safe merely because it cannot be mixed with another stage. A pooling gate must validate the stage enum and array structure before comparing cardinality.",
+  "guardrail": "Fail closed for unrecognized stage values, sparse or accessor arrays, and non-array runtime inputs; preserve legitimate same-stage pooling and reject mixed stages. Do not infer executor enforcement until the code is committed and CI verified.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-15T18:00:04.168Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-15T18:00:04.168Z",
+  "_digest": "18ddcdd7d8cdbb31b981492576f742fb83b81819f02c4931e089c5b3093b6f97"
+}

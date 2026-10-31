@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-linux-fd-exec-scm-rights-lifetime-20261028",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-vault.linux-fd-exec-and-scm-rights-transfer-lifetime",
+  "subsystem": "research-governance-forward-vault-linux-directory-fd-transfer",
+  "operation": "disposable-cloexec-explicit-passfds-and-scm-rights-after-sender-close",
+  "symptom": "In a disposable Linux synthetic probe, O_CLOEXEC prevented an otherwise permissive exec from inheriting a directory descriptor, while explicit pass_fds intentionally granted the same live object. SCM_RIGHTS conveyed a live directory FD to a receiver, which read exact synthetic bytes after the sender closed its copy. These are process capability-lifetime semantics, not authenticated provenance or production readiness.",
+  "rootCauseClass": "LINUX_EXEC_AND_SCM_RIGHTS_DIRECTORY_FD_CAPABILITY_LIFETIME",
+  "attemptSignature": "pr2286-v391-disposable-cloexec-explicit-passfds-and-scm-rights-after-close",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-node22-python3+github-actions-linux-node24-python3",
+    "materialStateKey": "pr2286-v390-live-dup-process-local-lifetime-v391-cross-process-capability-transfer"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.dirfdTransferLinux.test.ts",
+    "reports/research/forward-vault-linux-fd-exec-scm-rights-transfer-20261028.md",
+    "commit/3c10cf30febe96432699a838b8914e07495a0e65",
+    "commit/e06af0b560a252f88feabcf696b36a5cefd1fd6e",
+    "actions/runs/40537195885"
+  ],
+  "lesson": "O_CLOEXEC is a default exec inheritance boundary, not a ban on deliberate descriptor grants. Explicit pass_fds can expose the descriptor to an exec child, and SCM_RIGHTS transfers a live kernel directory reference even when the sender closes its own FD. Neither the receiver's fstat match nor successful FD-relative read authenticates the sender, initial directory provenance, namespace reachability or durable storage.",
+  "guardrail": "Treat directory FDs as owned capabilities across process boundaries. Preserve O_CLOEXEC by default, require explicit authorized grants, validate ancillary-message count/truncation and peer authorization, bind a separately authenticated directory identity to the handoff, and fail closed on transfer or lifetime errors. Reuse prior closed-FD reuse and Python-source escaping guardrails. Do not introduce production native bridging, Current BUY/LINE/public/automated betting, protected N2 activation or automatic recovery.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-27T16:04:11.644Z",
+  "productionConnection": false,
+  "_digest": "994615b02e1f247f112a1b3aff37d8643cbfb16688f6e354305dddee025e2794",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T16:04:11.644Z"
+}

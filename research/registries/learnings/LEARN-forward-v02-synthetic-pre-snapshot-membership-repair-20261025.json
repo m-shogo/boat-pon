@@ -1,0 +1,35 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-pre-snapshot-membership-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-synthetic-pre-snapshot-membership-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "snapshot-forward-v02-synthetic-claim-and-reference",
+  "symptom": "The standalone synthetic signature-claim and reference-anchor snapshots checked toJSON membership on the caller's live Proxy before copying own data descriptors. A has trap could replace an initially invalid Ed25519 signature with the matching signature, or change a revoked reference to ACTIVE, before the snapshot; the later deny-only consistency flag could then become true. No independent authentication or scoring was granted.",
+  "rootCauseClass": "SYNTHETIC_CLAIM_REFERENCE_LIVE_HAS_TRAP_BEFORE_DESCRIPTOR_SNAPSHOT",
+  "attemptSignature": "pr2286-v322-no-live-tojson-has-probe-claim-reference-two-negative-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticClaimAndReference.0.1-untrusted/pr2286-f4144507/live-toJSON-has-before-descriptor-copy"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.ts",
+    "src/research/governance/forwardV02SyntheticReferenceAnchorConflict.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/2cb551a988a9b3efb4e6a643fb375cef53215882",
+    "commit/1c4c37bf8cd0622ac701dfa79ebfd094aaa5046c",
+    "commit/3e0708ffde062fb9a24ed45570e612b49ba34dcc",
+    "research/registries/learnings/LEARN-forward-v02-standalone-signature-claim-late-snapshot-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-reference-late-mutation-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-batch-pre-snapshot-live-proxy-probes-20261025.json"
+  ],
+  "lesson": "Snapshotting before signature math is insufficient if the snapshot helper itself runs a live membership trap before reading the descriptors. An apparently harmless toJSON check can mutate the very signature or reference status that is about to be copied.",
+  "guardrail": "Do not perform toJSON membership checks on untrusted claim/reference Proxies before copying own descriptors. Preserve exact own-key admission, reject inherited toJSON via the known built-in prototype only, and test that live has traps never execute while invalid signatures and revoked references remain denied. These are caller-supplied synthetic metadata, not independent trust roots; independentAuthorityVerified and scoringAuthorized stay false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T06:06:58.000Z",
+  "productionConnection": false,
+  "_digest": "d1fcb558c104b53b176f0fd29b3d978e380ef46870830343bd39dd817aca1e59",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T06:06:58.000Z"
+}

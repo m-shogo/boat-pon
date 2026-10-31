@@ -1,0 +1,35 @@
+{
+  "learningId": "LEARN-runtime-ledger-ambient-array-admission-digest-drift-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.ambient-array-admission-digest-drift",
+  "subsystem": "research-governance-runtime-decision-ledger",
+  "operation": "validate-runtime-decision-record-and-canonical-digest",
+  "symptom": "Synthetic empty Array.prototype iterator can bypass runtime ledger own-field inspection, required-string and nullable-number checks, and Gregorian date capture validation. Synthetic no-op Array.from/map/sort can erase canonical digest array contents or key ordering, aliasing distinct valid records or making reordered equivalents differ. No live evidence corruption or production impact was observed.",
+  "rootCauseClass": "MUTABLE_ARRAY_ITERATOR_AND_HELPER_ADMISSION_DIGEST_DRIFT",
+  "attemptSignature": "pr2286-v363-runtime-ledger-empty-iterator-and-empty-from-map-sort-synthetic-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic+github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtime-decision-ledger.0.1/pr2286-v362-iterator-dependent-admission-and-helper-canonicalization"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedger.ts",
+    "src/research/governance/runtimeDecisionLedgerExactInstant.test.ts",
+    "src/research/governance/runtimeDecisionLedgerCanonicalDigest.test.ts",
+    "commit/f4abb5389b8e628f0430bed436684ba28e67c5e0",
+    "commit/8f0527ea6ea987a9fb9f5e5fb99adcd1ffb17a6e",
+    "commit/af97e9b2b16c74666f191634ea6e23193bb85b9a",
+    "commit/dd3a645d25236841c17a9d53afb13ac2b7bbd9d0",
+    "research/registries/learnings/LEARN-outcome-ledger-array-iterator-admission-bypass-20261021.json",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-helpers-20261024.json"
+  ],
+  "lesson": "Validation and hashing share an ambient JavaScript trust boundary: a correct field schema is insufficient when iterator-dependent admission or mutable array helpers can skip checks, erase arrays or reorder digest keys. A change in subsystem does not reset the root-cause learning gate.",
+  "guardrail": "Use indexed RegExp captures and indexed own-descriptor loops for admission, and deterministic indexed array copying plus explicit key ordering for canonical hashes. Regression-test malformed dates, missing/unknown fields, and distinct/reordered synthetic records under reversible empty iterators and no-op Array.from/map/sort. Do not infer independent evidence authenticity or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T17:09:22.614Z",
+  "productionConnection": false,
+  "_digest": "9ab7912ba2e9f612e3b7e237b21a10266e82c7c13d17e5cb9b1ac43bb4751360",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T17:09:22.614Z"
+}

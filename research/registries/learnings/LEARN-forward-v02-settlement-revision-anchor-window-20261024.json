@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-settlement-revision-anchor-window-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-settlement-revision-anchor-window-laundering",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-trust-policy-settlement-revision-anchor-windows",
+  "symptom": "The unmerged v292 deny-only trust-policy preflight checked the settlement trust anchor's validity window only at the last FINAL revision. A synthetic earlier PROVISIONAL revision outside that key window could pass metadata consistency when the later FINAL was in-window. No independent proof, private evidence or production path was used.",
+  "rootCauseClass": "TERMINAL_ONLY_SETTLEMENT_ANCHOR_WINDOW_CHECK_OMITS_PREDECESSOR_REVISIONS",
+  "attemptSignature": "pr2286-v293-synthetic-all-revision-settlement-anchor-window-deny-only-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-pr-node24-ci",
+    "materialStateKey": "forwardV02TrustPolicyPreflight.0.1-untrusted/pr2286-bd6a06b0/terminal-only-settlement-anchor-window"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02TrustPolicyPreflight.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "commit/6ae02e26d56e725fd9ec6b27b0cf545d52cdd81e",
+    "commit/92a35dc7fb73ac84437af1ffe908dd192c8f26dc"
+  ],
+  "lesson": "A valid terminal correction does not retroactively validate earlier settlement revisions under an envelope-wide trust anchor. Checking only the last revision's key window permits out-of-window predecessor metadata to appear consistent, even though the evidence is untrusted and unscorable.",
+  "guardrail": "For a settlement envelope that names one trust anchor for its correction chain, validate the anchor's issuer, role, state and validity interval at every revision observedAt, not only the terminal revision. Preserve a negative provisional-outside/FINAL-inside fixture and a positive all-inside fixture. Return independentAuthorityVerified=false and scoringAuthorized=false throughout; external attestation remains separately blocked.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T09:06:00.000Z",
+  "productionConnection": false,
+  "_digest": "b8487bbe114b243882d5da426d4ec4e6ac40bdac8ad65c083303b44644d19e64",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T09:06:00.000Z"
+}

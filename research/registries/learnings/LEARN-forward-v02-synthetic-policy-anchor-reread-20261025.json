@@ -1,0 +1,37 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-policy-anchor-reread-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-synthetic-policy-anchor-reread-after-math",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-synthetic-claimed-anchor-and-reference",
+  "symptom": "The synthetic claimed-anchor helper verified an Ed25519 claim against a preflighted caller policy, then read caller-owned policy.anchors again for key correlation. A descriptor proxy could substitute a different publicKeyDigest on the later read, producing a matching claimed-anchor flag for a key absent from the validated policy. The outer synthetic-reference helper repeated the same caller policy across phases. No independent authority or scoring was granted.",
+  "rootCauseClass": "UNTRUSTED_POLICY_ANCHOR_REREAD_AFTER_SIGNATURE_MATH",
+  "attemptSignature": "pr2286-v306-pin-untrusted-policy-before-math-and-reference-correlation",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticClaimedAnchorBinding.0.1-untrusted/pr2286-9310c76d/policy-anchor-reread-after-math"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.ts",
+    "src/research/governance/forwardV02SyntheticClaimedAnchorBinding.ts",
+    "src/research/governance/forwardV02SyntheticReferenceAnchorConflict.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/d18e0b6498f10d27d86d7151985403a6781aa88f",
+    "commit/f3f1a04eea7dec0ba5e28ee70fd62d65c2c7afb8",
+    "commit/7034a18ca1df938afc0f46974ecb906e6684d19a",
+    "commit/bcb75f7642a57eea36c3450f35f991668eb9cc97",
+    "github-actions/run-40132739926",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-claim-key-swap-20261025.json"
+  ],
+  "lesson": "A full signed-request digest can remain unchanged while a caller-owned trust-policy anchor digest is swapped after mathematical signature verification. Correlating the key against a later policy graph can falsely report matching caller claims even though no real external trust exists.",
+  "guardrail": "Take one bounded descriptor-only detached snapshot of caller-supplied policy before signature math and all subsequent claimed-anchor/reference comparisons. Pass that same snapshot through every phase, never reread caller-owned anchors after preflight, and keep literal independentAuthorityVerified=false and scoringAuthorized=false. Regression tests should assert the original policy is read once and that a later attempted key swap cannot produce a match.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T21:06:52.523Z",
+  "productionConnection": false,
+  "_digest": "eb4eed8eafad6ad1e2819bb82181eaaa813cd5f49fc949ab20683adaf0ba4e7e",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T21:06:52.523Z"
+}

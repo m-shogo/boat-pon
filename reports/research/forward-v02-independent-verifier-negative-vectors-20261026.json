@@ -1,0 +1,217 @@
+{
+  "schemaVersion": "forward-v02-independent-verifier-negative-fixtures.0.1-spec",
+  "status": "SPECIFICATION_ONLY_NOT_EXECUTABLE",
+  "evidenceStage": "SYNTHETIC_OFFLINE_DESIGN",
+  "productionConnection": false,
+  "scoringAuthorized": false,
+  "independentAuthorityVerified": false,
+  "requestContract": "forward-v02-independent-proof-request.0.1-untrusted",
+  "responseContract": "forward-v02-independent-proof-response.0.2-untrusted",
+  "authoritySeparation": {
+    "callerClaims": "Only allowlisted immutable metadata request/response; digests, issuer IDs, timestamps and claimed FINAL/VERIFIED never become trust roots.",
+    "independentWitness": "Future verifier must separately provision reviewed issuer trust, append-only inclusion and trusted ordering/clock, revocation freshness and prospective eligible-universe proof.",
+    "independentSettlement": "Future verifier must separately provision source trust and source-specific total ordering/finality/correction policy; verify complete revision chain and ticket/refund semantics.",
+    "protocol": "Approval of formula, stage, frozen cohort, denominator and exclusions is separate from authenticating both evidence chains."
+  },
+  "fixtures": [
+    {
+      "caseId": "W01",
+      "lane": "FREEZE",
+      "mutation": "CALLER_SELF_SIGNED_RECEIPT",
+      "independentFixtureState": "NO_INDEPENDENT_TRUST_ROOT",
+      "expectedDenial": "UNVERIFIED_WITNESS",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Matching request digest and caller-selected issuer/key never establish independence."
+    },
+    {
+      "caseId": "W02",
+      "lane": "FREEZE",
+      "mutation": "RECEIPT_SIGNED_BY_UNAPPROVED_ISSUER",
+      "independentFixtureState": "INDEPENDENT_TEST_TRUST_ROOT_PRESENT",
+      "expectedDenial": "UNVERIFIED_WITNESS",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Cryptographic validity under an unapproved issuer is insufficient."
+    },
+    {
+      "caseId": "W03",
+      "lane": "FREEZE",
+      "mutation": "RECEIPT_WITHOUT_APPEND_ONLY_INCLUSION",
+      "independentFixtureState": "INDEPENDENT_TEST_TRUST_ROOT_PRESENT",
+      "expectedDenial": "UNVERIFIED_WITNESS",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "A signature without the approved inclusion/ordering proof is not a prospective freeze."
+    },
+    {
+      "caseId": "W04",
+      "lane": "FREEZE",
+      "mutation": "WITNESS_COMMIT_EQUALS_EARLIEST_DECISION",
+      "independentFixtureState": "INDEPENDENT_TEST_CLOCK_PROOF_PRESENT",
+      "expectedDenial": "AFTER_DECISION",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Receipt commit must be strictly earlier, not equal."
+    },
+    {
+      "caseId": "W05",
+      "lane": "FREEZE",
+      "mutation": "ELIGIBLE_UNIVERSE_OMITS_PREDECLARED_MEMBER",
+      "independentFixtureState": "INDEPENDENT_TEST_MEMBERSHIP_PROOF_PRESENT",
+      "expectedDenial": "MISSING_MEMBERSHIP",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "An included-only digest cannot prove the complete eligible universe."
+    },
+    {
+      "caseId": "W06",
+      "lane": "FREEZE",
+      "mutation": "REVOCATION_STATE_MISSING_OR_STALE",
+      "independentFixtureState": "INDEPENDENT_TEST_TRUST_ROOT_PRESENT",
+      "expectedDenial": "UNVERIFIED_WITNESS",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "No inference from caller's REVIEWED or ACTIVE flags."
+    },
+    {
+      "caseId": "W07",
+      "lane": "FREEZE",
+      "mutation": "SIGNED_RECEIPT_BINDS_DIFFERENT_PROTOCOL_DIGEST",
+      "independentFixtureState": "INDEPENDENT_TEST_RECEIPT_PRESENT",
+      "expectedDenial": "CONFLICT",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Witness signature must bind the exact prospective protocol and membership digests."
+    },
+    {
+      "caseId": "S01",
+      "lane": "SETTLEMENT",
+      "mutation": "CALLER_FINAL_AND_EXACT_WITHOUT_SOURCE_PROOF",
+      "independentFixtureState": "NO_INDEPENDENT_SOURCE_ATTESTATION",
+      "expectedDenial": "UNVERIFIED_SOURCE",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "FINAL and EXACT are claims, not source authority."
+    },
+    {
+      "caseId": "S02",
+      "lane": "SETTLEMENT",
+      "mutation": "FINAL_REVISION_PREDECESSOR_MISSING",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "INCOMPLETE_REVISION_CHAIN",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Terminal status cannot erase a predecessor gap."
+    },
+    {
+      "caseId": "S03",
+      "lane": "SETTLEMENT",
+      "mutation": "TWO_CHILDREN_SHARE_PREDECESSOR_WITHOUT_SUPERSESSION_RULE",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "CONFLICT",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "A fork cannot be resolved by local observedAt ordering."
+    },
+    {
+      "caseId": "S04",
+      "lane": "SETTLEMENT",
+      "mutation": "SAME_SOURCE_REVISION_ID_TWO_CONTENT_DIGESTS",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "CONFLICT",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Source-scoped revision equivocation fails closed."
+    },
+    {
+      "caseId": "S05",
+      "lane": "SETTLEMENT",
+      "mutation": "LATEST_OBSERVATION_LACKS_AUTHENTICATED_TERMINALITY",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "UNRESOLVED_FINALITY",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Latest seen is not the terminal source revision."
+    },
+    {
+      "caseId": "S06",
+      "lane": "SETTLEMENT",
+      "mutation": "TWO_TERMINAL_REVISIONS_WITHOUT_TRUSTED_TOTAL_ORDER",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "CONFLICT",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Do not use caller sequence or local timestamp to break a source tie."
+    },
+    {
+      "caseId": "S07",
+      "lane": "SETTLEMENT",
+      "mutation": "SOURCE_RECORD_TICKET_OR_DECISION_ID_MISMATCH",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "UNRESOLVED_IDENTITY",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Race-only matching is insufficient for exact ticket settlement."
+    },
+    {
+      "caseId": "S08",
+      "lane": "SETTLEMENT",
+      "mutation": "REFUND_VOID_INVALIDATION_MARKED_EVALUABLE",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "UNRESOLVED_REFUND_OR_INVALIDATION",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Never count excluded refunds as ROI losses."
+    },
+    {
+      "caseId": "S09",
+      "lane": "SETTLEMENT",
+      "mutation": "TRUST_ANCHOR_REVOKED_AT_PREDECESSOR_REVISION",
+      "independentFixtureState": "INDEPENDENT_TEST_SOURCE_PROOF_PRESENT",
+      "expectedDenial": "UNVERIFIED_SOURCE",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Valid FINAL cannot launder an earlier out-of-window revision."
+    },
+    {
+      "caseId": "X01",
+      "lane": "CONJUNCTION",
+      "mutation": "BOTH_PROOFS_STRUCTURALLY_CONSISTENT_BUT_NOT_AUTHENTICATED",
+      "independentFixtureState": "NO_INDEPENDENT_PROOF",
+      "expectedDenial": "UNVERIFIED_WITNESS",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Metadata-only conjunction remains unverified and unscorable."
+    },
+    {
+      "caseId": "X02",
+      "lane": "CONJUNCTION",
+      "mutation": "CLAIMED_TEST_PROOFS_WITH_UNAPPROVED_EVALUATION_PROTOCOL",
+      "independentFixtureState": "TEST_ONLY_PROOF_SHAPES_NOT_ATTESTED",
+      "expectedDenial": "UNVERIFIED_WITNESS",
+      "expectedIndependentAuthorityVerified": false,
+      "expectedScoringAuthorized": false,
+      "why": "Unattested test-only proof shapes fail the witness-authenticity gate first; the unapproved protocol remains a separate downstream blocker and cannot authorize scoring."
+    }
+  ],
+  "usageRules": [
+    "All cases are negative specification vectors, not executed tests or verified independent evidence.",
+    "Future tests must generate synthetic proof material in an isolated test environment and independently provision the test trust root; do not copy private keys or source credentials into Git.",
+    "Use the immutable proof request builder output only as caller claims. Never accept caller-supplied trusted, VERIFIED, FINAL, sourceAuthority or REVIEWED fields as trust configuration.",
+    "Enforce failure precedence: malformed input -> trust/proof authenticity -> chronology/inclusion/completeness -> source revision ordering/terminality -> exact ticket/refund reconciliation -> protocol approval.",
+    "Do not infer a successful positive attestation from absence of any one denial; each lane needs an independently reviewed positive control before future authorization work.",
+    "Never call protected N2 or touch Current BUY, LINE, public publishing, production settings or automated betting for fixture validation.",
+    "For X02, absent independent proof is the first causal denial (UNVERIFIED_WITNESS); UNAPPROVED_PROTOCOL remains a downstream blocker and must not mask failed authenticity."
+  ],
+  "sourceRefs": [
+    "docs/architecture/research-learning-loop.md",
+    "docs/architecture/research-knowledge-retention-contract.md",
+    "reports/research/forward-v02-independent-authority-evidence-contract-20261024.md",
+    "reports/research/forward-v02-independent-proof-request-handoff-20261024.md",
+    "reports/research/forward-v02-untrusted-verifier-response-quarantine-20261024.md",
+    "research/registries/learnings/LEARN-forward-v02-partial-verifier-request-binding-20261024.json",
+    "research/registries/learnings/LEARN-forward-v02-terminal-proof-ref-fixture-drift-20261024.json",
+    "research/registries/learnings/LEARN-forward-v02-settlement-revision-anchor-window-20261024.json"
+  ]
+}

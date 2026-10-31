@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-metric-family-protocol-mismatch-20261008",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.result-metric-family-outside-protocol",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "match-evaluation-result-to-frozen-protocol",
+  "symptom": "resultMatchesProtocol returns true when result.metricFamily is absent from evaluationProtocol.metricFamilies, as long as stage, ID/digest, comparison mode and odds basis match.",
+  "rootCauseClass": "MISSING_PROTOCOL_METRIC_FAMILY_MEMBERSHIP_CHECK",
+  "attemptSignature": "forward-vault-result-matches-protocol-omits-metric-families",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-canonical-main/research-governance",
+    "materialStateKey": "forward-evaluation-vault.0.1/resultMatchesProtocol-no-metric-family-membership"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.test.ts",
+    "docs/architecture/forward-evaluation-vault.md",
+    "pull/2286"
+  ],
+  "lesson": "A result can be structurally valid yet use a metric family not authorized by its frozen evaluation protocol. Protocol matching must enforce metric-family membership as well as digest, stage, comparison mode and odds basis.",
+  "guardrail": "In resultMatchesProtocol, require protocol.metricFamilies.includes(result.metricFamily). Add a fixture where the protocol permits ROI only and a result declares LOGLOSS; it must return false. Keep research-only and do not infer evaluation or production readiness.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-08T03:03:51.504Z",
+  "productionConnection": false,
+  "_digest": "88d61b15d378a2e18549bc42fe7dd0e1918464f9c709a78be8d63db7c47c037d",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-08T03:03:51.504Z"
+}

@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-research-automation-legacy-unknown-mode-fallthrough-20261031",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.legacy-task-mode.unknown-subcommand-fallthrough",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "audit-legacy-cli-unknown-mode-executor-reachability",
+  "symptom": "On the pinned Draft research PR, the deprecated task mode exits 3, but any unrecognized positional mode other than validate-request could bypass that exact-string guard, parse a valid request, and reach the legacy queue/executor branch. This is static conditional reachability, not an observed execution, workflow dispatch, or N2 activation. A separate fail-closed unknown-mode gate and non-executing regression were added on the Draft PR; canonical main remains unchanged.",
+  "rootCauseClass": "LEGACY_CLI_UNRECOGNIZED_MODE_EXECUTION_FALLTHROUGH",
+  "attemptSignature": "pr2286-v478-unknown-subcommand-allowlist-before-request-parse",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector-pinned-pr-source/github-actions-ubuntu-node24-no-request-cli",
+    "materialStateKey": "legacy-runner-b33083d/unknown-mode-falls-through-task-guard"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "scripts/run-research-task.ts",
+    "src/automation/legacyRunnerTaskDisabled.test.ts",
+    "commit/95310ffb2a8b67c1edb78df91a56cac57f7c742a",
+    "commit/ea92faaeca1ed23072980bed9f7c072dd32f9899",
+    "research/registries/learnings/LEARN-research-automation-legacy-task-fail-closed-verified-20261031.json"
+  ],
+  "lesson": "Disabling one deprecated subcommand by exact string is insufficient when unknown positional modes share a default execution fallthrough. Restrict request parsing to the explicitly supported validate-request mode and reject all other modes before request, lock, queue or executor access.",
+  "guardrail": "Keep the explicit unknown-mode fail-closed exit 3 before legacy request parsing, alongside the task-mode exit. Preserve static source-order and no-request subprocess checks for run-task, execute and case-variant aliases. Do not run a valid legacy request or protected N2 for diagnostics; leave workflow disablement to separately approved operations.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T18:04:45.000Z",
+  "productionConnection": false,
+  "_digest": "71403b6d777c511e2a1f0e36a1fc9d29feb0e586938a6db431602df46e7ed26a",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T18:04:45.000Z"
+}

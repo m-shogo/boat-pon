@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-proof-request-preflight-copy-toctou",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "build-forward-v02-independent-proof-request",
+  "symptom": "The proof-request builder validated caller-owned envelope and proof references, then directly reread the same mutable inputs when constructing an immutable request. A descriptor-backed proxy could supply valid values during preflight and different witness receipt or settlement revision content at handoff. Independent authority and scoring remained denied.",
+  "rootCauseClass": "UNTRUSTED_INPUT_REREAD_BETWEEN_PREFLIGHT_AND_PROOF_REQUEST_COPY",
+  "attemptSignature": "pr2286-v305-descriptor-only-detached-snapshot-before-trust-preflight-and-request-copy",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02IndependentProofRequest.0.1-untrusted/pr2286-46cbbbd0/preflight-validates-original-then-directly-rereads-original"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.ts",
+    "src/research/governance/forwardV02IndependentProofRequest.test.ts",
+    "commit/baa5d24672f20eb8bfcf04266d72b595454d1598",
+    "commit/e03adc6d688db28ed7eece6333c8208c86c55d59",
+    "github-actions/run-40128026240",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-claim-key-swap-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-reference-request-rebuild-drift-20261025.json"
+  ],
+  "lesson": "Strict preflight does not pin caller-owned objects for a later handoff. An immutable output can faithfully freeze values that were never the values validated. Snapshot the complete allowlisted input graph using own data descriptors before semantic validation, then validate and copy only the detached graph.",
+  "guardrail": "For any metadata handoff that validates then copies untrusted input, create a bounded descriptor-only detached snapshot of all input graphs before preflight. Reject accessors, sparse or exotic arrays, symbols and cycles; preserve full revision chains. Use the same snapshot for preflight and request construction, and test witness and revision proxy value drift. Never infer external trust or scoring authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T20:03:37.363Z",
+  "productionConnection": false,
+  "_digest": "9b779167ff88de4e67a2ff36be405fddcc0ebb65c40832e696932b7d21a97deb",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T20:03:37.363Z"
+}

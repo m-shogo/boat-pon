@@ -1,0 +1,34 @@
+{
+  "learningId": "LEARN-forward-v02-proof-request-percent-encoded-local-path-id-20261031",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-v02.proof-request-percent-encoded-local-path-id",
+  "subsystem": "research-governance-forward-vault-v02",
+  "operation": "export-untrusted-independent-proof-request-identifiers",
+  "symptom": "Source inspection of the untrusted metadata-only proof-request builder found that a raw-string local-path regex could admit percent-encoded absolute POSIX, drive, UNC or file-URL path tokens in otherwise allowlisted identifiers. This is a synthetic source-level admission risk; no real private path, secret or raw odds was observed or accessed.",
+  "rootCauseClass": "RAW_ONLY_PATH_TOKEN_GUARD_OMITTED_PERCENT_DECODED_IDENTIFIER_FORMS",
+  "attemptSignature": "pr2286-v499-bounded-four-layer-percent-decoding-before-proof-id-export",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-contents-api/github-actions-ubuntu-node24-synthetic",
+    "materialStateKey": "forwardV02IndependentProofRequest.ts@889e37d4/raw-only-path-token-check"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.ts",
+    "src/research/governance/forwardV02IndependentProofRequest.test.ts",
+    "reports/research/forward-v02-pr2286-percent-encoded-proof-id-privacy-guard-20261031.md",
+    "commit/e2d9a2705158d4054f24024e6d62c343bdee9781",
+    "commit/be7339b0a1e3e2f80702554800b3ce10539338c2",
+    "github-actions/run-41208394897",
+    "LEARN-forward-v02-proof-request-embedded-local-path-id-20261031",
+    "LEARN-github-generated-regex-literal-escape-drift-20261031"
+  ],
+  "lesson": "Lexical checks over untrusted identifier text can miss absolute filesystem paths encoded as percent octets; a later decoder could expose them. This does not prove any real data leak, and raw or decoded identifier metadata is not independent source authority.",
+  "guardrail": "For exported untrusted proof-request identifiers, reuse the raw local-path guard and inspect up to four percent-decoding layers; fail closed on malformed encoded text and on still-encoded octets at the depth bound. Preserve benign encoded HTTPS and namespace identifiers, return only generic PRIVATE_PATH_METADATA with null request and false authority/scoring flags, and test both ordinary and strict Node ingress using synthetic values. Treat the guard as bounded privacy risk reduction, not a universal redactor or source verifier.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-31T14:04:50.712Z",
+  "productionConnection": false,
+  "_digest": "f8f48668fe8c9190b844df6454313a660d5af601f7ed46fc2825fcd1b8f8d588",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-31T14:04:50.712Z"
+}

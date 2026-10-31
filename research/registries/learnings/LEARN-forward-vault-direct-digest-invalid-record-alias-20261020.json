@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-direct-digest-invalid-record-alias-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.direct-digest-unvalidated-record-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "forward-vault-direct-digest-admission",
+  "symptom": "The exported forwardVaultDigest hashes invalid records without calling validateForwardVaultRecord. Distinct non-JSON values such as NaN and null serialize to the same JSON, creating identical digests outside the append admission path.",
+  "rootCauseClass": "DIRECT_DIGEST_API_VALIDATION_BYPASS",
+  "attemptSignature": "negative-test-direct-digest-nonfinite-null-serialization-alias",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node24/research-governance/github-successor",
+    "materialStateKey": "forwardEvaluationVault.ts@2bbff7f128c3f7b29466660cfe6062b0d015402d/direct-digest-unvalidated"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.digestAdmission.test.ts"
+  ],
+  "lesson": "Direct exported digest APIs must enforce the same record admission rules as append and persistence; canonical JSON serialization alone does not establish validity.",
+  "guardrail": "Validate the complete Forward Vault record before hashing; throw TypeError for invalid records and regression-test non-finite/null serialization aliases without changing valid-record digest bytes.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-19T18:55:51.000Z",
+  "productionConnection": false,
+  "_digest": "09c987ff69328c69d61c427792555010fa75a136309e2c720141bdc3465bba66",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T18:55:51.000Z"
+}

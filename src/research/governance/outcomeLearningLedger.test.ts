@@ -100,3 +100,119 @@ test("Outcome Learning Ledger rejects unsafe monetary integers and duplicate evi
   assert.ok(result.errors.includes("stakeYen must be a non-negative safe integer"));
   assert.ok(result.errors.includes("sourceEvidenceDigests must not contain duplicates"));
 });
+
+test("direct Outcome Ledger digest rejects invalid JSON aliases and malformed existing state", () => {
+  const valid = validSettled();
+  const invalidPayouts: unknown[] = [Number.NaN, Infinity, -Infinity, null, undefined, -1, Number.MAX_SAFE_INTEGER + 1, "640"];
+  const nullRecord = { ...valid, payoutYen: null };
+  for (const invalid of invalidPayouts) {
+    const malformed = { ...valid, payoutYen: invalid } as unknown as OutcomeLearningLedgerRecord;
+    assert.equal(validateOutcomeLearningLedgerRecord(malformed).valid, false);
+    assert.throws(() => outcomeLearningLedgerDigest(malformed), TypeError);
+    assert.equal(classifyOutcomeLedgerAppend(valid, malformed), "REJECTED_INVALID");
+    assert.equal(classifyOutcomeLedgerAppend(malformed, valid), "REJECTED_INVALID");
+    if (typeof invalid === "number" && !Number.isFinite(invalid)) {
+      assert.equal(JSON.stringify(malformed), JSON.stringify(nullRecord));
+    }
+  }
+  const missingPayout = { ...valid } as Record<string, unknown>;
+  delete missingPayout.payoutYen;
+  assert.equal(JSON.stringify({ ...valid, payoutYen: undefined }), JSON.stringify(missingPayout));
+  assert.equal(classifyOutcomeLedgerAppend(undefined, valid), "APPEND");
+  assert.match(outcomeLearningLedgerDigest(valid), /^[0-9a-f]{64}$/u);
+});
+
+test("Outcome Ledger JSON admission rejects inherited, exotic, hidden, accessor and sparse evidence", () => {
+  const valid = validSettled();
+  const inherited = Object.create(valid) as OutcomeLearningLedgerRecord;
+  const exotic = Object.assign(new Date("2026-08-05T06:00:00Z"), valid) as unknown as OutcomeLearningLedgerRecord;
+  const hidden = { ...valid };
+  Object.defineProperty(hidden, "payoutYen", { value: 640, enumerable: false, configurable: true });
+  const withSymbol = { ...valid, [Symbol("hidden")]: "not serialized" };
+  let getterReads = 0;
+  const accessor = { ...valid };
+  Object.defineProperty(accessor, "payoutYen", {
+    enumerable: true, configurable: true,
+    get() { getterReads++; return 640; },
+  });
+  const sparse = { ...valid, sourceEvidenceDigests: new Array<string>(1) };
+  const alteredArray = { ...valid, sourceEvidenceDigests: ["a".repeat(64)] };
+  Object.defineProperty(alteredArray.sourceEvidenceDigests, "toJSON", {
+    value() { return ["b".repeat(64)]; }, configurable: true,
+  });
+  for (const malformed of [inherited, exotic, hidden, withSymbol, accessor, sparse, alteredArray]) {
+    assert.equal(validateOutcomeLearningLedgerRecord(malformed).valid, false);
+    assert.throws(() => outcomeLearningLedgerDigest(malformed), TypeError);
+    assert.equal(classifyOutcomeLedgerAppend(malformed, valid), "REJECTED_INVALID");
+    assert.equal(classifyOutcomeLedgerAppend(valid, malformed), "REJECTED_INVALID");
+  }
+  assert.equal(getterReads, 0);
+  assert.equal(validateOutcomeLearningLedgerRecord(valid).valid, true);
+  assert.equal(outcomeLearningLedgerDigest(valid), outcomeLearningLedgerDigest({ ...valid }));
+});
+
+test("Outcome Learning Ledger validation verdict and errors are immutable at runtime", () => {
+  const invalid = { ...validSettled(), payoutYen: -1 };
+  for (const result of [
+    validateOutcomeLearningLedgerRecord(validSettled()),
+    validateOutcomeLearningLedgerRecord(invalid),
+    validateOutcomeLearningLedgerRecord(null),
+  ]) {
+    const valid = result.valid;
+    const errors = [...result.errors];
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.errors), true);
+    assert.throws(() => { result.valid = !valid; }, TypeError);
+    assert.throws(() => { result.errors.push("forged"); }, TypeError);
+    assert.deepEqual(result, { valid, errors });
+  }
+});
+
+test("Outcome Learning Ledger rejects Proxy getter/descriptor disagreement without executing hooks", () => {
+  const good = validSettled();
+  const expectedDigest = outcomeLearningLedgerDigest(good);
+  const underlying = { ...good, payoutYen: -1 };
+  let reads = 0;
+  const disguised = new Proxy(underlying, {
+    get(target, key, receiver) {
+      if (key === "payoutYen") { reads += 1; return good.payoutYen; }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  assert.equal(validateOutcomeLearningLedgerRecord(disguised).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, disguised), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(disguised), TypeError);
+  assert.equal(reads, 0);
+
+  const revoked = Proxy.revocable({ ...good }, {});
+  revoked.revoke();
+  assert.equal(validateOutcomeLearningLedgerRecord(revoked.proxy).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, revoked.proxy), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(revoked.proxy), TypeError);
+  assert.equal(outcomeLearningLedgerDigest(good), expectedDigest);
+});
+
+test("Outcome Learning Ledger rejects nested Proxy evidence arrays without consulting traps", () => {
+  const good = validSettled();
+  const expectedDigest = outcomeLearningLedgerDigest(good);
+  let reads = 0;
+  const evidence = new Proxy([...good.sourceEvidenceDigests], {
+    get(target, key, receiver) {
+      reads += 1;
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const candidate = { ...good, sourceEvidenceDigests: evidence };
+  assert.equal(validateOutcomeLearningLedgerRecord(candidate).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, candidate), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(candidate), TypeError);
+  assert.equal(reads, 0);
+
+  const revoked = Proxy.revocable([...good.sourceEvidenceDigests], {});
+  revoked.revoke();
+  const invalid = { ...good, sourceEvidenceDigests: revoked.proxy };
+  assert.equal(validateOutcomeLearningLedgerRecord(invalid).valid, false);
+  assert.equal(classifyOutcomeLedgerAppend(undefined, invalid), "REJECTED_INVALID");
+  assert.throws(() => outcomeLearningLedgerDigest(invalid), TypeError);
+  assert.equal(outcomeLearningLedgerDigest(good), expectedDigest);
+});

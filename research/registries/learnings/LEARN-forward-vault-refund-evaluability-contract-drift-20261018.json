@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-refund-evaluability-contract-drift-20261018",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.refund-evaluability-cross-ledger-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "audit-synthetic-roi-fixture-against-canonical-outcome-ledger",
+  "symptom": "The unmerged v162 synthetic ROI verifier includes REFUNDED in SCORABLE and the includedCount denominator, while canonical Outcome Learning Ledger requires REFUNDED.evaluable=false and the Forward Vault contract requires an explicitly evaluable terminal outcome. A direct bridge would score a row that the upstream ledger marks non-evaluable.",
+  "rootCauseClass": "SYNTHETIC_REFUND_SCORABILITY_CONFLICTS_WITH_CANONICAL_OUTCOME_EVALUABILITY",
+  "attemptSignature": "compare-v162-synthetic-refunded-scorability-with-main-outcome-ledger",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-main-read-only+node22-offline-v162-audit",
+    "materialStateKey": "outcome-ledger.0.1/refunded-evaluable-false+v162-fixture/refunded-scorable"
+  },
+  "evidenceRefs": [
+    "docs/architecture/outcome-learning-ledger-contract.md",
+    "docs/architecture/forward-evaluation-vault.md",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/forwardVaultRoiFixtureVerifier.ts (v162 offline candidate, not merged)",
+    "pull/2286"
+  ],
+  "lesson": "Arithmetic consistency and full-refund equality do not establish scoring eligibility. The upstream outcome ledger's evaluable flag is authoritative for admission; synthetic REFUNDED rows must not be silently promoted into scored ROI by a downstream fixture verifier.",
+  "guardrail": "Block any executor or official-data adapter that maps REFUNDED directly into the Forward Vault scored denominator. First reconcile disposition, evaluable=false, stake/refund and exclusion semantics against the frozen evaluation protocol, then add cross-ledger negative fixtures proving excluded refund evidence is retained without an ROI row. Keep all tests isolated from production and protected N2.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-18T11:58:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-18T11:58:00.000Z",
+  "_digest": "26ca5b517790f72a65b3f50d6526c0a62efe2355dd84c120ea3ada37bc368578"
+}

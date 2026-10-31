@@ -11,3 +11,26 @@ test("canonical digest and append boundary are idempotent/fail-closed",()=>{ con
 test("evidence stages cannot be pooled",()=>{ assert.equal(canPoolStages(["SHADOW_FORWARD","SHADOW_FORWARD"]),true); assert.equal(canPoolStages(["HISTORICAL","SHADOW_FORWARD"]),false); assert.equal(canPoolStages(["VALIDATION","UNTOUCHED_HOLDOUT"]),false); });
 test("result must preserve frozen protocol stage, denominator mode and odds basis",()=>{ const p=protocol(), r=result(p); assert.equal(resultMatchesProtocol(r,p),true); assert.equal(resultMatchesProtocol({...r,comparisonMode:"SELECTED_RACE"},p),false); assert.equal(resultMatchesProtocol({...r,oddsBasis:"CLOSING"},p),false); assert.equal(resultMatchesProtocol({...r,evidenceStage:"HISTORICAL"},p),false); });
 test("unsafe counts, unknown fields and non-finite metrics fail closed",()=>{ const r=result(); assert.equal(validateForwardVaultRecord({...r,includedCount:Number.MAX_SAFE_INTEGER+1}).valid,false); assert.equal(validateForwardVaultRecord({...r,metrics:{roi:Infinity}}).valid,false); assert.equal(validateForwardVaultRecord({...r,productionConnection:true}).valid,false); });
+
+test("prototype-inherited kind names are rejected without throwing",()=>{
+  for(const kind of ["toString","constructor","__proto__","hasOwnProperty","valueOf"]){
+    const malformed={...membership(),kind};
+    assert.deepEqual(validateForwardVaultRecord(malformed),{valid:false,errors:["invalid kind"]});
+    assert.equal(classifyForwardVaultAppend(undefined,malformed),"REJECTED_INVALID");
+    assert.equal(classifyForwardVaultAppend(membership(),malformed),"REJECTED_INVALID");
+  }
+});
+
+test("validation verdict and diagnostic list cannot be rewritten after handoff",()=>{
+  // Synthetic valid and denied research records; no scoring or production input.
+  for(const candidate of [membership(),{...membership(),included:"not-a-boolean"},null]){
+    const assessment=validateForwardVaultRecord(candidate);
+    const originalValid=assessment.valid;
+    const originalErrors=[...assessment.errors];
+    assert.equal(Object.isFrozen(assessment),true);
+    assert.equal(Object.isFrozen(assessment.errors),true);
+    assert.throws(()=>{ assessment.valid=!originalValid; },TypeError);
+    assert.throws(()=>{ assessment.errors.push("forged approval"); },TypeError);
+    assert.deepEqual({valid:assessment.valid,errors:assessment.errors},{valid:originalValid,errors:originalErrors});
+  }
+});

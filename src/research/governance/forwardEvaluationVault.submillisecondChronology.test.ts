@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {FORWARD_EVALUATION_VAULT_SCHEMA_VERSION as V, forwardVaultDigest, resultMatchesProtocol, type EvaluationProtocol, type EvaluationResult} from './forwardEvaluationVault.js';
+const digest=(char:string)=>char.repeat(64);
+const protocol=(createdAt:string):EvaluationProtocol=>({schemaVersion:V,kind:'EVALUATION_PROTOCOL',recordId:'eval-protocol:chronology',evidenceStage:'SHADOW_FORWARD',createdAt,evaluationProtocolId:'eval:chronology',comparisonMode:'COMMON_COHORT',oddsBasis:'BUY_TIME',metricFamilies:['ROI'],unresolvedPolicy:'EXCLUDE_AND_COUNT',benchmarkDecisionSystems:['fixture'],protocolVersion:'v1'});
+const result=(p:EvaluationProtocol,createdAt:string):EvaluationResult=>({schemaVersion:V,kind:'RESULT',recordId:'result:chronology',evidenceStage:'SHADOW_FORWARD',createdAt,resultId:'result:chronology',analysisSnapshotId:'snapshot:1',analysisSnapshotDigest:digest('a'),evaluationProtocolId:p.evaluationProtocolId,evaluationProtocolDigest:forwardVaultDigest(p),decisionSystem:'fixture',comparisonMode:p.comparisonMode,oddsBasis:p.oddsBasis,metricFamily:'ROI',includedCount:1,excludedCount:0,metrics:{roi:1},sourceManifestDigest:digest('b'),evaluatorVersion:'v1'});
+test('submillisecond prospective protocol must match later result',()=>{const p=protocol('2026-10-14T12:00:00.0001Z');assert.equal(resultMatchesProtocol(result(p,'2026-10-14T12:00:00.0002Z'),p),true)});
+test('submillisecond prospective order remains correct across timezone offsets',()=>{const p=protocol('2026-10-14T21:00:00.0001+09:00');assert.equal(resultMatchesProtocol(result(p,'2026-10-14T12:00:00.0002Z'),p),true)});
+test('equal or reversed submillisecond chronology must reject',()=>{const p=protocol('2026-10-14T12:00:00.0002Z');assert.equal(resultMatchesProtocol(result(p,'2026-10-14T12:00:00.0001Z'),p),false);assert.equal(resultMatchesProtocol(result(p,'2026-10-14T12:00:00.0002Z'),p),false)});

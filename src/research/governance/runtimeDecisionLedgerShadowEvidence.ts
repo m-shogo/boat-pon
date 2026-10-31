@@ -1,8 +1,81 @@
 import { createHash } from "node:crypto";
+import { isProxy } from "node:util/types";
 import type {
   RuntimeDecisionLedgerMappingContext,
   RuntimeDecisionLedgerReconciliation,
 } from "./runtimeDecisionLedgerMapper";
+
+// Call the captured native regex executor directly: a captured .test still
+// delegates to mutable RegExp.prototype.exec and can be bypassed by callers.
+// These fixed, non-global patterns never rely on lastIndex or caller hooks.
+const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
+// Capturing a native method is insufficient if the call dispatcher is mutable.
+// Keep Reflect.apply itself stable for the captured regex/date intrinsics.
+const BUILTIN_REFLECT_APPLY = Reflect.apply;
+// Array classification and canonical numeric-index parsing must not depend on
+// caller-replaced global helpers after this research module initializes.
+// This also preserves valid synthetic evidence under ambient helper drift.
+const BUILTIN_ARRAY_IS_ARRAY = Array.isArray;
+const BUILTIN_NUMBER = Number;
+const BUILTIN_NUMBER_NAN = Number.NaN;
+// Numeric integrity checks must not be redirected by mutable caller-realm
+// Number/Object helpers after this research module is initialized.
+const BUILTIN_NUMBER_IS_FINITE = Number.isFinite;
+const BUILTIN_NUMBER_IS_SAFE_INTEGER = Number.isSafeInteger;
+const BUILTIN_OBJECT_IS = Object.is;
+// Bind structural inspection to the same native own-key, descriptor and
+// prototype authority used for shadow evidence admission and canonical hashes.
+// Caller-realm overrides must not hide metadata or disguise accessors.
+const BUILTIN_REFLECT_OWN_KEYS = Reflect.ownKeys;
+const BUILTIN_OBJECT_GET_PROTOTYPE_OF = Object.getPrototypeOf;
+const BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescriptor;
+// Prototype admission must use the module-load intrinsic identities, not
+// global Array/Object constructors that callers can replace after import.
+const BUILTIN_ARRAY_PROTOTYPE = Array.prototype;
+const BUILTIN_OBJECT_PROTOTYPE = Object.prototype;
+// Error collection and canonical materialization must not rely on an ambient
+// Object.defineProperty replacement that can silently discard own data fields.
+const BUILTIN_OBJECT_DEFINE_PROPERTY = Object.defineProperty;
+// Canonical objects and arrays must keep their null prototypes even if the
+// caller later replaces the realm's object construction/prototype helpers.
+// Otherwise inherited toJSON hooks can rewrite otherwise distinct digest inputs.
+const BUILTIN_OBJECT_CREATE = Object.create;
+const BUILTIN_OBJECT_SET_PROTOTYPE_OF = Object.setPrototypeOf;
+// Numeric index materialization must not be redirected by a caller-replaced
+// global String constructor; doing so can collapse multiple canonical keys.
+const BUILTIN_STRING = String;
+// Validation result and error arrays must stay immutable even when a caller
+// replaces the ambient Object.freeze after module initialization.
+const BUILTIN_OBJECT_FREEZE = Object.freeze;
+// Nonblank admission must not trust a caller-replaced String.prototype.trim.
+const BUILTIN_STRING_TRIM = String.prototype.trim;
+function stableTrim(value: string): string {
+  return BUILTIN_REFLECT_APPLY(BUILTIN_STRING_TRIM, value, []) as string;
+}
+// Canonical evidence digests must not depend on a caller-replaced JSON.stringify.
+// Capture the native serializer after module load, alongside other digest intrinsics.
+const BUILTIN_JSON_STRINGIFY = JSON.stringify;
+// A caller can also replace Hash.prototype.update/digest after module load.
+// Capture both native hash operations so the source/context/content SHA-256
+// identities do not collapse under ambient crypto prototype changes.
+const HASH_METHOD_SNAPSHOT = createHash("sha256");
+const BUILTIN_HASH_UPDATE = HASH_METHOD_SNAPSHOT.update;
+const BUILTIN_HASH_DIGEST = HASH_METHOD_SNAPSHOT.digest;
+// Snapshot date parsing/formatting intrinsics for untrusted evidence validation.
+// Ambient Date.parse or Date.prototype.toISOString changes must not relabel
+// noncanonical caller time strings as canonical UTC (still NOT trusted time).
+const BUILTIN_DATE = Date;
+const BUILTIN_DATE_PARSE = Date.parse;
+const BUILTIN_DATE_TO_ISO_STRING = Date.prototype.toISOString;
+function stableCanonicalIso(value: string): string | null {
+  const parsed = BUILTIN_REFLECT_APPLY(BUILTIN_DATE_PARSE, BUILTIN_DATE, [value]) as number;
+  return BUILTIN_NUMBER_IS_FINITE(parsed)
+    ? BUILTIN_REFLECT_APPLY(BUILTIN_DATE_TO_ISO_STRING, new BUILTIN_DATE(parsed), []) as string
+    : null;
+}
+function stableRegexTest(pattern: RegExp, value: string): boolean {
+  return BUILTIN_REFLECT_APPLY(BUILTIN_REGEXP_EXEC, pattern, [value]) !== null;
+}
 
 export const RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION =
   "runtime-decision-ledger-shadow-evidence.0.1";
@@ -89,41 +162,258 @@ export type RuntimeDecisionLedgerShadowEvidenceInput = {
   reconciliation: RuntimeDecisionLedgerReconciliation;
 };
 
+// Inspect only own data descriptors: no Proxy traps or accessor getters execute.
+// Track active ancestors separately from visited aliases: cycles must be denied
+// before canonicalization, but shared acyclic objects are not cycles.
+// Bound traversal so an unexpected deep graph cannot become an unbounded preflight.
+type OwnDataGraphIssue = "proxy" | "cycle" | "limit" | "bigint" | "function" | "undefined" | "symbol" | "nonfinite" | "negativezero" | "prototype";
+function inspectOwnDataGraph(
+  value: unknown,
+  visited: object[] = [],
+  ancestors: object[] = [],
+): OwnDataGraphIssue | null {
+  if (isProxy(value)) return "proxy";
+  // JSON.stringify throws for bigint before the validator can report invalid fields.
+  if (typeof value === "bigint") return "bigint";
+  if (typeof value === "function") return "function";
+  if (value === undefined) return "undefined";
+  if (typeof value === "symbol") return "symbol";
+  if (typeof value === "number" && !BUILTIN_NUMBER_IS_FINITE(value)) return "nonfinite";
+  // JSON.stringify(-0) produces 0, erasing a distinct numeric input state.
+  if (typeof value === "number" && BUILTIN_OBJECT_IS(value, -0)) return "negativezero";
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return null;
+  for (let index = 0; index < ancestors.length; index++) {
+    if (ancestors[index] === value) return "cycle";
+  }
+  for (let index = 0; index < visited.length; index++) {
+    if (visited[index] === value) return null;
+  }
+  if (visited.length >= 128) return "limit";
+  // A fixed-schema object with inherited metadata can pass own-key admission,
+  // then either be accepted without that metadata (root) or throw during digest.
+  // Deny exotic prototypes before any semantic reads or canonical hashing.
+  const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
+  if (BUILTIN_ARRAY_IS_ARRAY(value)) {
+    if (prototype !== BUILTIN_ARRAY_PROTOTYPE && prototype !== null) return "prototype";
+  } else if (prototype !== BUILTIN_OBJECT_PROTOTYPE && prototype !== null) {
+    return "prototype";
+  }
+  BUILTIN_OBJECT_DEFINE_PROPERTY(visited, BUILTIN_STRING(visited.length), {
+    value, writable: true, enumerable: true, configurable: true,
+  });
+  const depth = ancestors.length;
+  BUILTIN_OBJECT_DEFINE_PROPERTY(ancestors, BUILTIN_STRING(depth), {
+    value, writable: true, enumerable: true, configurable: true,
+  });
+  try {
+    const keys = BUILTIN_REFLECT_OWN_KEYS(value);
+    for (let index = 0; index < keys.length; index++) {
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, keys[index]!);
+      if (descriptor && "value" in descriptor) {
+        const issue = inspectOwnDataGraph(descriptor.value, visited, ancestors);
+        if (issue) return issue;
+      }
+    }
+    return null;
+  } finally {
+    ancestors.length = depth;
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+  return value !== null && typeof value === "object" && !isProxy(value) && !BUILTIN_ARRAY_IS_ARRAY(value);
 }
 
 function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
+  // JSON.stringify invokes callable own toJSON and inherited Array.prototype.toJSON.
+  // Deny callable scalar fields and isolate canonical arrays from ambient hooks.
+  if (isProxy(value)) throw new TypeError("invalid canonical shadow evidence proxy");
+  if (typeof value === "function") throw new TypeError("invalid canonical shadow evidence function");
+  // JSON.stringify drops undefined/symbol object values and converts NaN/Infinity to null.
+  // Reject before hashing so distinct malformed research contexts cannot alias.
+  if (value === undefined || typeof value === "symbol" ||
+      (typeof value === "number" && !BUILTIN_NUMBER_IS_FINITE(value))) {
+    throw new TypeError("invalid canonical shadow evidence non-JSON primitive");
+  }
+  // Preserve source/context digest identity: JSON serializes -0 exactly as 0.
+  if (typeof value === "number" && BUILTIN_OBJECT_IS(value, -0)) {
+    throw new TypeError("invalid canonical shadow evidence negative zero");
+  }
+  if (BUILTIN_ARRAY_IS_ARRAY(value)) {
+    // JSON serialization omits extra own array keys (including symbols) and
+    // projects sparse slots as null. Bind the admitted array shape to its digest.
+    const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
+    if (prototype !== BUILTIN_ARRAY_PROTOTYPE && prototype !== null) {
+      throw new TypeError("invalid canonical shadow evidence array prototype");
+    }
+    const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
+    if (ownKeys.length !== value.length + 1) {
+      throw new TypeError("invalid canonical shadow evidence array own shape");
+    }
+    for (let index = 0; index < ownKeys.length; index++) {
+      const key = ownKeys[index]!;
+      if (key === "length") continue;
+      const numericIndex = typeof key === "string" ? BUILTIN_NUMBER(key) : BUILTIN_NUMBER_NAN;
+      if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(numericIndex) || numericIndex < 0 ||
+          numericIndex >= value.length || BUILTIN_STRING(numericIndex) !== key) {
+        throw new TypeError("invalid canonical shadow evidence array own shape");
+      }
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+        throw new TypeError("invalid canonical shadow evidence array");
+      }
+    }
+    const result: unknown[] = [];
+    BUILTIN_OBJECT_SET_PROTOTYPE_OF(result, null);
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, BUILTIN_STRING(index));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+        throw new TypeError("invalid canonical shadow evidence array");
+      }
+      BUILTIN_OBJECT_DEFINE_PROPERTY(result, BUILTIN_STRING(index), {
+        value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+      });
+    }
+    return result;
+  }
   if (!isRecord(value)) return value;
-  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+  // The source/context digest must cover the exact accepted own-data shape.
+  // JSON.stringify silently ignores symbol keys, hidden properties and
+  // inherited fields; a non-plain object can also project to an empty object.
+  const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
+  if (prototype !== BUILTIN_OBJECT_PROTOTYPE && prototype !== null) {
+    throw new TypeError("invalid canonical shadow evidence object prototype");
+  }
+  // An ambient Object.keys override must not erase all digest fields.
+  // Admit only own enumerable string-keyed data before sorting descriptors.
+  const keys: string[] = [];
+  const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
+  for (let index = 0; index < ownKeys.length; index++) {
+    const key = ownKeys[index]!;
+    if (typeof key !== "string") {
+      throw new TypeError("invalid canonical shadow evidence symbol key");
+    }
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      throw new TypeError("invalid canonical shadow evidence non-data property");
+    }
+    BUILTIN_OBJECT_DEFINE_PROPERTY(keys, BUILTIN_STRING(keys.length), {
+      value: key, writable: true, enumerable: true, configurable: true,
+    });
+  }
+  // Source and content digests must not depend on mutable Array.map/sort.
+  for (let index = 1; index < keys.length; index++) {
+    const key = keys[index]!;
+    let previous = index - 1;
+    while (previous >= 0 && keys[previous]! > key) {
+      keys[previous + 1] = keys[previous]!;
+      previous--;
+    }
+    keys[previous + 1] = key;
+  }
+  const result: Record<string, unknown> = BUILTIN_OBJECT_CREATE(null);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      throw new TypeError("invalid canonical shadow evidence object");
+    }
+    BUILTIN_OBJECT_DEFINE_PROPERTY(result, key, {
+      value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+    });
+  }
+  return result;
 }
 
 function digest(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
+  const hash = createHash("sha256");
+  BUILTIN_REFLECT_APPLY(BUILTIN_HASH_UPDATE, hash, [BUILTIN_JSON_STRINGIFY(canonicalize(value))]);
+  return BUILTIN_REFLECT_APPLY(BUILTIN_HASH_DIGEST, hash, ["hex"]) as string;
+}
+
+// Do not feed an array to Object.fromEntries: an ambient empty Array iterator
+// can silently erase the complete reason/taxonomy map.
+// Build sanitized reason maps without mutable ambient Map methods or iterators.
+// A null-prototype accumulator prevents inherited names from changing membership.
+function addCount(counts: Record<string, number>, key: string, increment: number): void {
+  const previous = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(counts, key);
+  BUILTIN_OBJECT_DEFINE_PROPERTY(counts, key, {
+    value: (previous?.value as number | undefined ?? 0) + increment,
+    enumerable: true, writable: true, configurable: true,
+  });
+}
+
+function orderedCountMap(counts: Record<string, number>): Record<string, number> {
+  const keys = BUILTIN_REFLECT_OWN_KEYS(counts) as string[];
+  for (let index = 1; index < keys.length; index++) {
+    const key = keys[index]!;
+    let previous = index - 1;
+    while (previous >= 0 && keys[previous]! > key) {
+      keys[previous + 1] = keys[previous]!;
+      previous--;
+    }
+    keys[previous + 1] = key;
+  }
+  const result: Record<string, number> = {};
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(counts, key);
+    if (!descriptor || !("value" in descriptor)) throw new TypeError("invalid reason count");
+    BUILTIN_OBJECT_DEFINE_PROPERTY(result, key, {
+      value: descriptor.value as number, enumerable: true, writable: true, configurable: true,
+    });
+  }
+  return result;
 }
 
 function countReasons(rows: Array<{ reasons: string[] }>): Record<string, number> {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    for (const reason of row.reasons) counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  const counts: Record<string, number> = BUILTIN_OBJECT_CREATE(null);
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const reasons = rows[rowIndex]!.reasons;
+    for (let index = 0; index < reasons.length; index++) {
+      addCount(counts, reasons[index]!, 1);
+    }
   }
-  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  return orderedCountMap(counts);
+}
+
+// Inspect literal UTF-16 substrings without mutable ambient String.prototype.includes.
+// Taxonomy and privacy/path admission must agree even if that prototype is changed.
+function containsLiteral(haystack: string, needle: string): boolean {
+  if (needle.length === 0) return true;
+  for (let start = 0; start + needle.length <= haystack.length; start++) {
+    let matched = true;
+    for (let offset = 0; offset < needle.length; offset++) {
+      if (haystack[start + offset] !== needle[offset]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) return true;
+  }
+  return false;
+}
+
+// Reject embedded filesystem path tokens in diagnostic strings and reason keys.
+// Do not confuse HTTPS scheme separators with absolute local paths.
+function containsAbsolutePathLike(value: string): boolean {
+  return stableRegexTest(/(?:^|[\s"'(=:])(?:file:\/\/|\/(?!\/|\s)|[A-Za-z]:[\\/]|\\\\[^\\\s])/u, value) ||
+    containsLiteral(value, "/Users/") || containsLiteral(value, "\\Users\\");
 }
 
 function taxonomyForReason(reason: string): string {
   if (reason === "source_row_update_or_odds_observation_after_created_at") return "source_mutability";
   if (
-    reason.includes("timezone") ||
-    reason.includes("timestamp") ||
-    reason.includes("scheduled_close") ||
-    reason.includes("program_import") ||
-    reason.includes("close_time") ||
-    reason.includes("decision occurs after") ||
-    reason.includes("odds observation occurs after")
+    containsLiteral(reason, "timezone") ||
+    containsLiteral(reason, "timestamp") ||
+    containsLiteral(reason, "scheduled_close") ||
+    containsLiteral(reason, "program_import") ||
+    containsLiteral(reason, "close_time") ||
+    containsLiteral(reason, "decision occurs after") ||
+    containsLiteral(reason, "odds observation occurs after")
   ) return "temporal_provenance";
-  if (reason.includes("model_version") || reason.includes("identity")) return "identity_completeness";
-  if (reason.includes("conflict")) return "identity_conflict";
+  if (containsLiteral(reason, "model_version") || containsLiteral(reason, "identity")) return "identity_completeness";
+  if (containsLiteral(reason, "conflict")) return "identity_conflict";
   return "schema_or_value";
 }
 
@@ -132,13 +422,20 @@ function taxonomyCounts(
   rejected: Record<string, number>,
   conflictCount: number,
 ): Record<string, number> {
-  const counts = new Map<string, number>();
-  for (const [reason, count] of [...Object.entries(unresolved), ...Object.entries(rejected)]) {
-    const taxonomy = taxonomyForReason(reason);
-    counts.set(taxonomy, (counts.get(taxonomy) ?? 0) + count);
+  const counts: Record<string, number> = BUILTIN_OBJECT_CREATE(null);
+  const sources = [unresolved, rejected];
+  for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
+    const source = sources[sourceIndex]!;
+    const keys = BUILTIN_REFLECT_OWN_KEYS(source);
+    for (let index = 0; index < keys.length; index++) {
+      const reason = keys[index] as string;
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(source, reason);
+      if (!descriptor || !("value" in descriptor)) throw new TypeError("invalid reason count");
+      addCount(counts, taxonomyForReason(reason), descriptor.value as number);
+    }
   }
-  if (conflictCount > 0) counts.set("identity_conflict", (counts.get("identity_conflict") ?? 0) + conflictCount);
-  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  if (conflictCount > 0) addCount(counts, "identity_conflict", conflictCount);
+  return orderedCountMap(counts);
 }
 
 function rate(count: number, total: number): number | null {
@@ -171,23 +468,21 @@ function expectedEvidenceVerdict(evidence: RuntimeDecisionLedgerShadowEvidence):
 }
 
 function nonNegativeSafeInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+  return typeof value === "number" && BUILTIN_NUMBER_IS_SAFE_INTEGER(value) && value >= 0;
 }
 
 function canonicalGeneratedAt(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+  return typeof value === "string" && stableCanonicalIso(value) === value;
 }
 
 function canonicalDate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = Date.parse(`${value}T00:00:00.000Z`);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0, 10) === value;
+  return typeof value === "string"
+    && stableRegexTest(/^\d{4}-\d{2}-\d{2}$/, value)
+    && stableCanonicalIso(`${value}T00:00:00.000Z`) === `${value}T00:00:00.000Z`;
 }
 
 function canonicalNonEmpty(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value.trim() === value;
+  return typeof value === "string" && value.length > 0 && stableTrim(value) === value;
 }
 
 function expectedRate(count: number, total: number): number | null {
@@ -265,7 +560,7 @@ export function buildRuntimeDecisionLedgerShadowEvidence(
   };
 }
 
-const TOP_LEVEL_KEYS = new Set([
+const TOP_LEVEL_KEYS = [
   "schemaVersion",
   "generatedAt",
   "verdict",
@@ -278,10 +573,10 @@ const TOP_LEVEL_KEYS = new Set([
   "privacy",
   "safety",
   "contentDigest",
-]);
+] as const;
 
-const SCOPE_KEYS = new Set(["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"]);
-const SOURCE_KEYS = new Set([
+const SCOPE_KEYS = ["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"] as const;
+const SOURCE_KEYS = [
   "fileSizeBytes",
   "modifiedTimeMs",
   "sqliteSchemaVersion",
@@ -293,8 +588,8 @@ const SOURCE_KEYS = new Set([
   "walPresent",
   "readOnly",
   "queryOnly",
-]);
-const RECONCILIATION_KEYS = new Set([
+] as const;
+const RECONCILIATION_KEYS = [
   "status",
   "sourceRows",
   "mappedUnique",
@@ -303,8 +598,8 @@ const RECONCILIATION_KEYS = new Set([
   "rejectedCount",
   "conflictCount",
   "recordsDigest",
-]);
-const COMPLETENESS_KEYS = new Set([
+] as const;
+const COMPLETENESS_KEYS = [
   "mappedRate",
   "unresolvedRate",
   "rejectedRate",
@@ -312,8 +607,8 @@ const COMPLETENESS_KEYS = new Set([
   "unresolvedReasonCounts",
   "rejectedReasonCounts",
   "taxonomyCounts",
-]);
-const PRIVACY_KEYS = new Set([
+] as const;
+const PRIVACY_KEYS = [
   "rawRecordsIncluded",
   "sourceRowIdsIncluded",
   "raceIdsIncluded",
@@ -321,27 +616,56 @@ const PRIVACY_KEYS = new Set([
   "absolutePathsIncluded",
   "localDbPathIncluded",
   "outcomeColumnsRead",
-]);
-const SAFETY_KEYS = new Set([
+] as const;
+const SAFETY_KEYS = [
   "operationalDbWrites",
   "notificationWrites",
   "lineSends",
   "appSettingsReads",
   "publicWrites",
   "productionPromotion",
-]);
+] as const;
 
-function requireExactObject(value: unknown, path: string, keys: Set<string>, errors: string[]): boolean {
+// Avoid ambient Array.prototype.push and inherited numeric setters when collecting failures.
+function appendError(errors: string[], message: string): void {
+  BUILTIN_OBJECT_DEFINE_PROPERTY(errors, BUILTIN_STRING(errors.length), {
+    value: message,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
+}
+
+// Module-owned indexed allowlists must not depend on mutable Set.has or Set iterators.
+function includesOwn(keys: readonly string[], value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  for (let index = 0; index < keys.length; index++) {
+    if (keys[index] === value) return true;
+  }
+  return false;
+}
+
+function requireExactObject(value: unknown, path: string, keys: readonly string[], errors: string[]): boolean {
   if (!isRecord(value)) {
-    errors.push(`${path} must be an object`);
+    appendError(errors,`${path} must be an object`);
     return false;
   }
-  for (const key of Object.keys(value)) if (!keys.has(key)) errors.push(`unknown field: ${path}.${key}`);
-  for (const key of keys) if (!(key in value)) errors.push(`missing field: ${path}.${key}`);
+  const ownKeys = BUILTIN_REFLECT_OWN_KEYS(value);
+  for (let index = 0; index < ownKeys.length; index++) {
+    const key = ownKeys[index]!;
+    if (typeof key !== "string" || !includesOwn(keys, key)) appendError(errors,`unknown field: ${path}.${BUILTIN_STRING(key)}`);
+  }
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors,`missing own enumerable data field: ${path}.${key}`);
+    }
+  }
   return true;
 }
 
-const FORBIDDEN_KEYS = new Set([
+const FORBIDDEN_KEYS = [
   "records",
   "record",
   "sourceDecisionHistoryId",
@@ -354,34 +678,169 @@ const FORBIDDEN_KEYS = new Set([
   "result",
   "payoutYen",
   "stakeYen",
-]);
+] as const;
+
+// Dynamic reason-count dictionaries are part of the public sanitized evidence shape.
+// Unlike the fixed schema objects, their keys must be validated individually.
+function validateCountMap(value: unknown, path: string, errors: string[]): Record<string, number> | null {
+  if (!isRecord(value)) {
+    appendError(errors, `${path} must be a count map`);
+    return null;
+  }
+  const initialErrors = errors.length;
+  const prototype = BUILTIN_OBJECT_GET_PROTOTYPE_OF(value);
+  if (prototype !== BUILTIN_OBJECT_PROTOTYPE && prototype !== null) {
+    appendError(errors, `${path} must have a plain object prototype`);
+  }
+  const keys = BUILTIN_REFLECT_OWN_KEYS(value);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    if (typeof key !== "string") {
+      appendError(errors, `${path} must not contain symbol keys`);
+      continue;
+    }
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors, `${path}.${key} must be an own enumerable data field`);
+      continue;
+    }
+    if (includesOwn(FORBIDDEN_KEYS, key) || containsAbsolutePathLike(key)) {
+      appendError(errors, `${path} contains forbidden reason key`);
+    }
+    if (!nonNegativeSafeInteger(descriptor.value)) {
+      appendError(errors, `${path}.${key} must be a non-negative safe integer`);
+    } else if (descriptor.value === 0) {
+      // The builder emits a count-map key only for an observed reason or conflict.
+      // Zero-valued phantom keys can otherwise survive total and taxonomy checks.
+      appendError(errors, `${path}.${key} must be positive`);
+    }
+  }
+  return errors.length === initialErrors ? value as Record<string, number> : null;
+}
+
+function countMapTotal(counts: Record<string, number>): number {
+  let total = 0;
+  const keys = BUILTIN_REFLECT_OWN_KEYS(counts);
+  for (let index = 0; index < keys.length; index++) total += counts[keys[index] as string]!;
+  return total;
+}
+
+// Taxonomy admission must not depend on ambient Map.has/get/set hooks: a
+// re-digested count map with the wrong taxonomy key must still fail closed.
+function taxonomyMatches(
+  actual: Record<string, number>,
+  unresolved: Record<string, number>,
+  rejected: Record<string, number>,
+  conflictCount: number,
+): boolean {
+  const expected: Record<string, number> = BUILTIN_OBJECT_CREATE(null);
+  const addExpected = (key: string, count: number): void => {
+    BUILTIN_OBJECT_DEFINE_PROPERTY(expected, key, {
+      value: (BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(expected, key)?.value as number | undefined ?? 0) + count,
+      enumerable: true, writable: true, configurable: true,
+    });
+  };
+  const sources = [unresolved, rejected];
+  for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
+    const source = sources[sourceIndex]!;
+    const keys = BUILTIN_REFLECT_OWN_KEYS(source);
+    for (let index = 0; index < keys.length; index++) {
+      const reason = keys[index] as string;
+      const taxonomy = taxonomyForReason(reason);
+      const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(source, reason);
+      if (!descriptor || !("value" in descriptor)) return false;
+      addExpected(taxonomy, descriptor.value as number);
+    }
+  }
+  if (conflictCount > 0) addExpected("identity_conflict", conflictCount);
+  const keys = BUILTIN_REFLECT_OWN_KEYS(actual);
+  if (keys.length !== BUILTIN_REFLECT_OWN_KEYS(expected).length) return false;
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index] as string;
+    const actualDescriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(actual, key);
+    const expectedDescriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(expected, key);
+    if (!actualDescriptor || !expectedDescriptor || actualDescriptor.value !== expectedDescriptor.value) return false;
+  }
+  return true;
+}
 
 function walk(value: unknown, path: string, errors: string[]): void {
+  if (isProxy(value)) {
+    appendError(errors, `proxy value forbidden at ${path}`);
+    return;
+  }
   if (typeof value === "string") {
-    if (/^(?:\/|file:\/\/|[A-Za-z]:\\)/.test(value) || value.includes("/Users/") || value.includes("\\Users\\")) {
-      errors.push(`absolute path-like value at ${path}`);
+    if (containsAbsolutePathLike(value)) {
+      appendError(errors,`absolute path-like value at ${path}`);
     }
     return;
   }
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) => walk(entry, `${path}[${index}]`, errors));
+  if (BUILTIN_ARRAY_IS_ARRAY(value)) {
+    // The sanitized shadow-evidence schema contains no arrays at any depth.
+    // Reject them rather than trusting mutable Array.prototype.forEach to inspect contents.
+    appendError(errors, `unexpected array at ${path}`);
     return;
   }
   if (!isRecord(value)) return;
-  for (const [key, entry] of Object.entries(value)) {
-    if (FORBIDDEN_KEYS.has(key)) errors.push(`forbidden key at ${path}.${key}`);
-    walk(entry, `${path}.${key}`, errors);
+  // A mutable Object.entries hook must not erase path/forbidden-field diagnostics.
+  // Own descriptors also avoid invoking an untrusted accessor while walking.
+  const keys = BUILTIN_REFLECT_OWN_KEYS(value);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors, `non-data field at ${path}.${BUILTIN_STRING(key)}`);
+      continue;
+    }
+    if (includesOwn(FORBIDDEN_KEYS, key)) appendError(errors,`forbidden key at ${path}.${BUILTIN_STRING(key)}`);
+    walk(descriptor.value, `${path}.${BUILTIN_STRING(key)}`, errors);
   }
+}
+
+// A caller must not be able to rewrite the validation verdict or suppress its
+// recorded errors after validation. Keep the accepted evidence caller-owned:
+// this protects the result envelope, not the underlying evidence snapshot.
+function immutableValidationResult(
+  errors: string[],
+  evidence: RuntimeDecisionLedgerShadowEvidence | null,
+): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
+  const valid = errors.length === 0;
+  BUILTIN_OBJECT_FREEZE(errors);
+  return BUILTIN_OBJECT_FREEZE({ valid, errors, evidence: valid ? evidence : null });
 }
 
 export function validateRuntimeDecisionLedgerShadowEvidence(
   value: unknown,
 ): { valid: boolean; errors: string[]; evidence: RuntimeDecisionLedgerShadowEvidence | null } {
   const errors: string[] = [];
-  if (!isRecord(value)) return { valid: false, errors: ["evidence must be an object"], evidence: null };
-  for (const key of Object.keys(value)) if (!TOP_LEVEL_KEYS.has(key)) errors.push(`unknown top-level field: ${key}`);
-  for (const key of TOP_LEVEL_KEYS) if (!(key in value)) errors.push(`missing top-level field: ${key}`);
-  if (errors.length > 0) return { valid: false, errors, evidence: null };
+  const graphIssue = inspectOwnDataGraph(value);
+  if (graphIssue) {
+    const message = graphIssue === "proxy" ? "proxy value forbidden in evidence graph"
+      : graphIssue === "cycle" ? "cyclic reference forbidden in evidence graph"
+      : graphIssue === "bigint" ? "non-JSON bigint forbidden in evidence graph"
+      : graphIssue === "function" ? "non-JSON function forbidden in evidence graph"
+      : graphIssue === "undefined" ? "non-JSON undefined forbidden in evidence graph"
+      : graphIssue === "symbol" ? "non-JSON symbol forbidden in evidence graph"
+      : graphIssue === "nonfinite" ? "non-finite number forbidden in evidence graph"
+      : graphIssue === "negativezero" ? "negative zero forbidden in evidence graph"
+      : graphIssue === "prototype" ? "non-plain prototype forbidden in evidence graph"
+      : "evidence graph exceeds preflight bound";
+    return immutableValidationResult([message], null);
+  }
+  if (!isRecord(value)) return immutableValidationResult(["evidence must be an object"], null);
+  const topLevelKeys = BUILTIN_REFLECT_OWN_KEYS(value);
+  for (let index = 0; index < topLevelKeys.length; index++) {
+    const key = topLevelKeys[index]!;
+    if (typeof key !== "string" || !includesOwn(TOP_LEVEL_KEYS, key)) appendError(errors,`unknown top-level field: ${BUILTIN_STRING(key)}`);
+  }
+  for (let index = 0; index < TOP_LEVEL_KEYS.length; index++) {
+    const key = TOP_LEVEL_KEYS[index]!;
+    const descriptor = BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      appendError(errors,`missing own enumerable data top-level field: ${key}`);
+    }
+  }
+  if (errors.length > 0) return immutableValidationResult(errors, null);
 
   requireExactObject(value.scope, "scope", SCOPE_KEYS, errors);
   requireExactObject(value.source, "source", SOURCE_KEYS, errors);
@@ -389,124 +848,187 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
   requireExactObject(value.completeness, "completeness", COMPLETENESS_KEYS, errors);
   requireExactObject(value.privacy, "privacy", PRIVACY_KEYS, errors);
   requireExactObject(value.safety, "safety", SAFETY_KEYS, errors);
-  if (errors.length > 0) return { valid: false, errors, evidence: null };
+  if (errors.length > 0) return immutableValidationResult(errors, null);
 
   const evidence = value as unknown as RuntimeDecisionLedgerShadowEvidence;
   if (evidence.schemaVersion !== RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION) {
-    errors.push(`schemaVersion must be ${RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION}`);
+    appendError(errors,`schemaVersion must be ${RUNTIME_DECISION_LEDGER_SHADOW_EVIDENCE_SCHEMA_VERSION}`);
   }
-  if (!canonicalGeneratedAt(evidence.generatedAt)) errors.push("generatedAt must be a canonical UTC date-time");
-  if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(evidence.verdict)) errors.push("invalid verdict");
-  for (const [name, valueToCheck] of [
+  if (!canonicalGeneratedAt(evidence.generatedAt)) appendError(errors,"generatedAt must be a canonical UTC date-time");
+  if (!includesOwn(["PASS", "CONDITIONAL", "FAILED"], evidence.verdict)) appendError(errors,"invalid verdict");
+  const digestFields = [
     ["sourceDescriptorDigest", evidence.sourceDescriptorDigest],
     ["contextDigest", evidence.contextDigest],
     ["recordsDigest", evidence.reconciliation?.recordsDigest],
     ["contentDigest", evidence.contentDigest],
-  ] as const) {
-    if (typeof valueToCheck !== "string" || !/^[0-9a-f]{64}$/.test(valueToCheck)) errors.push(`${name} must be sha256 hex`);
+  ] as const;
+  for (let index = 0; index < digestFields.length; index++) {
+    const pair = digestFields[index]!;
+    const name = pair[0];
+    const valueToCheck = pair[1];
+    if (typeof valueToCheck !== "string" || !stableRegexTest(/^[0-9a-f]{64}$/, valueToCheck)) appendError(errors,`${name} must be sha256 hex`);
   }
 
   if (evidence.sourceDescriptorDigest !== digest(evidence.source)) {
-    errors.push("sourceDescriptorDigest mismatch");
+    appendError(errors,"sourceDescriptorDigest mismatch");
   }
 
   const source = evidence.source;
-  for (const [name, count] of [
+  const sourceCountFields = [
     ["fileSizeBytes", source.fileSizeBytes],
     ["sqliteSchemaVersion", source.sqliteSchemaVersion],
     ["sqliteUserVersion", source.sqliteUserVersion],
     ["pageCount", source.pageCount],
     ["freelistCount", source.freelistCount],
-  ] as const) {
-    if (!nonNegativeSafeInteger(count)) errors.push(`source.${name} must be a non-negative safe integer`);
+  ] as const;
+  for (let index = 0; index < sourceCountFields.length; index++) {
+    const pair = sourceCountFields[index]!;
+    const name = pair[0];
+    const count = pair[1];
+    if (!nonNegativeSafeInteger(count)) appendError(errors,`source.${name} must be a non-negative safe integer`);
   }
-  if (!Number.isSafeInteger(source.pageSizeBytes) || source.pageSizeBytes < 1) {
-    errors.push("source.pageSizeBytes must be a positive safe integer");
+  if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(source.pageSizeBytes) || source.pageSizeBytes < 1) {
+    appendError(errors,"source.pageSizeBytes must be a positive safe integer");
   }
-  if (!Number.isFinite(source.modifiedTimeMs) || source.modifiedTimeMs < 0) {
-    errors.push("source.modifiedTimeMs must be a non-negative finite number");
+  if (!BUILTIN_NUMBER_IS_FINITE(source.modifiedTimeMs) || source.modifiedTimeMs < 0) {
+    appendError(errors,"source.modifiedTimeMs must be a non-negative finite number");
   }
-  if (typeof source.journalMode !== "string" || source.journalMode.trim().length === 0) {
-    errors.push("source.journalMode must be a non-empty string");
+  if (typeof source.journalMode !== "string" || stableTrim(source.journalMode).length === 0) {
+    appendError(errors,"source.journalMode must be a non-empty string");
   }
 
   const r = evidence.reconciliation;
   if (!r || !isRecord(r)) {
-    errors.push("reconciliation must be an object");
+    appendError(errors,"reconciliation must be an object");
   } else {
-    if (!(["PASS", "CONDITIONAL", "FAILED"] as string[]).includes(r.status)) {
-      errors.push("reconciliation.status is invalid");
+    if (!includesOwn(["PASS", "CONDITIONAL", "FAILED"], r.status)) {
+      appendError(errors,"reconciliation.status is invalid");
     }
-    for (const [name, count] of [
+    const reconciliationCountFields = [
       ["sourceRows", r.sourceRows],
       ["mappedUnique", r.mappedUnique],
       ["exactDuplicates", r.exactDuplicates],
       ["unresolvedCount", r.unresolvedCount],
       ["rejectedCount", r.rejectedCount],
       ["conflictCount", r.conflictCount],
-    ] as const) {
-      if (!nonNegativeSafeInteger(count)) errors.push(`${name} must be a non-negative safe integer`);
+    ] as const;
+    for (let index = 0; index < reconciliationCountFields.length; index++) {
+      const pair = reconciliationCountFields[index]!;
+      const name = pair[0];
+      const count = pair[1];
+      if (!nonNegativeSafeInteger(count)) appendError(errors,`${name} must be a non-negative safe integer`);
+    }
+    // The mapper derives reconciliation.status from conflict/unresolved/rejected counts.
+    // A re-digested outer verdict must not launder a contradictory inner status.
+    if (nonNegativeSafeInteger(r.conflictCount) &&
+        nonNegativeSafeInteger(r.unresolvedCount) && nonNegativeSafeInteger(r.rejectedCount)) {
+      const expectedStatus = r.conflictCount > 0 ? "FAILED"
+        : r.unresolvedCount > 0 || r.rejectedCount > 0 ? "CONDITIONAL" : "PASS";
+      if (r.status !== expectedStatus) {
+        appendError(errors,`reconciliation.status must be ${expectedStatus}`);
+      }
     }
     if (
       nonNegativeSafeInteger(r.sourceRows) &&
       r.sourceRows !== r.mappedUnique + r.exactDuplicates + r.unresolvedCount + r.rejectedCount + r.conflictCount
-    ) errors.push("reconciliation counts do not sum to sourceRows");
+    ) appendError(errors,"reconciliation counts do not sum to sourceRows");
   }
 
-  if (!canonicalNonEmpty(evidence.scope.runKind)) errors.push("scope.runKind must be a canonical non-empty string");
-  if (!canonicalNonEmpty(evidence.scope.modelVersion)) errors.push("scope.modelVersion must be a canonical non-empty string");
+  if (!canonicalNonEmpty(evidence.scope.runKind)) appendError(errors,"scope.runKind must be a canonical non-empty string");
+  if (!canonicalNonEmpty(evidence.scope.modelVersion)) appendError(errors,"scope.modelVersion must be a canonical non-empty string");
   if (!canonicalDate(evidence.scope.from) || !canonicalDate(evidence.scope.to)) {
-    errors.push("bounded scope requires canonical from/to dates");
+    appendError(errors,"bounded scope requires canonical from/to dates");
   } else if (evidence.scope.from > evidence.scope.to) {
-    errors.push("scope.from must not be after scope.to");
+    appendError(errors,"scope.from must not be after scope.to");
   }
-  if (!Number.isSafeInteger(evidence.scope.limit) || evidence.scope.limit < 1 || evidence.scope.limit > 5000) {
-    errors.push("scope.limit must be an integer between 1 and 5000");
+  if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(evidence.scope.limit) || evidence.scope.limit < 1 || evidence.scope.limit > 5000) {
+    appendError(errors,"scope.limit must be an integer between 1 and 5000");
   }
   if (!nonNegativeSafeInteger(evidence.scope.returnedRows)) {
-    errors.push("scope.returnedRows must be a non-negative safe integer");
+    appendError(errors,"scope.returnedRows must be a non-negative safe integer");
   }
-  if (evidence.scope.bounded !== true) errors.push("scope.bounded must be true");
-  if (typeof evidence.scope.limitReached !== "boolean") errors.push("scope.limitReached must be boolean");
-  if (Number.isSafeInteger(evidence.scope.limit)
+  if (evidence.scope.bounded !== true) appendError(errors,"scope.bounded must be true");
+  if (typeof evidence.scope.limitReached !== "boolean") appendError(errors,"scope.limitReached must be boolean");
+  if (BUILTIN_NUMBER_IS_SAFE_INTEGER(evidence.scope.limit)
     && nonNegativeSafeInteger(evidence.scope.returnedRows)
     && evidence.scope.returnedRows > evidence.scope.limit) {
-    errors.push("scope.returnedRows must not exceed scope.limit");
+    appendError(errors,"scope.returnedRows must not exceed scope.limit");
   }
   if (evidence.scope.returnedRows !== evidence.reconciliation.sourceRows) {
-    errors.push("scope.returnedRows must equal reconciliation.sourceRows");
+    appendError(errors,"scope.returnedRows must equal reconciliation.sourceRows");
   }
   if (evidence.scope.limitReached && evidence.scope.returnedRows !== evidence.scope.limit) {
-    errors.push("limitReached requires returnedRows to equal limit");
+    appendError(errors,"limitReached requires returnedRows to equal limit");
   }
-  if (evidence.source.walPresent) errors.push("bounded evidence requires walPresent=false");
+  if (evidence.source.walPresent !== false) appendError(errors,"source.walPresent must be false");
   if (evidence.source.readOnly !== true || evidence.source.queryOnly !== true) {
-    errors.push("source must be readOnly and queryOnly");
+    appendError(errors,"source must be readOnly and queryOnly");
   }
 
   const expectedVerdict = expectedEvidenceVerdict(evidence);
-  if (evidence.verdict !== expectedVerdict) errors.push(`verdict must be ${expectedVerdict}`);
+  if (evidence.verdict !== expectedVerdict) appendError(errors,`verdict must be ${expectedVerdict}`);
 
   if (!rateMatches(evidence.completeness.mappedRate, r.mappedUnique, r.sourceRows)) {
-    errors.push("completeness.mappedRate mismatch");
+    appendError(errors,"completeness.mappedRate mismatch");
   }
   if (!rateMatches(evidence.completeness.unresolvedRate, r.unresolvedCount, r.sourceRows)) {
-    errors.push("completeness.unresolvedRate mismatch");
+    appendError(errors,"completeness.unresolvedRate mismatch");
   }
   if (!rateMatches(evidence.completeness.rejectedRate, r.rejectedCount, r.sourceRows)) {
-    errors.push("completeness.rejectedRate mismatch");
+    appendError(errors,"completeness.rejectedRate mismatch");
   }
   if (!rateMatches(evidence.completeness.conflictRate, r.conflictCount, r.sourceRows)) {
-    errors.push("completeness.conflictRate mismatch");
+    appendError(errors,"completeness.conflictRate mismatch");
   }
 
-  for (const [name, actual] of Object.entries(evidence.privacy)) {
-    if (actual !== false) errors.push(`privacy.${name} must be false`);
+  const unresolvedCounts = validateCountMap(
+    evidence.completeness.unresolvedReasonCounts, "completeness.unresolvedReasonCounts", errors,
+  );
+  const rejectedCounts = validateCountMap(
+    evidence.completeness.rejectedReasonCounts, "completeness.rejectedReasonCounts", errors,
+  );
+  const taxonomies = validateCountMap(
+    evidence.completeness.taxonomyCounts, "completeness.taxonomyCounts", errors,
+  );
+  // A malformed dynamic count map may contain an enumerable accessor.
+  // Do not canonicalize or walk it after its descriptor has already failed
+  // admission: JSON serialization would execute caller-owned getters.
+  if (!unresolvedCounts || !rejectedCounts || !taxonomies) {
+    return immutableValidationResult(errors, null);
   }
-  for (const field of ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const) {
-    if (evidence.safety[field] !== 0) errors.push(`safety.${field} must be 0`);
+  if (unresolvedCounts && rejectedCounts && taxonomies) {
+    if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(countMapTotal(unresolvedCounts)) ||
+      countMapTotal(unresolvedCounts) < r.unresolvedCount) {
+      appendError(errors, "completeness.unresolvedReasonCounts does not cover unresolved rows");
+    }
+    if (!BUILTIN_NUMBER_IS_SAFE_INTEGER(countMapTotal(rejectedCounts)) ||
+      countMapTotal(rejectedCounts) < r.rejectedCount) {
+      appendError(errors, "completeness.rejectedReasonCounts does not cover rejected rows");
+    }
+    // A positive reason count cannot describe zero rows in its own category.
+    // Multi-reason rows remain valid: only the zero-row boundary is exact.
+    if (r.unresolvedCount === 0 && countMapTotal(unresolvedCounts) !== 0) {
+      appendError(errors, "completeness.unresolvedReasonCounts must be empty when unresolvedCount is zero");
+    }
+    if (r.rejectedCount === 0 && countMapTotal(rejectedCounts) !== 0) {
+      appendError(errors, "completeness.rejectedReasonCounts must be empty when rejectedCount is zero");
+    }
+    if (!taxonomyMatches(taxonomies, unresolvedCounts, rejectedCounts, r.conflictCount)) {
+      appendError(errors, "completeness.taxonomyCounts mismatch");
+    }
   }
-  if (evidence.safety.productionPromotion !== false) errors.push("safety.productionPromotion must be false");
+
+  // Fixed privacy flags must not depend on ambient Object.entries enumeration.
+  for (let index = 0; index < PRIVACY_KEYS.length; index++) {
+    const name = PRIVACY_KEYS[index]!;
+    if (evidence.privacy[name] !== false) appendError(errors,`privacy.${name} must be false`);
+  }
+  const zeroWriteFields = ["operationalDbWrites", "notificationWrites", "lineSends", "appSettingsReads", "publicWrites"] as const;
+  for (let index = 0; index < zeroWriteFields.length; index++) {
+    const field = zeroWriteFields[index]!;
+    if (evidence.safety[field] !== 0) appendError(errors,`safety.${field} must be 0`);
+  }
+  if (evidence.safety.productionPromotion !== false) appendError(errors,"safety.productionPromotion must be false");
 
   const expectedDigest = digest(digestableEvidence({
     schemaVersion: evidence.schemaVersion,
@@ -520,8 +1042,8 @@ export function validateRuntimeDecisionLedgerShadowEvidence(
     privacy: evidence.privacy,
     safety: evidence.safety,
   }));
-  if (evidence.contentDigest !== expectedDigest) errors.push("contentDigest mismatch");
+  if (evidence.contentDigest !== expectedDigest) appendError(errors,"contentDigest mismatch");
 
   walk(evidence, "$", errors);
-  return { valid: errors.length === 0, errors, evidence: errors.length === 0 ? evidence : null };
+  return immutableValidationResult(errors, evidence);
 }

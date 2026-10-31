@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-prototype-serialization-divergence-20261009",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.prototype-serialization-digest-divergence",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-record-and-atomic-json-publication",
+  "symptom": "The v10 plain-own-property checks accept a Date metrics object with numeric enumerable fields or an inherited toJSON method on the record/metrics. Canonical hashing ignores the exotic prototype while atomicWriteJson uses JSON.stringify, producing a different persisted payload. A changed candidate can be misclassified IDEMPOTENT_NOOP.",
+  "rootCauseClass": "NON_PLAIN_OBJECT_INHERITED_TOJSON_DIGEST_PERSISTENCE_DRIFT",
+  "attemptSignature": "forward-vault-v10-own-data-key-check-without-plain-object-prototype-guard",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22/research-governance",
+    "materialStateKey": "forward-evaluation-vault.0.1/pr2286-head-8b0d6b2-plus-local-v10-plain-own-keys-no-prototype-guard"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.prototypeSerialization.test.ts",
+    "src/research/governance/executorSdk.ts",
+    "pull/2286"
+  ],
+  "lesson": "Own enumerable data properties alone do not guarantee JSON.stringify equivalence. Inherited toJSON and exotic internal slots can alter persisted bytes without altering the canonical digest; a successful idempotency classification can then mask different serialized evidence.",
+  "guardrail": "At the vault validation boundary accept only ordinary Object.prototype or null-prototype records and metrics. Reject other objects before hashing, fail closed for exotic nested objects, and regression-test Date metrics and inherited toJSON against the actual JSON serialization boundary.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-09T00:05:24.000Z",
+  "productionConnection": false,
+  "_digest": "8001ed55ee92dc7223010e29779dee7e259e8a90e8735eaba73dd2eb26815f4f",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-09T00:05:24.000Z"
+}

@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-synthetic-refund-equality-20261018",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.synthetic-refund-return-stake-mismatch",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "synthetic-roi-fixture-recomputation-and-row-digest",
+  "symptom": "The synthetic ROI verifier and row digest accepted REFUNDED rows with returnUnits unequal to stakeUnits when the RESULT ROI was recomputed to match the inconsistent refund, allowing an internally consistent but semantically impossible full-refund fixture.",
+  "rootCauseClass": "MISSING_REFUND_EQUALITY_IN_ARITHMETIC_AND_MANIFEST_ROW_VALIDATION",
+  "attemptSignature": "v162-self-consistent-refunded-return-0-199-201-400-against-stake-200",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/typescript5.8.3/offline-pr2286-fixture",
+    "materialStateKey": "pr2286-177b4976+v161-synthetic-roi-verifier-without-refund-equality"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardVaultRoiFixtureVerifier.ts",
+    "src/research/governance/forwardVaultRoiFixtureVerifier.test.ts",
+    "pull/2286"
+  ],
+  "lesson": "An ROI value and a signed manifest can be self-consistent while encoding an impossible full-refund payout. Validate refund semantics before both arithmetic admission and row-digest construction; a valid digest never replaces settlement-semantic checks.",
+  "guardrail": "For REFUNDED synthetic ticket rows require positive safe-integer stake and returnUnits exactly equal to stakeUnits in both verifyFrozenRoiFixture and syntheticRoiRowDigest. Negative fixtures must recompute ROI consistently for under-refunds and over-refunds, not only perturb an unchanged aggregate. This proves fixture consistency only, not official settlement authenticity.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-18T11:08:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-18T11:08:00.000Z",
+  "_digest": "fa6150240036656411c611bd7ee9a4d3075c0407bb00552ff7135e1f30b69920"
+}

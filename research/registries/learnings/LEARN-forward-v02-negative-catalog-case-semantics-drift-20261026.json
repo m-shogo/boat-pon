@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-v02-negative-catalog-case-semantics-drift-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-negative-catalog-case-semantics-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-offline-independent-verifier-negative-catalog-contract",
+  "symptom": "Static catalog audit found that the v347 contract test accepted a nonempty replacement of a case's mutation or independentFixtureState while preserving its case ID, lane, denial and false authorization flags. Thus a future verifier harness could execute a different negative scenario under the original case ID without the catalog guard detecting semantic drift. No verifier, independent evidence or scoring path was executed.",
+  "rootCauseClass": "NEGATIVE_CATALOG_GUARD_PINS_DENIAL_BUT_NOT_CASE_MUTATION_AND_FIXTURE_PRECONDITION",
+  "attemptSignature": "pr2286-v348-static-negative-catalog-semantic-freeze-and-mutation-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-negative-fixtures.0.1-spec/pr2286-v347-case-id-denial-only-checks"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "reports/research/forward-v02-independent-verifier-negative-vectors-20261026.json",
+    "src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts",
+    "commit/bc9536e5a4322e54df86a6953e380174deaa384c"
+  ],
+  "lesson": "A deny-only fixture catalog is not frozen by case IDs and expected denial codes alone. A changed mutation or independently provisioned fixture precondition can silently redefine what a future verifier test is supposed to falsify while preserving its apparent PASS classification.",
+  "guardrail": "Pin each negative case's semantic mutation and independent fixture precondition alongside its expected first denial and lane. Exercise deliberate mutation/state drift in contract regression tests, and preserve explicit untrusted request/response contract identities. Treat static catalog checks as specification integrity only, never independent verification.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T02:04:54.255Z",
+  "productionConnection": false,
+  "_digest": "e8dc68f0309fce3d5e2d95ce88567101a1e6e5cb9ba8ad14d1857d097e14a0ab",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T02:04:54.255Z"
+}

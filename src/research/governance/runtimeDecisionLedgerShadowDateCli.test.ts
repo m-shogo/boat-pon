@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { isolatedResearchNodeChildEnv } from "./researchNodeChildEnv.js";
 
 const scriptPath = fileURLToPath(new URL("../../../scripts/report-runtime-decision-ledger-shadow.ts", import.meta.url));
 const missingDb = fileURLToPath(new URL("../../../.tmp-shadow-report-date-test.sqlite", import.meta.url));
@@ -21,7 +22,7 @@ function runWithDate(date: string) {
     date,
     "--db",
     missingDb,
-  ], { encoding: "utf8" });
+  ], { encoding: "utf8", env: isolatedResearchNodeChildEnv() });
 }
 
 test("shadow report rejects impossible calendar dates before any DB access", () => {

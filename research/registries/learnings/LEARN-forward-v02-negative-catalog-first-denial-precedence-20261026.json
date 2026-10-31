@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-negative-catalog-first-denial-precedence-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-negative-fixture-first-denial-precedence",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "specify-offline-independent-verifier-negative-catalog",
+  "symptom": "X02 specified UNAPPROVED_PROTOCOL as the first denial while its test-only witness/settlement proof shapes were expressly unauthenticated. The catalog's own failure precedence requires trust/proof authenticity to be evaluated before protocol approval. The contradictory vector could teach a future verifier harness to mask missing independent attestation with a downstream protocol failure; no actual verifier or scoring path was executed.",
+  "rootCauseClass": "MULTI_BLOCKER_NEGATIVE_FIXTURE_EXPECTED_DOWNSTREAM_PROTOCOL_DENIAL_BEFORE_TRUST_AUTHENTICITY",
+  "attemptSignature": "pr2286-v346-X02-unattested-proof-shapes-protocol-first-negative-specification",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-negative-fixtures.0.1-spec/pr2286-v346-X02-unattested-proofs-protocol-first"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "reports/research/forward-v02-independent-verifier-negative-vectors-20261026.json",
+    "reports/research/forward-v02-independent-verifier-fixture-contract-20261026.md",
+    "src/research/governance/forwardV02IndependentVerifierNegativeCatalog.test.ts",
+    "commit/0452db469246c039c1a9a50d13069db65b222023",
+    "commit/861a8e398c16354890b0a684d80bb3ea5d00728a"
+  ],
+  "lesson": "A negative vector that deliberately combines missing independent attestation and missing protocol approval must assert the first causal trust-authenticity denial. A downstream UNAPPROVED_PROTOCOL classification is still a blocker, but must not replace or mask the earlier UNVERIFIED_WITNESS failure.",
+  "guardrail": "For future verifier test catalogs, freeze the documented denial precedence and assert the expected first blocker against each fixture's independent-evidence preconditions. Keep downstream blockers separate; never manufacture a verified-positive fixture to make an expected downstream denial reachable. Preserve literal independentAuthorityVerified=false and scoringAuthorized=false in specification-only vectors.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T01:00:39.628Z",
+  "productionConnection": false,
+  "_digest": "7e16b81a88376033169c3bb46f89aaa862a4f0b6a3d049c464421ae5e93a3dfb",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T01:00:39.628Z"
+}

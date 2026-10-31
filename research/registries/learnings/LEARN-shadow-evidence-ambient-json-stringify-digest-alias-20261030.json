@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-json-stringify-digest-alias-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-json-stringify-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "bind-canonical-shadow-source-context-content-digests-under-ambient-json-stringify-replacement",
+  "symptom": "Node 22.16.0 synthetic reproduction confirmed that replacing JSON.stringify with a constant serializer makes distinct plain data objects produce identical SHA-256 digests. Static review of the v458 research-only shadow evidence builder/validator found a live JSON.stringify call in digest(), allowing an ambient replacement to collapse source, context and content digest identities and to validate re-digested synthetic evidence. No private source values, odds, credentials or production execution were used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_JSON_STRINGIFY_CANONICAL_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v459-pin-json-stringify-for-shadow-source-context-content-digests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@62883077/ambient-JSON.stringify-in-digest"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/b0e5988a41bbd920ef3b9b577d69dbda803a2718",
+    "commit/0586d4deec3fc6af8ebed1332d71853766682910",
+    "research/registries/learnings/LEARN-shadow-evidence-canonical-tojson-hook-digest-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-structural-inspection-20261030.json"
+  ],
+  "lesson": "Canonical own-data shape validation is not sufficient if the final JSON serializer is mutable after module initialization. An ambient constant serializer can collapse distinct sanitized source/context/content digests and make caller-rehashed evidence appear internally consistent. This does not authenticate external source issuance, rights, time, finality or scoring.",
+  "guardrail": "Capture the native JSON.stringify reference at research module initialization and use it only after the existing strict canonicalize() pass. Regression-test unchanged baseline digest identity, changed source/context digest separation, and rejection of a synthetic forged constant-digest source under reversible ambient JSON.stringify replacement. Do not infer independent K authority, merge readiness or production permission.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T23:03:19.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T23:03:19.000Z",
+  "_digest": "6376eeb090d248131b6f129cbf332e4bbe0e970b4fb47e1f670d52a426a2402c"
+}

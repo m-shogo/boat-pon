@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-regexp-test-exec-admission-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-regexp-test-exec-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-path-digest-and-canonical-date-admission",
+  "symptom": "In synthetic Node 22.16.0, overriding RegExp.prototype.test to return false could hide embedded synthetic path tokens and reject valid date fields, while returning true could admit a malformed contextDigest after re-digesting. Capturing the native test function alone was insufficient: its RegExpExec dispatch still consulted mutable RegExp.prototype.exec, permitting selective path-token suppression or malformed hex admission. No actual private paths, K archive, odds, database or production evidence was used.",
+  "rootCauseClass": "AMBIENT_REGEXP_TEST_AND_EXEC_HOOKS_CAN_REWRITE_SHADOW_EVIDENCE_ADMISSION",
+  "attemptSignature": "pr2286-v447-captured-native-regexp-exec-with-test-and-exec-hook-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@8794f951/ambient-test-and-00ebb0b8/captured-test-still-delegates-exec"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/00ebb0b8e499e2d3633f0d221638b2e19dfe5ab0",
+    "commit/1c3371fe993c455f7f8b9a0a270d879833fc5432",
+    "research/registries/learnings/LEARN-shadow-evidence-string-includes-taxonomy-privacy-bypass-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-embedded-absolute-path-token-admission-20261029.json"
+  ],
+  "lesson": "A content digest does not authenticate semantic admission if a caller can modify ambient RegExp.prototype.test or exec. Capturing test alone does not isolate regex matching because built-in test delegates to mutable exec. Verify the complete dispatch chain, not just the named method.",
+  "guardrail": "For fixed non-global shadow-evidence patterns, invoke a module-captured native RegExp.prototype.exec directly through Reflect.apply and compare with null; do not call mutable .test or delegate to prototype .exec. Regression-test both reversible ambient hooks, valid evidence compatibility, embedded synthetic path rejection and malformed digest rejection. Keep all artifacts research-only and productionConnection=false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T11:08:42.000Z",
+  "productionConnection": false,
+  "_digest": "7072a6f0537d2090fc7327de1764f350a66a0bb613a49ea3459f054b0be600f8",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T11:08:42.000Z"
+}

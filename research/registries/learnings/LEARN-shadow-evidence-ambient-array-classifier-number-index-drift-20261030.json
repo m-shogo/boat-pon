@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-array-classifier-number-index-drift-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-array-classifier-number-index-denial",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "build-and-validate-shadow-evidence-under-ambient-array-and-number-replacement",
+  "symptom": "Isolated Node synthetic reproduction showed that replacing Array.isArray with a constant false makes an ordinary array fail the graph prototype branch, while replacing Number(\"1\") with 0 makes a canonical numeric array index fail shape validation. Static review found the v464 shadow evidence builder/validator called both ambient helpers. This is valid-evidence denial and canonicalization availability drift, not evidence of a false-positive verdict, a SHA-256 collision, private-data exposure, or production impact.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_ARRAY_CLASSIFIER_NUMERIC_INDEX_DENIAL",
+  "attemptSignature": "pr2286-v465-pin-array-isarray-number-index-and-regress-source-calls",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-isolated-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@88290bca/ambient-Array.isArray-and-Number-array-index"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/c7a609b1b33dd7a7c94897794931658b02af3f51",
+    "commit/281e4744cb73b6c5a7ac543e465f952afee0d622",
+    "commit/5c03f393ebbe785f08bd891c4d2744092917650c",
+    "research/registries/learnings/LEARN-runtime-ledger-ambient-array-admission-digest-drift-20261027.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-structural-inspection-20261030.json"
+  ],
+  "lesson": "Even after own-descriptor and canonical JSON safeguards, ambient array classification and numeric-index coercion can reject otherwise valid research context arrays. Fail-closed denial is preferable to false acceptance, but it breaks deterministic shadow evidence generation and verification under caller-realm helper drift.",
+  "guardrail": "Capture Array.isArray, Number and the NaN sentinel at module initialization; use captured references in graph inspection, record admission, canonical array-shape checking and privacy walk. Keep indexed own-descriptor copying and captured numeric safety checks. Regress valid synthetic array-context digest identity and invalid array count maps under reversible Array.isArray/Number overrides, and statically forbid reintroduced direct ambient calls. Do not infer external issuer/clock/finality/rights, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T05:04:58.946Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T05:04:58.946Z",
+  "_digest": "2e56fb49cc881140d5c21e7ed0559ea69b86f12b76037cf58c0c535ae3e151d2"
+}

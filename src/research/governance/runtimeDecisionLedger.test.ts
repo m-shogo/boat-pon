@@ -132,3 +132,153 @@ test("Runtime Decision Ledger rejects integers outside the JavaScript safe range
     assert.equal(result.valid, false, `${field} must fail closed outside the safe integer range`);
   }
 });
+
+test("Runtime Decision Ledger validation cannot lose errors when Array.push is replaced", () => {
+  const originalPush = Object.getOwnPropertyDescriptor(Array.prototype, "push");
+  let observed: { good: boolean; bad: boolean; errors: string[]; digestRejected: boolean };
+  try {
+    Object.defineProperty(Array.prototype, "push", {
+      configurable: true, writable: true,
+      value() { return this.length; },
+    });
+    const good = validBuyRecord();
+    const bad = { ...good, sourceRowDigest: "not-a-digest", decision: "UNKNOWN" };
+    const result = validateRuntimeDecisionLedgerRecord(bad);
+    let digestRejected = false;
+    try { runtimeDecisionLedgerDigest(bad as RuntimeDecisionLedgerRecord); }
+    catch (error) { digestRejected = error instanceof TypeError; }
+    observed = {
+      good: validateRuntimeDecisionLedgerRecord(good).valid,
+      bad: result.valid,
+      errors: result.errors,
+      digestRejected,
+    };
+  } finally {
+    if (originalPush) Object.defineProperty(Array.prototype, "push", originalPush);
+    else Reflect.deleteProperty(Array.prototype, "push");
+  }
+  assert.equal(observed.good, true);
+  assert.equal(observed.bad, false);
+  assert.ok(observed.errors.includes("sourceRowDigest must be a SHA-256 hex digest"));
+  assert.ok(observed.errors.includes("decision must be BUY, WATCH, or SKIP"));
+  assert.equal(observed.digestRejected, true);
+});
+
+test("Runtime Decision Ledger validation verdict and errors are immutable at runtime", () => {
+  const invalid = { ...validBuyRecord(), sourceRowDigest: "bad" };
+  for (const result of [
+    validateRuntimeDecisionLedgerRecord(validBuyRecord()),
+    validateRuntimeDecisionLedgerRecord(invalid),
+    validateRuntimeDecisionLedgerRecord(null),
+  ]) {
+    const valid = result.valid;
+    const errors = [...result.errors];
+    assert.equal(Object.isFrozen(result), true);
+    assert.equal(Object.isFrozen(result.errors), true);
+    assert.throws(() => { result.valid = !valid; }, TypeError);
+    assert.throws(() => { result.errors.push("forged"); }, TypeError);
+    assert.deepEqual(result, { valid, errors });
+  }
+});
+
+test("Runtime Decision Ledger admission is stable under ambient Set.has and iterator hooks", () => {
+  const good = validBuyRecord();
+  const expectedDigest = runtimeDecisionLedgerDigest(good);
+  const malformed = {
+    ...good,
+    decision: "UNKNOWN",
+    evaluationMode: "unapproved",
+    dataCompleteness: "unknown",
+    notificationEligible: false,
+    notificationDedupeKey: null,
+    unapprovedResearchField: "must be denied",
+  };
+  const missing: Record<string, unknown> = {
+    ...good, decision: "WATCH", notificationEligible: false, notificationDedupeKey: null,
+  };
+  delete missing.evaluationMode;
+
+  const originalHas = Object.getOwnPropertyDescriptor(Set.prototype, "has")!;
+  const originalIterator = Object.getOwnPropertyDescriptor(Set.prototype, Symbol.iterator)!;
+  let goodValid = false;
+  let goodDigest = "";
+  let invalid: ReturnType<typeof validateRuntimeDecisionLedgerRecord> | undefined;
+  let absent: ReturnType<typeof validateRuntimeDecisionLedgerRecord> | undefined;
+  let digestRejected = false;
+  try {
+    Object.defineProperty(Set.prototype, "has", {
+      configurable: true, writable: true, value() { return true; },
+    });
+    Object.defineProperty(Set.prototype, Symbol.iterator, {
+      configurable: true, writable: true, value: function* () {},
+    });
+    goodValid = validateRuntimeDecisionLedgerRecord(good).valid;
+    goodDigest = runtimeDecisionLedgerDigest(good);
+    invalid = validateRuntimeDecisionLedgerRecord(malformed);
+    absent = validateRuntimeDecisionLedgerRecord(missing);
+    try { runtimeDecisionLedgerDigest(malformed as RuntimeDecisionLedgerRecord); }
+    catch (error) { digestRejected = error instanceof TypeError; }
+  } finally {
+    Object.defineProperty(Set.prototype, Symbol.iterator, originalIterator);
+    Object.defineProperty(Set.prototype, "has", originalHas);
+  }
+
+  assert.equal(goodValid, true);
+  assert.equal(goodDigest, expectedDigest);
+  assert.equal(invalid?.valid, false);
+  assert.ok(invalid?.errors.includes("decision must be BUY, WATCH, or SKIP"));
+  assert.ok(invalid?.errors.includes("evaluationMode is invalid"));
+  assert.ok(invalid?.errors.includes("dataCompleteness is invalid"));
+  assert.ok(invalid?.errors.includes("unknown field is not allowed: unapprovedResearchField"));
+  assert.equal(absent?.valid, false);
+  assert.ok(absent?.errors.includes("missing own field: evaluationMode"));
+  assert.equal(digestRejected, true);
+});
+
+test("Runtime Decision Ledger rejects Proxy getter/descriptor disagreement before any caller hook", () => {
+  const good = validBuyRecord();
+  const baselineDigest = runtimeDecisionLedgerDigest(good);
+  const underlying = { ...good, currentOdds: -100 };
+  let reads = 0;
+  const disguised = new Proxy(underlying, {
+    get(target, key, receiver) {
+      if (key === "currentOdds") { reads += 1; return good.currentOdds; }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  // Before Proxy denial, validation read 6.4 while canonical hashing read
+  // the own data descriptor -100, accepting a digest for an invalid record.
+  assert.equal(validateRuntimeDecisionLedgerRecord(disguised).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(disguised), TypeError);
+  assert.equal(reads, 0, "Proxy getter must not execute during admission");
+
+  const revoked = Proxy.revocable({ ...good }, {});
+  revoked.revoke();
+  assert.equal(validateRuntimeDecisionLedgerRecord(revoked.proxy).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(revoked.proxy), TypeError);
+  assert.equal(validateRuntimeDecisionLedgerRecord(good).valid, true);
+  assert.equal(runtimeDecisionLedgerDigest(good), baselineDigest);
+});
+
+test("Runtime Decision Ledger rejects nested Proxy reason arrays, including revoked arrays", () => {
+  const good = validBuyRecord();
+  const baselineDigest = runtimeDecisionLedgerDigest(good);
+  let reads = 0;
+  const reasons = new Proxy([...good.reasons], {
+    get(target, key, receiver) {
+      reads += 1;
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const disguised = { ...good, reasons };
+  assert.equal(validateRuntimeDecisionLedgerRecord(disguised).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(disguised), TypeError);
+  assert.equal(reads, 0, "nested Proxy traps must not execute");
+
+  const revoked = Proxy.revocable([...good.warnings], {});
+  revoked.revoke();
+  const withRevoked = { ...good, warnings: revoked.proxy };
+  assert.equal(validateRuntimeDecisionLedgerRecord(withRevoked).valid, false);
+  assert.throws(() => runtimeDecisionLedgerDigest(withRevoked), TypeError);
+  assert.equal(runtimeDecisionLedgerDigest(good), baselineDigest);
+});

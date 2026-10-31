@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-outcome-ledger-reconciliation-nonboolean-exact-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.reconciliation-nonboolean-exact-bypass",
+  "subsystem": "research-governance-outcome-ledger",
+  "operation": "classify-outcome-reconciliation-runtime-flags",
+  "symptom": "Non-boolean truthy reconciliation flags, including the string false, were classified EXACT.",
+  "rootCauseClass": "TRUTHY_NONBOOLEAN_RECONCILIATION_ADMISSION",
+  "attemptSignature": "five-flags-runtime-type-and-own-data-negative-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-pr-ci",
+    "materialStateKey": "outcomeLearningLedger.ts@04c56dedb9ad/truthy-reconciliation-flags"
+  },
+  "evidenceRefs": [
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedgerReconciliationAdmission.test.ts",
+    "pull/2286"
+  ],
+  "lesson": "TypeScript boolean types are not runtime evidence validation; truthy coercion can promote unresolved settlement links to EXACT.",
+  "guardrail": "Require five own enumerable boolean data descriptors before reconciliation classification; reject malformed shapes as REJECTED_INVALID without executing accessors. Preserve false-flag priority and research isolation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-20T02:06:24.361Z",
+  "productionConnection": false,
+  "_digest": "bd3f2ce864b6867d2a7a5c7f1b415643cc44e1d2c9c6fbe85447cc7571476de1",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-20T02:06:24.361Z"
+}

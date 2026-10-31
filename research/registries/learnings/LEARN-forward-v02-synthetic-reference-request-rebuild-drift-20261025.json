@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-reference-request-rebuild-drift-20261025",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-vault.v02-synthetic-reference-request-rebuild-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-synthetic-reference-anchor-conflict",
+  "symptom": "The synthetic reference helper rebuilt caller-owned request metadata after Ed25519 math and claimed-anchor correlation without rechecking the signed request digest. A descriptor proxy can change protocol metadata between these builds; the earlier signature then describes a different request snapshot. No independent verification or scoring authority was ever granted.",
+  "rootCauseClass": "REBUILT_UNTRUSTED_REQUEST_NOT_REBOUND_TO_SIGNED_TRANSCRIPT",
+  "attemptSignature": "pr2286-v303-recheck-rebuilt-request-digest-after-claimed-signature-deny-only-proxy-test",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticReferenceAnchorConflict.0.1-untrusted/pr2286-b989d1df/rebuild-without-signed-transcript-recheck"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticReferenceAnchorConflict.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/0a48b7a0500d76c80a4fa28c74bb820b05f9afa0",
+    "commit/002f2c0cc41db4d87b653565983a408a70cf1c3d",
+    "github-actions/run-40118959781",
+    "research/registries/learnings/LEARN-forward-v02-partial-verifier-request-binding-20261024.json",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-reference-never-authority-20261025.json"
+  ],
+  "lesson": "When a deny-only verifier simulation constructs the same caller-owned request more than once, a previously valid Ed25519 signature cannot be assumed to bind the later snapshot. The verified regression mutates protocol fields through a descriptor proxy between mathematical verification and reference correlation; the later request is rejected as changed.",
+  "guardrail": "For every separately rebuilt synthetic request, recompute its domain-separated full transcript digest and compare it with the original signature claim using descriptor-only reads. Return a deny-only request-changed blocker on mismatch. Never infer independent trust, source finality, protocol approval or scoring from caller-controlled signatures, policy or reference fixtures.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-24T18:08:00.000Z",
+  "productionConnection": false,
+  "_digest": "003357776cba83877cd8f44c5628f6c820fdce5241596d4320d7b1f9abec2902",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T18:08:00.000Z"
+}

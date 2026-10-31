@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-research-automation-legacy-prepolicy-denial-verified-20261031",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-automation.legacy-cli-denial.pre-policy-read-order",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "reject-deprecated-and-unknown-modes-before-legacy-policy-load",
+  "symptom": "The Draft research CLI previously parsed the legacy policy before rejecting deprecated task and unknown positional modes. This could mask the controlled exit-3 denial when policy files were missing or malformed. Moving both denials before policy loading and testing an empty synthetic working directory produced the intended exit 3 without request parsing; official Actions 41128543812 passed the named regression and both jobs. This does not disable the workflow, exercise valid requests, or prove production protection on main.",
+  "rootCauseClass": "LEGACY_DISABLED_MODE_POLICY_READ_PRECEDENCE",
+  "attemptSignature": "pr2286-v481-pre-policy-mode-gates-plus-empty-workspace-no-request-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-ubuntu-node24-tsx/isolated-empty-workspace-no-request",
+    "materialStateKey": "legacy-runner-e73451d6/test-9b9f1d46"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/9ddbc22775e2ee32a3a26d2b08eed68cbe4baec1",
+    "commit/450bc06a889616ab1c221fce54c468876c610b96",
+    "commit/5febda116c32518f052834af1415cc789fa02457",
+    "actions/runs/41128543812",
+    "scripts/run-research-task.ts",
+    "src/automation/legacyRunnerTaskDisabled.test.ts",
+    "research/registries/learnings/LEARN-research-automation-legacy-task-fail-closed-verified-20261031.json"
+  ],
+  "lesson": "Fail-closed disabled-mode guards must precede optional configuration reads, not merely request parsing. An isolated empty-workspace CLI regression with an absolute trusted test loader distinguishes policy-independent denial from a missing-file error without executing any research task.",
+  "guardrail": "Keep task and unknown positional modes terminally denied before the legacy policy read, with exit code 3. Preserve source-order assertions and the isolated no-policy/no-request subprocess regression. Status and operator control modes remain separate and are not reviewed or disabled here. Do not dispatch valid legacy requests, activate protected N2, infer live workflow disablement, or connect research to production.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-30T21:11:38.000Z",
+  "productionConnection": false,
+  "_digest": "9ba414599cddd3334d83e95327e4ab8f0c28472d06ea11e9122255e80e2acc69",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T21:11:38.000Z"
+}

@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-parity-post-preflight-original-reuse-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-parity-post-preflight-original-reuse",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-linked-buy-and-local-outcome-race-parity",
+  "symptom": "The linked BUY and local outcome race parity entry points accepted a successful lower-level cross-ledger preflight but then read original caller-controlled candidate/decision/outcome objects. A reference Proxy trap could alter race membership or refund disposition after the lower-level snapshot, making unequal or excluded race sets appear aligned (never granting scoring).",
+  "rootCauseClass": "PARITY_POST_PREFLIGHT_REUSES_MUTABLE_CALLER_OBJECTS",
+  "attemptSignature": "pr2286-v317-pin-linked-and-local-parity-inputs-two-late-reference-repair-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02LinkedBuyRaceParity.0.1/pr2286-f876a773/reuse-original-after-lower-preflight"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02LinkedBuyRaceParity.ts",
+    "src/research/governance/forwardV02LinkedBuyRaceParity.test.ts",
+    "commit/2046b539e40fbee80348ef460f7d66ccd1b81837",
+    "research/registries/learnings/LEARN-forward-v02-outcome-link-cross-input-late-repair-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-batch-replay-late-reference-mutation-20261025.json"
+  ],
+  "lesson": "Successful validation of a detached lower-level copy does not protect a higher-level parity check that later consumes original caller references. A late cross-input mutation can change the apparent cohort or exclusion classification after preflight.",
+  "guardrail": "Pin candidate, references, decisions and outcomes into one set of bounded detached input graphs before calling lower-level preflight and use only those same pinned graphs for linked BUY and local outcome race-set parity. Preserve refund/exclusion asymmetry as a denial, assert late mutation triggers, and never infer independent settlement or scoring authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T03:11:20.000Z",
+  "productionConnection": false,
+  "_digest": "ee18460671542f5b5d2cb01d64a6663b5efacc8c6605ee62eee6e8507ca5db6f",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T03:11:20.000Z"
+}

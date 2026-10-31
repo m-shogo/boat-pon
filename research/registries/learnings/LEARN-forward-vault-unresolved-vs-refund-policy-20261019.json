@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-unresolved-vs-refund-policy-20261019",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.unresolved-policy-refund-semantics-conflation",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "audit-v166-offline-outcome-preflight-against-canonical-evaluation-protocol",
+  "symptom": "The unmerged v166 non-scoring preflight accepted a free-standing EXCLUDE_AND_COUNT string as refundTreatment. Canonical Forward Vault 0.1 defines EXCLUDE_AND_COUNT only as unresolvedPolicy and has no frozen refund/void treatment field. A caller-supplied string could therefore be mistaken for independently frozen monetary semantics.",
+  "rootCauseClass": "UNRESOLVED_EXCLUSION_POLICY_CONFLATED_WITH_UNSPECIFIED_REFUND_TREATMENT",
+  "attemptSignature": "v166-preflight-free-string-refundTreatment-vs-canonical-unresolvedPolicy",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-main-pr-read+node22-typescript5.8.3-offline-v166",
+    "materialStateKey": "forward-vault.0.1-no-refund-treatment+v166-free-string-refund-treatment"
+  },
+  "evidenceRefs": [
+    "docs/architecture/forward-evaluation-vault.md",
+    "config/research-governance/forward-evaluation-vault.schema.json",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardVaultOutcomePreflight.ts (v166 offline candidate, not merged)",
+    "pull/2286"
+  ],
+  "lesson": "A frozen unresolved-evidence exclusion policy does not prove the ROI stake/return/refund/void contract. Do not name or accept unresolvedPolicy as refundTreatment; a digest or syntactically valid string cannot fill a missing prospective protocol field.",
+  "guardrail": "At the Outcome Ledger to Forward Vault boundary require a canonical validated EvaluationProtocol object, reject free-standing policy strings or invented refundTreatment fields, and keep REFUNDED/VOID non-scoring with an explicit pending-frozen-monetary-policy status. Do not admit ROI until a separately versioned, prospectively frozen refund/void contract and independent evidence exist.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-18T16:02:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-18T16:02:00.000Z",
+  "_digest": "e0457bc9b5e0a7ec34c72db96c07ee40e65dc9896ab51ff2ce7fe05a48a53b8b"
+}

@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-impossible-calendar-date-20261015",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.iso-calendar-day-rollover-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-iso-calendar-day",
+  "symptom": "The PR runtime Date.parse-based instant validator accepts impossible Gregorian dates such as 2026-02-30, normalizing them to a later calendar day. Offline negative-control tests failed 5 of 19 assertions; calendar-aware candidate passed 19 of 19, but is not committed or CI-verified.",
+  "rootCauseClass": "DATE_PARSE_NORMALIZES_INVALID_GREGORIAN_CALENDAR_DAY",
+  "attemptSignature": "forward-vault-date-parse-calendar-rollover-negative-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/github-pr-2286-research-governance",
+    "materialStateKey": "forward-evaluation-vault.0.1/pr-blob-cae38cc/instant-dateparse-rollover"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.calendarBoundary.test.ts"
+  ],
+  "lesson": "Date.parse accepting an ISO-shaped string does not prove that its Gregorian calendar day exists. Reject invalid month/day/leap-year combinations before admission, hashing or cohort enrollment.",
+  "guardrail": "Validate year/month/day against the proleptic Gregorian calendar and validate hour/minute/second and timezone bounds before Date.parse. Require negative fixtures for Feb 30, non-leap Feb 29, Apr 31 and century leap rules, then run repository CI on committed code.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-14T19:55:10.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-14T19:55:10.000Z",
+  "_digest": "c6cde8a7b05ae2c54d09ccf7b57d9569d005df69bb9af3751af65b268efd5fc9"
+}

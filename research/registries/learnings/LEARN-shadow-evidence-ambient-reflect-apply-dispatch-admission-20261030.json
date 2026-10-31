@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-reflect-apply-dispatch-admission-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-reflect-apply-dispatch-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-shadow-path-digest-and-canonical-date-through-pinned-intrinsics",
+  "symptom": "Synthetic Node 22.16.0 showed that replacing ambient Reflect.apply after module initialization could substitute results even when native RegExp.exec, Date.parse and Date.toISOString had been captured. An embedded synthetic path marker, malformed digest shape, noncanonical generatedAt and impossible bounded scope date could be relabeled by the dispatch hook. No private data or production execution was involved.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_REFLECT_APPLY_DISPATCH_BYPASS",
+  "attemptSignature": "pr2286-v456-pin-reflect-apply-dispatch-for-shadow-regex-and-date-intrinsics",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@8f867893/captured-intrinsics-still-call-mutable-Reflect.apply"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/7a348f9976889c298da9841ca458d70e225dc853",
+    "commit/d79edfe4ce320d62d48d558034763a7558096b0f",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-regexp-test-exec-admission-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-date-parse-iso-admission-20261030.json"
+  ],
+  "lesson": "Capturing a native validator intrinsic does not stabilize its behavior when invocation still goes through a mutable global dispatcher. A caller-realm Reflect.apply hook can rewrite both RegExp and Date admission despite prior captured-method guards. This is synthetic integrity evidence, not independent K-source or time attestation.",
+  "guardrail": "Capture Reflect.apply at module initialization together with native RegExp.exec, Date.parse and Date.toISOString, and invoke only through that pinned dispatcher. Regression-test reversible ambient dispatcher replacement against valid evidence, path-token denial, malformed digest denial, noncanonical UTC instant and impossible calendar date. Keep shadow evidence research-only and never infer K issuer/rights, finality, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T20:07:33.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T20:07:33.000Z",
+  "_digest": "cf28636aa1abf9c541636f9aed7885918f32abe7a478794e7dd5ca93052990a5"
+}

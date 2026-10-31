@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-shadow-evidence-array-own-property-shape-digest-alias-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.array-own-property-shape-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "build-context-digest-from-caller-owned-array-metadata",
+  "symptom": "Node 22.16.0 synthetic JSON projection showed that an array with hidden, extra enumerable or symbol-keyed own metadata serialized identically to an ordinary array, while a sparse array serialized identically to an array containing null. The shadow canonicalizer previously visited only numeric indices and silently discarded those array shape differences when computing contextDigest. No private odds, paths, source records or production data were used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_ARRAY_OWN_PROPERTY_SHAPE_CANONICAL_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v451-reject-array-extra-hidden-symbol-sparse-accessor-and-exotic-shapes-before-canonical-digest",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@d42a8e90/array-canonicalizer-ignores-extra-own-keys-and-prototype"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.arrayShape.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-canonical-own-property-shape-alias-20261029.json",
+    "research/registries/learnings/LEARN-forward-vault-sparse-array-null-serialization-20261019.json"
+  ],
+  "lesson": "The existing object own-property guardrail does not automatically cover Array branches. JSON.stringify ignores extra array properties and symbols and represents holes as null; canonical hashing must reject those shapes before copying indexed data.",
+  "guardrail": "For research-only shadow canonical arrays, allow only Array.prototype/null prototypes, exact length plus dense own enumerable numeric data indices, and no extra/symbol/hidden keys. Check shape before indexed canonicalization; keep ordinary digest compatibility and test synthetic hidden, enumerable, symbol, sparse, accessor and exotic-prototype cases. No external K authority, scoring or production authorization follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T14:59:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T14:59:00.000Z",
+  "_digest": "fc1afe168ecd29519fb9e1216ee4a927dac63a743677071a6cfc64096889ec4c"
+}

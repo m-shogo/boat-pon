@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-outcome-ledger-json-shape-validation-bypass-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.json-shape-validation-digest-divergence",
+  "subsystem": "research-governance-outcome-ledger",
+  "operation": "outcome-ledger-validate-and-canonical-digest-json-shape",
+  "symptom": "Outcome Ledger validator reads inherited required fields and permits non-enumerable/accessor/symbol record properties or sparse evidence-digest arrays. Canonical hashing enumerates a different JSON property set, so invalid or divergent payloads can enter digest/append admission despite the direct-digest validation guard.",
+  "rootCauseClass": "NONJSON_PROPERTY_SHAPE_VALIDATION_BYPASS",
+  "attemptSignature": "outcome-ledger-own-data-prototype-sparse-array-negative-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-governance-node24",
+    "materialStateKey": "outcomeLearningLedger.ts@69b06dcd/direct-digest-guard-without-json-shape"
+  },
+  "evidenceRefs": [
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedger.test.ts",
+    "research/registries/learnings/LEARN-forward-vault-nonjson-data-properties-20261008.json",
+    "research/registries/learnings/LEARN-forward-vault-prototype-serialization-divergence-20261009.json",
+    "pull/2286"
+  ],
+  "lesson": "Validating field values without validating their own enumerable data-property shape and array density is insufficient for canonical digest and JSON persistence equivalence.",
+  "guardrail": "Reuse Forward Vault own-data/prototype guardrails: reject exotic record prototypes/toJSON hooks, inherited or non-enumerable required fields, accessors, symbol properties and sparse/modified evidence arrays before digest or append classification; preserve valid-record digest bytes and research-only isolation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-20T01:04:22.000Z",
+  "productionConnection": false,
+  "_digest": "db82d7dfcaae8fb2bb7e549fd2319a1bf3fbffc0708a1e5a5c9a33f90b30f8a8",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-20T01:04:22.000Z"
+}

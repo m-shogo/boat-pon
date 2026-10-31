@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-schema-unknown-offset-parity-20261016",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.schema-runtime-unknown-offset-parity",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "schema-only-pit-timestamp-admission",
+  "symptom": "The vault Draft 2020-12 schema accepted -00:00 unknown-offset timestamps even after the runtime v108 admission guard rejected them, so schema-only consumers could grant unsupported point-in-time authority.",
+  "rootCauseClass": "SCHEMA_FORMAT_DATETIME_ACCEPTS_UNKNOWN_UTC_OFFSET",
+  "attemptSignature": "v109-offline-schema-only-five-timestamp-field-parity-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/typescript5.8.3/python-jsonschema/offline-v108-pr-head-fixture",
+    "materialStateKey": "pr2286-e95df064-plus-v108-schema-date-time-without-known-offset-guard"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/forward-evaluation-vault.schema.json",
+    "src/research/governance/forwardEvaluationVault.unknownOffset.test.ts",
+    "src/research/governance/forwardEvaluationVault.schemaOffsetParity.test.ts"
+  ],
+  "lesson": "JSON Schema date-time format allows RFC3339 -00:00, so format validation alone does not enforce the research PIT requirement for a known UTC offset. Schema-only admission must be aligned with the runtime timestamp guard.",
+  "guardrail": "Use one reusable exactInstant schema definition with a -00:00 rejection pattern for createdAt, enrollment start/end, enrolledAt and snapshot cutoffAt; retain date-time format and nullable endAt. Test both schema-only and runtime admission.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-16T07:00:00.000Z",
+  "productionConnection": false,
+  "_digest": "516c640543efa30a29ca94d8378da1b0709381f03dbf97a9c0d1f82fe19e23e6",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-16T07:00:00.000Z"
+}

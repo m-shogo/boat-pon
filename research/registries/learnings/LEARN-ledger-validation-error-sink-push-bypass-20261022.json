@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-ledger-validation-error-sink-push-bypass-20261022",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.ledger-validation.mutable-error-array-push-bypass",
+  "subsystem": "research-governance-ledger-validation",
+  "operation": "validate-forward-vault-and-outcome-ledger-records",
+  "symptom": "The PR validators record errors through mutable Array.prototype.push. In a synthetic no-op push runtime, invalid required fields leave error arrays empty and can be admitted. No live research data corruption was observed.",
+  "rootCauseClass": "MUTABLE_ARRAY_PUSH_ERROR_COLLECTION_ADMISSION_BYPASS",
+  "attemptSignature": "synthetic-noop-array-push-invalid-required-record-with-indexed-error-sink-candidate",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/local-source-equivalent+github-connector",
+    "materialStateKey": "pr2286-2eba27f8/forward-3ea75dd+outcome-0551598+v240-offline-proof"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "research/registries/learnings/LEARN-forward-vault-required-field-foreach-bypass-20261021.json",
+    "research/registries/learnings/LEARN-outcome-ledger-array-iterator-admission-bypass-20261021.json"
+  ],
+  "lesson": "Replacing iterator and forEach-dependent admission checks does not protect validators if their error sinks still delegate to mutable Array.prototype.push; a suppressed error array can produce a false valid result.",
+  "guardrail": "Record validation failures by indexed assignment, not mutable Array.prototype.push. Verify both valid-record parity and invalid-record rejection under a synthetic no-op push with the actual repository TypeScript runner before integration.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-21T21:05:50.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-21T21:05:50.000Z",
+  "_digest": "33ee95c9137dc5c2fdb896f9b7575782d6a132066ae951d0a8679690b29e5763"
+}

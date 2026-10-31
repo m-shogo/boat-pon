@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boat-pon.local/schema/forward-v02-authority-metadata.0.1-untrusted.json",
+  "title": "Forward v0.2 caller-supplied authority metadata (UNTRUSTED)",
+  "description": "Research-only structural schema. No issuer, receipt, signature-shaped digest, trustAnchorId, finality label or valid shape proves independent authority. Cross-field, calendar, chronology, membership coverage and finality-chain checks require the deny-only TypeScript preflight. Never authorize scoring.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "evidenceStage",
+    "freeze",
+    "settlement"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "forward-v02-authority-metadata.0.1-untrusted"
+    },
+    "evidenceStage": {
+      "enum": [
+        "SHADOW_FORWARD",
+        "FUTURE_ONLY"
+      ]
+    },
+    "freeze": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cohortId",
+        "protocolDigest",
+        "membershipDigest",
+        "firstDecisionAt",
+        "expectedMembership",
+        "includedMembership",
+        "excludedMembership",
+        "witness"
+      ],
+      "properties": {
+        "cohortId": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "protocolDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "membershipDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "firstDecisionAt": {
+          "$ref": "#/$defs/exactInstant"
+        },
+        "expectedMembership": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonblank"
+          }
+        },
+        "includedMembership": {
+          "type": "array",
+          "minItems": 0,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonblank"
+          }
+        },
+        "excludedMembership": {
+          "type": "array",
+          "minItems": 0,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonblank"
+          }
+        },
+        "witness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "receiptId",
+            "issuerId",
+            "receiptAt",
+            "protocolDigest",
+            "membershipDigest",
+            "signatureDigest",
+            "trustAnchorId"
+          ],
+          "properties": {
+            "receiptId": {
+              "$ref": "#/$defs/nonblank"
+            },
+            "issuerId": {
+              "$ref": "#/$defs/nonblank"
+            },
+            "receiptAt": {
+              "$ref": "#/$defs/exactInstant"
+            },
+            "protocolDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "membershipDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "signatureDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "trustAnchorId": {
+              "$ref": "#/$defs/nonblank"
+            }
+          }
+        }
+      }
+    },
+    "settlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expectedDecisionId",
+        "decisionId",
+        "expectedTicketKey",
+        "ticketKey",
+        "sourceId",
+        "trustAnchorId",
+        "disposition",
+        "evaluable",
+        "revisions"
+      ],
+      "properties": {
+        "expectedDecisionId": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "decisionId": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "expectedTicketKey": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "ticketKey": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "trustAnchorId": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "disposition": {
+          "enum": [
+            "SETTLED",
+            "REFUNDED",
+            "VOID",
+            "CANCELLED",
+            "UNRESOLVED"
+          ]
+        },
+        "evaluable": {
+          "type": "boolean"
+        },
+        "revisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revisionId",
+              "contentDigest",
+              "predecessorDigest",
+              "sequence",
+              "observedAt",
+              "sourceFinality"
+            ],
+            "properties": {
+              "revisionId": {
+                "$ref": "#/$defs/nonblank"
+              },
+              "contentDigest": {
+                "$ref": "#/$defs/digest"
+              },
+              "predecessorDigest": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/$defs/digest"
+                  }
+                ]
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "observedAt": {
+                "$ref": "#/$defs/exactInstant"
+              },
+              "sourceFinality": {
+                "enum": [
+                  "PROVISIONAL",
+                  "FINAL",
+                  "REVOKED"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonblank": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "exactInstant": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?!0000-)(?!.*-00:00$)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])$"
+    }
+  }
+}

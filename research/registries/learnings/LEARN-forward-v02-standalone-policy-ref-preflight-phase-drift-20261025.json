@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-policy-ref-preflight-phase-drift-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-policy-ref-preflight-phase-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-trust-policy-preflight",
+  "symptom": "The standalone trust-policy preflight validated the caller-owned envelope before examining policy anchors and proof references. An envelope own-descriptor Proxy could change a previously revoked witness anchor to ACTIVE, or repair a mismatching policy snapshot digest, before the later policy/reference reads. The standalone untrusted metadata-consistency flag could therefore describe a later claim rather than the claim present before envelope preflight; no independent authority or scoring was granted.",
+  "rootCauseClass": "UNTRUSTED_POLICY_AND_PROOF_REFS_READ_AFTER_ENVELOPE_PREFLIGHT_SIDE_EFFECTS",
+  "attemptSignature": "pr2286-v310-pin-standalone-policy-and-refs-before-envelope-preflight-two-phase-trigger-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02TrustPolicyPreflight.0.1-untrusted/pr2286-13694558/direct-policy-and-ref-reads-after-envelope-validation"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02TrustPolicyPreflight.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "commit/7ead164f32f478448cc92b00eb59f30d4e376ef4",
+    "commit/7382c889243ce2fb62b8f0a2bf9b2513f3abb016",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-untrusted-response-preflight-late-snapshot-20261025.json"
+  ],
+  "lesson": "A standalone preflight is callable without the proof-request builder's detached snapshot. An earlier envelope validation may execute caller-controlled descriptor traps that change policy and proof-reference values before their subsequent validation. Strict shape checks alone cannot establish entry-time consistency.",
+  "guardrail": "For standalone, deny-only policy/reference correlation, take bounded own-data-descriptor detached snapshots of policy and proof refs before traversing the envelope; then snapshot the envelope and perform all semantic checks on detached graphs only. Preserve invalid-envelope precedence, reject getters and exotic arrays, assert mutation triggers in two negative regressions, and never infer external trust or scoring.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T00:02:35.924Z",
+  "productionConnection": false,
+  "_digest": "1ce547b6940957f26ec2115f49affae31187bcbf27ceeae3500d34567f705e4b",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T00:02:35.924Z"
+}
