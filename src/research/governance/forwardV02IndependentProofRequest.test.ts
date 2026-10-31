@@ -691,3 +691,94 @@ test("proof-request export denies synthetic local path tokens in all projected i
     assert.equal(result.scoringAuthorized, false);
   }
 });
+
+test("proof-request export denies percent-encoded local paths without overblocking benign encoded IDs", () => {
+  type F = ReturnType<typeof fixture>;
+  const encodedDeep = (value: string, layers: number) => {
+    let encoded = value;
+    for (let i = 0; i < layers; i++) encoded = encodeURIComponent(encoded);
+    return encoded;
+  };
+  const cases: Array<{ name: string; change: (f: F) => void }> = [
+    { name: "encoded cohort absolute POSIX", change: f => {
+      f.envelope.freeze.cohortId = "synthetic%3D%2Fplaceholder%2Ffile";
+    } },
+    { name: "encoded issuer drive path", change: f => {
+      const id = "synthetic%3DC%3A%5Cplaceholder%5Cdata";
+      f.envelope.freeze.witness.issuerId = id;
+      f.policy.anchors[0]!.authorityId = id;
+    } },
+    { name: "encoded receipt file URL", change: f => {
+      const id = "synthetic%3Dfile%3A%2F%2F%2Fplaceholder%2Ffile";
+      f.envelope.freeze.witness.receiptId = id;
+      f.refs.witnessReceiptId = id;
+    } },
+    { name: "double-encoded witness anchor path", change: f => {
+      const id = "synthetic%253D%252Fplaceholder%252Fwitness";
+      f.envelope.freeze.witness.trustAnchorId = id;
+      f.policy.anchors[0]!.anchorId = id;
+    } },
+    { name: "encoded settlement UNC path", change: f => {
+      const id = "synthetic%3D%5C%5Cplaceholder%5Cshare";
+      f.envelope.settlement.sourceId = id;
+      f.policy.anchors[1]!.authorityId = id;
+    } },
+    { name: "encoded terminal revision path", change: f => {
+      const id = "synthetic%3D%2Fplaceholder%2Frevision";
+      f.envelope.settlement.revisions[0]!.revisionId = id;
+      f.refs.settlementRevisionId = id;
+    } },
+    { name: "encoded nonterminal correction path", change: f => {
+      f.envelope.settlement.revisions[0]!.revisionId = "synthetic%3D%2Fplaceholder%2Fprior";
+      f.envelope.settlement.revisions[0]!.sourceFinality = "PROVISIONAL";
+      f.envelope.settlement.revisions.push({
+        revisionId: "synthetic-revision-2", contentDigest: h("e"),
+        predecessorDigest: h("d"), sequence: 2,
+        observedAt: "2026-10-24T00:00:02Z", sourceFinality: "FINAL",
+      });
+      f.refs.settlementRevisionId = "synthetic-revision-2";
+    } },
+    { name: "four-layer encoded cohort", change: f => {
+      f.envelope.freeze.cohortId = encodedDeep("synthetic=/placeholder/data", 4);
+    } },
+    { name: "over-depth encoded cohort", change: f => {
+      f.envelope.freeze.cohortId = encodedDeep("synthetic=/placeholder/data", 5);
+    } },
+    { name: "malformed percent-encoded cohort", change: f => {
+      f.envelope.freeze.cohortId = "synthetic%2Fplaceholder%E0%A4%A";
+    } },
+  ];
+  const builders = [
+    (f: F) => buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs),
+    (f: F) => buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs),
+  ];
+  for (const { name, change } of cases) {
+    const f = fixture();
+    change(f);
+    for (const build of builders) {
+      const result = build(f);
+      assert.equal(result.metadataConsistent, false, name);
+      assert.equal(result.request, null, name);
+      assert.deepEqual(result.blockers, ["PRIVATE_PATH_METADATA"], name);
+      assert.equal(result.independentAuthorityVerified, false, name);
+      assert.equal(result.scoringAuthorized, false, name);
+      assert.equal(JSON.stringify(result).includes("placeholder"), false, name);
+    }
+  }
+  for (const id of [
+    "https%3A%2F%2Fexample.invalid%2Fresearch%2Fcohort",
+    "team%2Fresearch-cohort",
+    "cohort%252F2026",
+    "synthetic%zz",
+  ]) {
+    for (const build of builders) {
+      const f = fixture();
+      f.envelope.freeze.cohortId = id;
+      const result = build(f);
+      assert.equal(result.metadataConsistent, true, id);
+      assert.equal(result.request?.freeze.cohortId, id);
+      assert.equal(result.independentAuthorityVerified, false);
+      assert.equal(result.scoringAuthorized, false);
+    }
+  }
+});
