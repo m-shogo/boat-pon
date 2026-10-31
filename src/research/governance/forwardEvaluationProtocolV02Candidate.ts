@@ -24,7 +24,8 @@ const TOP = [
   "evidenceRequirements", "productionConnection", "scoringAuthorized",
 ] as const;
 const MONEY = [
-  "currency", "unit", "netRoiFormula", "refund", "void", "cancelled",
+  "currency", "unit", "netRoiFormula", "stakePopulation", "returnPopulation",
+  "specialPayout", "refund", "void", "cancelled",
   "unresolved", "zeroDenominator",
 ] as const;
 const MAX_HIT = [
@@ -35,7 +36,7 @@ const SAMPLE = ["minDecisions", "minRaces", "grouping"] as const;
 const EVIDENCE = ["outcome", "sourceManifest", "enrollment", "stagePooling"] as const;
 const EXCLUSIONS = [
   "REFUNDED", "VOID", "CANCELLED", "UNRESOLVED", "NONFINAL",
-  "NOT_EVALUABLE", "IDENTITY_MISMATCH", "NOT_ENROLLED",
+  "NOT_EVALUABLE", "IDENTITY_MISMATCH", "NOT_ENROLLED", "SPECIAL_PAYOUT",
 ] as const;
 const SHA256 = /^[0-9a-f]{64}$/u;
 
@@ -139,6 +140,11 @@ export function assessForwardV02Candidate(input: unknown): ForwardV02CandidateAs
     if (!exactObject(c.moneyPolicy, MONEY) ||
         c.moneyPolicy.currency !== "JPY" || c.moneyPolicy.unit !== "INTEGER_YEN" ||
         c.moneyPolicy.netRoiFormula !== "(SUM_PAYOUT_MINUS_SUM_STAKE)/SUM_STAKE" ||
+        // Consumer return-rate includes refunds and special payouts. A draft
+        // research ROI must declare a different, evaluable-only population.
+        c.moneyPolicy.stakePopulation !== "EVALUABLE_SETTLED_STAKE_ONLY" ||
+        c.moneyPolicy.returnPopulation !== "EVALUABLE_SETTLED_PAYOUT_ONLY" ||
+        c.moneyPolicy.specialPayout !== "EXCLUDE_AND_COUNT" ||
         c.moneyPolicy.refund !== "EXCLUDE_AND_COUNT" ||
         c.moneyPolicy.void !== "EXCLUDE_AND_COUNT" ||
         c.moneyPolicy.cancelled !== "EXCLUDE_AND_COUNT" ||

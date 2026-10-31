@@ -73,6 +73,9 @@ function candidate() {
     moneyPolicy: {
       currency: "JPY", unit: "INTEGER_YEN",
       netRoiFormula: "(SUM_PAYOUT_MINUS_SUM_STAKE)/SUM_STAKE",
+      stakePopulation: "EVALUABLE_SETTLED_STAKE_ONLY",
+      returnPopulation: "EVALUABLE_SETTLED_PAYOUT_ONLY",
+      specialPayout: "EXCLUDE_AND_COUNT",
       refund: "EXCLUDE_AND_COUNT", void: "EXCLUDE_AND_COUNT",
       cancelled: "EXCLUDE_AND_COUNT", unresolved: "EXCLUDE_AND_COUNT",
       zeroDenominator: "UNSCORABLE_AND_REPORT",
@@ -85,7 +88,7 @@ function candidate() {
     samplePolicy: { minDecisions: 1, minRaces: 1, grouping: "PER_STAGE_PER_DECISION_SYSTEM" },
     exclusionReasons: [
       "REFUNDED", "VOID", "CANCELLED", "UNRESOLVED", "NONFINAL",
-      "NOT_EVALUABLE", "IDENTITY_MISMATCH", "NOT_ENROLLED",
+      "NOT_EVALUABLE", "IDENTITY_MISMATCH", "NOT_ENROLLED", "SPECIAL_PAYOUT",
     ],
     benchmarkDecisionSystems: ["synthetic-a", "synthetic-b"],
     evidenceRequirements: {

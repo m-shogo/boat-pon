@@ -21,6 +21,9 @@ function candidate() {
     moneyPolicy: {
       currency: "JPY", unit: "INTEGER_YEN",
       netRoiFormula: "(SUM_PAYOUT_MINUS_SUM_STAKE)/SUM_STAKE",
+      stakePopulation: "EVALUABLE_SETTLED_STAKE_ONLY",
+      returnPopulation: "EVALUABLE_SETTLED_PAYOUT_ONLY",
+      specialPayout: "EXCLUDE_AND_COUNT",
       refund: "EXCLUDE_AND_COUNT", void: "EXCLUDE_AND_COUNT",
       cancelled: "EXCLUDE_AND_COUNT", unresolved: "EXCLUDE_AND_COUNT",
       zeroDenominator: "UNSCORABLE_AND_REPORT",
@@ -35,7 +38,7 @@ function candidate() {
     },
     exclusionReasons: [
       "REFUNDED", "VOID", "CANCELLED", "UNRESOLVED", "NONFINAL",
-      "NOT_EVALUABLE", "IDENTITY_MISMATCH", "NOT_ENROLLED",
+      "NOT_EVALUABLE", "IDENTITY_MISMATCH", "NOT_ENROLLED", "SPECIAL_PAYOUT",
     ],
     benchmarkDecisionSystems: ["synthetic-shadow", "synthetic-benchmark"],
     evidenceRequirements: {
@@ -243,4 +246,27 @@ test("candidate preflight cannot be rewritten into scoring authority after asses
   }
   assert.equal(complete.candidateComplete, true);
   assert.equal(denied.candidateComplete, false);
+});
+
+// Synthetic consumer-display conventions are not a frozen research ROI policy.
+test("TELEBOAT gross-return conventions cannot silently replace v0.2 research populations", () => {
+  assert.equal(assessForwardV02Candidate(candidate()).candidateComplete, true);
+  for (const [field, invalid] of [
+    ["stakePopulation", "ALL_PURCHASE_STAKE_INCLUDING_REFUNDS"],
+    ["returnPopulation", "PAYOUT_PLUS_REFUNDS_AND_SPECIAL_PAYOUT"],
+    ["specialPayout", "COUNT_AS_HIT"],
+  ] as const) {
+    const x = candidate();
+    x.moneyPolicy[field] = invalid;
+    assert.deepEqual(blockers(x), ["UNFROZEN_MONEY_OR_OUTCOME_POLICY"]);
+  }
+  for (const field of ["stakePopulation", "returnPopulation", "specialPayout"] as const) {
+    const x = candidate();
+    delete (x.moneyPolicy as Partial<typeof x.moneyPolicy>)[field];
+    assert.deepEqual(blockers(x), ["INVALID_CANDIDATE_SHAPE"]);
+  }
+  const x = candidate();
+  x.exclusionReasons = x.exclusionReasons.filter((reason) => reason !== "SPECIAL_PAYOUT");
+  assert.deepEqual(blockers(x), ["INCOMPLETE_EXCLUSION_TAXONOMY"]);
+  assert.equal(assessForwardV02Candidate(candidate()).scoringAuthorized, false);
 });
