@@ -537,3 +537,27 @@ test("strict proof request ingress preserves invalid-envelope priority for multi
   assert.equal(result.independentAuthorityVerified, false);
   assert.equal(result.scoringAuthorized, false);
 });
+
+
+test("metadata-only settlement proof request cannot claim ticket-level return-kind coverage", () => {
+  // The v0.2 candidate requires independently attributable ticket type,
+  // selection, terminal revision and return kind. This older metadata-only
+  // handoff deliberately carries no ticket-level classifier. A structurally
+  // consistent request is therefore not proof of ordinary-vs-special payout.
+  const result = check(fixture());
+  assert.equal(result.metadataConsistent, true);
+  assert.equal(result.request?.settlement.terminalRevisionId, "synthetic-revision");
+  assert.equal(result.independentAuthorityVerified, false);
+  assert.equal(result.scoringAuthorized, false);
+  assert.deepEqual(result.blockers, [
+    "UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL",
+  ]);
+  const settlement = result.request?.settlement;
+  assert.ok(settlement);
+  for (const field of [
+    "ticketType", "selection", "ticketKey", "expectedTicketKey",
+    "returnKind", "terminalReturnKind", "specialPayout",
+  ]) {
+    assert.equal(Object.hasOwn(settlement, field), false, field);
+  }
+});
