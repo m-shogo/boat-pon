@@ -561,3 +561,25 @@ test("metadata-only settlement proof request cannot claim ticket-level return-ki
     assert.equal(Object.hasOwn(settlement, field), false, field);
   }
 });
+
+test("caller-supplied ticket return-kind and selection assertions are rejected before metadata-only proof handoff", () => {
+  // R01/R02/R03/R04 are future independent-verifier specifications, not
+  // executable proof tests. Here we lock the current untrusted handoff:
+  // caller-added return-kind or exact-ticket assertions cannot masquerade
+  // as independently verified evidence in the older metadata-only request.
+  for (const [field, value] of [
+    ["terminalReturnKind", "ORDINARY_PAYOUT"],
+    ["returnKind", "SPECIAL_PAYOUT"],
+    ["ticketType", "TRIFECTA"],
+    ["selection", "1-2-3"],
+  ] as const) {
+    const f = fixture();
+    (f.envelope.settlement as unknown as Record<string, unknown>)[field] = value;
+    const result = check(f);
+    assert.equal(result.metadataConsistent, false, field);
+    assert.deepEqual(result.blockers, ["INVALID_ENVELOPE"], field);
+    assert.equal(result.request, null, field);
+    assert.equal(result.independentAuthorityVerified, false, field);
+    assert.equal(result.scoringAuthorized, false, field);
+  }
+});
