@@ -824,3 +824,61 @@ test("standalone transcript rejects ill-formed UTF-16 aliases before UTF-8 hashi
   assert.match(digestForwardV02UntrustedRequest(validPair), /^[0-9a-f]{64}$/u);
   assert.equal(digestForwardV02UntrustedRequest(base), digestForwardV02UntrustedRequest(built.request));
 });
+
+
+test("metadata-only verifier response correlation cannot distinguish exact ticket or refund disposition", () => {
+  // This is an intentional 0.1 request projection limitation, not a hash
+  // collision or a real verifier bypass. A claimed VERIFIED response may match
+  // a transcript that does not contain exact ticket identity or return kind.
+  const baseline = fixture();
+  const baselineBuilt = buildForwardV02IndependentProofRequest(
+    baseline.envelope, baseline.policy, baseline.refs,
+  );
+  assert.ok(baselineBuilt.request);
+  const baselineDigest = digestForwardV02UntrustedRequest(baselineBuilt.request);
+  assert.equal(baseline.response.requestBindingDigest, baselineDigest);
+
+  const cases: Array<{
+    label: string;
+    mutate: (f: ReturnType<typeof fixture>) => void;
+  }> = [
+    {
+      label: "different exact ticket",
+      mutate: f => {
+        f.envelope.settlement.expectedTicketKey = "synthetic-other-ticket";
+        f.envelope.settlement.ticketKey = "synthetic-other-ticket";
+      },
+    },
+    {
+      label: "refund instead of ordinary settlement",
+      mutate: f => {
+        f.envelope.settlement.disposition = "REFUNDED";
+        f.envelope.settlement.evaluable = false;
+      },
+    },
+  ];
+  for (const { label, mutate } of cases) {
+    const f = fixture();
+    mutate(f);
+    const built = buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs);
+    assert.equal(built.metadataConsistent, true, label);
+    assert.ok(built.request, label);
+    assert.deepEqual(built.request, baselineBuilt.request, label);
+    assert.equal(digestForwardV02UntrustedRequest(built.request), baselineDigest, label);
+    assert.equal(f.response.requestBindingDigest, baselineDigest, label);
+    for (const assess of [
+      assessForwardV02UntrustedVerifierResponse,
+      assessForwardV02UntrustedVerifierResponseStrictNodeIngress,
+    ]) {
+      const result = assess(f.envelope, f.policy, f.refs, f.response);
+      assert.equal(result.requestMetadataConsistent, true, label);
+      assert.equal(result.responseMetadataConsistent, true, label);
+      assert.deepEqual(result.blockers, [
+        "UNTRUSTED_VERIFIER_RESPONSE", "UNVERIFIED_WITNESS",
+        "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL",
+      ], label);
+      assert.equal(result.independentAuthorityVerified, false, label);
+      assert.equal(result.scoringAuthorized, false, label);
+    }
+  }
+});
