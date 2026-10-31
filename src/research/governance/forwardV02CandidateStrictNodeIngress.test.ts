@@ -46,6 +46,7 @@ function candidate() {
       sourceManifest: "INDEPENDENT_DIGEST_RECONCILIATION",
       enrollment: "PROSPECTIVE_FROZEN_BEFORE_DECISION",
       stagePooling: "PROHIBITED",
+      terminalReturnKind: "INDEPENDENT_EXACT_TICKET_TYPE_SELECTION_REVISION_AND_RETURN_KIND",
     },
     productionConnection: false,
     scoringAuthorized: false,
@@ -59,6 +60,17 @@ test("strict candidate ingress preserves unapproved ordinary-candidate parity", 
   assert.equal(strict(c).candidateComplete, true);
   assert.equal(strict(c).scoringAuthorized, false);
   assert.deepEqual(strict({ ...c, status: "APPROVED" }).blockers, ["INVALID_CANDIDATE_HEADER"]);
+});
+
+test("strict candidate ingress requires ticket-level return-kind proof declaration", () => {
+  const missing = candidate();
+  delete (missing.evidenceRequirements as Partial<typeof missing.evidenceRequirements>).terminalReturnKind;
+  assert.deepEqual(strict(missing).blockers, ["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
+  const inferred = candidate();
+  inferred.evidenceRequirements.terminalReturnKind = "INFER_FROM_PAYOUT";
+  assert.deepEqual(strict(inferred).blockers, ["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
+  assert.equal(strict(candidate()).candidateComplete, true);
+  assert.equal(strict(candidate()).scoringAuthorized, false);
 });
 
 test("root candidate Proxy cannot repair an initially invalid evidence stage", () => {
