@@ -46,6 +46,7 @@ function candidate() {
       sourceManifest: "INDEPENDENT_DIGEST_RECONCILIATION",
       enrollment: "PROSPECTIVE_FROZEN_BEFORE_DECISION",
       stagePooling: "PROHIBITED",
+      terminalReturnKind: "INDEPENDENT_EXACT_TICKET_TYPE_SELECTION_REVISION_AND_RETURN_KIND",
     },
     productionConnection: false,
     scoringAuthorized: false,
@@ -142,6 +143,27 @@ test("caller declarations cannot replace independent source and enrollment proof
   const y = candidate();
   y.evidenceRequirements.enrollment = "POST_HOC";
   assert.deepEqual(blockers(y), ["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
+});
+
+test("terminal return kind requires independent exact-ticket and revision evidence, not payout inference", () => {
+  const good = assessForwardV02Candidate(candidate());
+  assert.equal(good.candidateComplete, true);
+  assert.equal(good.scoringAuthorized, false);
+
+  const missing = candidate();
+  delete (missing.evidenceRequirements as Partial<typeof missing.evidenceRequirements>).terminalReturnKind;
+  assert.deepEqual(blockers(missing), ["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
+
+  for (const alias of [
+    "CALLER_ASSERTED_ORDINARY",
+    "INFER_FROM_FINAL_PAYOUT_YEN",
+    "RACE_LEVEL_RETURN_KIND",
+    "INDEPENDENT_TICKET_RETURN_KIND_WITHOUT_REVISION",
+  ]) {
+    const x = candidate();
+    x.evidenceRequirements.terminalReturnKind = alias;
+    assert.deepEqual(blockers(x), ["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
+  }
 });
 
 test("unknown, accessor, symbol, sparse and inherited-toJSON shapes fail closed", () => {
