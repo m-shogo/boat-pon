@@ -882,3 +882,34 @@ test("metadata-only verifier response correlation cannot distinguish exact ticke
     }
   }
 });
+
+test("all nine self-reported verifier status pairs remain non-authoritative in both ingresses", () => {
+  // The response's claimed statuses are untrusted labels, not independently
+  // authenticated verdicts. A matching request digest never elevates them.
+  const statuses = ["VERIFIED", "REJECTED", "UNKNOWN"] as const;
+  const expectedBlockers = [
+    "UNTRUSTED_VERIFIER_RESPONSE", "UNVERIFIED_WITNESS",
+    "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL",
+  ];
+  for (const witnessStatus of statuses) {
+    for (const settlementStatus of statuses) {
+      const f = fixture();
+      const originalDigest = f.response.requestBindingDigest;
+      f.response.claimedWitnessStatus = witnessStatus;
+      f.response.claimedSettlementStatus = settlementStatus;
+      for (const assess of [
+        assessForwardV02UntrustedVerifierResponse,
+        assessForwardV02UntrustedVerifierResponseStrictNodeIngress,
+      ]) {
+        const result = assess(f.envelope, f.policy, f.refs, f.response);
+        const label = `${witnessStatus}/${settlementStatus}`;
+        assert.equal(result.requestMetadataConsistent, true, label);
+        assert.equal(result.responseMetadataConsistent, true, label);
+        assert.equal(result.independentAuthorityVerified, false, label);
+        assert.equal(result.scoringAuthorized, false, label);
+        assert.deepEqual(result.blockers, expectedBlockers, label);
+      }
+      assert.equal(f.response.requestBindingDigest, originalDigest);
+    }
+  }
+});
