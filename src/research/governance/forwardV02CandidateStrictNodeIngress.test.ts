@@ -106,7 +106,7 @@ test("nested benchmark array Proxy cannot repair missing exclusions", () => {
   });
   assert.deepEqual(strict(c).blockers, ["INVALID_CANDIDATE_SHAPE"]);
   assert.equal(traps, 0);
-  assert.equal(c.exclusionReasons.length, 7);
+  assert.equal(c.exclusionReasons.length, 8);
 });
 
 test("revoked nested Proxy and accessor are rejected without trap or getter", () => {

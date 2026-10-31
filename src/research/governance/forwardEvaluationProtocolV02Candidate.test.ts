@@ -263,7 +263,7 @@ test("TELEBOAT gross-return conventions cannot silently replace v0.2 research po
   for (const field of ["stakePopulation", "returnPopulation", "specialPayout"] as const) {
     const x = candidate();
     delete (x.moneyPolicy as Partial<typeof x.moneyPolicy>)[field];
-    assert.deepEqual(blockers(x), ["INVALID_CANDIDATE_SHAPE"]);
+    assert.deepEqual(blockers(x), ["UNFROZEN_MONEY_OR_OUTCOME_POLICY"]);
   }
   const x = candidate();
   x.exclusionReasons = x.exclusionReasons.filter((reason) => reason !== "SPECIAL_PAYOUT");
