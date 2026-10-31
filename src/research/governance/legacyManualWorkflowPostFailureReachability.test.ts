@@ -61,3 +61,44 @@ test("post-run audit is completion-triggered, conclusion-agnostic and read-only"
   assert.doesNotMatch(audit, /workflow_run\.conclusion/u);
   assert.doesNotMatch(audit, /\bgit\s+push\b/u);
 });
+
+
+test("standalone retention remains a separate owner-guarded CAS writer", () => {
+  const manual = read(manualPath);
+  const standalone = read(".github/workflows/research-durable-retention-snapshot.yml");
+  assert.match(standalone, /^on:\s*\n\s*workflow_dispatch:\s*$/mu);
+  assert.doesNotMatch(standalone, /^\s*schedule:\s*$/mu);
+  assert.match(standalone, /^permissions:\s*\n\s*contents:\s*write\s*$/mu);
+  assert.match(standalone, /^\s*group:\s*boat-pon-local-research\s*$/mu);
+  assert.match(manual, /^\s*group:\s*boat-pon-local-research\s*$/mu);
+  assert.match(standalone, /\[ "\$ACTOR" = "m-shogo" \]/u);
+  assert.match(standalone, /\[ "\$REF" = "refs\/heads\/main" \]/u);
+  assert.match(standalone, /^  snapshot:\s*$/mu);
+  assert.match(standalone, /^    needs:\s*guard\s*$/mu);
+  assert.match(standalone, /^    if:\s*needs\.guard\.outputs\.ok == 'true'\s*$/mu);
+  assert.match(standalone, /if \[ "\$REMOTE_SHA" != "\$SOURCE_SHA" \]; then/u);
+  assert.ok(standalone.includes("git -C /tmp/boat-pon-retention-state push origin HEAD:automation/boat-pon-research --quiet"));
+  assert.match(standalone, /reports\/automation\/retention\/durable-knowledge\/\*/u);
+  assert.doesNotMatch(standalone, /pnpm automation:task\b/u);
+  assert.doesNotMatch(standalone, /self-hosted/u);
+  // The separate dispatch is not proven enabled or runnable by these static checks.
+});
+
+test("canonical intent path stays distinct from deprecated manual task mode", () => {
+  const intent = read(".github/workflows/boat-pon-intent-dispatch.yml");
+  const manual = read(manualPath);
+  assert.match(intent, /^on:\s*\n\s*push:\s*$/mu);
+  assert.match(intent, /^\s*branches:\s*\[main\]\s*$/mu);
+  assert.ok(intent.includes('"automation/requests/intents/*.json"'));
+  assert.match(intent, /^permissions:\s*\n\s*contents:\s*read\s*$/mu);
+  assert.match(intent, /^  run-one-task:\s*$/mu);
+  assert.match(intent, /pnpm automation:intent-task -- --request=canonical-request\.json/u);
+  assert.doesNotMatch(intent, /pnpm automation:task\b/u);
+  assert.match(intent, /name: Materialize control state and dataset authority from automation branch/u);
+  assert.match(intent, /name: Restore trusted automation commit helpers/u);
+  assert.ok(intent.includes("EXPECTED_AUTOMATION_BRANCH_BASE: \${{ steps.materialize_authority.outputs.branch_base_sha }}"));
+  assert.match(intent, /if: always\(\) && steps\.restore_commit_helper\.outcome == 'success'/u);
+  assert.match(manual, /pnpm automation:task -- --request=/u);
+  assert.doesNotMatch(manual, /pnpm automation:intent-task/u);
+  // No intent is created or dispatched; no production or protected N2 authority.
+});
