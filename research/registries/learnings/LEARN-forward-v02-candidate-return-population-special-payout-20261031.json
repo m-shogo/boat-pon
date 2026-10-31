@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-candidate-return-population-special-payout-20261031",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-v02.candidate-consumer-return-metric-policy-ambiguity",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-candidate-money-population-and-special-payout-preflight",
+  "symptom": "The unmerged v485 v0.2 candidate could report candidateComplete=true without freezing the stake population, payout population or special-payout exclusion taxonomy. Public TELEBOAT return-rate definitions include refunds and special payouts, so consumer display conventions could be mistaken for research ROI semantics. Synthetic contract gap only; no actual scoring or K data was used.",
+  "rootCauseClass": "DRAFT_CANDIDATE_MONEY_POPULATION_AND_SPECIAL_PAYOUT_UNSPECIFIED",
+  "attemptSignature": "pr2286-v486-require-evaluable-stake-return-populations-and-special-payout-exclusion",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-ubuntu26-node24-synthetic/connector-pr2286",
+    "materialStateKey": "forwardEvaluationProtocolV02Candidate.ts@80f18ab1/money-policy-omits-populations-and-special-payout"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/72d9870cf98e9718f9a4c88acd91f46d2f0013ab",
+    "commit/258d27224ab94c038c5182f1fc73077667e102af",
+    "actions/runs/41153953533",
+    "src/research/governance/forwardEvaluationProtocolV02Candidate.ts",
+    "src/research/governance/forwardEvaluationProtocolV02Candidate.test.ts",
+    "reports/research/forward-v02-pr2286-official-teleboat-refund-reporting-denominator-separation-20261031.md"
+  ],
+  "lesson": "Consumer return-rate and hit-rate populations cannot substitute for a prospective research ROI denominator. A structurally complete unapproved candidate must explicitly distinguish evaluable settled stake and payout from refunds and special payouts; a separate exclusion reason is required to prevent silent omission.",
+  "guardrail": "Require exact stakePopulation=EVALUABLE_SETTLED_STAKE_ONLY, returnPopulation=EVALUABLE_SETTLED_PAYOUT_ONLY and specialPayout=EXCLUDE_AND_COUNT in the research-only candidate, plus SPECIAL_PAYOUT in exclusionReasons. Reject gross purchase/refund-inclusive return aliases and omitted fields with fail-closed blockers; preserve scoringAuthorized=false, no independent K authority, no production connection. Reuse the two negative regressions and update any synthetic fixture counts when the taxonomy expands.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-31T01:13:25.000Z",
+  "productionConnection": false,
+  "_digest": "2e01426197bc0fc7872ca7ed9f69ba521069bb165ac6b7df701574a6e8d19fae",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-31T01:13:25.000Z"
+}
