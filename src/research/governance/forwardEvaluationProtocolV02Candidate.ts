@@ -33,7 +33,7 @@ const MAX_HIT = [
   "stakeAndPayoutRemoval",
 ] as const;
 const SAMPLE = ["minDecisions", "minRaces", "grouping"] as const;
-const EVIDENCE = ["outcome", "sourceManifest", "enrollment", "stagePooling"] as const;
+const EVIDENCE = ["outcome", "sourceManifest", "enrollment", "stagePooling", "terminalReturnKind"] as const;
 const EXCLUSIONS = [
   "REFUNDED", "VOID", "CANCELLED", "UNRESOLVED", "NONFINAL",
   "NOT_EVALUABLE", "IDENTITY_MISMATCH", "NOT_ENROLLED", "SPECIAL_PAYOUT",
@@ -189,7 +189,11 @@ export function assessForwardV02Candidate(input: unknown): ForwardV02CandidateAs
         c.evidenceRequirements.outcome !== "INDEPENDENT_EXACT_FINAL_EVALUABLE_SETTLED" ||
         c.evidenceRequirements.sourceManifest !== "INDEPENDENT_DIGEST_RECONCILIATION" ||
         c.evidenceRequirements.enrollment !== "PROSPECTIVE_FROZEN_BEFORE_DECISION" ||
-        c.evidenceRequirements.stagePooling !== "PROHIBITED") {
+        c.evidenceRequirements.stagePooling !== "PROHIBITED" ||
+        // Outcome Ledger 0.1 SETTLED has no authenticated ordinary-vs-special
+        // return kind. A candidate must demand exact ticket-level source proof;
+        // this declaration never verifies that proof or authorizes scoring.
+        c.evidenceRequirements.terminalReturnKind !== "INDEPENDENT_EXACT_TICKET_TYPE_SELECTION_REVISION_AND_RETURN_KIND") {
       return deny(["MISSING_INDEPENDENT_EVIDENCE_REQUIREMENTS"]);
     }
     return Object.freeze({
