@@ -126,16 +126,23 @@ const LOCAL_PATH_TOKEN = /(?:^|[\s=:(\[{,"'])(?:file:\/\/|\\\\|[A-Za-z]:[\\/]|\/
 // decoded form too. Reject malformed encodings and still-encoded values at the
 // depth limit rather than exporting an opaque path-like identifier.
 const PERCENT_OCTET = /%[0-9a-f]{2}/iu;
+// Reuse the existing shadow-evidence Learning: native RegExp.test delegates to
+// ambient RegExp.prototype.exec. Capture exec itself and invoke it directly,
+// so a later test/exec hook cannot suppress the path privacy deny.
+const nativeRegexExec = RegExp.prototype.exec;
+function matchesFixedRegex(pattern: RegExp, value: string): boolean {
+  return Reflect.apply(nativeRegexExec, pattern, [value]) !== null;
+}
 const percentDecode = decodeURIComponent;
 function containsLocalPathToken(value: string): boolean {
   let candidate = value;
   for (let depth = 0; depth < 4; depth++) {
-    if (LOCAL_PATH_TOKEN.test(candidate)) return true;
-    if (!PERCENT_OCTET.test(candidate)) return false;
+    if (matchesFixedRegex(LOCAL_PATH_TOKEN, candidate)) return true;
+    if (!matchesFixedRegex(PERCENT_OCTET, candidate)) return false;
     try { candidate = percentDecode(candidate); }
     catch { return true; }
   }
-  return LOCAL_PATH_TOKEN.test(candidate) || PERCENT_OCTET.test(candidate);
+  return matchesFixedRegex(LOCAL_PATH_TOKEN, candidate) || matchesFixedRegex(PERCENT_OCTET, candidate);
 }
 
 /**
