@@ -43,7 +43,8 @@ function candidate() {
     benchmarkDecisionSystems: ["synthetic-a", "synthetic-b"],
     evidenceRequirements: { outcome: "INDEPENDENT_EXACT_FINAL_EVALUABLE_SETTLED",
       sourceManifest: "INDEPENDENT_DIGEST_RECONCILIATION",
-      enrollment: "PROSPECTIVE_FROZEN_BEFORE_DECISION", stagePooling: "PROHIBITED" },
+      enrollment: "PROSPECTIVE_FROZEN_BEFORE_DECISION", stagePooling: "PROHIBITED",
+      terminalReturnKind: "INDEPENDENT_EXACT_TICKET_TYPE_SELECTION_REVISION_AND_RETURN_KIND" },
     productionConnection: false, scoringAuthorized: false,
   };
 }
