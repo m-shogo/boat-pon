@@ -129,9 +129,13 @@ const PERCENT_OCTET = /%[0-9a-f]{2}/iu;
 // Reuse the existing shadow-evidence Learning: native RegExp.test delegates to
 // ambient RegExp.prototype.exec. Capture exec itself and invoke it directly,
 // so a later test/exec hook cannot suppress the path privacy deny.
+// Reuse LEARN-shadow-evidence-ambient-reflect-apply-dispatch-admission-20261030:
+// a later caller-realm Reflect.apply hook can forge a native exec result.
+// Pin both the executor and its dispatcher before processing untrusted IDs.
 const nativeRegexExec = RegExp.prototype.exec;
+const nativeReflectApply = Reflect.apply;
 function matchesFixedRegex(pattern: RegExp, value: string): boolean {
-  return Reflect.apply(nativeRegexExec, pattern, [value]) !== null;
+  return nativeReflectApply(nativeRegexExec, pattern, [value]) !== null;
 }
 const percentDecode = decodeURIComponent;
 function containsLocalPathToken(value: string): boolean {
