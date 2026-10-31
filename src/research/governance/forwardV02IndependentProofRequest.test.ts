@@ -782,3 +782,62 @@ test("proof-request export denies percent-encoded local paths without overblocki
     }
   }
 });
+
+test("proof-request local-path privacy guard bypasses ambient RegExp.test and exec hooks", () => {
+  // Reuse LEARN-shadow-evidence-ambient-regexp-test-exec-admission-20261029.
+  // The captured native RegExp.exec must be invoked directly: native test
+  // alone delegates to a mutable prototype exec hook.
+  type F = ReturnType<typeof fixture>;
+  const builders = [
+    (f: F) => buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs),
+    (f: F) => buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs),
+  ];
+  const originalTest = RegExp.prototype.test;
+  const originalExec = RegExp.prototype.exec;
+  const isPrivacyPattern = (r: RegExp): boolean =>
+    r.source.includes("A-Za-z") || r.source === "%[0-9a-f]{2}";
+  for (const hook of ["test", "exec"] as const) {
+    let intercepted = 0;
+    try {
+      if (hook === "test") {
+        RegExp.prototype.test = function (this: RegExp, value: string): boolean {
+          if (isPrivacyPattern(this)) { intercepted++; return false; }
+          return Reflect.apply(originalTest, this, [value]);
+        };
+      } else {
+        RegExp.prototype.exec = function (this: RegExp, value: string): RegExpExecArray | null {
+          if (isPrivacyPattern(this)) { intercepted++; return null; }
+          return Reflect.apply(originalExec, this, [value]);
+        };
+      }
+      for (const id of [
+        "synthetic=/placeholder/private",
+        "synthetic%3D%2Fplaceholder%2Fprivate",
+      ]) {
+        for (const build of builders) {
+          const f = fixture();
+          f.envelope.freeze.cohortId = id;
+          const result = build(f);
+          assert.equal(result.metadataConsistent, false, hook);
+          assert.equal(result.request, null, hook);
+          assert.deepEqual(result.blockers, ["PRIVATE_PATH_METADATA"], hook);
+          assert.equal(result.independentAuthorityVerified, false, hook);
+          assert.equal(result.scoringAuthorized, false, hook);
+          assert.equal(JSON.stringify(result).includes("placeholder"), false, hook);
+        }
+      }
+      for (const build of builders) {
+        const f = fixture();
+        f.envelope.freeze.cohortId = "https%3A%2F%2Fexample.invalid%2Fresearch%2Fcohort";
+        const result = build(f);
+        assert.equal(result.metadataConsistent, true, hook);
+        assert.equal(result.independentAuthorityVerified, false, hook);
+        assert.equal(result.scoringAuthorized, false, hook);
+      }
+      assert.equal(intercepted, 0, "privacy patterns must bypass mutable regex hooks");
+    } finally {
+      RegExp.prototype.test = originalTest;
+      RegExp.prototype.exec = originalExec;
+    }
+  }
+});
