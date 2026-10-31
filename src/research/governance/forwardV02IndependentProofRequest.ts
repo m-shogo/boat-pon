@@ -121,8 +121,21 @@ function snapshotRejected(reason: string): ForwardV02ProofRequestAssessment {
  * UNC and file-URL paths without reflecting the input in a blocker.
  */
 const LOCAL_PATH_TOKEN = /(?:^|[\s=:(\[{,"'])(?:file:\/\/|\\\\|[A-Za-z]:[\\/]|\/(?!\/)[^\s/]+)/iu;
+// Decode only bounded percent-encoded layers. Downstream transports may
+// interpret encoded absolute paths after the lexical check, so inspect their
+// decoded form too. Reject malformed encodings and still-encoded values at the
+// depth limit rather than exporting an opaque path-like identifier.
+const PERCENT_OCTET = /%[0-9a-f]{2}/iu;
+const percentDecode = decodeURIComponent;
 function containsLocalPathToken(value: string): boolean {
-  return LOCAL_PATH_TOKEN.test(value);
+  let candidate = value;
+  for (let depth = 0; depth < 4; depth++) {
+    if (LOCAL_PATH_TOKEN.test(candidate)) return true;
+    if (!PERCENT_OCTET.test(candidate)) return false;
+    try { candidate = percentDecode(candidate); }
+    catch { return true; }
+  }
+  return LOCAL_PATH_TOKEN.test(candidate) || PERCENT_OCTET.test(candidate);
 }
 
 /**
