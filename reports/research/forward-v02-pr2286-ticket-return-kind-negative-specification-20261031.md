@@ -22,12 +22,12 @@ This slice freezes **eight distinct proposed denial vectors** in a new append-on
 | R02 | Source-authenticated special payout relabeled ordinary | `CONFLICT` |
 | R03 | Exacta source proof reused for trifecta in the same race | `UNRESOLVED_IDENTITY` |
 | R04 | Exact ticket proof reused for a different selection | `UNRESOLVED_IDENTITY` |
-| R05 | Earlier ordinary return superseded by a terminal special-payout correction | `UNRESOLVED_FINALITY` |
+| R05 | Earlier ordinary return superseded by a terminal special-payout correction | `CONFLICT` |
 | R06 | Race-wide void status substituted for bet-type establishment | `UNRESOLVED_IDENTITY` |
 | R07 | Refund mapped to zero-payout loss | `UNRESOLVED_REFUND_OR_INVALIDATION` |
 | R08 | Caller-recomputed digest treated as source attestation | `UNVERIFIED_SOURCE` |
 
-These denial names are **proposed fixture classifications**, not claims that a current verifier emits them. The catalog has `status=SPECIFICATION_ONLY_NOT_EXECUTABLE`, `independentAuthorityVerified=false`, `scoringAuthorized=false`, and `productionConnection=false`. A future positive control requires separately provisioned test source authority, complete source correction/finality semantics, exact ticket binding, and explicit human review. It must never derive its trust root from the caller request.
+R05 is a **contradiction** against an independently authenticated later terminal correction, not unresolved finality; a separate missing-terminal-proof case would use unresolved finality. These denial names are **proposed fixture classifications**, not claims that a current verifier emits them. The catalog has `status=SPECIFICATION_ONLY_NOT_EXECUTABLE`, `independentAuthorityVerified=false`, `scoringAuthorized=false`, and `productionConnection=false`. A future positive control requires separately provisioned test source authority, complete source correction/finality semantics, exact ticket binding, and explicit human review. It must never derive its trust root from the caller request.
 
 ## Authority and reproducibility
 
