@@ -54,7 +54,7 @@
       "lane": "SETTLEMENT",
       "mutation": "EARLIER_ORDINARY_RETURN_REVISION_OVERRIDDEN_BY_LATER_SPECIAL",
       "independentFixtureState": "INDEPENDENT_TEST_CORRECTION_CHAIN_PRESENT",
-      "expectedDenial": "UNRESOLVED_FINALITY",
+      "expectedDenial": "CONFLICT",
       "expectedIndependentAuthorityVerified": false,
       "expectedScoringAuthorized": false,
       "why": "An earlier ordinary payout cannot be scored after a source-authenticated later terminal correction changes its return kind."
