@@ -38,21 +38,20 @@ test("retention eligibility does not depend on task success in pinned YAML", () 
   // Synthetic predicate truth table: source-verified guard-only job predicate,
   // followed by JST-hour, changed-output and CAS gates. This is not an Actions
   // interpreter or evidence that any write actually occurred.
-  const taskConclusions = ["success", "failure", "cancelled", "skipped"] as const;
-  for (const taskConclusion of taskConclusions) {
-    for (const guardOk of [false, true]) {
-      for (const hour of [22, 23]) {
-        for (const changed of [false, true]) {
-          const jobEligible = guardOk; // "always()" ignores taskConclusion.
-          const appendStepEligible = jobEligible && hour === 23 && changed;
-          assert.equal(appendStepEligible, guardOk && hour === 23 && changed,
-            `${taskConclusion}/guard=${guardOk}/JST=${hour}/changed=${changed}`);
-        }
-      }
+  const cases = [
+    { guardOk: true, hour: 23, changed: true, expected: true },
+    { guardOk: true, hour: 23, changed: false, expected: false },
+    { guardOk: true, hour: 22, changed: true, expected: false },
+    { guardOk: false, hour: 23, changed: true, expected: false },
+  ] as const;
+  for (const taskConclusion of ["success", "failure", "cancelled", "skipped"]) {
+    for (const row of cases) {
+      const jobEligible = row.guardOk; // "always()" ignores taskConclusion.
+      const appendStepEligible = jobEligible && row.hour === 23 && row.changed;
+      assert.equal(appendStepEligible, row.expected,
+        `${taskConclusion}/guard=${row.guardOk}/JST=${row.hour}/changed=${row.changed}`);
     }
   }
-  // Explicitly distinguish process failure from independent retention eligibility.
-  assert.equal(true && 23 === 23 && true, true);
 });
 
 test("post-run audit is completion-triggered, conclusion-agnostic and read-only", () => {
