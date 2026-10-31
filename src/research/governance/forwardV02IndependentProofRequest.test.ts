@@ -631,3 +631,63 @@ test("metadata-only proof request has no injective ticket identity or dispositio
     }
   }
 });
+
+test("proof-request export denies synthetic local path tokens in all projected identifiers", () => {
+  type F = ReturnType<typeof fixture>;
+  const cases: Array<{ name: string; change: (f: F) => void }> = [
+    { name: "cohort POSIX path", change: f => { f.envelope.freeze.cohortId = "synthetic=/opt/placeholder"; } },
+    { name: "issuer drive path", change: f => {
+      const id = "synthetic=C:\\placeholder\\data";
+      f.envelope.freeze.witness.issuerId = id;
+      f.policy.anchors[0]!.authorityId = id;
+    } },
+    { name: "receipt file URL", change: f => {
+      const id = "synthetic=file:///placeholder/item";
+      f.envelope.freeze.witness.receiptId = id;
+      f.refs.witnessReceiptId = id;
+    } },
+    { name: "witness anchor POSIX path", change: f => {
+      const id = "synthetic=/placeholder/witness";
+      f.envelope.freeze.witness.trustAnchorId = id;
+      f.policy.anchors[0]!.anchorId = id;
+    } },
+    { name: "settlement source UNC path", change: f => {
+      const id = "synthetic=\\\\placeholder\\share";
+      f.envelope.settlement.sourceId = id;
+      f.policy.anchors[1]!.authorityId = id;
+    } },
+    { name: "settlement anchor POSIX path", change: f => {
+      const id = "synthetic=/placeholder/settlement";
+      f.envelope.settlement.trustAnchorId = id;
+      f.policy.anchors[1]!.anchorId = id;
+    } },
+    { name: "terminal revision POSIX path", change: f => {
+      const id = "synthetic=/placeholder/revision";
+      f.envelope.settlement.revisions[0]!.revisionId = id;
+      f.refs.settlementRevisionId = id;
+    } },
+  ];
+  for (const { name, change } of cases) {
+    const f = fixture();
+    change(f);
+    for (const result of [
+      buildForwardV02IndependentProofRequest(f.envelope, f.policy, f.refs),
+      buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs),
+    ]) {
+      assert.equal(result.metadataConsistent, false, name);
+      assert.equal(result.request, null, name);
+      assert.deepEqual(result.blockers, ["PRIVATE_PATH_METADATA"], name);
+      assert.equal(result.independentAuthorityVerified, false, name);
+      assert.equal(result.scoringAuthorized, false, name);
+      assert.equal(JSON.stringify(result).includes("placeholder"), false, name);
+    }
+  }
+  for (const id of ["https://example.invalid/research/cohort", "team/research-cohort"]) {
+    const f = fixture();
+    f.envelope.freeze.cohortId = id;
+    const result = check(f);
+    assert.equal(result.metadataConsistent, true, id);
+    assert.equal(result.request?.freeze.cohortId, id);
+    assert.equal(result.scoringAuthorized, false);
+  }
+});
