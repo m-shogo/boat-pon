@@ -583,3 +583,51 @@ test("caller-supplied ticket return-kind and selection assertions are rejected b
     assert.equal(result.scoringAuthorized, false, field);
   }
 });
+
+test("metadata-only proof request has no injective ticket identity or disposition binding", () => {
+  // Deliberate non-injective projection, not a verifier exploit: the 0.1
+  // handoff excludes exact-ticket identity and return disposition. Two
+  // individually consistent caller envelopes can produce the SAME request.
+  // A future verifier must not infer ticket/return-kind coverage from this
+  // request, a caller digest, or metadataConsistent=true.
+  const builders = [
+    (f: ReturnType<typeof fixture>) => check(f),
+    (f: ReturnType<typeof fixture>) =>
+      buildForwardV02IndependentProofRequestStrictNodeIngress(f.envelope, f.policy, f.refs),
+  ];
+  for (const build of builders) {
+    const baseline = build(fixture());
+    assert.equal(baseline.metadataConsistent, true);
+    assert.ok(baseline.request);
+    assert.equal(baseline.independentAuthorityVerified, false);
+    assert.equal(baseline.scoringAuthorized, false);
+
+    const otherTicket = fixture();
+    otherTicket.envelope.settlement.expectedTicketKey = "synthetic-other-ticket";
+    otherTicket.envelope.settlement.ticketKey = "synthetic-other-ticket";
+    const changedTicket = build(otherTicket);
+    assert.equal(changedTicket.metadataConsistent, true);
+    assert.ok(changedTicket.request);
+    assert.deepEqual(changedTicket.request, baseline.request,
+      "the metadata-only request does not bind exact-ticket identity");
+
+    const refunded = fixture();
+    refunded.envelope.settlement.disposition = "REFUNDED";
+    refunded.envelope.settlement.evaluable = false;
+    const changedDisposition = build(refunded);
+    assert.equal(changedDisposition.metadataConsistent, true);
+    assert.ok(changedDisposition.request);
+    assert.deepEqual(changedDisposition.request, baseline.request,
+      "the metadata-only request does not bind return disposition");
+
+    for (const result of [changedTicket, changedDisposition]) {
+      assert.deepEqual(result.blockers, [
+        "UNVERIFIED_WITNESS", "UNVERIFIED_SOURCE", "UNAPPROVED_PROTOCOL",
+      ]);
+      assert.equal(result.independentAuthorityVerified, false);
+      assert.equal(result.scoringAuthorized, false);
+      assert.equal(Object.hasOwn(result.request?.settlement ?? {}, "ticketKey"), false);
+      assert.equal(Object.hasOwn(result.request?.settlement ?? {}, "disposition"), false);
+    }
+  }
+});
