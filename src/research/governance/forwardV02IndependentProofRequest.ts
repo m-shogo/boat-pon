@@ -120,7 +120,7 @@ function snapshotRejected(reason: string): ForwardV02ProofRequestAssessment {
  * and namespace-style IDs while rejecting synthetic embedded POSIX, Windows,
  * UNC and file-URL paths without reflecting the input in a blocker.
  */
-const LOCAL_PATH_TOKEN = /(?:^|[\\s=:(\\[{,"'])(?:file:\\/\\/|\\\\\\\\|[A-Za-z]:[\\\\/]|\\/(?!\\/)[^\\s/]+)/iu;
+const LOCAL_PATH_TOKEN = /(?:^|[\s=:(\[{,"'])(?:file:\/\/|\\\\|[A-Za-z]:[\\/]|\/(?!\/)[^\s/]+)/iu;
 function containsLocalPathToken(value: string): boolean {
   return LOCAL_PATH_TOKEN.test(value);
 }
