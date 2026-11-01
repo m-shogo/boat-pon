@@ -42,10 +42,13 @@ test("malformed runtime arguments fail closed without throwing",()=>{
   assert.equal(resultMatchesProtocol(null as unknown as EvaluationResult,p),false);
   assert.equal(resultMatchesProtocol(result(p),null as unknown as EvaluationProtocol),false);
 });
-test("ambient serializer failure is converted to false and restored",()=>{
+test("ambient serializer replacement cannot change protocol match or invalid-record denial",()=>{
   const p=protocol();const r=result(p);const original=JSON.stringify;
   try {JSON.stringify=(()=>{throw new Error("fixture serializer failure")}) as typeof JSON.stringify;
-    assert.equal(resultMatchesProtocol(r,p),false);
+    // Canonical digest uses the module-load native serializer; the ambient
+    // replacement no longer invalidates an otherwise valid frozen protocol.
+    assert.equal(resultMatchesProtocol(r,p),true);
+    assert.equal(resultMatchesProtocol({...r,metricFamily:"UNKNOWN"},p),false);
   } finally {JSON.stringify=original;}
   assert.equal(resultMatchesProtocol(r,p),true);
 });
