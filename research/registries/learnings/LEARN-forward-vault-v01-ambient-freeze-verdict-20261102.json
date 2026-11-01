@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-freeze-verdict-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-object-freeze-verdict-mutability",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-object-freeze-for-immutable-validation-verdict-and-errors",
+  "symptom": "Node 22.16.0 synthetic reproduction showed that a no-op Object.freeze leaves validation verdict objects and their error lists mutable. Source inspection of v0.1 found frozenValidation using the live Object.freeze method, so a caller could alter a previously issued invalid verdict or its diagnostics after validation. This is a research-only integrity issue; no private K evidence, N2 activation, production data or observed attack was involved.",
+  "rootCauseClass": "V01_AMBIENT_OBJECT_FREEZE_VALIDATION_VERDICT_MUTABILITY",
+  "attemptSignature": "pr2286-v531-pin-v01-object-freeze-validation-envelope",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@f2849bb3/v01-live-Object.freeze-validation-envelope"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientFreezeVerdict.test.ts",
+    "commit/60b220fd2fa55a68b4f793bc6d5f5f0a9b537ac8",
+    "commit/38d2af47f58bf99a58f6c503d9996272f916ab2e",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-object-freeze-verdict-mutability-20261030.json"
+  ],
+  "lesson": "Validation result immutability is not guaranteed by calling Object.freeze if the reference is looked up from the mutable caller realm at validation time. A previously issued fail-closed verdict can be relabeled or its diagnostic evidence altered.",
+  "guardrail": "Capture native Object.freeze at module initialization and use the captured method for both validation errors and verdict envelope. Under reversible synthetic no-op Object.freeze replacement, assert valid and malformed results preserve frozen verdict and diagnostic arrays and reject attempted mutation. This does not establish issuer rights, finality, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T21:04:01.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T21:04:01.000Z",
+  "_digest": "d4696ab5521f01ee14a97f0e61ca7d477ac8897f5217b4c73667b4b24ace4956"
+}
