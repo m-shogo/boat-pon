@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-numeric-predicates-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-numeric-predicate-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-number-isfinite-issafeinteger-object-is-for-result-numeric-admission",
+  "symptom": "Static review of v0.1 Forward Vault RESULT validation found live Number.isFinite, Number.isSafeInteger and Object.is calls. Reversible synthetic overrides can admit NaN metrics, fractional result counts or negative-zero values, breaking the JSON-digest admission boundary. No private K evidence, production inputs, protected N2 or observed attack was involved.",
+  "rootCauseClass": "V01_AMBIENT_NUMERIC_PREDICATE_ADMISSION_AND_JSON_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v533-pin-v01-number-finite-safeint-objectis-and-regress",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@6e1c92cf/v01-live-Number.isFinite-Number.isSafeInteger-Object.is"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientNumericAdmission.test.ts",
+    "commit/619ae529102a9b2fa422de7929333a508fd901bc",
+    "commit/cb3aa6f02a960a5a8c9d65ad982d7548b786f33e",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-number-object-numeric-admission-20261030.json"
+  ],
+  "lesson": "An own-data validator can still admit JSON-digest aliases if its numeric predicates dispatch through mutable caller-realm Number/Object helpers. Non-finite metric values, fractional counters and negative zero require stable admission predicates.",
+  "guardrail": "Capture native Number.isFinite, Number.isSafeInteger and Object.is at module initialization and use those references consistently in v0.1 RESULT validation. Verify invalid NaN, fractional counts and negative-zero metrics/counters under reversible synthetic overrides, with stable valid digests and rejected append decisions. No scoring, source-rights, merge or production authority is granted.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T23:04:32.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T23:04:32.000Z",
+  "_digest": "85a90cbdaa3dfc913dc6e9f035e621785df997f423c526084d3bf5c408a188c4"
+}
