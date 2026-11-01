@@ -6,8 +6,10 @@
  * not authenticated clock evidence or production/scoring authority.
  */
 export function validForwardV02ClaimedInstant(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u.exec(value);
+  // Reject unbounded caller-supplied fractions before regex/Date.parse or ordering allocations.
+  // 64 decimal places preserve nanosecond distinctions without unlimited input cost.
+  if (typeof value !== "string" || value.length > 90) return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,64})?(?:Z|[+-](\d{2}):(\d{2}))$/u.exec(value);
   if (!m || value.endsWith("-00:00")) return false;
   const year = Number(m[1]), month = Number(m[2]), day = Number(m[3]);
   const hour = Number(m[4]), minute = Number(m[5]), second = Number(m[6]);
