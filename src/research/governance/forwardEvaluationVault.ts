@@ -97,7 +97,8 @@ const digests=(v:unknown)=>denseUniqueArray(v,isSha256);
 // Inspect finite metric values through own data descriptors. Delegating to
 // Array.prototype.some can admit NaN/Infinity when ambient methods are replaced,
 // while JSON.stringify would silently persist those values as null.
-// Reject -0: JSON.stringify turns it into 0, aliasing distinct result metrics.\nconst finiteMetricMap=(v:unknown):boolean=>{
+// Reject -0: JSON.stringify turns it into 0, aliasing distinct result metrics.
+const finiteMetricMap=(v:unknown):boolean=>{
   if(!obj(v)||!ownDataShape(v))return false;
   const keys=Object.keys(v);
   if(keys.length===0)return false;
