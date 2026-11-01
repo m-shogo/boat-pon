@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-legacy-manual-request-reference-raw-log-projection-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.legacy-manual-request.reference-raw-log-projection",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "trace-freeform-dispatch-reference-through-builder-to-actions-log-without-dispatch",
+  "symptom": "Pinned main legacy manual workflow echoes the complete generated request JSON in a run step. The owner-supplied request_reference permits path-like punctuation and is copied into requestReference without privacy token denial; consequently a path-like reference supplied by an operator could be printed in Actions logs. This is conditional source-level exposure, not evidence that any private path was entered or leaked.",
+  "rootCauseClass": "FREEFORM_REFERENCE_WITHOUT_PRIVACY_FILTER_ECHOED_TO_ACTIONS_LOG",
+  "attemptSignature": "pr2286-v509-pinned-main-builder-and-workflow-reference-projection-static-no-dispatch",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector-pinned-main-static-source/no-dispatch",
+    "materialStateKey": "legacy-manual-workflow-95094e7/builder-8fdf91c/owner-dispatch-reference-log"
+  },
+  "evidenceRefs": [
+    ".github/workflows/boat-pon-local-research.yml",
+    "scripts/build-research-request.mjs",
+    "reports/research/forward-v02-pr2286-legacy-manual-reference-log-privacy-audit-20261101.md",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-embedded-local-path-id-20261031.json",
+    "pull/2286"
+  ],
+  "lesson": "A field-format allowlist and owner-only dispatch guard do not make a free-form reference safe for unredacted logging. Distinguish input acceptance, JSON projection, and Actions log output; a harmless path-shaped synthetic input can reveal the source-level route without observing any private data.",
+  "guardrail": "Keep the legacy workflow and runner unmodified pending operations-owner review. For future approved remediation, replace full request echo with an allowlisted metadata summary or redact free-form fields before logging; independently constrain reference identifiers to non-path opaque tokens. Never log private paths, secrets or raw odds, dispatch the legacy workflow for diagnosis, or infer an actual leak from static reachability.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T00:05:41.000Z",
+  "productionConnection": false,
+  "_digest": "93c416ce3410535e9f659ca887bc826870a9fcde42a54338de8efafd330536d8",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T00:05:41.000Z"
+}
