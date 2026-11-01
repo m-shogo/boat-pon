@@ -56,8 +56,6 @@ function digestList(value: unknown): value is string[] {
   } catch { return false; }
 }
 
-// Reuse the strict authority-envelope calendar/offset guard: the synthetic
-// manifest must not drift from its claimed-instant admission contract.
 // Node's UTF-8 encoder replaces an unpaired UTF-16 surrogate with U+FFFD.
 // A manifest identifier must be a well-formed string before it participates in
 // a content-addressed reference; otherwise distinct IDs can share a digest.
@@ -117,6 +115,8 @@ export function forwardV02SourceManifestReferenceDigest(value: unknown): string 
        value.evidenceStage !== "UNTOUCHED_HOLDOUT" && value.evidenceStage !== "SHADOW_FORWARD" &&
        value.evidenceStage !== "FUTURE_ONLY") ||
       typeof value.analysisSnapshotDigest !== "string" || !SHA.test(value.analysisSnapshotDigest) ||
+  // The shared claimed-instant validator also governs the strict authority
+  // envelope and standalone request transcript; keep manifest admission aligned.
       !validForwardV02ClaimedInstant(value.createdAt) || value.productionConnection !== false ||
       !digestList(value.decisionDigests) || !digestList(value.outcomeDigests)) return null;
   const decisions = value.decisionDigests, outcomes = value.outcomeDigests;
