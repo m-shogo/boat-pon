@@ -64,6 +64,9 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
 // trusting a caller-replaced String.prototype.trim after module initialization.
 const BUILTIN_STRING_TRIM = String.prototype.trim;
 const BUILTIN_REFLECT_APPLY = Reflect.apply;
+// Capture the native exec directly: RegExp.prototype.test delegates to mutable
+// RegExp.prototype.exec, so capturing test alone is not sufficient.
+const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
 const str=(v:unknown)=>typeof v==="string"&&
   (BUILTIN_REFLECT_APPLY(BUILTIN_STRING_TRIM,v,[]) as string).length>0;
 // Reuse the bounded v0.2 claimed-instant implementation for v0.1 syntax
@@ -88,7 +91,9 @@ const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
   } catch { return false; }
 };
 const strings=(v:unknown)=>denseUniqueArray(v,str);
-const digests=(v:unknown)=>denseUniqueArray(v,x=>typeof x==="string"&&SHA.test(x));
+const isSha256=(v:unknown):v is string=>typeof v==="string"&&
+  (BUILTIN_REFLECT_APPLY(BUILTIN_REGEXP_EXEC,SHA,[v]) as RegExpExecArray|null)!==null;
+const digests=(v:unknown)=>denseUniqueArray(v,isSha256);
 // Inspect finite metric values through own data descriptors. Delegating to
 // Array.prototype.some can admit NaN/Infinity when ambient methods are replaced,
 // while JSON.stringify would silently persist those values as null.
@@ -186,7 +191,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   const dg=(...ks:string[])=>{
     for(let i=0;i<ks.length;i++){
       const k=ks[i];
-      if(typeof v[k]!=="string"||!SHA.test(v[k] as string))appendError(`${k} must be SHA-256`);
+      if(!isSha256(v[k]))appendError(`${k} must be SHA-256`);
     }
   };
   switch(v.kind){
