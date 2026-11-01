@@ -18,8 +18,10 @@ export type ForwardVaultRecord = EnrollmentProtocol | Membership | AnalysisSnaps
 export type Validation = { valid: boolean; errors: string[] };
 // Runtime consumers must not rewrite an already-issued validation verdict or
 // its diagnostic list. Compile-time types alone do not enforce this boundary.
-const frozenValidation=(valid:boolean,errors:string[]):Validation=>Object.freeze({
-  valid, errors:Object.freeze(errors),
+// A caller-replaced Object.freeze must not make issued validation verdicts mutable.
+const BUILTIN_OBJECT_FREEZE = Object.freeze;
+const frozenValidation=(valid:boolean,errors:string[]):Validation=>BUILTIN_OBJECT_FREEZE({
+  valid, errors:BUILTIN_OBJECT_FREEZE(errors),
 }) as Validation;
 
 const SHA = /^[0-9a-f]{64}$/u;
