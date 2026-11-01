@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { compareForwardV02ClaimedInstants, validForwardV02ClaimedInstant } from "./forwardV02ClaimedInstant.js";
 
 export const FORWARD_EVALUATION_VAULT_SCHEMA_VERSION = "forward-evaluation-vault.0.1" as const;
 export type EvidenceStage = "HISTORICAL" | "VALIDATION" | "UNTOUCHED_HOLDOUT" | "SHADOW_FORWARD" | "FUTURE_ONLY";
@@ -60,32 +61,10 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
   } catch { return false; }
 };
 const str=(v:unknown)=>typeof v==="string"&&v.trim().length>0;
-// Validate literal Gregorian dates and RFC3339 clock bounds before Date.parse,
-// which otherwise normalizes impossible days and 24:00 to another instant.
-const instant=(v:unknown)=>{
-  // Match the v0.2 claimed-instant resource bound without changing v0.1 clock authority.
-  if(typeof v!=="string"||v.length>90)return false;
-  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,64})?(?:Z|[+-]\d{2}:\d{2})$/u.exec(v);
-  if(!m||v.endsWith("-00:00"))return false;
-  const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
-  const hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
-  if(year===0||hour>23||minute>59||second>59)return false;
-  const leap=year%4===0&&(year%100!==0||year%400===0);
-  const days=[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];
-  if(month<1||month>12||day<1||day>days[month-1])return false;
-  return Number.isFinite(Date.parse(v));
-};
-// Compare validated RFC3339 instants without losing sub-millisecond ordering.
-const compareInstants=(a:string,b:string):number=>{
-  const fraction=/\.(\d+)(?=Z$|[+-]\d{2}:\d{2}$)/u;
-  const seconds=(s:string)=>Date.parse(s.replace(fraction,""));
-  const sa=seconds(a),sb=seconds(b);
-  if(sa!==sb)return sa<sb?-1:1;
-  const fa=fraction.exec(a)?.[1]??"",fb=fraction.exec(b)?.[1]??"";
-  const width=Math.max(fa.length,fb.length);
-  const pa=fa.padEnd(width,"0"),pb=fb.padEnd(width,"0");
-  return pa<pb?-1:pa>pb?1:0;
-};
+// Reuse the bounded v0.2 claimed-instant implementation for v0.1 syntax
+// and chronology. A claimed timestamp is not authenticated clock evidence.
+const instant = validForwardV02ClaimedInstant;
+const compareInstants = compareForwardV02ClaimedInstants;
 // Array.every skips holes, while JSON.stringify persists them as null.
 // Inspect own indexed data descriptors to keep validation and hashing aligned.
 const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
