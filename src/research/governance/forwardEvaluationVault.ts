@@ -72,6 +72,10 @@ const setHas = (set: Set<unknown>, value: unknown): boolean =>
 // Capture own-key enumeration before caller code can replace Object.keys.
 // Validation and canonical digest must inspect the same complete key set.
 const BUILTIN_OBJECT_KEYS = Object.keys;
+// Canonical construction and validation denial recording must not depend on
+// caller-replaced object helpers after this module is initialized.
+const BUILTIN_OBJECT_DEFINE_PROPERTY = Object.defineProperty;
+const BUILTIN_OBJECT_CREATE = Object.create;
 // Bind canonical digest bytes to the module-load native serializer, not a
 // caller-replaced ambient JSON.stringify after validation.
 const BUILTIN_JSON_STRINGIFY = JSON.stringify;
@@ -146,7 +150,7 @@ const canonical=(v:unknown):unknown=>{
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor))throw new TypeError("non-JSON array in Forward Evaluation Vault");
       // A caller-independent inherited Array.prototype numeric setter must not
       // erase a validated metric/protocol entry from the canonical digest.
-      Object.defineProperty(output, String(i), {
+      BUILTIN_OBJECT_DEFINE_PROPERTY(output, String(i), {
         value: canonical(descriptor.value),
         enumerable: true, writable: true, configurable: true,
       });
@@ -166,7 +170,7 @@ const canonical=(v:unknown):unknown=>{
       while(j>=0&&keys[j]>key){keys[j+1]=keys[j];j--;}
       keys[j+1]=key;
     }
-    const output:Record<string,unknown>=Object.create(null) as Record<string,unknown>;
+    const output:Record<string,unknown>=BUILTIN_OBJECT_CREATE(null) as Record<string,unknown>;
     for(let i=0;i<keys.length;i++){
       const key=keys[i];
       const descriptor=Object.getOwnPropertyDescriptor(v,key);
@@ -191,7 +195,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   // A fresh error array has no own index yet: inherited numeric setters can
   // silently discard a denial and make an invalid research record appear valid.
   const appendError=(message:string):void=>{
-    Object.defineProperty(e,String(e.length),{
+    BUILTIN_OBJECT_DEFINE_PROPERTY(e,String(e.length),{
       value:message,enumerable:true,writable:true,configurable:true,
     });
   };
