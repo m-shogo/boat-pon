@@ -60,7 +60,12 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
     return true;
   } catch { return false; }
 };
-const str=(v:unknown)=>typeof v==="string"&&v.trim().length>0;
+// Match the portable schema's ECMAScript whitespace semantics without
+// trusting a caller-replaced String.prototype.trim after module initialization.
+const BUILTIN_STRING_TRIM = String.prototype.trim;
+const BUILTIN_REFLECT_APPLY = Reflect.apply;
+const str=(v:unknown)=>typeof v==="string"&&
+  (BUILTIN_REFLECT_APPLY(BUILTIN_STRING_TRIM,v,[]) as string).length>0;
 // Reuse the bounded v0.2 claimed-instant implementation for v0.1 syntax
 // and chronology. A claimed timestamp is not authenticated clock evidence.
 const instant = validForwardV02ClaimedInstant;
