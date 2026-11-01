@@ -64,6 +64,9 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
 // trusting a caller-replaced String.prototype.trim after module initialization.
 const BUILTIN_STRING_TRIM = String.prototype.trim;
 const BUILTIN_REFLECT_APPLY = Reflect.apply;
+// Capture own-key enumeration before caller code can replace Object.keys.
+// Validation and canonical digest must inspect the same complete key set.
+const BUILTIN_OBJECT_KEYS = Object.keys;
 // Capture the native exec directly: RegExp.prototype.test delegates to mutable
 // RegExp.prototype.exec, so capturing test alone is not sufficient.
 const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
@@ -100,7 +103,7 @@ const digests=(v:unknown)=>denseUniqueArray(v,isSha256);
 // Reject -0: JSON.stringify turns it into 0, aliasing distinct result metrics.
 const finiteMetricMap=(v:unknown):boolean=>{
   if(!obj(v)||!ownDataShape(v))return false;
-  const keys=Object.keys(v);
+  const keys=BUILTIN_OBJECT_KEYS(v);
   if(keys.length===0)return false;
   for(let i=0;i<keys.length;i++){
     const descriptor=Object.getOwnPropertyDescriptor(v,keys[i]);
@@ -143,7 +146,7 @@ const canonical=(v:unknown):unknown=>{
     // making different append-only payloads share the same digest.
     // Sort keys by UTF-16 lexical order without mutable Array.prototype.sort.
     // This preserves the canonical digest across object insertion orders.
-    const keys=Object.keys(v);
+    const keys=BUILTIN_OBJECT_KEYS(v);
     for(let i=1;i<keys.length;i++){
       const key=keys[i];
       let j=i-1;
@@ -182,7 +185,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   if(!str(v.recordId))appendError("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
   if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return frozenValidation(false,[...e,"invalid kind"]);
   if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))appendError("record fields must exactly match kind");
-  for(const k of Object.keys(v))if(!FIELDS[v.kind as VaultKind].includes(k))appendError(`unknown field is not allowed: ${k}`);
+  for(const k of BUILTIN_OBJECT_KEYS(v))if(!FIELDS[v.kind as VaultKind].includes(k))appendError(`unknown field is not allowed: ${k}`);
   const req=(...ks:string[])=>{
     for(let i=0;i<ks.length;i++){
       const k=ks[i];
