@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-json-stringify-digest-alias-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-json-stringify-digest-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "bind-v01-canonical-digest-and-append-idempotency-under-ambient-json-serializer-replacement",
+  "symptom": "Node 22.16.0 synthetic reproduction showed that replacing JSON.stringify with a constant serializer aliases distinct SHA-256 digests. Source inspection found a live JSON.stringify call after Forward Vault v0.1 canonicalization; same-ID changed research metadata could be misclassified as IDEMPOTENT_NOOP. No private odds, real settlement, actual exploit or production effect was observed.",
+  "rootCauseClass": "V01_AMBIENT_JSON_STRINGIFY_CANONICAL_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v527-pin-native-json-stringify-for-v01-canonical-digest-and-regress",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@76ad7adf/v01-live-JSON.stringify-after-canonical"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientJsonStringify.test.ts",
+    "commit/7d18784c253ab8901c24669295ad8905ab661406",
+    "commit/cb0057dc84e5a98a16ec603e145fe008b27d2d44",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-json-stringify-digest-alias-20261030.json",
+    "research/registries/learnings/LEARN-forward-vault-v01-ambient-object-keys-erasure-20261102.json"
+  ],
+  "lesson": "Strict v0.1 own-data admission and canonicalization cannot preserve digest identity if the final JSON serializer is mutable. The already-verified shadow-evidence native-serializer guardrail applies to this materially distinct Forward Vault v0.1 digest boundary.",
+  "guardrail": "Capture JSON.stringify at research module initialization and use the captured native function only on validated canonical records. Test changed same-ID membership metadata under a reversible constant serializer, and unchanged metadata under a throwing ambient serializer. Preserve frozen digest vectors and research/production isolation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T17:57:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T17:57:00.000Z",
+  "_digest": "111eaacae6ecac8140dd2f6efd897c64179294ce0e937f8d279d7edbd2d841ce"
+}
