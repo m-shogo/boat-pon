@@ -20,6 +20,11 @@ export type Validation = { valid: boolean; errors: string[] };
 // its diagnostic list. Compile-time types alone do not enforce this boundary.
 // A caller-replaced Object.freeze must not make issued validation verdicts mutable.
 const BUILTIN_OBJECT_FREEZE = Object.freeze;
+// Numeric admission must not change when caller code replaces ambient Number/Object helpers.
+// Otherwise NaN, fractional counts or -0 can pass validation and alias JSON digests.
+const BUILTIN_NUMBER_IS_FINITE = Number.isFinite;
+const BUILTIN_NUMBER_IS_SAFE_INTEGER = Number.isSafeInteger;
+const BUILTIN_OBJECT_IS = Object.is;
 const frozenValidation=(valid:boolean,errors:string[]):Validation=>BUILTIN_OBJECT_FREEZE({
   valid, errors:BUILTIN_OBJECT_FREEZE(errors),
 }) as Validation;
@@ -131,7 +136,7 @@ const finiteMetricMap=(v:unknown):boolean=>{
   if(keys.length===0)return false;
   for(let i=0;i<keys.length;i++){
     const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,keys[i]);
-    if(!descriptor||!("value" in descriptor)||typeof descriptor.value!=="number"||!Number.isFinite(descriptor.value)||Object.is(descriptor.value,-0))return false;
+    if(!descriptor||!("value" in descriptor)||typeof descriptor.value!=="number"||!BUILTIN_NUMBER_IS_FINITE(descriptor.value)||BUILTIN_OBJECT_IS(descriptor.value,-0))return false;
   }
   return true;
 };
@@ -229,7 +234,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
     case "MEMBERSHIP": req("cohortId","enrollmentProtocolId","canonicalRaceId","decisionRecordId","reason"); dg("enrollmentProtocolDigest","decisionRecordDigest"); if(!instant(v.enrolledAt))appendError("enrolledAt must be exact"); if(typeof v.included!=="boolean")appendError("included must be boolean"); break;
     case "ANALYSIS_SNAPSHOT": req("analysisSnapshotId","cohortId"); if(!instant(v.cutoffAt))appendError("cutoffAt must be exact"); if(!digests(v.membershipDigests))appendError("membershipDigests must be unique SHA-256 digests"); break;
     case "EVALUATION_PROTOCOL": req("evaluationProtocolId","protocolVersion"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(v.oddsBasis!=="BUY_TIME"&&v.oddsBasis!=="CLOSING"&&v.oddsBasis!=="NONE")appendError("invalid oddsBasis"); if(!strings(v.metricFamilies)||!strings(v.benchmarkDecisionSystems))appendError("protocol arrays must be non-empty unique strings"); if(v.unresolvedPolicy!=="EXCLUDE_AND_COUNT")appendError("unresolvedPolicy must fail closed"); break;
-    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(v.oddsBasis!=="BUY_TIME"&&v.oddsBasis!=="CLOSING"&&v.oddsBasis!=="NONE")appendError("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!Number.isSafeInteger(v[k])||(v[k] as number)<0||Object.is(v[k],-0))appendError(`${k} must be non-negative safe integer`); if(!finiteMetricMap(v.metrics))appendError("metrics must contain finite numbers"); break;
+    case "RESULT": req("resultId","analysisSnapshotId","evaluationProtocolId","decisionSystem","metricFamily","evaluatorVersion"); dg("analysisSnapshotDigest","evaluationProtocolDigest","sourceManifestDigest"); if(v.comparisonMode!=="SELECTED_RACE"&&v.comparisonMode!=="COMMON_COHORT")appendError("invalid comparisonMode"); if(v.oddsBasis!=="BUY_TIME"&&v.oddsBasis!=="CLOSING"&&v.oddsBasis!=="NONE")appendError("invalid oddsBasis"); for(const k of ["includedCount","excludedCount"])if(!BUILTIN_NUMBER_IS_SAFE_INTEGER(v[k])||(v[k] as number)<0||BUILTIN_OBJECT_IS(v[k],-0))appendError(`${k} must be non-negative safe integer`); if(!finiteMetricMap(v.metrics))appendError("metrics must contain finite numbers"); break;
   }
   return frozenValidation(e.length===0,e);
 }
