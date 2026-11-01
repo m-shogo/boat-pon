@@ -41,7 +41,7 @@ test("claimed-instant ordering matches independent UTC/fraction ranks for every 
       assert.equal(Math.sign(actual), expected, left.claimed + " vs " + right.claimed);
       assert.equal(
         Math.sign(compareForwardV02ClaimedInstants(right.claimed, left.claimed)),
-        -expected,
+        Math.sign(right.rank - left.rank),
         "antisymmetry: " + left.claimed + " vs " + right.claimed,
       );
     }
