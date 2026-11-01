@@ -64,6 +64,11 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
 // trusting a caller-replaced String.prototype.trim after module initialization.
 const BUILTIN_STRING_TRIM = String.prototype.trim;
 const BUILTIN_REFLECT_APPLY = Reflect.apply;
+// Stage and duplicate admission must not dispatch through caller-replaced Set methods.
+const BUILTIN_SET_HAS = Set.prototype.has;
+const BUILTIN_SET_ADD = Set.prototype.add;
+const setHas = (set: Set<unknown>, value: unknown): boolean =>
+  BUILTIN_REFLECT_APPLY(BUILTIN_SET_HAS, set, [value]) as boolean;
 // Capture own-key enumeration before caller code can replace Object.keys.
 // Validation and canonical digest must inspect the same complete key set.
 const BUILTIN_OBJECT_KEYS = Object.keys;
@@ -95,8 +100,8 @@ const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
     const seen=new Set<unknown>();
     for(let i=0;i<v.length;i++){
       const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
-      if(!descriptor||!descriptor.enumerable||!("value" in descriptor)||!accept(descriptor.value)||seen.has(descriptor.value))return false;
-      seen.add(descriptor.value);
+      if(!descriptor||!descriptor.enumerable||!("value" in descriptor)||!accept(descriptor.value)||setHas(seen,descriptor.value))return false;
+      BUILTIN_REFLECT_APPLY(BUILTIN_SET_ADD,seen,[descriptor.value]);
     }
     return true;
   } catch { return false; }
@@ -192,7 +197,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   };
   if(!ownDataShape(v))return frozenValidation(false,["record fields must be enumerable own data properties"]);
   if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)appendError("invalid schemaVersion");
-  if(!str(v.recordId))appendError("recordId must be non-empty"); if(!STAGES.has(v.evidenceStage as EvidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
+  if(!str(v.recordId))appendError("recordId must be non-empty"); if(!setHas(STAGES,v.evidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
   if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return frozenValidation(false,[...e,"invalid kind"]);
   if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))appendError("record fields must exactly match kind");
   for(const k of BUILTIN_OBJECT_KEYS(v))if(!FIELDS[v.kind as VaultKind].includes(k))appendError(`unknown field is not allowed: ${k}`);
@@ -228,7 +233,7 @@ export function canPoolStages(stages:EvidenceStage[]):boolean {
     let first:EvidenceStage|undefined;
     for(let i=0;i<stages.length;i++){
       const descriptor=Object.getOwnPropertyDescriptor(stages,String(i));
-      if(!descriptor||!("value" in descriptor)||!descriptor.enumerable||!STAGES.has(descriptor.value))return false;
+      if(!descriptor||!("value" in descriptor)||!descriptor.enumerable||!setHas(STAGES,descriptor.value))return false;
       if(i>0&&descriptor.value!==first)return false;
       if(i===0)first=descriptor.value;
     }
