@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-sha-regexp-hooks-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-regexp-sha-digest-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-v01-sha256-scalar-and-array-digests-under-ambient-regexp-hooks",
+  "symptom": "Source inspection and a synthetic Node probe show that v0.1 SHA-256 scalar and membership-digest-array admission used mutable SHA.test dispatch. An ambient RegExp.prototype.test override could accept malformed digest text or deny valid evidence metadata. No external exploit, private data or production impact is claimed.",
+  "rootCauseClass": "V01_AMBIENT_REGEXP_TEST_EXEC_SHA_DIGEST_ADMISSION",
+  "attemptSignature": "pr2286-v524-pin-native-regexp-exec-for-v01-sha-digest-validation",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@508a53cb/v01-SHA.test-ambient-before-v524"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.shaDigestAmbient.test.ts",
+    "commit/e2fa45188c40101c0bce17a3a9982a6341f9c30a",
+    "commit/3e78d59217bb7004bee2b6e99a8a2d71aa18126a",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-regexp-test-exec-admission-20261029.json"
+  ],
+  "lesson": "A captured native RegExp.test is insufficient when its dispatch can consult mutable RegExp.exec. The v0.1 Forward Vault SHA validation path needs the existing native-exec guardrail independently of the separate shadow-evidence and claimed-instant paths.",
+  "guardrail": "Capture native RegExp.prototype.exec and Reflect.apply at module initialization; invoke native exec directly for the fixed non-global SHA-256 pattern. Apply one shared SHA predicate to scalar and digest-array admission; regress both forged and denying ambient test/exec hooks with synthetic metadata only. Preserve research-only scope and productionConnection=false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T14:57:15.000Z",
+  "productionConnection": false,
+  "_digest": "e623b6e0fc4becc05d65ebdbda0ff3ae4dcb9e8bd994c5a2d0280c171d8af224",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T14:57:15.000Z"
+}
