@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-test-antisymmetry-negative-zero-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-governance.synthetic-chronology-matrix.negative-zero-assertion",
+  "subsystem": "research-governance-claimed-instant-regression",
+  "operation": "verify-forward-v02-claimed-instant-total-order-matrix",
+  "symptom": "The first synthetic total-order matrix CI failed one new antisymmetry assertion on an equal-rank pair: actual 0, expected -0. The comparator itself returned equality correctly. The verify Test step exited 1, while research-governance and post-job cleanup succeeded; no runner/platform failure or production behavior change was evidenced.",
+  "rootCauseClass": "SYNTHETIC_TEST_NEGATED_ZERO_STRICT_ASSERTION",
+  "attemptSignature": "pr2286-v513-antisymmetry-expected-negated-math-sign",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-contents-api/github-actions-ubuntu-node24-node-test",
+    "materialStateKey": "forwardV02ClaimedInstantOrderMatrix.test.ts@b88c0b56/negated-zero-expected"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02ClaimedInstantOrderMatrix.test.ts",
+    "commit/b88c0b5639e9280acaa12b3aeb5d335b934df3b1",
+    "github-actions/run-41271215789",
+    "github-actions/job-124744209455",
+    "commit/b445465d8115b97c609287e23aff111550df5b46",
+    "github-actions/run-41271233418"
+  ],
+  "lesson": "Negating Math.sign(0) produces negative zero, which node:assert/strict distinguishes from positive zero. A red synthetic comparator test can therefore be a fixture expectation error rather than a chronology or runtime comparator defect.",
+  "guardrail": "For bidirectional ordering assertions derive the reverse expected sign directly from reversed ranks (Math.sign(right.rank - left.rank)), not unary negation of a possibly zero expected sign. Confirm the exact failing assertion in the complete verify log, distinguish it from production/research payload behavior, and verify the corrected source on a new pinned CI head.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T04:03:08.000Z",
+  "productionConnection": false,
+  "_digest": "9d36982fca871eca991716fcf4268330ec459b4c8f3cad98351c15e704f177b6",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T04:03:08.000Z"
+}
