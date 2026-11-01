@@ -108,6 +108,8 @@ export function forwardV02SourceManifestReferenceDigest(value: unknown): string 
   try { value = snapshotForwardV02UntrustedGraph(value); }
   catch { return null; }
   if (!exactDataObject(value, MANIFEST_KEYS)) return null;
+  // The shared claimed-instant validator also governs the strict authority
+  // envelope and standalone request transcript; keep manifest admission aligned.
   if (value.schemaVersion !== "forward-source-manifest.0.2-candidate" ||
       typeof value.manifestId !== "string" || !value.manifestId.trim() ||
       !wellFormedUtf16(value.manifestId) ||
@@ -115,8 +117,6 @@ export function forwardV02SourceManifestReferenceDigest(value: unknown): string 
        value.evidenceStage !== "UNTOUCHED_HOLDOUT" && value.evidenceStage !== "SHADOW_FORWARD" &&
        value.evidenceStage !== "FUTURE_ONLY") ||
       typeof value.analysisSnapshotDigest !== "string" || !SHA.test(value.analysisSnapshotDigest) ||
-  // The shared claimed-instant validator also governs the strict authority
-  // envelope and standalone request transcript; keep manifest admission aligned.
       !validForwardV02ClaimedInstant(value.createdAt) || value.productionConnection !== false ||
       !digestList(value.decisionDigests) || !digestList(value.outcomeDigests)) return null;
   const decisions = value.decisionDigests, outcomes = value.outcomeDigests;
