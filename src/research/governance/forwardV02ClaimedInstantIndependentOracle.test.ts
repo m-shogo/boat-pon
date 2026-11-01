@@ -11,7 +11,17 @@ import {
  */
 const MONTH_START = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334] as const;
 const SCALE = 10n ** 64n;
-type Sample = Readonly<{ claimed: string; epochFraction: bigint }>;
+type Sample = Readonly<{
+  claimed: string;
+  epochFraction: bigint;
+  year: number;
+  month: number;
+  hour: number;
+  minute: number;
+  second: number;
+  fraction: string;
+  offsetMinutes: number;
+}>;
 
 function leapYear(year: number): boolean {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
@@ -35,6 +45,7 @@ function syntheticSample(
   return {
     claimed,
     epochFraction: BigInt(totalSeconds) * SCALE + BigInt(fraction.padEnd(64, "0") || "0"),
+    year, month, hour, minute, second, fraction, offsetMinutes,
   };
 }
 
@@ -42,9 +53,13 @@ const YEARS = [1, 4, 99, 100, 400, 999, 1582, 1900, 1999, 2000, 2024, 2026, 9999
 const OFFSETS = [0, 1, -1, 9 * 60, -(11 * 60 + 30), 23 * 60 + 59, -(23 * 60 + 59)];
 const FRACTIONS = ["", "1", "9", "000000001", "123456789012345678", "9".repeat(64)];
 function samples(): Sample[] {
+  // xorshift32 avoids the low-bit phase lock of an LCG sampled every
+  // eight draws (which previously exercised only 3/12 months and 3/24 hours).
   let state = 0x519_2026;
   const next = (bound: number): number => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state = (state ^ (state << 5)) >>> 0;
     return state % bound;
   };
   const result: Sample[] = [
@@ -63,6 +78,17 @@ function samples(): Sample[] {
   }
   return result;
 }
+
+test("independent Gregorian oracle sampler spans all declared calendar, time and offset dimensions", () => {
+  const cases = samples();
+  assert.equal(new Set(cases.map((item) => item.year)).size, YEARS.length);
+  assert.equal(new Set(cases.map((item) => item.month)).size, 12);
+  assert.equal(new Set(cases.map((item) => item.hour)).size, 24);
+  assert.equal(new Set(cases.map((item) => item.minute)).size, 60);
+  assert.equal(new Set(cases.map((item) => item.second)).size, 60);
+  assert.equal(new Set(cases.map((item) => item.fraction)).size, FRACTIONS.length);
+  assert.equal(new Set(cases.map((item) => item.offsetMinutes)).size, OFFSETS.length);
+});
 
 test("independent Gregorian oracle admits synthetic four-digit dates across offsets and 64-digit fractions", () => {
   for (const item of samples()) {
