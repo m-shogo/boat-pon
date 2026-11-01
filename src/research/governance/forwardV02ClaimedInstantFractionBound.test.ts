@@ -60,3 +60,9 @@ test("manifest admission and submillisecond ordering retain bounded precision", 
     prefix + "1" + "0".repeat(62) + "1Z",
   ), -1);
 });
+
+test("direct comparator rejects invalid or oversized claims before ordering", () => {
+  assert.throws(() => compareForwardV02ClaimedInstants("not-an-instant", "also-invalid"), /INVALID_CLAIMED_INSTANT/);
+  assert.throws(() => compareForwardV02ClaimedInstants(prefix + fraction65 + "Z", prefix + "1Z"), /INVALID_CLAIMED_INSTANT/);
+  assert.throws(() => compareForwardV02ClaimedInstants(prefix + "1Z", prefix + "1".repeat(100_000) + "Z"), /INVALID_CLAIMED_INSTANT/);
+});

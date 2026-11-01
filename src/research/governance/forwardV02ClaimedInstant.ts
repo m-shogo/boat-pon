@@ -21,6 +21,11 @@ export function validForwardV02ClaimedInstant(value: unknown): value is string {
 }
 // Date.parse truncates submilliseconds; retain fractional precision for ordering.
 export function compareForwardV02ClaimedInstants(left: string, right: string): number {
+  // Exported direct callers must not bypass the bounded timestamp preflight.
+  // In particular, Date.parse(NaN) must never become an ordering verdict.
+  if (!validForwardV02ClaimedInstant(left) || !validForwardV02ClaimedInstant(right)) {
+    throw new TypeError("INVALID_CLAIMED_INSTANT");
+  }
   const fraction = /\.(\d+)(?=Z$|[+-]\d{2}:\d{2}$)/u;
   const l = Date.parse(left.replace(fraction, ""));
   const r = Date.parse(right.replace(fraction, ""));
