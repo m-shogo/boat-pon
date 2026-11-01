@@ -63,8 +63,9 @@ const str=(v:unknown)=>typeof v==="string"&&v.trim().length>0;
 // Validate literal Gregorian dates and RFC3339 clock bounds before Date.parse,
 // which otherwise normalizes impossible days and 24:00 to another instant.
 const instant=(v:unknown)=>{
-  if(typeof v!=="string")return false;
-  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.exec(v);
+  // Match the v0.2 claimed-instant resource bound without changing v0.1 clock authority.
+  if(typeof v!=="string"||v.length>90)return false;
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,64})?(?:Z|[+-]\d{2}:\d{2})$/u.exec(v);
   if(!m||v.endsWith("-00:00"))return false;
   const year=Number(m[1]),month=Number(m[2]),day=Number(m[3]);
   const hour=Number(m[4]),minute=Number(m[5]),second=Number(m[6]);
