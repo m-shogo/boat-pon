@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-vault-v01-unbounded-claimed-instant-fraction-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.exact-instant-unbounded-fraction",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "audit-forward-vault-v01-runtime-and-schema-timestamp-resource-bound",
+  "symptom": "Forward Evaluation Vault 0.1's runtime instant regex and exactInstant schema accepted unbounded fractional-second digits, while the separate v0.2 claimed-instant helper already rejects more than 64 digits and timestamps longer than 90 characters. A deterministic synthetic Node 22.16.0 reproduction showed regex and Date.parse acceptance for 65 and 100000 fractional digits. This is an avoidable caller-controlled validation/allocation surface, not an observed external attack, private-data exposure, production defect or settlement authority.",
+  "rootCauseClass": "UNBOUNDED_V01_VAULT_TIMESTAMP_FRACTION_SCHEMA_RUNTIME_DRIFT",
+  "attemptSignature": "pr2286-v521-bound-vault-v01-fraction-runtime-schema-and-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-ubuntu-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@74aa165d-unbounded/schema@97d05568-unbounded-v01"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "config/research-governance/forward-evaluation-vault.schema.json",
+    "src/research/governance/forwardEvaluationVault.fractionBound.test.ts",
+    "commit/0f18e6802c4b5dfc937542b8e7428633ce903d79",
+    "commit/75cc8d2eb0957a293e0472c77900571ca823c901",
+    "commit/14032ed0b59536969a7bdae6d3561226ca9988d3",
+    "research/registries/learnings/LEARN-forward-v02-claimed-instant-unbounded-fraction-20261101.json"
+  ],
+  "lesson": "A resource bound fixed in a v0.2 claimed-instant helper does not automatically cover the older Forward Vault v0.1 record and schema boundary. Both versions process untrusted claimed clocks; audit each independently rather than inferring safety from one green suite.",
+  "guardrail": "For the research-only Forward Vault v0.1 instant validator, reject inputs longer than 90 characters and fractional seconds longer than 64 ASCII digits before Date.parse or chronology comparison. Mirror maxLength 90 and fractional {1,64} in the v0.1 schema, preserve valid submillisecond comparisons, and regression-test 64-digit acceptance, 65-digit rejection, and a bounded synthetic oversized input. This is structural resource control only; no source time, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T12:00:39.000Z",
+  "productionConnection": false,
+  "_digest": "b98e5eb04134e86c34a5cc91ffe0b5bd9a87304340166c997a41f810282c6917",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T12:00:39.000Z"
+}
