@@ -38,7 +38,7 @@ const FIELDS: Record<VaultKind,string[]> = {
 const obj=(v:unknown):v is Record<string,unknown>=>{
   if(v===null||typeof v!=="object"||Array.isArray(v))return false;
   try {
-    const proto=Object.getPrototypeOf(v);
+    const proto=BUILTIN_OBJECT_GET_PROTOTYPE_OF(v);
     return (proto===Object.prototype||proto===null)&&!("toJSON" in v);
   } catch { return false; }
 };
@@ -46,11 +46,11 @@ const obj=(v:unknown):v is Record<string,unknown>=>{
 // Inspect descriptors rather than reading values, so accessors never execute.
 const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolean=>{
   try {
-    const keys=Reflect.ownKeys(v);
+    const keys=BUILTIN_REFLECT_OWN_KEYS(v);
     for(let i=0;i<keys.length;i++){
       const key=keys[i];
       if(typeof key!=="string")return false;
-      const d=Object.getOwnPropertyDescriptor(v,key);
+      const d=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,key);
       if(!d||!d.enumerable||!("value" in d))return false;
     }
     if(required){
@@ -74,6 +74,11 @@ const setHas = (set: Set<unknown>, value: unknown): boolean =>
 // Capture own-key enumeration before caller code can replace Object.keys.
 // Validation and canonical digest must inspect the same complete key set.
 const BUILTIN_OBJECT_KEYS = Object.keys;
+// Structural admission and canonical hashing must use the same native
+// reflection methods even if a caller replaces ambient helpers later.
+const BUILTIN_REFLECT_OWN_KEYS = Reflect.ownKeys;
+const BUILTIN_OBJECT_GET_PROTOTYPE_OF = Object.getPrototypeOf;
+const BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescriptor;
 // Canonical construction and validation denial recording must not depend on
 // caller-replaced object helpers after this module is initialized.
 const BUILTIN_OBJECT_DEFINE_PROPERTY = Object.defineProperty;
@@ -102,10 +107,10 @@ const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
   try {
     // Array.prototype.toJSON can replace persisted array contents after validation.
     // Reject inherited/own hooks rather than hashing evidence that serializes differently.
-    if(Object.getPrototypeOf(v)!==Array.prototype||"toJSON" in v||Reflect.ownKeys(v).length!==v.length+1)return false;
+    if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==Array.prototype||"toJSON" in v||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)return false;
     const seen=new Set<unknown>();
     for(let i=0;i<v.length;i++){
-      const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
+      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,String(i));
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor)||!accept(descriptor.value)||setHas(seen,descriptor.value))return false;
       BUILTIN_REFLECT_APPLY(BUILTIN_SET_ADD,seen,[descriptor.value]);
     }
@@ -125,7 +130,7 @@ const finiteMetricMap=(v:unknown):boolean=>{
   const keys=BUILTIN_OBJECT_KEYS(v);
   if(keys.length===0)return false;
   for(let i=0;i<keys.length;i++){
-    const descriptor=Object.getOwnPropertyDescriptor(v,keys[i]);
+    const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,keys[i]);
     if(!descriptor||!("value" in descriptor)||typeof descriptor.value!=="number"||!Number.isFinite(descriptor.value)||Object.is(descriptor.value,-0))return false;
   }
   return true;
@@ -135,7 +140,7 @@ const finiteMetricMap=(v:unknown):boolean=>{
 const exactOwnArrayEntry=(values:readonly string[],expected:string):boolean=>{
   try {
     for(let i=0;i<values.length;i++){
-      const d=Object.getOwnPropertyDescriptor(values,String(i));
+      const d=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(values,String(i));
       if(d&&d.enumerable&&"value" in d&&d.value===expected)return true;
     }
   } catch { return false; }
@@ -143,12 +148,12 @@ const exactOwnArrayEntry=(values:readonly string[],expected:string):boolean=>{
 };
 const canonical=(v:unknown):unknown=>{
   if(Array.isArray(v)){
-    if(Object.getPrototypeOf(v)!==Array.prototype||Reflect.ownKeys(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
+    if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==Array.prototype||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
     // Do not delegate canonical array traversal to mutable Array.from.
     // A replaced Array.from can erase elements and alias distinct digests.
     const output:unknown[]=[];
     for(let i=0;i<v.length;i++){
-      const descriptor=Object.getOwnPropertyDescriptor(v,String(i));
+      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,String(i));
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor))throw new TypeError("non-JSON array in Forward Evaluation Vault");
       // A caller-independent inherited Array.prototype numeric setter must not
       // erase a validated metric/protocol entry from the canonical digest.
@@ -175,7 +180,7 @@ const canonical=(v:unknown):unknown=>{
     const output:Record<string,unknown>=BUILTIN_OBJECT_CREATE(null) as Record<string,unknown>;
     for(let i=0;i<keys.length;i++){
       const key=keys[i];
-      const descriptor=Object.getOwnPropertyDescriptor(v,key);
+      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,key);
       if(!descriptor||!("value" in descriptor))throw new TypeError("non-JSON object in Forward Evaluation Vault");
       output[key]=canonical(descriptor.value);
     }
@@ -234,11 +239,11 @@ export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined
 // Read only own data descriptors: never invoke untrusted array accessors.
 export function canPoolStages(stages:EvidenceStage[]):boolean {
   try {
-    if(!Array.isArray(stages)||Object.getPrototypeOf(stages)!==Array.prototype)return false;
-    if(Reflect.ownKeys(stages).length!==stages.length+1)return false;
+    if(!Array.isArray(stages)||BUILTIN_OBJECT_GET_PROTOTYPE_OF(stages)!==Array.prototype)return false;
+    if(BUILTIN_REFLECT_OWN_KEYS(stages).length!==stages.length+1)return false;
     let first:EvidenceStage|undefined;
     for(let i=0;i<stages.length;i++){
-      const descriptor=Object.getOwnPropertyDescriptor(stages,String(i));
+      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(stages,String(i));
       if(!descriptor||!("value" in descriptor)||!descriptor.enumerable||!setHas(STAGES,descriptor.value))return false;
       if(i>0&&descriptor.value!==first)return false;
       if(i===0)first=descriptor.value;
