@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { validForwardV02ClaimedInstant } from "./forwardV02ClaimedInstant";
 import { snapshotForwardV02UntrustedGraphRejectingProxies } from "./forwardV02UntrustedSnapshot";
 import { assessForwardV02Candidate } from "./forwardEvaluationProtocolV02Candidate";
 import { snapshotForwardV02UntrustedGraph } from "./forwardV02IndependentProofRequest";
@@ -55,19 +56,8 @@ function digestList(value: unknown): value is string[] {
   } catch { return false; }
 }
 
-function exactInstant(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u.exec(value);
-  if (!m || value.endsWith("-00:00")) return false;
-  const year = Number(m[1]), month = Number(m[2]), day = Number(m[3]);
-  const hour = Number(m[4]), minute = Number(m[5]), second = Number(m[6]);
-  if (year === 0 || month < 1 || month > 12 || hour > 23 || minute > 59 ||
-      second > 59 || Number(m[7] ?? 0) > 23 || Number(m[8] ?? 0) > 59) return false;
-  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  return day >= 1 && day <= days[month - 1]! && Number.isFinite(Date.parse(value));
-}
-
+// Reuse the strict authority-envelope calendar/offset guard: the synthetic
+// manifest must not drift from its claimed-instant admission contract.
 // Node's UTF-8 encoder replaces an unpaired UTF-16 surrogate with U+FFFD.
 // A manifest identifier must be a well-formed string before it participates in
 // a content-addressed reference; otherwise distinct IDs can share a digest.
@@ -127,7 +117,7 @@ export function forwardV02SourceManifestReferenceDigest(value: unknown): string 
        value.evidenceStage !== "UNTOUCHED_HOLDOUT" && value.evidenceStage !== "SHADOW_FORWARD" &&
        value.evidenceStage !== "FUTURE_ONLY") ||
       typeof value.analysisSnapshotDigest !== "string" || !SHA.test(value.analysisSnapshotDigest) ||
-      !exactInstant(value.createdAt) || value.productionConnection !== false ||
+      !validForwardV02ClaimedInstant(value.createdAt) || value.productionConnection !== false ||
       !digestList(value.decisionDigests) || !digestList(value.outcomeDigests)) return null;
   const decisions = value.decisionDigests, outcomes = value.outcomeDigests;
   const fields: string[] = [
