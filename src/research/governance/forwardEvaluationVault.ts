@@ -70,6 +70,11 @@ const BUILTIN_OBJECT_KEYS = Object.keys;
 // Bind canonical digest bytes to the module-load native serializer, not a
 // caller-replaced ambient JSON.stringify after validation.
 const BUILTIN_JSON_STRINGIFY = JSON.stringify;
+// Bind SHA-256 update/digest to their module-load native methods. A caller
+// can replace crypto.Hash prototype methods after validation and alias digests.
+const HASH_METHOD_SNAPSHOT = createHash("sha256");
+const BUILTIN_HASH_UPDATE = HASH_METHOD_SNAPSHOT.update;
+const BUILTIN_HASH_DIGEST = HASH_METHOD_SNAPSHOT.digest;
 // Capture the native exec directly: RegExp.prototype.test delegates to mutable
 // RegExp.prototype.exec, so capturing test alone is not sufficient.
 const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
@@ -171,7 +176,9 @@ export const forwardVaultDigest=(r:ForwardVaultRecord)=>{
   // The exported digest must enforce the same admission contract as append.
   // Invalid NaN and null values otherwise alias under JSON.stringify.
   if(!validateForwardVaultRecord(r).valid)throw new TypeError("invalid Forward Evaluation Vault record");
-  return createHash("sha256").update(BUILTIN_JSON_STRINGIFY(canonical(r))).digest("hex");
+  const hash = createHash("sha256");
+  BUILTIN_REFLECT_APPLY(BUILTIN_HASH_UPDATE, hash, [BUILTIN_JSON_STRINGIFY(canonical(r))]);
+  return BUILTIN_REFLECT_APPLY(BUILTIN_HASH_DIGEST, hash, ["hex"]) as string;
 };
 
 export function validateForwardVaultRecord(v:unknown):Validation {
