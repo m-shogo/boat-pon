@@ -67,6 +67,9 @@ const BUILTIN_REFLECT_APPLY = Reflect.apply;
 // Capture own-key enumeration before caller code can replace Object.keys.
 // Validation and canonical digest must inspect the same complete key set.
 const BUILTIN_OBJECT_KEYS = Object.keys;
+// Bind canonical digest bytes to the module-load native serializer, not a
+// caller-replaced ambient JSON.stringify after validation.
+const BUILTIN_JSON_STRINGIFY = JSON.stringify;
 // Capture the native exec directly: RegExp.prototype.test delegates to mutable
 // RegExp.prototype.exec, so capturing test alone is not sufficient.
 const BUILTIN_REGEXP_EXEC = RegExp.prototype.exec;
@@ -168,7 +171,7 @@ export const forwardVaultDigest=(r:ForwardVaultRecord)=>{
   // The exported digest must enforce the same admission contract as append.
   // Invalid NaN and null values otherwise alias under JSON.stringify.
   if(!validateForwardVaultRecord(r).valid)throw new TypeError("invalid Forward Evaluation Vault record");
-  return createHash("sha256").update(JSON.stringify(canonical(r))).digest("hex");
+  return createHash("sha256").update(BUILTIN_JSON_STRINGIFY(canonical(r))).digest("hex");
 };
 
 export function validateForwardVaultRecord(v:unknown):Validation {
