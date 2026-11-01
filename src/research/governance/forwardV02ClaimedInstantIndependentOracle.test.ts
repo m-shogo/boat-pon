@@ -109,3 +109,54 @@ test("independent BigInt UTC oracle agrees with claimed-instant ordering and ant
       expected === 0 ? 0 : -expected, `reverse: ${right.claimed} vs ${left.claimed}`);
   }
 });
+
+test("independent Gregorian oracle crosses every month and hour rather than only marginal coverage", () => {
+  const cases: Sample[] = [];
+  for (let month = 1; month <= 12; month++) {
+    for (let hour = 0; hour < 24; hour++) {
+      cases.push(syntheticSample(2024, month, 15, hour, 0, 0, "", 0));
+    }
+  }
+  assert.equal(cases.length, 12 * 24);
+  assert.equal(new Set(cases.map((item) => item.claimed.slice(5, 7) + "/" + item.hour)).size, 12 * 24);
+  for (let i = 0; i < cases.length - 1; i++) {
+    const left = cases[i]!, right = cases[i + 1]!;
+    assert.ok(left.epochFraction < right.epochFraction);
+    assert.equal(compareForwardV02ClaimedInstants(left.claimed, right.claimed), -1);
+    assert.equal(compareForwardV02ClaimedInstants(right.claimed, left.claimed), 1);
+  }
+});
+
+test("independent UTC oracle crosses every declared fraction and offset pair", () => {
+  const cases = OFFSETS.flatMap((offset) =>
+    FRACTIONS.map((fraction) => syntheticSample(2024, 6, 15, 12, 34, 56, fraction, offset)));
+  assert.equal(cases.length, OFFSETS.length * FRACTIONS.length);
+  for (const left of cases) {
+    assert.equal(validForwardV02ClaimedInstant(left.claimed), true, left.claimed);
+    for (const right of cases) {
+      const expected = left.epochFraction < right.epochFraction ? -1 :
+        left.epochFraction > right.epochFraction ? 1 : 0;
+      assert.equal(compareForwardV02ClaimedInstants(left.claimed, right.claimed), expected,
+        `${left.claimed} vs ${right.claimed}`);
+    }
+  }
+});
+
+test("independent UTC oracle preserves equivalent instants across offset-induced year rollover", () => {
+  const fraction = "123456789012345678";
+  const equivalents = [
+    syntheticSample(2024, 1, 1, 0, 0, 0, fraction, 0),
+    syntheticSample(2024, 1, 1, 9, 0, 0, fraction, 9 * 60),
+    syntheticSample(2023, 12, 31, 12, 30, 0, fraction, -(11 * 60 + 30)),
+    syntheticSample(2024, 1, 1, 23, 59, 0, fraction, 23 * 60 + 59),
+    syntheticSample(2023, 12, 31, 0, 1, 0, fraction, -(23 * 60 + 59)),
+  ];
+  for (const left of equivalents) {
+    assert.equal(validForwardV02ClaimedInstant(left.claimed), true, left.claimed);
+    for (const right of equivalents) {
+      assert.equal(left.epochFraction, right.epochFraction);
+      assert.equal(compareForwardV02ClaimedInstants(left.claimed, right.claimed), 0,
+        `${left.claimed} vs ${right.claimed}`);
+    }
+  }
+});
