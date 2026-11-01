@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-claimed-instant-chronology-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-claimed-instant-chronology",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-v01-enrollment-boundary-under-ambient-date-regexp-mutation",
+  "symptom": "Synthetic source-path analysis identified that v0.1 Forward Vault validated and compared claimed instants using mutable ambient Date.parse and RegExp.exec. A later mutation of Date.parse could make a reversed enrollment interval appear equal and pass admission; a mutation of RegExp.exec could deny otherwise valid timestamps. This is research-only syntactic integrity, not an observed attack or evidence of authenticated time.",
+  "rootCauseClass": "V01_AMBIENT_DATE_PARSE_AND_REGEXP_EXEC_CLAIMED_CHRONOLOGY_DRIFT",
+  "attemptSignature": "pr2286-v522-reuse-pinned-v02-claimed-instant-validator-comparator-with-ambient-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@71bd40b0/v01-ambient-Date.parse-RegExp.exec-and-String.replace-before-shared-helper"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.sharedInstantAmbient.test.ts",
+    "src/research/governance/forwardV02ClaimedInstant.ts",
+    "commit/27ef207e381ad4e11239cf8f0d1bbe92abf543f5",
+    "commit/93f2b061ed963f96cdeb659551a9968e6e283c40",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-date-parse-iso-admission-20261030.json",
+    "research/registries/learnings/LEARN-forward-vault-v01-unbounded-claimed-instant-fraction-20261101.json"
+  ],
+  "lesson": "Version-specific claimed-time validation can diverge under ambient JavaScript intrinsic mutation even when a newer bounded parser is protected. Reuse the pinned shared parser and comparator rather than maintaining a second mutable chronology path. Claimed timestamps remain unauthenticated.",
+  "guardrail": "Use the existing bounded and module-initialization-pinned v0.2 claimed-instant helper for v0.1 runtime syntax and submillisecond ordering. Regress reversed enrollment intervals with ambient Date.parse altered and valid enrollment instants with ambient RegExp.exec altered; retain v0.1 schema and all research/production isolation. Never infer K issuer rights, independent finality or scoring authority from green tests.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T13:02:39.000Z",
+  "productionConnection": false,
+  "_digest": "537d2be5c34295bb0064ddbc1557c40a6b4305bd62cd27b49d0548011ec3e3c1",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T13:02:39.000Z"
+}
