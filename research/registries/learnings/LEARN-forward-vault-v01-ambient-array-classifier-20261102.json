@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-array-classifier-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-array-classifier-denial",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-array-isarray-for-valid-record-and-stage-admission",
+  "symptom": "Source review of Forward Vault v0.1 found four live Array.isArray calls. A reversible synthetic override returning false denies otherwise valid protocol arrays, changes canonical digest availability and rejects homogeneous stage pooling; returning true must not admit non-array protocol fields. This is research evidence availability drift, not an observed SHA collision, attack, K evidence issue or production impact.",
+  "rootCauseClass": "V01_AMBIENT_ARRAY_CLASSIFIER_VALID_RECORD_DENIAL",
+  "attemptSignature": "pr2286-v536-pin-v01-array-classifier-and-reversible-synthetic-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@b9e4946d/v01-live-Array.isArray-four-call-sites"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientArrayClassifier.test.ts",
+    "commit/b8b151300aa1ddf80da41b378a4e75d8321d0b92",
+    "commit/e5c19492e7f07693bfa664ad97dc77d60f8c49a8",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-array-classifier-number-index-drift-20261030.json"
+  ],
+  "lesson": "Even when own-property reflection and numeric index conversion are pinned, a live Array.isArray can reject valid arrays and change whether stage pooling and canonical digest computation are available under caller-realm mutation.",
+  "guardrail": "Capture Array.isArray once at module initialization and use the captured function in record, array, canonicalization and stage-pooling admission. Test valid digest/idempotency, conflict preservation, homogeneous/mixed stages and non-array rejection with reversible always-false/always-true classifier overrides. Research-only; no source-rights, readiness, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T01:56:44.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T01:56:44.000Z",
+  "_digest": "d2ed98031cefca2c5c0ae510a2c3f0ce7687baad6e81d492585b4848405044fb"
+}
