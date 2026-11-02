@@ -34,7 +34,7 @@
         "from": { "type": "string", "format": "date", "pattern": "^(?!0000-)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$" },
         "to": { "type": "string", "format": "date", "pattern": "^(?!0000-)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$" },
         "limit": { "type": "integer", "minimum": 1, "maximum": 5000 },
-        "returnedRows": { "type": "integer", "minimum": 0 },
+        "returnedRows": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "limitReached": { "type": "boolean" },
         "bounded": { "const": true }
       }
@@ -56,13 +56,13 @@
         "queryOnly"
       ],
       "properties": {
-        "fileSizeBytes": { "type": "integer", "minimum": 0 },
+        "fileSizeBytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "modifiedTimeMs": { "type": "number", "minimum": 0 },
-        "sqliteSchemaVersion": { "type": "integer", "minimum": 0 },
-        "sqliteUserVersion": { "type": "integer", "minimum": 0 },
-        "pageCount": { "type": "integer", "minimum": 0 },
-        "pageSizeBytes": { "type": "integer", "minimum": 1 },
-        "freelistCount": { "type": "integer", "minimum": 0 },
+        "sqliteSchemaVersion": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "sqliteUserVersion": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "pageCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "pageSizeBytes": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "freelistCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "journalMode": { "type": "string", "minLength": 1 },
         "walPresent": { "const": false },
         "readOnly": { "const": true },
@@ -84,12 +84,12 @@
       ],
       "properties": {
         "status": { "enum": ["PASS", "CONDITIONAL", "FAILED"] },
-        "sourceRows": { "type": "integer", "minimum": 0 },
-        "mappedUnique": { "type": "integer", "minimum": 0 },
-        "exactDuplicates": { "type": "integer", "minimum": 0 },
-        "unresolvedCount": { "type": "integer", "minimum": 0 },
-        "rejectedCount": { "type": "integer", "minimum": 0 },
-        "conflictCount": { "type": "integer", "minimum": 0 },
+        "sourceRows": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "mappedUnique": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "exactDuplicates": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "unresolvedCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "rejectedCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "conflictCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "recordsDigest": { "$ref": "#/$defs/sha256" }
       }
     },
@@ -169,7 +169,7 @@
     },
     "countMap": {
       "type": "object",
-      "additionalProperties": { "type": "integer", "minimum": 1 }
+      "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
     }
   }
 }
