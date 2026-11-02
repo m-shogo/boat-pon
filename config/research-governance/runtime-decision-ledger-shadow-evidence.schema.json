@@ -169,6 +169,15 @@
     },
     "countMap": {
       "type": "object",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "records", "record", "sourceDecisionHistoryId", "decisionId",
+            "canonicalRaceId", "raceId", "selection", "dbPath", "localPath",
+            "result", "payoutYen", "stakeYen"
+          ]
+        }
+      },
       "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
     }
   }
