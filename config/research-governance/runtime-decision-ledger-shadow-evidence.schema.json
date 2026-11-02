@@ -57,7 +57,7 @@
       ],
       "properties": {
         "fileSizeBytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-        "modifiedTimeMs": { "type": "number", "minimum": 0 },
+        "modifiedTimeMs": { "type": "number", "minimum": 0, "maximum": 1.7976931348623157e308 },
         "sqliteSchemaVersion": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "sqliteUserVersion": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "pageCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
