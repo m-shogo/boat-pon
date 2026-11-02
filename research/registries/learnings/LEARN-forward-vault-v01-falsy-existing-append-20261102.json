@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-falsy-existing-append-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.falsy-existing-record-append-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "require-exact-undefined-for-v01-existing-record-absence-before-append",
+  "symptom": "Source review identified that classifyForwardVaultAppend used !existing to decide APPEND, so null, false, zero and empty-string existing readback values were treated as an absent record rather than rejected. A malformed existing slot could therefore authorize a fresh append classification despite the append-only intent. This is a bounded synthetic runtime-input integrity finding, not a demonstrated disk overwrite, observed attack, K evidence or production impact.",
+  "rootCauseClass": "V01_TRUTHINESS_EXISTING_RECORD_ABSENCE_BYPASSES_APPEND_ADMISSION",
+  "attemptSignature": "pr2286-v539-exact-undefined-existing-record-absence-and-falsy-synthetic-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@96578047/v01-falsy-existing-record-absence-check"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.falsyExistingAdmission.test.ts",
+    "commit/9e05e1c68f5d884c385d894ca9a991d48fd810e0",
+    "commit/cad3577f713e5fb3208acbb705495a6b81294a41",
+    "research/registries/learnings/LEARN-shadow-evidence-wal-absence-nonboolean-admission-20261029.json"
+  ],
+  "lesson": "In append-only research admission, only the explicit undefined sentinel means no existing record. Truthiness conflates missing state with malformed or failed readback values and can turn an invalid existing slot into APPEND.",
+  "guardrail": "Use existing === undefined for absent-record classification, and validate every other existing value before comparing record identity or digests. Regress null, false, zero and empty-string existing inputs while preserving explicit absence, valid idempotency, conflict and digest behavior. Never infer physical persistence safety, source authority, readiness, merge or production permission.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T04:59:46.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T04:59:46.000Z",
+  "_digest": "61df45997c737dc6e7d8a1ad4aa610bd83d7f1fcfebbc7fecbb1b20327c794a6"
+}
