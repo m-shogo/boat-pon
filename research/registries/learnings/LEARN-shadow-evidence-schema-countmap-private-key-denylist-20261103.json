@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-countmap-private-key-denylist-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-countmap-private-key-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-shadow-countmap-propertynames-private-key-admission-vs-runtime",
+  "symptom": "The Shadow Evidence Draft 2020-12 countMap schema constrained only values, so a schema-only consumer admitted positive count-map entries named selection, sourceDecisionHistoryId, payoutYen or other private identifiers. The runtime validator already denied these names. Synthetic jsonschema Draft 2020-12 probes reproduced the schema-only gap; no private data or production impact was observed.",
+  "rootCauseClass": "SCHEMA_ONLY_DYNAMIC_COUNT_MAP_PRIVATE_KEY_DENYLIST_OMITTED",
+  "attemptSignature": "pr2286-v552-shadow-countmap-propertynames-private-key-parity-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-4.26-draft202012/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@3c4bd6e19adb/countMap-propertyNames-absent"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaCountMapPrivacyParity.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-reason-count-map-admission-20261027.json",
+    "commit/d7041adad180c081ac2efff8e8e08bad477ac499",
+    "commit/2dd51bc0a0de3bab0af5d1c8467c29eb2c131603"
+  ],
+  "lesson": "A sanitized count map with positive bounded integer values can still carry private identifier names. Schema-only consumers require a propertyNames denylist aligned with the runtime FORBIDDEN_KEYS; digest consistency and value bounds alone do not enforce key privacy.",
+  "guardrail": "Retain Draft 2020-12 countMap.propertyNames.not.enum for the 12 runtime-forbidden identity and sensitive-field keys across unresolved, rejected and taxonomy dictionaries. Keep runtime path-token checks, semantic taxonomy reconciliation and content digest validation; this schema rule is a narrow lexical guardrail, not complete privacy attestation or external source authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T16:04:38.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T16:04:38.000Z",
+  "_digest": "a6369b8572372f3abc90cedbe51a92a2e3decf07e3a2de6598152d425f92489d"
+}
