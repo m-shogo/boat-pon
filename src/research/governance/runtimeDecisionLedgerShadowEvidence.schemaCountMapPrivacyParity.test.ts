@@ -15,11 +15,16 @@ const schema = JSON.parse(readFileSync(
   new URL("../../../config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json", import.meta.url),
   "utf8",
 )) as {
-  properties: { completeness: { properties: Record<string, { $ref: string }> } };
+  properties: {
+    completeness: { properties: Record<string, { $ref: string }> };
+    scope: { properties: Record<string, { allOf?: Array<{ not: { $ref: string } }> }> };
+    source: { properties: Record<string, { allOf?: Array<{ not: { $ref: string } }> }> };
+  };
   $defs: {
+    pathToken: { type: string; pattern: string };
     countMap: {
       type: string;
-      propertyNames: { allOf: [{ not: { enum: string[] } }, { not: { pattern: string } }] };
+      propertyNames: { allOf: [{ not: { enum: string[] } }, { not: { $ref: string } }] };
       additionalProperties: { type: string; minimum: number; maximum: number };
     };
   };
@@ -134,7 +139,8 @@ test("shadow runtime rejects re-digested private count-map keys while ordinary k
 test("shadow count-map schema path-token propertyNames agrees with runtime on synthetic keys", () => {
   const rule = schema.$defs.countMap;
   assert.equal(rule.propertyNames.allOf.length, 2);
-  const pathPattern = new RegExp(rule.propertyNames.allOf[1]!.not.pattern, "u");
+  assert.equal(rule.propertyNames.allOf[1]!.not.$ref, "#/$defs/pathToken");
+  const pathPattern = new RegExp(schema.$defs.pathToken.pattern, "u");
   const cases: ReadonlyArray<readonly [string, boolean]> = [
     ["close_time_not_proven_visible_at_decision", false],
     ["temporal_provenance", false],
@@ -176,4 +182,46 @@ test("shadow count-map schema path-token propertyNames agrees with runtime on sy
     assert.equal(runtimeDenied, expectedDenied, "runtime " + JSON.stringify(key));
   }
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
+
+test("shadow scalar path-token schema matches runtime privacy rejection on synthetic strings", () => {
+  const pathPattern = new RegExp(schema.$defs.pathToken.pattern, "u");
+  const cases: ReadonlyArray<readonly [string, boolean]> = [
+    ["paper-live", false],
+    ["v4-conservative", false],
+    ["wal", false],
+    ["note=https://example.invalid/a", false],
+    ["https://example.invalid/a", false],
+    ["foo/bar", false],
+    ["A\u0085/opt", false],
+    ["prefix:\u0085/opt", false],
+    ["diag=/opt/synthetic-fixture", true],
+    ["/synthetic-fixture", true],
+    ["C:\\synthetic-fixture", true],
+    ["C:/synthetic-fixture", true],
+    ["file:///synthetic-fixture", true],
+    ["\\\\server\\share", true],
+    ["prefix /Users/synthetic-fixture", true],
+    ["prefix \\Users\\synthetic-fixture", true],
+    ["A\uFEFF/opt", true],
+    ["A\u2028/opt", true],
+    ["prefix: /opt", true],
+    ["prefix=/opt", true],
+  ];
+  for (const field of ["runKind", "modelVersion", "journalMode"] as const) {
+    const rule = field === "journalMode"
+      ? schema.properties.source.properties[field]
+      : schema.properties.scope.properties[field];
+    assert.equal(rule?.allOf?.[0]?.not.$ref, "#/$defs/pathToken", field);
+    for (const [value, expectedDenied] of cases) {
+      assert.equal(pathPattern.test(value), expectedDenied, "schema " + field + ": " + JSON.stringify(value));
+      const input = fixture();
+      if (field === "journalMode") input.source.journalMode = value;
+      else input.scope[field] = value;
+      const result = validateRuntimeDecisionLedgerShadowEvidence(buildRuntimeDecisionLedgerShadowEvidence(input));
+      const runtimeDenied = result.errors.some((error) => error.includes("absolute path-like value"));
+      assert.equal(runtimeDenied, expectedDenied, "runtime " + field + ": " + JSON.stringify(value));
+      assert.equal(result.valid, !expectedDenied, field + ": " + JSON.stringify(value) + ": " + result.errors.join("; "));
+    }
+  }
 });
