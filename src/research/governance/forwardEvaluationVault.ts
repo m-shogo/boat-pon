@@ -20,6 +20,9 @@ export type Validation = { valid: boolean; errors: string[] };
 // its diagnostic list. Compile-time types alone do not enforce this boundary.
 // A caller-replaced Object.freeze must not make issued validation verdicts mutable.
 const BUILTIN_OBJECT_FREEZE = Object.freeze;
+// Pin array classification so caller-replaced Array.isArray cannot deny valid
+// vault arrays or change canonical digest and stage-pooling admission.
+const BUILTIN_ARRAY_IS_ARRAY = Array.isArray;
 // Numeric admission must not change when caller code replaces ambient Number/Object helpers.
 // Otherwise NaN, fractional counts or -0 can pass validation and alias JSON digests.
 const BUILTIN_NUMBER_IS_FINITE = Number.isFinite;
@@ -41,7 +44,7 @@ const FIELDS: Record<VaultKind,string[]> = {
 };
 // Reject exotic prototypes and toJSON hooks: JSON.stringify must agree with canonical hashing.
 const obj=(v:unknown):v is Record<string,unknown>=>{
-  if(v===null||typeof v!=="object"||Array.isArray(v))return false;
+  if(v===null||typeof v!=="object"||BUILTIN_ARRAY_IS_ARRAY(v))return false;
   try {
     const proto=BUILTIN_OBJECT_GET_PROTOTYPE_OF(v);
     return (proto===Object.prototype||proto===null)&&!("toJSON" in v);
@@ -115,7 +118,7 @@ const compareInstants = compareForwardV02ClaimedInstants;
 // Array.every skips holes, while JSON.stringify persists them as null.
 // Inspect own indexed data descriptors to keep validation and hashing aligned.
 const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
-  if(!Array.isArray(v)||v.length===0)return false;
+  if(!BUILTIN_ARRAY_IS_ARRAY(v)||v.length===0)return false;
   try {
     // Array.prototype.toJSON can replace persisted array contents after validation.
     // Reject inherited/own hooks rather than hashing evidence that serializes differently.
@@ -159,7 +162,7 @@ const exactOwnArrayEntry=(values:readonly string[],expected:string):boolean=>{
   return false;
 };
 const canonical=(v:unknown):unknown=>{
-  if(Array.isArray(v)){
+  if(BUILTIN_ARRAY_IS_ARRAY(v)){
     if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==Array.prototype||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
     // Do not delegate canonical array traversal to mutable Array.from.
     // A replaced Array.from can erase elements and alias distinct digests.
@@ -251,7 +254,7 @@ export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined
 // Read only own data descriptors: never invoke untrusted array accessors.
 export function canPoolStages(stages:EvidenceStage[]):boolean {
   try {
-    if(!Array.isArray(stages)||BUILTIN_OBJECT_GET_PROTOTYPE_OF(stages)!==Array.prototype)return false;
+    if(!BUILTIN_ARRAY_IS_ARRAY(stages)||BUILTIN_OBJECT_GET_PROTOTYPE_OF(stages)!==Array.prototype)return false;
     if(BUILTIN_REFLECT_OWN_KEYS(stages).length!==stages.length+1)return false;
     let first:EvidenceStage|undefined;
     for(let i=0;i<stages.length;i++){
