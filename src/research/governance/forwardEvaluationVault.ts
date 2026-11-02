@@ -27,6 +27,10 @@ const BUILTIN_NODE_IS_PROXY = nodeTypes.isProxy;
 // Pin array classification so caller-replaced Array.isArray cannot deny valid
 // vault arrays or change canonical digest and stage-pooling admission.
 const BUILTIN_ARRAY_IS_ARRAY = Array.isArray;
+// Expected prototype identities must not drift when global Array/Object
+// constructors are replaced after import (research-only caller realm).
+const BUILTIN_ARRAY_PROTOTYPE = Array.prototype;
+const BUILTIN_OBJECT_PROTOTYPE = Object.prototype;
 // Numeric admission must not change when caller code replaces ambient Number/Object helpers.
 // Otherwise NaN, fractional counts or -0 can pass validation and alias JSON digests.
 const BUILTIN_NUMBER_IS_FINITE = Number.isFinite;
@@ -51,7 +55,7 @@ const obj=(v:unknown):v is Record<string,unknown>=>{
   if(v===null||typeof v!=="object"||BUILTIN_NODE_IS_PROXY(v)||BUILTIN_ARRAY_IS_ARRAY(v))return false;
   try {
     const proto=BUILTIN_OBJECT_GET_PROTOTYPE_OF(v);
-    return (proto===Object.prototype||proto===null)&&!("toJSON" in v);
+    return (proto===BUILTIN_OBJECT_PROTOTYPE||proto===null)&&!("toJSON" in v);
   } catch { return false; }
 };
 // Only own, enumerable data descriptors can participate in JSON persistence.
@@ -129,7 +133,7 @@ const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
   try {
     // Array.prototype.toJSON can replace persisted array contents after validation.
     // Reject inherited/own hooks rather than hashing evidence that serializes differently.
-    if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==Array.prototype||"toJSON" in v||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)return false;
+    if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==BUILTIN_ARRAY_PROTOTYPE||"toJSON" in v||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)return false;
     const seen=new BUILTIN_SET<unknown>();
     for(let i=0;i<v.length;i++){
       const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,BUILTIN_STRING(i));
@@ -171,7 +175,7 @@ const exactOwnArrayEntry=(values:readonly string[],expected:string):boolean=>{
 const canonical=(v:unknown):unknown=>{
   if(BUILTIN_NODE_IS_PROXY(v))throw new TypeError("Proxy is not admissible in Forward Evaluation Vault");
   if(BUILTIN_ARRAY_IS_ARRAY(v)){
-    if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==Array.prototype||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
+    if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==BUILTIN_ARRAY_PROTOTYPE||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)throw new TypeError("non-JSON array in Forward Evaluation Vault");
     // Do not delegate canonical array traversal to mutable Array.from.
     // A replaced Array.from can erase elements and alias distinct digests.
     const output:unknown[]=[];
@@ -273,7 +277,7 @@ export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined
 // Read only own data descriptors: never invoke untrusted array accessors.
 export function canPoolStages(stages:EvidenceStage[]):boolean {
   try {
-    if(BUILTIN_NODE_IS_PROXY(stages)||!BUILTIN_ARRAY_IS_ARRAY(stages)||BUILTIN_OBJECT_GET_PROTOTYPE_OF(stages)!==Array.prototype)return false;
+    if(BUILTIN_NODE_IS_PROXY(stages)||!BUILTIN_ARRAY_IS_ARRAY(stages)||BUILTIN_OBJECT_GET_PROTOTYPE_OF(stages)!==BUILTIN_ARRAY_PROTOTYPE)return false;
     if(BUILTIN_REFLECT_OWN_KEYS(stages).length!==stages.length+1)return false;
     let first:EvidenceStage|undefined;
     for(let i=0;i<stages.length;i++){
