@@ -83,7 +83,7 @@ test("shadow mtime schema bounds finite numeric admission without rejecting fini
     [-1, false],
     [overflow, false],
   ] as const) {
-    const schemaRangeAdmits = value >= rule.minimum && value <= rule.maximum!;
+    const schemaRangeAdmits: boolean = value >= rule.minimum && value <= rule.maximum!;
     assert.equal(schemaRangeAdmits, expected, String(value));
   }
 });
