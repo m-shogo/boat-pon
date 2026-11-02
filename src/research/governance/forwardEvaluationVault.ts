@@ -263,7 +263,9 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   return frozenValidation(e.length===0,e);
 }
 
-export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; if(!existing)return "APPEND"; if(!validateForwardVaultRecord(existing).valid)return "REJECTED_INVALID"; if(existing.recordId!==next.recordId)return "CONFLICT"; try { return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; } catch { return "REJECTED_INVALID"; } }
+export function classifyForwardVaultAppend(existing:ForwardVaultRecord|undefined,candidate:unknown):VaultAppendDecision { const v=validateForwardVaultRecord(candidate); if(!v.valid)return "REJECTED_INVALID"; const next=candidate as ForwardVaultRecord; // Only an explicit undefined means no prior record. A malformed/falsy readback
+  // (null, false, 0, or empty string) must never authorize a fresh append.
+  if(existing===undefined)return "APPEND"; if(!validateForwardVaultRecord(existing).valid)return "REJECTED_INVALID"; if(existing.recordId!==next.recordId)return "CONFLICT"; try { return forwardVaultDigest(existing)===forwardVaultDigest(next)?"IDEMPOTENT_NOOP":"CONFLICT"; } catch { return "REJECTED_INVALID"; } }
 // Stage pooling is a runtime admission boundary, not only a TypeScript hint.
 // Read only own data descriptors: never invoke untrusted array accessors.
 export function canPoolStages(stages:EvidenceStage[]):boolean {
