@@ -76,3 +76,23 @@ test("v0.1 unknown-field diagnostics remain complete under an empty array iterat
   assert.ok(observed.errors.includes("unknown field is not allowed: extraSyntheticField"));
   assert.deepEqual(observed.errors, baseline.errors);
 });
+
+test("v0.1 invalid-kind diagnostics retain prior denials under an empty array iterator", () => {
+  const malformed = { ...result(), kind: "SYNTHETIC_UNKNOWN", recordId: " \t", evidenceStage: "UNKNOWN" };
+  const baseline = validateForwardVaultRecord(malformed);
+  assert.deepEqual(baseline.errors, [
+    "recordId must be non-empty", "invalid evidenceStage", "invalid kind",
+  ]);
+  const observed = withEmptyArrayIterator(() => {
+    const verdict = validateForwardVaultRecord(malformed);
+    let digestDenied = false;
+    try { forwardVaultDigest(malformed as unknown as EvaluationResult); }
+    catch (error) { digestDenied = error instanceof TypeError; }
+    return { verdict, digestDenied, append: classifyForwardVaultAppend(undefined, malformed) };
+  });
+  assert.equal(observed.verdict.valid, false);
+  assert.deepEqual(observed.verdict.errors, baseline.errors);
+  assert.equal(Object.isFrozen(observed.verdict.errors), true);
+  assert.equal(observed.digestDenied, true);
+  assert.equal(observed.append, "REJECTED_INVALID");
+});
