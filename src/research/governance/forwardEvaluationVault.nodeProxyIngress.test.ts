@@ -91,9 +91,9 @@ test("v0.1 nested array, metric and stage-pooling Proxy traps never execute", ()
       traps++; return Reflect.getOwnPropertyDescriptor(target, key);
     },
   };
-  const nestedMetrics = { ...result(), metrics: new Proxy({ roi: 1 }, trap) };
-  const nestedProtocol = { ...protocol(), metricFamilies: new Proxy(["ROI"], trap) };
-  const stages: EvidenceStage[] = new Proxy(["SHADOW_FORWARD", "SHADOW_FORWARD"] as EvidenceStage[], trap);
+  const nestedMetrics = { ...result(), metrics: new Proxy<Record<string, number>>({ roi: 1 }, trap) };
+  const nestedProtocol = { ...protocol(), metricFamilies: new Proxy<string[]>(["ROI"], trap) };
+  const stages: EvidenceStage[] = new Proxy<EvidenceStage[]>(["SHADOW_FORWARD", "SHADOW_FORWARD"], trap);
   assert.equal(validateForwardVaultRecord(nestedMetrics).valid, false);
   assert.equal(validateForwardVaultRecord(nestedProtocol).valid, false);
   assert.equal(classifyForwardVaultAppend(undefined, nestedMetrics), "REJECTED_INVALID");
