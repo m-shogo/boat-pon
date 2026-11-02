@@ -100,7 +100,10 @@ test("shadow runtime rejects overflow mtime and retains valid finite metadata", 
   forged.source.modifiedTimeMs = JSON.parse("1e400") as number;
   const result = validateRuntimeDecisionLedgerShadowEvidence(forged);
   assert.equal(result.valid, false);
+  // The generic evidence-graph preflight may reject Infinity before the
+  // source-specific validator runs. Both are fail-closed runtime outcomes.
   assert.ok(result.errors.some((error) =>
-    error.includes("source.modifiedTimeMs must be a non-negative finite number")
+    error.includes("non-finite number forbidden in evidence graph")
+    || error.includes("source.modifiedTimeMs must be a non-negative finite number")
   ), result.errors.join("; "));
 });
