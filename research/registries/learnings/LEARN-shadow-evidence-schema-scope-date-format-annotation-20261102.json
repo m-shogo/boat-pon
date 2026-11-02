@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-scope-date-format-annotation-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.scope-date-format-annotation-admission",
+  "subsystem": "research-governance-shadow-evidence",
+  "operation": "schema-only-shadow-scope-date-admission-without-format-assertion",
+  "symptom": "The Draft 2020-12 shadow evidence scope.from/to schema used format:date without a lexical pattern. Without format assertion a standalone schema consumer accepted not-a-date, invalid months and non-date strings, although the runtime validator requires canonical Gregorian YYYY-MM-DD.",
+  "rootCauseClass": "SCHEMA_FORMAT_DATE_ANNOTATION_WITHOUT_CANONICAL_DATE_LEXICAL_GUARD",
+  "attemptSignature": "pr2286-v547-shadow-scope-from-to-canonical-date-lexical-pattern-and-negative-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "python-jsonschema-draft202012-no-formatchecker/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@3fbc1f7b/scope.from-to-format-date-only"
+  },
+  "evidenceRefs": [
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaLexicalParity.test.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-generatedat-format-annotation-20261102.json",
+    "pull/2286"
+  ],
+  "lesson": "JSON Schema Draft 2020-12 format:date can be annotation-only. The shadow scope dates need a lexical fail-closed guard even when a consumer does not enable format assertions. The schema regex cannot establish Gregorian calendar validity or time authority.",
+  "guardrail": "Require identical canonical YYYY-MM-DD lexical patterns for scope.from and scope.to, rejecting year zero and malformed month/day spellings in schema-only checks. Keep runtime Gregorian roundtrip and from<=to validation; never infer trusted time, independent K evidence or scoring authority from schema acceptance.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T13:01:12.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T13:01:12.000Z",
+  "_digest": "4447d46b705dec815fe115f2897591f4c235f2c0dfdab7756188b7b17041db86"
+}
