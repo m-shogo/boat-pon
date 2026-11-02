@@ -60,7 +60,7 @@ test("Forward Vault RESULT metric schema bounds both signs of JSON exponent over
     [overflow, false],
     [negativeOverflow, false],
   ] as const) {
-    const admitted = value >= numericRule!.minimum && value <= numericRule!.maximum;
+    const admitted: boolean = value >= numericRule!.minimum && value <= numericRule!.maximum;
     assert.equal(admitted, expected, String(value));
   }
 });
