@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-finite-mtime-test-error-stage-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.finite-mtime-test-specific-error-assumption",
+  "subsystem": "research-governance-shadow-evidence-regression-tests",
+  "operation": "verify-synthetic-mtime-overflow-fail-closed-stage",
+  "symptom": "After the finite-mtime schema regression test compiled, GitHub Actions verify failed one synthetic assertion. The runtime rejected Infinity in the generic evidence-graph preflight with 'non-finite number forbidden in evidence graph', while the test required only the later source.modifiedTimeMs-specific diagnostic. The research method did not fail; post-job cleanup completed.",
+  "rootCauseClass": "REGRESSION_ASSERTION_ASSUMED_LATER_FIELD_GUARD_OVER_EARLIER_GRAPH_GUARD",
+  "attemptSignature": "pr2286-shadow-schema-mtime-test-source-specific-error-only-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-node24-verify-research-only",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.schemaFiniteMtimeParity.test.ts@38bc40da/source-specific-error-only"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaFiniteMtimeParity.test.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "actions/runs/41524669460",
+    "actions/jobs/125549213372",
+    "commit/38bc40da4e1dcae5e2c6c132ea3b03ad2e9230cf",
+    "commit/ab191056a5b803a327fe61e9116e7a423a13d5fa",
+    "research/registries/learnings/LEARN-shadow-evidence-scope-regex-anychar-test-assumption-20261103.json"
+  ],
+  "lesson": "A fail-closed validator can reject an invalid value in an earlier whole-graph guard, so a regression assertion requiring only a later field-specific error falsely fails. Separate admission outcome from the diagnostic stage that first rejects it.",
+  "guardrail": "Assert that the overflow evidence is rejected, and accept either the generic nonfinite evidence-graph diagnostic or the source.modifiedTimeMs-specific finite-number diagnostic. Keep valid finite controls, check complete job logs and post-job cleanup, and do not treat a test assertion failure as a research or platform failure.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T21:06:37.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T21:06:37.000Z",
+  "_digest": "70106c27bd1bbb497f0ec551e2507ab0e1dbdab1110c03dd96de9726757ddc7d"
+}
