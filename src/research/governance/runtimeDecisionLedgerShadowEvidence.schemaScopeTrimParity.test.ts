@@ -109,8 +109,8 @@ test("shadow scope canonical schema rules share one cross-engine pattern", () =>
   const rules = schema.properties.scope.properties;
   assert.equal(rules.runKind.pattern, rules.modelVersion.pattern);
   // Do not rely on JS/Python's different \\S whitespace definitions.
-  assert.equal(rules.runKind.pattern.includes("\\\\S"), false);
-  assert.equal(rules.runKind.pattern.includes("\\\\uFEFF"), true);
+  assert.equal(rules.runKind.pattern.includes(String.raw`\\S`), false);
+  assert.equal(rules.runKind.pattern.includes(String.raw`\\uFEFF`), true);
   assert.equal(new RegExp(rules.runKind.pattern, "u").test("A\n"), false);
   assert.equal(new RegExp(rules.runKind.pattern, "u").test("A\nB"), true);
 });
