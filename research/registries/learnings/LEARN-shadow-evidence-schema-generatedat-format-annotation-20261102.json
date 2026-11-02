@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-generatedat-format-annotation-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-generatedat-format-annotation-admission",
+  "subsystem": "research-governance-shadow-evidence",
+  "operation": "schema-only-shadow-generatedat-admission-without-format-assertion",
+  "symptom": "The Draft 2020-12 shadow-evidence schema used only format:date-time for generatedAt. A format-annotation-only consumer admitted arbitrary non-dates, offsets and noncanonical fractions that the runtime validator rejects; a standalone schema consumer could mistake malformed generation time for canonical metadata.",
+  "rootCauseClass": "SCHEMA_FORMAT_DATETIME_ANNOTATION_WITHOUT_CANONICAL_UTC_LEXICAL_GUARD",
+  "attemptSignature": "pr2286-v546-canonical-utc-millisecond-schema-pattern-plus-schema-only-negative-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "python-jsonschema-draft202012-no-formatchecker/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@900d9b27/generatedAt-format-only-annotation"
+  },
+  "evidenceRefs": [
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaLexicalParity.test.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "research/registries/learnings/LEARN-forward-vault-schema-format-annotation-lexical-bypass-20261016.json",
+    "pull/2286",
+    "actions/runs/41442262722"
+  ],
+  "lesson": "JSON Schema Draft 2020-12 date-time format may be annotation only; shadow generatedAt cannot rely on format to enforce the runtime's canonical UTC millisecond spelling. A valid-looking generation timestamp is caller-controlled and not evidence of trusted capture time, independent issuer or final settlement.",
+  "guardrail": "Pin the shadow generatedAt schema to an explicit four-digit-year, uppercase-T, three-digit-fraction UTC-Z lexical pattern, test positive and negative schema-only vectors without format assertion, and retain the runtime Date roundtrip for Gregorian validity. Never use generatedAt to authorize scoring or production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T12:08:48.405Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T12:08:48.405Z",
+  "_digest": "cf13442ac48ed871e18c7dfed13d9ff9f4e2670d729a5187ed18ac7dce6774b8"
+}
