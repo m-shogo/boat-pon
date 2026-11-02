@@ -69,6 +69,8 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
 };
 // Match the portable schema's ECMAScript whitespace semantics without
 // trusting a caller-replaced String.prototype.trim after module initialization.
+// Numeric array indices and denial slots must not dispatch through caller-replaced global String.
+const BUILTIN_STRING = String;
 const BUILTIN_STRING_TRIM = String.prototype.trim;
 const BUILTIN_REFLECT_APPLY = Reflect.apply;
 // Pin own-property admission: caller mutation must not reopen inherited kind
@@ -120,7 +122,7 @@ const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
     if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==Array.prototype||"toJSON" in v||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)return false;
     const seen=new Set<unknown>();
     for(let i=0;i<v.length;i++){
-      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,String(i));
+      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,BUILTIN_STRING(i));
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor)||!accept(descriptor.value)||setHas(seen,descriptor.value))return false;
       BUILTIN_REFLECT_APPLY(BUILTIN_SET_ADD,seen,[descriptor.value]);
     }
@@ -150,7 +152,7 @@ const finiteMetricMap=(v:unknown):boolean=>{
 const exactOwnArrayEntry=(values:readonly string[],expected:string):boolean=>{
   try {
     for(let i=0;i<values.length;i++){
-      const d=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(values,String(i));
+      const d=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(values,BUILTIN_STRING(i));
       if(d&&d.enumerable&&"value" in d&&d.value===expected)return true;
     }
   } catch { return false; }
@@ -163,11 +165,11 @@ const canonical=(v:unknown):unknown=>{
     // A replaced Array.from can erase elements and alias distinct digests.
     const output:unknown[]=[];
     for(let i=0;i<v.length;i++){
-      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,String(i));
+      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,BUILTIN_STRING(i));
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor))throw new TypeError("non-JSON array in Forward Evaluation Vault");
       // A caller-independent inherited Array.prototype numeric setter must not
       // erase a validated metric/protocol entry from the canonical digest.
-      BUILTIN_OBJECT_DEFINE_PROPERTY(output, String(i), {
+      BUILTIN_OBJECT_DEFINE_PROPERTY(output, BUILTIN_STRING(i), {
         value: canonical(descriptor.value),
         enumerable: true, writable: true, configurable: true,
       });
@@ -212,7 +214,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   // A fresh error array has no own index yet: inherited numeric setters can
   // silently discard a denial and make an invalid research record appear valid.
   const appendError=(message:string):void=>{
-    BUILTIN_OBJECT_DEFINE_PROPERTY(e,String(e.length),{
+    BUILTIN_OBJECT_DEFINE_PROPERTY(e,BUILTIN_STRING(e.length),{
       value:message,enumerable:true,writable:true,configurable:true,
     });
   };
@@ -253,7 +255,7 @@ export function canPoolStages(stages:EvidenceStage[]):boolean {
     if(BUILTIN_REFLECT_OWN_KEYS(stages).length!==stages.length+1)return false;
     let first:EvidenceStage|undefined;
     for(let i=0;i<stages.length;i++){
-      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(stages,String(i));
+      const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(stages,BUILTIN_STRING(i));
       if(!descriptor||!("value" in descriptor)||!descriptor.enumerable||!setHas(STAGES,descriptor.value))return false;
       if(i>0&&descriptor.value!==first)return false;
       if(i===0)first=descriptor.value;
