@@ -86,7 +86,10 @@ const BUILTIN_OBJECT_HAS_OWN_PROPERTY = Object.prototype.hasOwnProperty;
 const hasOwn = (value: object, key: PropertyKey): boolean =>
   BUILTIN_REFLECT_APPLY(BUILTIN_OBJECT_HAS_OWN_PROPERTY, value, [key]) as boolean;
 // Stage and duplicate admission must not dispatch through caller-replaced Set methods.
-// Capture the Set constructor as well as its methods: a caller-replaced global\n// Set must not deny otherwise valid unique protocol arrays after module load.\nconst BUILTIN_SET = Set;\nconst BUILTIN_SET_HAS = Set.prototype.has;
+// Capture the Set constructor as well as its methods: a caller-replaced global
+// Set must not deny otherwise valid unique protocol arrays after module load.
+const BUILTIN_SET = Set;
+const BUILTIN_SET_HAS = Set.prototype.has;
 const BUILTIN_SET_ADD = Set.prototype.add;
 const setHas = (set: Set<unknown>, value: unknown): boolean =>
   BUILTIN_REFLECT_APPLY(BUILTIN_SET_HAS, set, [value]) as boolean;
