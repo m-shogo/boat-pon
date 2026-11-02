@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-vault-schema-nonfinite-metrics-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.schema-nonfinite-result-metrics-admission",
+  "subsystem": "research-governance-forward-evaluation-vault",
+  "operation": "schema-only-draft202012-result-metric-finite-number-parity",
+  "symptom": "Forward Evaluation Vault RESULT.metrics used additionalProperties type:number without finite bounds. In synthetic Python jsonschema Draft 2020-12, positive and negative Infinity produced by JSON exponent overflow were admitted by that rule while validateForwardVaultRecord rejects non-finite metric values. This is a schema-only metadata contract gap, not observed real evidence corruption or production behavior.",
+  "rootCauseClass": "SCHEMA_UNBOUNDED_RESULT_METRIC_NUMBER_ADMITS_JSON_EXPONENT_OVERFLOW",
+  "attemptSignature": "pr2286-forward-vault-result-metrics-finite-bounds-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-4.26-draft202012/node-jsonparse/github-actions-node24-research-only",
+    "materialStateKey": "forward-evaluation-vault.schema.json@50cd792f/RESULT.metrics-unbounded-number"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/forward-evaluation-vault.schema.json",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.schemaFiniteMetricsParity.test.ts",
+    "research/registries/learnings/LEARN-forward-vault-metrics-some-admission-20261024.json",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-nonfinite-mtime-parity-20261103.json",
+    "commit/c64049fbdc71471d95fdd8441d1437d496bbc798",
+    "commit/a211b921f7f8bc98ad9822c7986b64d3ae5af986"
+  ],
+  "lesson": "JSON Schema type:number does not guarantee finite numeric values when a JSON exponent overflows into Infinity. Runtime finite-metric validation must remain authoritative; schema-only consumers need explicit representable-number bounds.",
+  "guardrail": "For research-only Forward Vault RESULT.metrics, retain minimum:-Number.MAX_VALUE and maximum:Number.MAX_VALUE in the numeric additionalProperties schema, with both-sign overflow and finite-boundary regression tests. JSON Schema cannot distinguish negative zero from zero; keep the runtime signed-zero digest guardrail. Never infer authentic outcomes, scoring readiness or production authority from schema acceptance.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T22:02:31.129Z",
+  "productionConnection": false,
+  "_digest": "0527a890c3ddca6280fc4b91f72ce9648156461ee5e1592273c97301a60243a4",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T22:02:31.129Z"
+}
