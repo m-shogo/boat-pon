@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-safe-integer-parity-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-unsafe-integer-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-shadow-counter-admission-vs-runtime-safe-integer",
+  "symptom": "The shadow evidence Draft 2020-12 schema lacked maximum bounds on 13 fixed integer counters and dynamic reason/taxonomy counts. A schema-only consumer could accept JSON integers above 2^53-1 that the runtime rejects with Number.isSafeInteger; a downstream consumer could overstate exact counter precision. This was a synthetic schema/runtime contract mismatch, not observed private evidence corruption or production impact.",
+  "rootCauseClass": "JSON_SCHEMA_INTEGER_UNBOUNDED_ABOVE_RUNTIME_SAFE_INTEGER",
+  "attemptSignature": "pr2286-v550-shadow-schema-14-safe-integer-upper-bounds-and-two-parity-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "python-jsonschema-draft202012/node22.16.0/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@a715a463/unbounded-integer-counters"
+  },
+  "evidenceRefs": [
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaSafeIntegerParity.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-number-object-numeric-admission-20261030.json",
+    "commit/ce475ba80f1dc2f4d759a1cf09e1e1cb0b9c3709",
+    "commit/29f4f2614cb05ba25b89849f0aac91460216f6f8",
+    "pull/2286"
+  ],
+  "lesson": "JSON Schema integer type does not impose JavaScript safe-integer precision. A schema-only consumer and runtime validator disagree unless every numeric count is explicitly bounded at 9007199254740991, including additionalProperties dictionaries.",
+  "guardrail": "Keep maximum:9007199254740991 on every fixed nonnegative integer count and on dynamic reason/taxonomy count-map values; retain the existing tighter scope.limit maximum and runtime safe-integer checks. Add schema metadata parity regressions for all 14 counter rules. Schema acceptance alone never authenticates K evidence, finality, evaluation readiness or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T14:42:26.311Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T14:42:26.311Z",
+  "_digest": "3e5a03476fcb7962bef06b0bc1b7c242ab2e3fb44b7d37f02c6746d5037d69d2"
+}
