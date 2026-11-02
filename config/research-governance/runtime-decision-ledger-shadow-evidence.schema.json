@@ -29,8 +29,8 @@
       "additionalProperties": false,
       "required": ["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"],
       "properties": {
-        "runKind": { "type": "string", "minLength": 1, "pattern": "^[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF](?:[\\s\\S]*[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])?(?![\\s\\S])" },
-        "modelVersion": { "type": "string", "minLength": 1, "pattern": "^[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF](?:[\\s\\S]*[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])?(?![\\s\\S])" },
+        "runKind": { "type": "string", "minLength": 1, "pattern": "^[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF](?:[\\s\\S]*[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])?(?![\\s\\S])", "allOf": [{ "not": { "$ref": "#/$defs/pathToken" } }] },
+        "modelVersion": { "type": "string", "minLength": 1, "pattern": "^[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF](?:[\\s\\S]*[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])?(?![\\s\\S])", "allOf": [{ "not": { "$ref": "#/$defs/pathToken" } }] },
         "from": { "type": "string", "format": "date", "pattern": "^(?!0000-)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$" },
         "to": { "type": "string", "format": "date", "pattern": "^(?!0000-)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$" },
         "limit": { "type": "integer", "minimum": 1, "maximum": 5000 },
@@ -63,7 +63,7 @@
         "pageCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "pageSizeBytes": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
         "freelistCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-        "journalMode": { "type": "string", "minLength": 1, "pattern": "[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]" },
+        "journalMode": { "type": "string", "minLength": 1, "pattern": "[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]", "allOf": [{ "not": { "$ref": "#/$defs/pathToken" } }] },
         "walPresent": { "const": false },
         "readOnly": { "const": true },
         "queryOnly": { "const": true }
@@ -160,6 +160,7 @@
     "contentDigest": { "$ref": "#/$defs/sha256", "description": "Canonical digest of sanitized evidence content excluding generatedAt and contentDigest itself; content identity only, not proof of capture time, issuer, rights, correction completeness, or scoring authorization." }
   },
   "$defs": {
+    "pathToken": { "type": "string", "pattern": "(?:^|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF\"'(=:])(?:file:\\/\\/|\\/(?!\\/|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|[A-Za-z]:[\\\\\\/]|\\\\\\\\[^\\\\\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|\\/Users\\/|\\\\Users\\\\" },
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "rateOrNull": {
       "oneOf": [
@@ -182,7 +183,7 @@
           },
           {
             "not": {
-              "pattern": "(?:^|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF\"'(=:])(?:file:\\/\\/|\\/(?!\\/|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|[A-Za-z]:[\\\\\\/]|\\\\\\\\[^\\\\\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|\\/Users\\/|\\\\Users\\\\"
+              "$ref": "#/$defs/pathToken"
             }
           }
         ]
