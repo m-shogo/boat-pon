@@ -54,3 +54,24 @@ test("K1 schema-only Gregorian calendar checks reject rollover and century error
     assert.equal(acceptsDate(day + "T12:00:00Z"), true, day);
   }
 });
+
+test("K1 schema uses portable exact-end timestamp and digest guards", () => {
+  const instantPattern = schema.$defs.exactInstant.pattern;
+  const digestPattern = (schema.properties.sourceRowDigest as { pattern: string }).pattern;
+  const exactEnd = "(?![\\s\\S])";
+  assert.equal(instantPattern.endsWith(exactEnd), true);
+  assert.equal(digestPattern.endsWith(exactEnd), true);
+
+  const probes = [
+    { pattern: instantPattern, valid: "2026-08-05T05:26:30Z" },
+    { pattern: digestPattern, valid: "a".repeat(64) },
+  ];
+  for (const { pattern, valid } of probes) {
+    const rule = new RegExp(pattern, "u");
+    assert.equal(rule.test(valid), true, "canonical control");
+    for (const suffix of ["\\n", "\\r\\n", "\\u2028", "\\u2029"]) {
+      const actualSuffix = JSON.parse('"' + suffix + '"') as string;
+      assert.equal(rule.test(valid + actualSuffix), false, "must reject terminal " + suffix);
+    }
+  }
+});
