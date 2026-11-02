@@ -86,7 +86,7 @@ const BUILTIN_OBJECT_HAS_OWN_PROPERTY = Object.prototype.hasOwnProperty;
 const hasOwn = (value: object, key: PropertyKey): boolean =>
   BUILTIN_REFLECT_APPLY(BUILTIN_OBJECT_HAS_OWN_PROPERTY, value, [key]) as boolean;
 // Stage and duplicate admission must not dispatch through caller-replaced Set methods.
-const BUILTIN_SET_HAS = Set.prototype.has;
+// Capture the Set constructor as well as its methods: a caller-replaced global\n// Set must not deny otherwise valid unique protocol arrays after module load.\nconst BUILTIN_SET = Set;\nconst BUILTIN_SET_HAS = Set.prototype.has;
 const BUILTIN_SET_ADD = Set.prototype.add;
 const setHas = (set: Set<unknown>, value: unknown): boolean =>
   BUILTIN_REFLECT_APPLY(BUILTIN_SET_HAS, set, [value]) as boolean;
@@ -127,7 +127,7 @@ const denseUniqueArray=(v:unknown,accept:(x:unknown)=>boolean):boolean=>{
     // Array.prototype.toJSON can replace persisted array contents after validation.
     // Reject inherited/own hooks rather than hashing evidence that serializes differently.
     if(BUILTIN_OBJECT_GET_PROTOTYPE_OF(v)!==Array.prototype||"toJSON" in v||BUILTIN_REFLECT_OWN_KEYS(v).length!==v.length+1)return false;
-    const seen=new Set<unknown>();
+    const seen=new BUILTIN_SET<unknown>();
     for(let i=0;i<v.length;i++){
       const descriptor=BUILTIN_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR(v,BUILTIN_STRING(i));
       if(!descriptor||!descriptor.enumerable||!("value" in descriptor)||!accept(descriptor.value)||setHas(seen,descriptor.value))return false;
