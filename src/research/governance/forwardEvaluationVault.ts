@@ -61,7 +61,7 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
     if(required){
       if(keys.length!==required.length)return false;
       for(let i=0;i<required.length;i++){
-        if(!Object.prototype.hasOwnProperty.call(v,required[i]))return false;
+        if(!hasOwn(v,required[i]))return false;
       }
     }
     return true;
@@ -71,6 +71,11 @@ const ownDataShape=(v:Record<string,unknown>,required?:readonly string[]):boolea
 // trusting a caller-replaced String.prototype.trim after module initialization.
 const BUILTIN_STRING_TRIM = String.prototype.trim;
 const BUILTIN_REFLECT_APPLY = Reflect.apply;
+// Pin own-property admission: caller mutation must not reopen inherited kind
+// dispatch or reject valid fixed-schema records.
+const BUILTIN_OBJECT_HAS_OWN_PROPERTY = Object.prototype.hasOwnProperty;
+const hasOwn = (value: object, key: PropertyKey): boolean =>
+  BUILTIN_REFLECT_APPLY(BUILTIN_OBJECT_HAS_OWN_PROPERTY, value, [key]) as boolean;
 // Stage and duplicate admission must not dispatch through caller-replaced Set methods.
 const BUILTIN_SET_HAS = Set.prototype.has;
 const BUILTIN_SET_ADD = Set.prototype.add;
@@ -214,9 +219,9 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   if(!ownDataShape(v))return frozenValidation(false,["record fields must be enumerable own data properties"]);
   if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)appendError("invalid schemaVersion");
   if(!str(v.recordId))appendError("recordId must be non-empty"); if(!setHas(STAGES,v.evidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
-  if(typeof v.kind!=="string"||!Object.prototype.hasOwnProperty.call(FIELDS,v.kind)) return frozenValidation(false,[...e,"invalid kind"]);
+  if(typeof v.kind!=="string"||!hasOwn(FIELDS,v.kind)) return frozenValidation(false,[...e,"invalid kind"]);
   if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))appendError("record fields must exactly match kind");
-  for(const k of BUILTIN_OBJECT_KEYS(v))if(!FIELDS[v.kind as VaultKind].includes(k))appendError(`unknown field is not allowed: ${k}`);
+  for(const k of BUILTIN_OBJECT_KEYS(v))if(!exactOwnArrayEntry(FIELDS[v.kind as VaultKind],k))appendError(`unknown field is not allowed: ${k}`);
   const req=(...ks:string[])=>{
     for(let i=0;i<ks.length;i++){
       const k=ks[i];
