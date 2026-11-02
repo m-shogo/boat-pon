@@ -170,13 +170,22 @@
     "countMap": {
       "type": "object",
       "propertyNames": {
-        "not": {
-          "enum": [
-            "records", "record", "sourceDecisionHistoryId", "decisionId",
-            "canonicalRaceId", "raceId", "selection", "dbPath", "localPath",
-            "result", "payoutYen", "stakeYen"
-          ]
-        }
+        "allOf": [
+          {
+            "not": {
+              "enum": [
+              "records", "record", "sourceDecisionHistoryId", "decisionId",
+              "canonicalRaceId", "raceId", "selection", "dbPath",
+              "localPath", "result", "payoutYen", "stakeYen"
+              ]
+            }
+          },
+          {
+            "not": {
+              "pattern": "(?:^|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF\"'(=:])(?:file:\\/\\/|\\/(?!\\/|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|[A-Za-z]:[\\\\\\/]|\\\\\\\\[^\\\\\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|\\/Users\\/|\\\\Users\\\\"
+            }
+          }
+        ]
       },
       "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
     }

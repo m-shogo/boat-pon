@@ -19,7 +19,7 @@ const schema = JSON.parse(readFileSync(
   $defs: {
     countMap: {
       type: string;
-      propertyNames: { not: { enum: string[] } };
+      propertyNames: { allOf: [{ not: { enum: string[] } }, { not: { pattern: string } }] };
       additionalProperties: { type: string; minimum: number; maximum: number };
     };
   };
@@ -101,15 +101,15 @@ function resign(evidence: RuntimeDecisionLedgerShadowEvidence): void {
 test("shadow count-map schema propertyNames excludes the runtime private-key denylist", () => {
   const rule = schema.$defs.countMap;
   assert.equal(rule.type, "object");
-  assert.deepEqual([...rule.propertyNames.not.enum].sort(), [...forbiddenKeys].sort());
+  assert.deepEqual([...rule.propertyNames.allOf[0]!.not.enum].sort(), [...forbiddenKeys].sort());
   assert.equal(rule.additionalProperties.type, "integer");
   assert.equal(rule.additionalProperties.minimum, 1);
   assert.equal(rule.additionalProperties.maximum, Number.MAX_SAFE_INTEGER);
   for (const field of ["unresolvedReasonCounts", "rejectedReasonCounts", "taxonomyCounts"]) {
     assert.equal(schema.properties.completeness.properties[field]?.$ref, "#/$defs/countMap");
   }
-  assert.equal(rule.propertyNames.not.enum.includes("close_time_not_proven_visible_at_decision"), false);
-  assert.equal(rule.propertyNames.not.enum.includes("temporal_provenance"), false);
+  assert.equal(rule.propertyNames.allOf[0]!.not.enum.includes("close_time_not_proven_visible_at_decision"), false);
+  assert.equal(rule.propertyNames.allOf[0]!.not.enum.includes("temporal_provenance"), false);
 });
 
 test("shadow runtime rejects re-digested private count-map keys while ordinary keys remain valid", () => {
@@ -127,6 +127,53 @@ test("shadow runtime rejects re-digested private count-map keys while ordinary k
       result.errors.some((error) => error.includes("contains forbidden reason key")),
       key + ": " + result.errors.join("; "),
     );
+  }
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+});
+
+test("shadow count-map schema path-token propertyNames agrees with runtime on synthetic keys", () => {
+  const rule = schema.$defs.countMap;
+  assert.equal(rule.propertyNames.allOf.length, 2);
+  const pathPattern = new RegExp(rule.propertyNames.allOf[1]!.not.pattern, "u");
+  const cases: ReadonlyArray<readonly [string, boolean]> = [
+    ["close_time_not_proven_visible_at_decision", false],
+    ["temporal_provenance", false],
+    ["note=https://example.invalid/a", false],
+    ["https://example.invalid/a", false],
+    ["selection", true],
+    ["diagnostic=/opt/synthetic-fixture", true],
+    ["/synthetic-fixture", true],
+    ["C:\\synthetic-fixture", true],
+    ["C:/synthetic-fixture", true],
+    ["file:///synthetic-fixture", true],
+    ["\\\\server\\share", true],
+    ["prefix \\\\server\\share", true],
+    ["prefix /Users/synthetic-fixture", true],
+    ["prefix \\Users\\synthetic-fixture", true],
+    ["foo/bar", false],
+    ["a//b", false],
+    ["A\u0085/opt", false],
+    ["A\uFEFF/opt", true],
+    ["A\u2028/opt", true],
+    ["note=//relative", false],
+    ["prefix: /opt", true],
+    ["prefix=/opt", true],
+    ["prefix:\u0085/opt", false],
+  ];
+
+  const baseline = buildRuntimeDecisionLedgerShadowEvidence(fixture());
+  assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
+  for (const [key, expectedDenied] of cases) {
+    const schemaDenied = rule.propertyNames.allOf[0]!.not.enum.includes(key) || pathPattern.test(key);
+    const forged = structuredClone(baseline);
+    Object.defineProperty(forged.completeness.unresolvedReasonCounts, key, {
+      value: 1, enumerable: true, writable: true, configurable: true,
+    });
+    resign(forged);
+    const result = validateRuntimeDecisionLedgerShadowEvidence(forged);
+    const runtimeDenied = result.errors.some((error) => error.includes("contains forbidden reason key"));
+    assert.equal(schemaDenied, expectedDenied, "schema " + JSON.stringify(key));
+    assert.equal(runtimeDenied, expectedDenied, "runtime " + JSON.stringify(key));
   }
   assert.equal(validateRuntimeDecisionLedgerShadowEvidence(baseline).valid, true);
 });
