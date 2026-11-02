@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-scalar-path-token-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-scalar-path-token-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-shadow-scalar-path-token-admission-vs-runtime",
+  "symptom": "The Draft 2020-12 Shadow Evidence schema constrained trim-canonical scope.runKind/modelVersion and nonblank source.journalMode, but omitted the runtime's absolute-path-token privacy denial for these scalar strings. Synthetic POSIX, drive-letter, UNC, and file-URL tokens passed their schema lexical rules while runtime validation rejected them. No real private paths, odds, databases, or production behavior were accessed.",
+  "rootCauseClass": "SCHEMA_ONLY_SCALAR_PATH_TOKEN_DENIAL_OMITTED",
+  "attemptSignature": "pr2286-shadow-scalar-path-token-schema-parity-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/ecmascript-regexp/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@8e040469baf5/scalar-path-token-ref-absent"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaCountMapPrivacyParity.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-embedded-absolute-path-token-admission-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-countmap-path-token-parity-20261103.json",
+    "commit/ca029caf84200a80da55d07d8d820fc7611c0d61",
+    "commit/3684e0ed5f7b77277fd3871fa8298771e8f4f7a6"
+  ],
+  "lesson": "A scalar string can satisfy schema type, trim and nonblank rules yet still contain a synthetic local path token. A runtime-only privacy walk does not protect schema-only consumers. Reuse the same lexical path-token rule for scalar and dynamic count-map ingress without weakening HTTPS negative controls.",
+  "guardrail": "Use a single Draft 2020-12 $defs.pathToken pattern, referenced under not by scope.runKind, scope.modelVersion, source.journalMode and countMap.propertyNames; test POSIX, drive-letter, UNC, file URL, Unicode whitespace and benign HTTPS synthetic controls against runtime validation. Keep digest and semantic checks; lexical parity does not confer provenance, finality or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T19:06:56.496Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T19:06:56.496Z",
+  "_digest": "746ce17caf24b6d5904349684754057c492514f3ca34110ef884eb6fb33e64e1"
+}
