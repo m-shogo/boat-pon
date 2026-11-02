@@ -97,13 +97,13 @@
     "scheduledCloseAtSeen": { "$ref": "#/$defs/exactInstant" },
     "currentOdds": {
       "oneOf": [
-        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308 },
         { "type": "null" }
       ]
     },
     "requiredOdds": {
       "oneOf": [
-        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308 },
         { "type": "null" }
       ]
     },
@@ -121,7 +121,7 @@
     },
     "expectedValue": {
       "oneOf": [
-        { "type": "number" },
+        { "type": "number", "minimum": -1.7976931348623157e308, "maximum": 1.7976931348623157e308 },
         { "type": "null" }
       ]
     },
@@ -157,10 +157,10 @@
       "then": {
         "properties": {
           "dataCompleteness": { "const": "complete" },
-          "currentOdds": { "type": "number", "exclusiveMinimum": 0 },
-          "requiredOdds": { "type": "number", "exclusiveMinimum": 0 },
+          "currentOdds": { "type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308 },
+          "requiredOdds": { "type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308 },
           "estimatedHitRate": { "type": "number", "minimum": 0, "maximum": 1 },
-          "expectedValue": { "type": "number" },
+          "expectedValue": { "type": "number", "minimum": -1.7976931348623157e308, "maximum": 1.7976931348623157e308 },
           "recommendedStakeYen": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
           "oddsObservedAt": { "$ref": "#/$defs/exactInstant" }
         }
