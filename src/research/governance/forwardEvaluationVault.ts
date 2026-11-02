@@ -236,7 +236,7 @@ export function validateForwardVaultRecord(v:unknown):Validation {
   if(!ownDataShape(v))return frozenValidation(false,["record fields must be enumerable own data properties"]);
   if(v.schemaVersion!==FORWARD_EVALUATION_VAULT_SCHEMA_VERSION)appendError("invalid schemaVersion");
   if(!str(v.recordId))appendError("recordId must be non-empty"); if(!setHas(STAGES,v.evidenceStage))appendError("invalid evidenceStage"); if(!instant(v.createdAt))appendError("createdAt must be timezone-bound ISO timestamp");
-  if(typeof v.kind!=="string"||!hasOwn(FIELDS,v.kind)) return frozenValidation(false,[...e,"invalid kind"]);
+  if(typeof v.kind!=="string"||!hasOwn(FIELDS,v.kind)) { appendError("invalid kind"); return frozenValidation(false,e); }
   if(!ownDataShape(v,FIELDS[v.kind as VaultKind]))appendError("record fields must exactly match kind");
   // Caller-replaced Array.prototype[Symbol.iterator] must not suppress unknown-field diagnostics.
   const actualFields=BUILTIN_OBJECT_KEYS(v);
