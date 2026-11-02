@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-runtime-ledger-schema-nonfinite-odds-ev-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.schema-nonfinite-odds-ev-admission",
+  "subsystem": "research-governance-runtime-decision-ledger",
+  "operation": "schema-only-draft202012-current-required-odds-expected-value-finite-parity",
+  "symptom": "Runtime Decision Ledger schema accepted synthetic JSON exponent overflow for currentOdds, requiredOdds and expectedValue under both nullable and BUY-specific rules, while validateRuntimeDecisionLedgerRecord rejects non-finite numbers. Python jsonschema Draft 2020-12 admitted Infinity for unbounded positive odds and both infinities for expectedValue. No private odds, real decisions or production behavior were accessed.",
+  "rootCauseClass": "SCHEMA_UNBOUNDED_RUNTIME_LEDGER_ODDS_AND_EV_NUMBERS_ADMIT_JSON_EXPONENT_OVERFLOW",
+  "attemptSignature": "pr2286-runtime-ledger-finite-numeric-schema-parity-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-draft202012/node-jsonparse/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger.schema.json@814a071d/currentOdds-requiredOdds-expectedValue-unbounded"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger.schema.json",
+    "src/research/governance/runtimeDecisionLedger.ts",
+    "src/research/governance/runtimeDecisionLedger.schemaFiniteNumberParity.test.ts",
+    "research/registries/learnings/LEARN-forward-vault-schema-nonfinite-metrics-parity-20261103.json",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-nonfinite-mtime-parity-20261103.json",
+    "commit/4e56e7b096f82a45634e96d4d8d8ade449ee494c",
+    "commit/0498f2f7be70a9a7361c3548d5b8029b4d865388"
+  ],
+  "lesson": "JSON Schema type:number and exclusiveMinimum:0 do not guarantee finite JavaScript numeric values when JSON exponent overflow parses to Infinity. Conditional BUY branches must carry the same finite constraints as the nullable top-level rules.",
+  "guardrail": "Bound currentOdds and requiredOdds by exclusiveMinimum:0 and maximum:Number.MAX_VALUE, and expectedValue by +/-Number.MAX_VALUE, in both nullable and BUY-specific schema rules. Keep runtime Number.isFinite authoritative and synthetic overflow/boundary tests. Never infer authentic odds, BUY readiness or production authority from schema-only validation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T22:58:41.000Z",
+  "productionConnection": false,
+  "_digest": "28a41e5d1ae5d0afe5ed44695aae30d161e9b4b821ca434cae3741fbfa4acdd3",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T22:58:41.000Z"
+}
