@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-v01-node-proxy-ingress-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.proxy-get-descriptor-admission-digest-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "reject-node-proxy-at-v01-record-nested-array-metrics-and-stage-pooling-ingress",
+  "symptom": "Source review and Node 22.16.0 synthetic reproduction established that Proxy get can report an admissible includedCount while the own data descriptor holds a negative count. Forward Vault v0.1 validated ordinary property reads and later hashed descriptor values without rejecting Proxy ingress. Revoked root or nested array proxies can also throw before the intended fail-closed result. This is a synthetic research metadata integrity finding, not an observed attack, private K evidence or production impact.",
+  "rootCauseClass": "V01_PROXY_GET_DESCRIPTOR_VALIDATION_DIGEST_DISAGREEMENT_AND_REVOKED_INGRESS",
+  "attemptSignature": "pr2286-v538-node-isProxy-v01-root-nested-metrics-stages-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@56025773/v01-no-node-proxy-ingress-root-nested-arrays-metrics-stages"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.nodeProxyIngress.test.ts",
+    "research/registries/learnings/LEARN-forward-v02-node-proxy-rejecting-ingress-20261025.json",
+    "research/registries/learnings/LEARN-outcome-ledger-proxy-descriptor-digest-admission-20261029.json"
+  ],
+  "lesson": "Pinned reflection helpers and strict own-data shape checks do not make a caller-owned Proxy authoritative: get and getOwnPropertyDescriptor can disagree, and revoked Proxies can throw before normal fail-closed checks. The v0.1 vault requires the already verified Node-only Proxy ingress guardrail at every externally supplied object or array boundary.",
+  "guardrail": "Reuse captured node:util.types.isProxy to reject root records, nested protocol/digest arrays, metrics objects, canonicalization inputs and stage-pooling arrays before Array.isArray, prototype, length, ownKeys, get or descriptor traps. Regression-test get/descriptor disagreement, revoked root/nested proxies, trap nonexecution, ordinary valid digest/idempotency and conflict behavior. No source authenticity, readiness, scoring, merge or production authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T04:05:09.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T04:05:09.000Z",
+  "_digest": "40ac06168e1fbdffa24ef3609c4fa01d6562b02cd57fcf1a77d7a716c1d64553"
+}
