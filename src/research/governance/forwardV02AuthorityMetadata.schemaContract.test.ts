@@ -146,3 +146,17 @@ test("schema cannot establish independent evidence or permit scoring", () => {
     ...envelope, independentAuthorityVerified: true,
   }).metadataConsistent, false);
 });
+
+test("forward v0.2 authority metadata strict terminal patterns reject trailing line breaks", () => {
+  const examples: ReadonlyArray<readonly [string, string]> = [
+    ["exactInstant", "2026-10-24T00:00:00Z"],
+    ["digest", "a".repeat(64)],
+  ];
+  for (const [field, canonical] of examples) {
+    const pattern = new RegExp(schema.$defs[field].pattern, "u");
+    assert.equal(pattern.test(canonical), true, field);
+    for (const suffix of ["\\n", "\\r\\n", "\\u2028", "\\u2029"]) {
+      assert.equal(pattern.test(canonical + suffix), false, field + " terminal suffix " + JSON.stringify(suffix));
+    }
+  }
+});
