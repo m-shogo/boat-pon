@@ -155,7 +155,7 @@ test("forward v0.2 authority metadata strict terminal patterns reject trailing l
   for (const [field, canonical] of examples) {
     const pattern = new RegExp(schema.$defs[field].pattern, "u");
     assert.equal(pattern.test(canonical), true, field);
-    for (const suffix of ["\\n", "\\r\\n", "\\u2028", "\\u2029"]) {
+    for (const suffix of ["\n", "\r\n", "\u2028", "\u2029"]) {
       assert.equal(pattern.test(canonical + suffix), false, field + " terminal suffix " + JSON.stringify(suffix));
     }
   }
