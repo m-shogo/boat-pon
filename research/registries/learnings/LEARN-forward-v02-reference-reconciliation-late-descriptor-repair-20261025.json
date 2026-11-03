@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-reference-reconciliation-late-descriptor-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-reference-reconciliation-late-descriptor-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-reference-reconciliation",
+  "symptom": "The untrusted reference reconciliation checked the candidate and reference shapes on caller-owned objects, then directly reread candidate formula digests and manifest fields after further descriptor traversal. A late descriptor Proxy could repair an initially mismatching candidate formula digest or manifest evidence stage before content comparison, yielding referencesReconciled=true for a different claim. Independent authority and scoring remained denied.",
+  "rootCauseClass": "REFERENCE_RECONCILIATION_REVALIDATES_CALLER_MUTABLE_GRAPHS_AFTER_DESCRIPTOR_SIDE_EFFECTS",
+  "attemptSignature": "pr2286-v312-pin-candidate-and-reference-graphs-before-semantic-validation-two-phase-trigger-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02ReferenceReconciliation.0.1-untrusted/pr2286-35eba02b/direct-candidate-and-manifest-rereads-after-shape-check"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02ReferenceReconciliation.ts",
+    "src/research/governance/forwardV02ReferenceReconciliation.test.ts",
+    "commit/80914f088163ac6be78d31ff0536fced036090ea",
+    "commit/683821ef07391a57ff60393bb7c8958e1e55f907",
+    "github-actions/run-40148756779",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-batch-replay-late-reference-mutation-20261025.json"
+  ],
+  "lesson": "Strict descriptor-only shape checks are not snapshots: a later descriptor trap can repair an earlier untrusted formula or manifest field before direct reads, causing reference equality to describe a different state.",
+  "guardrail": "Before any reference-reconciliation semantic validation, copy the complete candidate and reference graphs using the shared bounded own-data-descriptor snapshot, and validate/hash/compare only detached values. Negative regressions must prove that late candidate-digest and nested manifest-stage mutations execute but do not produce reconciliation. Keep scoringAuthorized=false; matching digests never establish independent source authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T00:58:47.873Z",
+  "productionConnection": false,
+  "_digest": "fa86f136479b104511b376422d2a4e8238052bb662d6354ffef59ea95b4422a3",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T00:58:47.873Z"
+}

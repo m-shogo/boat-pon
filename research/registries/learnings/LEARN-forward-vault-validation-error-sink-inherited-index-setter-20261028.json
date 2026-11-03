@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-vault-validation-error-sink-inherited-index-setter-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.validation-error-sink-inherited-index-setter-admission-bypass",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-record-and-append-admission",
+  "symptom": "The Forward Evaluation Vault validator used e[e.length] assignment to collect errors. A synthetic inherited Array.prototype index-zero getter/setter can discard the first validation denial, leaving a zero-length error array and admitting a record with an empty required evaluationProtocolId. Node 22.16.0 source-equivalent probe reproduced vulnerableValid=true and protectedValid=false. No real evidence or production behavior was involved.",
+  "rootCauseClass": "INHERITED_NUMERIC_SETTER_DISCARDS_VALIDATION_DENIAL",
+  "attemptSignature": "pr2286-v415-forward-vault-error-sink-index-zero-setter-fail-closed-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-local-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardEvaluationVault.ts@9990d421/error-array-length-index-assignment"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.errorSinkPush.test.ts",
+    "commit/516464662fe55dde8f71cf5cd69c10fe892d8851",
+    "commit/8aac7875ee1ef01dbd143c6ae418d23472f50f91",
+    "research/registries/learnings/LEARN-ledger-validation-error-sink-push-bypass-20261022.json",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-inherited-index-setter-20261026.json"
+  ],
+  "lesson": "Avoiding mutable Array.prototype.push is insufficient when an error sink appends through a fresh array numeric assignment. Inherited setters can erase a validation denial and make invalid research metadata appear valid before hashing or append classification.",
+  "guardrail": "Create every validation error as an own enumerable array index with Object.defineProperty, not push or e[e.length] assignment. Under a reversible inherited index-zero getter/setter, assert invalid required-field rejection, nonempty frozen errors, direct digest rejection and REJECTED_INVALID append classification; preserve valid-record parity. No scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T12:59:19.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T12:59:19.000Z",
+  "_digest": "fa320f8b9e3433ad79ed9e1171f3b604f9d3221b3ebc2e9d01534e0b404cae6a"
+}

@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-countmap-path-token-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-countmap-absolute-path-key-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-shadow-countmap-propertynames-path-token-admission-vs-runtime",
+  "symptom": "A Draft 2020-12 schema-only consumer admitted positive count-map entries whose synthetic keys embedded absolute POSIX, drive-letter, UNC or file-URL path tokens. The runtime validator already rejected these keys. Synthetic Python jsonschema and Node 22.16.0 probes established the cross-engine gap without reading any private paths, odds, databases or production evidence.",
+  "rootCauseClass": "SCHEMA_ONLY_DYNAMIC_COUNT_MAP_PATH_KEY_DENIAL_OMITTED",
+  "attemptSignature": "pr2286-countmap-path-token-schema-parity-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-4.26.0-draft202012/node22.16.0/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@4ef5ef62d1e6/countMap-no-path-pattern"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaCountMapPrivacyParity.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-embedded-absolute-path-token-admission-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-countmap-private-key-denylist-20261103.json"
+  ],
+  "lesson": "A JSON Schema propertyNames denylist for known private field names does not reject synthetic absolute filesystem path tokens hidden inside arbitrary diagnostic count-map keys. Schema-only validation must carry a lexical path guard independent of runtime validation, and Python/ECMAScript whitespace differences must be tested explicitly.",
+  "guardrail": "Keep propertyNames.allOf with the existing exact private-key denylist and a second not.pattern for POSIX, drive-letter, UNC, file-URL and embedded path tokens. Use an explicit ECMAScript whitespace class rather than engine-specific \\s; retain HTTPS and ordinary taxonomy negative controls, digest checks and runtime semantic validation. This is schema-only lexical hardening, not proof of data provenance or production authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T17:55:15.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T17:55:15.000Z",
+  "_digest": "6fb048da82ba8f8cc03f5507af171d6f96c2f8752dddbe00d86d823099f6f3e5"
+}

@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-untrusted-response-preflight-late-snapshot-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-untrusted-response-preflight-late-snapshot",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-untrusted-verifier-response",
+  "symptom": "The deny-only caller-supplied verifier response was first snapshotted after building the independent-proof request. A descriptor proxy in envelope preflight could change a mismatching requestBindingDigest or a nested correction revision digest to a matching value before response capture, reporting responseMetadataConsistent=true for a different entry-time response. No independent verification or scoring authority was granted.",
+  "rootCauseClass": "UNTRUSTED_RESPONSE_AND_NESTED_REVISION_SNAPSHOT_AFTER_REQUEST_PREFLIGHT",
+  "attemptSignature": "pr2286-v309-pin-untrusted-response-and-revision-digests-before-request-preflight",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.0.2-untrusted/pr2286-b1fbe0f3/response-and-revisions-snapshotted-after-request-build"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/db8a312a267b4b2ed9c80e55d244371c091ec22f",
+    "commit/3fb52633e06e455105fcae43e43ac43c29c34dda",
+    "research/registries/learnings/LEARN-forward-v02-standalone-signature-claim-late-snapshot-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-partial-verifier-request-binding-20261024.json"
+  ],
+  "lesson": "A complete request-binding digest cannot prevent a caller-owned response from being silently replaced during unrelated request preflight if the response is read only afterward. Nested revision-digest arrays must be detached at the same early boundary as scalar response fields.",
+  "guardrail": "Pin strict own-data-descriptor response fields and an indexed copy of the complete revision digest array before building the untrusted request. Preserve REQUEST_NOT_READY precedence for invalid requests, reject mismatched entry-time claims, and use phase-triggered regressions that prove both scalar and nested mutations executed. Keep independentAuthorityVerified=false and scoringAuthorized=false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T23:11:50.000Z",
+  "productionConnection": false,
+  "_digest": "019f08a4aee320bc2f388b67520cdff4d8215d33ebeea626270d14ac13aa6c9e",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T23:11:50.000Z"
+}

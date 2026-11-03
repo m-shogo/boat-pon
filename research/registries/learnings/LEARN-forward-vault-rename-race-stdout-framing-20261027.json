@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-rename-race-stdout-framing-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.renameat2-race-test-incomplete-stdout-frame",
+  "subsystem": "research-governance-forward-vault-linux-race-test",
+  "operation": "two-writer-child-stdout-result-barrier-prefix-only-wait",
+  "symptom": "Official CI verify failed when the existing Linux two-writer race test treated the partial stdout prefix RESULT: as a complete child outcome; one observed loser output lacked its trailing newline at assertion time. The new ancestor-symlink test passed, research-governance passed, and post-job cleanup succeeded. This was test orchestration, not demonstrated filesystem publication failure.",
+  "rootCauseClass": "PARTIAL_CHILD_STDOUT_CHUNK_ACCEPTED_AS_COMPLETE_RESULT_FRAME",
+  "attemptSignature": "pr2286-v378-prefix-only-RESULT-colon-wait-before-exact-outcome-assertion",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-linux-node24-python3-glibc",
+    "materialStateKey": "pr2286-v378-renameNoReplaceRaceLinux-prefix-result-wait"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.renameNoReplaceRaceLinux.test.ts",
+    "reports/research/forward-vault-linux-race-result-frame-ci-triage-20261027.md",
+    "actions/runs/40478662996",
+    "commit/61b2b612de652a1e736f18588140f639f7e76dc6",
+    "actions/runs/40479130509"
+  ],
+  "lesson": "A child-process stdout data event may contain only part of a newline-delimited result. Awaiting RESULT: is not enough before exact-line comparisons; the losing process can be correctly rejected while the test spuriously fails on a missing final newline. The full job log distinguished test-harness framing from the native publication outcome and runner state.",
+  "guardrail": "For synthetic concurrent subprocess tests, wait for an entire framed outcome (including its newline) before asserting exact stdout, using a non-global regex or equivalent line buffer. Preserve independent exit-code, winner/loser, stage-integrity and strict-readback assertions. Do not classify an incomplete stdout chunk as a native filesystem failure, retry an unchanged prefix-only barrier, or consume protected N2 diagnostics.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T09:17:51.174Z",
+  "productionConnection": false,
+  "_digest": "4ec269fb007788429b71d9efa870f57554ca4ab0fb6a3c5d0e6845add9eba589",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T09:17:51.174Z"
+}

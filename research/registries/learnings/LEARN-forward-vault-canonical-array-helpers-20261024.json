@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-canonical-array-helpers-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.mutable-sort-from-canonical-digest-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "canonical-digest-and-append-idempotency-classification",
+  "symptom": "Synthetic no-op Array.prototype.sort makes equivalent valid records with different insertion order hash differently (false CONFLICT). Synthetic Array.from returning [] erases validated array contents, allowing distinct protocols to share a digest (false IDEMPOTENT_NOOP). No real research record, score, or production path was affected.",
+  "rootCauseClass": "MUTABLE_ARRAY_HELPERS_CANONICAL_DIGEST_DRIFT",
+  "attemptSignature": "pr2286-v277-synthetic-noop-sort-and-empty-array-from-canonical-digest-differential",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/local-synthetic+github-pr-ci",
+    "materialStateKey": "forward-vault.0.1/pr2286-3a232be1/canonical-array-from-sort"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.canonicalArrayHelpers.test.ts",
+    "pull/2286",
+    "research/registries/learnings/LEARN-forward-vault-mutable-map-digest-20261024.json"
+  ],
+  "lesson": "Validated immutable record semantics can still drift in the digest step if canonicalization delegates to mutable Array.from or Array.prototype.sort. Equivalent objects can conflict, while distinct array-bearing protocols can alias.",
+  "guardrail": "Use indexed own-descriptor traversal for canonical arrays and an explicit deterministic UTF-16 key ordering loop for objects. Regression-test unchanged digests and same-ID/different-content classification with synthetic ambient helper overrides. Keep scoring unauthorized.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-23T17:13:30.000Z",
+  "productionConnection": false,
+  "_digest": "cf6ed1330cda551cc77d0fb3381429aff1087b3e764693f8999d106767ee7883",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-23T17:13:30.000Z"
+}

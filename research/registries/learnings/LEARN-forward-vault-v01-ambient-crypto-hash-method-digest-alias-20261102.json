@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-crypto-hash-method-digest-alias-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-crypto-hash-method-digest-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-sha256-update-and-digest-methods-for-canonical-record-identity",
+  "symptom": "Node 22.16.0 synthetic reproduction showed that replacing crypto.Hash.prototype.update with a no-op or digest with a constant makes distinct SHA-256 inputs alias. Source inspection found Forward Vault v0.1 still chaining live hash.update()/digest() after its JSON serializer was pinned, permitting changed same-ID research metadata to be misclassified as IDEMPOTENT_NOOP. No private odds, actual K evidence, observed attack or production impact.",
+  "rootCauseClass": "V01_AMBIENT_CRYPTO_HASH_METHOD_CANONICAL_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v528-pin-v01-native-crypto-hash-methods-and-reversible-synthetic-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@e4f196e3/v01-live-Hash.prototype.update-and-digest"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientCryptoHashMethods.test.ts",
+    "commit/4f143e7b3da6f663af2c7a06802f6fb2b63bb228",
+    "commit/8d8f23f561536897834cdd6a1d74ef97c7394934",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-crypto-hash-method-digest-alias-20261030.json"
+  ],
+  "lesson": "Pinning the v0.1 canonical JSON serializer is insufficient if the returned crypto.Hash still dispatches update/digest through mutable prototype methods. Reuse the verified shadow-evidence hash-method guardrail at this materially distinct Forward Vault v0.1 digest boundary.",
+  "guardrail": "At module initialization capture the native Hash.update and Hash.digest methods from a fresh SHA-256 instance, then invoke them through the already captured Reflect.apply. Regress both no-op update and constant digest under reversible synthetic prototype overrides; assert changed same-ID metadata remains CONFLICT and stable canonical digests retain their original values. Do not infer external K issuer, finality, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T19:00:54.000Z",
+  "productionConnection": false,
+  "_digest": "772e978b41b8786d4bf5b99034af9ae5208b39c9b07b8f23b13f6dcd9fa56743",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T19:00:54.000Z"
+}

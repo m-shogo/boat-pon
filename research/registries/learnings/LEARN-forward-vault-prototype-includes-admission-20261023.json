@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-prototype-includes-admission-20261023",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.prototype-includes-admission-bypass",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-frozen-evaluation-protocol-and-result-match",
+  "symptom": "An ambient Array.prototype.includes override returning true can make an unsupported result metric family appear authorized by the frozen protocol and can admit unknown oddsBasis values in the v0.1 runtime validator.",
+  "rootCauseClass": "MUTABLE_ARRAY_PROTOTYPE_MEMBERSHIP_TRUST",
+  "attemptSignature": "pr2286-v274-synthetic-array-prototype-includes-override-negative",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/research-governance-github-pr",
+    "materialStateKey": "forward-vault.0.1/pre-v274-prototype-includes-metric-and-odds"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.prototypeIncludesBoundary.test.ts",
+    "pull/2286"
+  ],
+  "lesson": "A frozen protocol array is not safely checked with a mutable Array.prototype.includes method when ambient prototype changes are in scope. A digest match does not compensate for a bypassed membership or enum check.",
+  "guardrail": "Match permitted metric families by own indexed data descriptors and validate oddsBasis with direct literal comparisons; preserve the strict record validator and test prototype override in a synthetic research-only fixture. Never infer scoring authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-23T15:00:14.000Z",
+  "productionConnection": false,
+  "_digest": "0dacdb9b044eb07195e973a46be6fd6afcacf0dc6c6423233c1040ef409c7594",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-23T15:00:14.000Z"
+}

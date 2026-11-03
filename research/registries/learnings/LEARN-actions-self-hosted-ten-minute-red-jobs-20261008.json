@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-actions-self-hosted-ten-minute-red-jobs-20261008",
+  "classification": "TRANSIENT_UNCLASSIFIED",
+  "fingerprintKey": "actions.self-hosted.ten-minute-red-job-conclusion",
+  "subsystem": "github-actions-self-hosted",
+  "operation": "natural-scheduled-n2-research-workflow-job-finalization",
+  "symptom": "Five natural N2 research jobs ended failure at 600-602 seconds despite workflow timeout-minutes=20. Four reported no step summaries; Daily Readiness #62 reported all nine steps success, including payload, catalog, post-job and Complete job, but the job conclusion was failure after a later completion gap.",
+  "rootCauseClass": "UNCLASSIFIED_TEN_MINUTE_JOB_CONCLUSION",
+  "attemptSignature": "natural-scheduled-self-hosted-macos-n2-readiness-or-rollup",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions/self-hosted-macos/n2-research",
+    "materialStateKey": "n2-readiness-and-rollup/workflow-timeout-20min/runner-job-finalization"
+  },
+  "evidenceRefs": [
+    "github-actions/run-37054556888/job-110995938471",
+    "github-actions/run-37088613147/job-111103931863",
+    "github-actions/run-37288719754/job-111693788686",
+    "github-actions/run-37377087863/job-111988887865",
+    "github-actions/run-37679786526/job-112992513883",
+    "github-actions/run-37521692892/job-112468481004"
+  ],
+  "lesson": "A ten-minute red job conclusion is not evidence of research payload failure. In #62 the readiness and catalog validation outputs passed, and all steps including post-job cleanup completed successfully before GitHub marked the job red. A shared ten-minute boundary across both workflows suggests a runner/platform or job-finalization issue, but the cause is not established; #60 job logs are unavailable.",
+  "guardrail": "For this signature, compare job start/end times and full logs with step/process/post-job outcomes before classifying failure. Do not consume protected N2 reruns for diagnostics. Investigate runner-service/platform finalization and ten-minute boundaries separately; use subsequent natural schedules to verify. Do not infer readiness or production authorization from a successful research payload.",
+  "repeatPolicy": "OBSERVE_ONLY",
+  "createdAt": "2026-10-07T21:04:49.000Z",
+  "productionConnection": false,
+  "_digest": "bcf8675231b706e9c6b961401f611e2996fecbee124807760ab1f97af36e6672",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-07T21:04:49.000Z"
+}

@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-global-constructor-prototype-denial-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-global-constructor-prototype-denial",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "preserve-shadow-evidence-prototype-admission-under-global-array-object-constructor-replacement",
+  "symptom": "Node 22.16.0 isolated synthetic reproduction showed that replacing global Array or Object after module initialization changes the live Array.prototype/Object.prototype identity. Static review of v466 shadow evidence graph inspection and canonicalization found five live comparisons to those mutable constructor prototypes. Valid plain evidence can be denied as an exotic prototype and valid array-valued synthetic context can fail canonicalization. This is availability/integrity-of-validation drift, not demonstrated forged acceptance, external source compromise, or production impact.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_GLOBAL_CONSTRUCTOR_PROTOTYPE_DENIAL",
+  "attemptSignature": "pr2286-v467-pin-intrinsic-array-object-prototype-identities-and-regress-global-constructor-spoof",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-isolated-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@6fb628aa/dynamic-Array-and-Object-prototype-comparison"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/6e1a668528f7ba1f06cdab22e3abf09b139de2c0",
+    "commit/54f4163e3cf95cdca54dd481dcf673718761af70",
+    "research/registries/learnings/LEARN-shadow-evidence-exotic-prototype-validator-ingress-20261030.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-array-classifier-number-index-drift-20261030.json"
+  ],
+  "lesson": "Pinning Array.isArray and Object.getPrototypeOf is insufficient if the expected prototype identities are still read through replaceable global Array/Object constructors. Valid research evidence may be rejected or digest generation may throw after an unrelated ambient constructor replacement.",
+  "guardrail": "Capture Array.prototype and Object.prototype at module initialization and use those references for all five shadow graph and canonicalization prototype comparisons. Regress valid plain evidence validation and synthetic array-valued context digest stability under reversible global constructor replacement, restoring globals in finally. This protects only deterministic research validation and does not establish independent K source, rights, clock, correction/finality, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T07:00:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T07:00:00.000Z",
+  "_digest": "0dc9ada05e085beaf7868e1953063552abbe09718eb3af389c17335d5a8698fb"
+}

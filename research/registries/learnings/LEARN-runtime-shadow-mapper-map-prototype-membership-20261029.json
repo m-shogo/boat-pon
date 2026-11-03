@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-map-prototype-membership-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.shadow-mapper-ambient-map-prototype-membership-erasure",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "reconcile-decision-history-source-membership-and-conflicts",
+  "symptom": "A synthetic empty Map.prototype.values iterator can make a populated reconciliation Map produce zero ordered records and PASS with sourceRows > 0 and mappedUnique 0. Ambient Map.prototype.get/set can also suppress same-identity duplicate and conflict detection. Node 22.16.0 source-equivalent reproduction confirmed the values() membership erasure. No private rows, external evidence or production execution were involved.",
+  "rootCauseClass": "AMBIENT_MAP_METHODS_ERASE_SHADOW_MEMBERSHIP_AND_CONFLICTS",
+  "attemptSignature": "pr2286-v421-map-prototype-get-set-values-reconciliation-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@d9fb9178/ambient-map-get-set-values-reconciliation"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/fe52b5fb110a08b7ca435ff629bb8dbe429c3c32",
+    "commit/28a54f516b649ea9b297ea7f568b4301d15f6283",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-array-helper-membership-digest-20261028.json"
+  ],
+  "lesson": "An own-descriptor source-row loop still cannot guarantee reconciliation completeness if accepted records are later enumerated through mutable Map.prototype.values, or duplicate/conflict lookup uses mutable Map.prototype.get/set. A nonempty source with PASS and zero mapped membership is an audit failure, not successful evidence.",
+  "guardrail": "Keep accepted mapped records in an indexed own-data array and same-identity lookups in a null-prototype own-descriptor dictionary. Do not depend on ambient Map.prototype.get/set/values for reconciliation membership. Regress reordered accepted rows, exact duplicates, changed same-identity conflicts and stable digest under reversible no-op Map hooks; never infer source authenticity or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T16:07:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T16:07:00.000Z",
+  "_digest": "ad39052e4d8375e022bae12801976b1ba03f147cb5e42f9f3871afbd48cf73c7"
+}

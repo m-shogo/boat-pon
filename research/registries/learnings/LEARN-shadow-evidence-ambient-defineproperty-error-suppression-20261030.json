@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-defineproperty-error-suppression-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-defineproperty-error-suppression",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-shadow-evidence-fail-closed-error-sink-and-canonical-digest-under-ambient-defineproperty-replacement",
+  "symptom": "Node 22.16.0 synthetic reproduction showed that replacing Object.defineProperty with a no-op silently drops indexed validation errors. Source review of v459 found appendError and canonical materialization using the live method; malformed shadow evidence could therefore appear valid when errors are suppressed, and distinct source/context fields could be omitted from the digest. No private evidence, odds, database, N2 or production behavior was used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_DEFINEPROPERTY_ERROR_SINK_AND_DIGEST_ADMISSION_BYPASS",
+  "attemptSignature": "pr2286-v460-pin-object-defineproperty-for-shadow-error-sink-and-canonical-materialization",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@b147f3db/ambient-Object.defineProperty-in-error-sink-and-canonicalization"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/ca1c6a8b5981ce868ff2c6bb8c1517db690f7a87",
+    "commit/65ddbd4a09d4afc9a69635d8214196a8bc111704",
+    "research/registries/learnings/LEARN-forward-vault-validation-error-sink-inherited-index-setter-20261028.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-structural-inspection-20261030.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-json-stringify-digest-alias-20261030.json"
+  ],
+  "lesson": "A validator that avoids mutable Array.push and indexed assignment can still silently lose all denials when its Object.defineProperty error sink is dynamically replaced. The same primitive also creates canonical own fields, so the integrity boundary must pin both error recording and digest materialization rather than only own-key inspection and JSON.stringify.",
+  "guardrail": "Capture Object.defineProperty at research module initialization; use the captured reference for validation error indices, graph traversal, count maps and canonical object/array construction. Under a reversible no-op replacement, assert valid evidence parity, rejection of re-digested semantic/safety drift with nonempty errors, and distinct source/context/content digests. Never infer independent K issuer rights, correction finality, merge readiness or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T00:06:33.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T00:06:33.000Z",
+  "_digest": "d5bbd7451a579de09b320638bc7221417b8e688c4040be1391709921cc6c6ca1"
+}

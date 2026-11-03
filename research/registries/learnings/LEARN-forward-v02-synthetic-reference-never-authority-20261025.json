@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-reference-never-authority-20261025",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-vault.v02-synthetic-reference-anchor-correlation",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-synthetic-reference-anchor-conflict",
+  "symptom": "An offline synthetic reference fixture can match the caller's signed request, claimed role/issuer/anchor/key digest and claimed clock window, but both objects remain caller-supplied and must never be promoted into independent verification or scoring authority.",
+  "rootCauseClass": "SYNTHETIC_REFERENCE_CORRELATION_NOT_INDEPENDENT_PROVISIONING",
+  "attemptSignature": "pr2286-v301-synthetic-separate-reference-key-role-rotation-revocation-window-deny-only",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticReferenceAnchorConflict.0.1-untrusted/pr2286-1626338a/synthetic-separate-reference-deny-only"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticReferenceAnchorConflict.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/610a7d19b35b6aa4fffcaf9362a95bcb79da42c1",
+    "commit/b6cfa35ea454ed524dec2573dcdef20c02b5ffd7",
+    "commit/1626338a6ba7b3eae5e772a57be4dcad3c3cb161",
+    "github-actions/run-40114268143",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-helpers-20261024.json"
+  ],
+  "lesson": "A second synthetic anchor snapshot is only an additional consistency comparison, not proof of independent custody. Even valid Ed25519 math plus matching claimed policy and reference cannot establish trusted issuer, clock, revocation, source finality or evaluation authority. An ambient Array.prototype.map dependency in the first implementation was removed using the existing canonical-array guardrail; the latest-head CI executed the negative regression.",
+  "guardrail": "Keep all synthetic reference checks deny-only and explicit independentAuthorityVerified=false/scoringAuthorized=false. Compare role, issuer, anchor, SPKI SHA-256, revocation state and each claimed correction timestamp with strict descriptor-only reads and indexed traversal. Reject substitutions, rotation drift, revoked or out-of-window keys and getter-bearing fixtures; require independently provisioned and authenticated roots in a separately reviewed future verifier.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-24T17:06:10.000Z",
+  "productionConnection": false,
+  "_digest": "c31f1487a18ebdee1f0c577972855b0af6786e155379fcfd9d9ba2ac81185e29",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T17:06:10.000Z"
+}

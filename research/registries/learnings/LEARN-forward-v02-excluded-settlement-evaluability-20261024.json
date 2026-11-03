@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-excluded-settlement-evaluability-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-excluded-member-evaluable-settlement",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-authority-metadata-frozen-membership-evaluability",
+  "symptom": "The unmerged v289 untrusted authority metadata preflight accepted an evaluable SETTLED terminal outcome for a decision explicitly listed in the same frozen cohort's excludedMembership. Expected/covered membership and decision identity matched, but evaluability was not bound to includedMembership. Synthetic metadata only; no real evidence or production path.",
+  "rootCauseClass": "FROZEN_EXCLUSION_NOT_BOUND_TO_EVALUABLE_TERMINAL_SETTLEMENT",
+  "attemptSignature": "pr2286-v290-excluded-settled-evaluable-negative-and-retained-refund-positive",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-pr-node24-ci",
+    "materialStateKey": "forwardV02AuthorityMetadata.0.1-untrusted/pr2286-a021bff2/excluded-member-settlement-not-bound-to-freeze"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02AuthorityMetadata.ts",
+    "src/research/governance/forwardV02AuthorityMetadata.test.ts",
+    "commit/d6f238948d8bed2ef608915d1c688f58ff489a73",
+    "commit/a49f78bc8fb29804a45538768a38dddddc533f96",
+    "docs/architecture/research-knowledge-retention-contract.md"
+  ],
+  "lesson": "A complete frozen membership partition does not establish evaluation eligibility if a downstream terminal settlement can relabel an excluded decision as evaluable. Internal identity/digest agreement is insufficient without an explicit included-membership admission check.",
+  "guardrail": "In the deny-only metadata preflight, permit evaluable SETTLED only for a decision in includedMembership; reject excluded SETTLED/evaluable with CONFLICT. Retain excluded REFUNDED/VOID non-evaluable evidence without scoring. Regression-test excluded SETTLED, all-excluded cohort and non-evaluable excluded refund. Independent attestation and scoring remain prohibited.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T06:04:24.029Z",
+  "productionConnection": false,
+  "_digest": "d6c2aff2e6017889a1e774cfb6a6f542a9792c6d33e968e5e342156ea5eb00e8",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T06:04:24.029Z"
+}

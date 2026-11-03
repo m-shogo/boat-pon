@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-digest-message-expectation-drift-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.digest-admission-error-message-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-direct-digest-admission-regressions",
+  "symptom": "After forwardVaultDigest began rejecting invalid records before canonicalization, ten existing negative tests still required old canonicalizer-specific error-message regexes; GitHub CI verify failed although invalid inputs continued to throw TypeError.",
+  "rootCauseClass": "NEGATIVE_TEST_EXPECTED_OLD_ERROR_MESSAGE_AFTER_ADMISSION_ORDER_CHANGE",
+  "attemptSignature": "verify-direct-digest-validation-with-legacy-nonjson-error-regex",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions/node24/pr2286",
+    "materialStateKey": "forwardVaultDigest-prevalidation-v194+legacy-nonjson-throws-assertions"
+  },
+  "evidenceRefs": [
+    "actions/runs/39315929361",
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ownDataBoundary.test.ts",
+    "src/research/governance/forwardEvaluationVault.prototypeSerialization.test.ts",
+    "src/research/governance/forwardEvaluationVault.sparseArrayBoundary.test.ts"
+  ],
+  "lesson": "When admission validation moves ahead of canonicalization, invalid input still fails closed but the first thrown TypeError message changes. Negative tests should assert the stable error type and non-execution side effects, not an incidental internal message.",
+  "guardrail": "For digest validation regressions, assert TypeError as the public failure contract; retain explicit invalid-record validation, append rejection, getter non-execution and valid-digest idempotency checks. After admission-order changes, run all existing negative tests under official PR CI before claiming success.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-19T20:07:38.078Z",
+  "productionConnection": false,
+  "_digest": "0ec5384e4b10fc48944f07c45be4e69209b9d94e197d940f1fa6b4dac12762ba",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T20:07:38.078Z"
+}

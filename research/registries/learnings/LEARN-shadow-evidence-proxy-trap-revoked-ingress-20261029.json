@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-proxy-trap-revoked-ingress-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.proxy-descriptor-trap-revoked-ingress",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-and-canonicalize-sanitized-shadow-evidence",
+  "symptom": "The research-only sanitized shadow-evidence validator did not reject caller-controlled root and nested Proxy objects before Array.isArray, Reflect.ownKeys, property reads or descriptor checks. A revoked root Proxy throws during the pre-fix isRecord Array.isArray check rather than returning a fail-closed validation result; a live Proxy can run user-defined traps during admission. This is a synthetic Node integrity boundary, not a production incident or authenticated external evidence.",
+  "rootCauseClass": "SHADOW_EVIDENCE_PROXY_TRAP_BEFORE_ADMISSION_AND_REVOKED_THROW",
+  "attemptSignature": "pr2286-v433-shadow-evidence-proxy-root-nested-revoked-failclosed-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@c2e462821c39/isRecord-canonicalize-walk-proxy-unguarded"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/909b0a37f184babe0054a8e6cbe41f7f93e2b62a",
+    "commit/a0d6af99a08e01c7b36afba9ef787f10cf4e6563",
+    "research/registries/learnings/LEARN-runtime-ledger-proxy-descriptor-digest-admission-20261029.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-nested-proxy-descriptor-ingress-20261029.json"
+  ],
+  "lesson": "Fixed-schema own-data descriptor checks cannot establish a trustworthy admission boundary for caller-controlled Proxy objects. A revoked Proxy can also throw before an intended fail-closed verdict. The Node-only research shadow-evidence validator must reject root and nested Proxy objects before invoking their traps.",
+  "guardrail": "Reuse node:util/types isProxy at root/nested object admission and before canonicalization or recursive inspection. Regression-test hostile get/ownKeys/descriptor traps and revoked root Proxy without trap execution, plus ordinary evidence validation and digest stability. Do not infer external source authenticity or any production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T23:02:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T23:02:00.000Z",
+  "_digest": "47d03a910fb831425436301bcd46bf1d13930df5901bb62716834822f339f04a"
+}

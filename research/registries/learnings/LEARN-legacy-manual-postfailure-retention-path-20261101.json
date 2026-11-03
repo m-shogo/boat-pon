@@ -1,0 +1,34 @@
+{
+  "learningId": "LEARN-legacy-manual-postfailure-retention-path-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.legacy-manual-workflow.postfailure-retention-write-reachability",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "trace-deprecated-cli-failure-through-manual-workflow-followups-without-dispatch",
+  "symptom": "Pinned main workflow retains a daily-retention-snapshot job with `if: always() && needs.guard.outputs.ok == 'true'`, a JST 23 time gate, and a conditional CAS append to the automation branch. The job does not require run-one-task success. After the Draft PR's early-exit-3 legacy task denial, a successful owner/main guard could therefore still permit the independent retention job to attempt a sanitized snapshot write at JST 23. A separate workflow_run retained-state audit is also conclusion-agnostic but read-only. This is conditional static reachability, not an observed dispatch, write, or production incident.",
+  "rootCauseClass": "LEGACY_TASK_DISABLEMENT_NOT_EQUIVALENT_TO_WORKFLOW_FOLLOWUP_DISABLEMENT",
+  "attemptSignature": "pr2286-v504-pinned-postfailure-retention-and-retained-audit-workflow-graph-no-dispatch",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector-pinned-main-draft-workflow-static-trace/no-dispatch",
+    "materialStateKey": "manual-workflow-95094e7/retained-audit-5fb01c0/draft-cli-25969ac0"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    ".github/workflows/boat-pon-local-research.yml",
+    ".github/workflows/research-retained-state-audit.yml",
+    ".github/workflows/research-durable-retention-snapshot.yml",
+    "scripts/run-research-task.ts",
+    "scripts/automation-commit.sh",
+    "reports/research/forward-v02-pr2286-legacy-postfailure-followup-reachability-audit-20261101.md",
+    "research/registries/learnings/LEARN-research-automation-legacy-task-fail-closed-verified-20261031.json",
+    "research/registries/learnings/LEARN-research-automation-legacy-commit-helper-provenance-20261031.json"
+  ],
+  "lesson": "Fail-closing a deprecated task executable does not automatically disable workflow-level follow-up jobs. Evaluate `always()` and `needs` predicates, time gates, token permissions, and independent workflow_run triggers separately from the task process exit and primary job conclusion.",
+  "guardrail": "Do not claim the legacy workflow inert solely from CLI exit 3 or green PR CI. Before an operational deprecation decision, obtain owner review of the main manual workflow's conditional daily retention CAS writer, always-on status/commit steps, and conclusion-agnostic read-only audit. Preserve existing CAS/path allowlists, do not dispatch the workflow or protected N2 for diagnosis, and do not alter canonical intent or production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-31T19:04:50.000Z",
+  "productionConnection": false,
+  "_digest": "a97e8d27e51318277aa3ee74d4601e8bdebb64fb2e0086864002301d3b8ace92",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-31T19:04:50.000Z"
+}

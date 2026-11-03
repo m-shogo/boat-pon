@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-fd-lifetime-python-newline-fixture-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.embedded-python-newline-escape-fixture",
+  "subsystem": "research-governance-forward-vault-linux-test-harness",
+  "operation": "inline-python-bytes-literal-generated-source-ci-parity",
+  "symptom": "The committed TypeScript test embedded a one-backslash newline escape in a Python bytes literal, so the generated Python child source contained an actual newline inside a single-quoted literal. Both new FD-lifetime tests failed with SyntaxError before executing any kernel or FD assertion; verify exited 1 while research-governance passed and post-checkout succeeded. Local success had used a different correctly escaped source file.",
+  "rootCauseClass": "EMBEDDED_PYTHON_NEWLINE_ESCAPE_LOST_DURING_TS_SOURCE_TRANSFER",
+  "attemptSignature": "pr2286-v390-inline-python-bytes-literal-single-escaped-newline",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-linux-node24-typescript6.0.3+local-linux-node22-python3",
+    "materialStateKey": "pr2286-v390-dirfd-lifetime-test-embedded-python-source"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.dirfdLifetimeLinux.test.ts",
+    "reports/research/forward-vault-fd-lifetime-python-newline-fixture-ci-triage-20261028.md",
+    "actions/runs/40527184621",
+    "commit/6fe6ab4ad1861408c3ac3c75350de377a17eb78f",
+    "commit/b5b6bee826ab320db03bddd295a5b50cfac271d1"
+  ],
+  "lesson": "When Python source is embedded inside TypeScript string literals, a one-backslash newline escape is interpreted by JavaScript before Python sees the code and may create an unterminated Python bytes literal. A locally passing file does not verify a differently escaped committed file. Inspect the complete child stderr and the exact repository-read-back source before attributing red CI to the research mechanism.",
+  "guardrail": "Do not rerun the unchanged one-backslash embedded Python fixture. Preserve two backslashes in TypeScript source when Python must receive a literal backslash-n; validate the generated child program and read back the committed source. Attribute test syntax, process exit, workflow conclusion, post-job and runner separately; never call a kernel/FD research method failed when its child never parsed. Keep productionConnection false and no protected N2 or Current BUY/LINE/public/production changes.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T15:08:17.500Z",
+  "productionConnection": false,
+  "_digest": "1e7c5ae80362a28ceaeccf5d1f99b68179b290cf34b27ee862b6dee724c0fd36",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T15:08:17.500Z"
+}

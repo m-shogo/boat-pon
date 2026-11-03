@@ -1,0 +1,37 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-request-claimed-instant-chronology-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-request-claimed-instant-chronology-parity",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "digest-forward-v02-untrusted-request-standalone",
+  "symptom": "The exported standalone v0.2 untrusted request digest accepted nonblank but impossible calendar/clock/offset claims and invalid receipt-before-decision or revision-after-decision/monotonic chronology. The strict authority-envelope preflight already rejected these shapes, but direct caller-owned requests could still acquire a structural correlation digest. No independent clock or source authentication, scoring, or production impact was demonstrated.",
+  "rootCauseClass": "STANDALONE_REQUEST_TRANSCRIPT_NONBLANK_TIME_WITHOUT_STRICT_CALENDAR_CHRONOLOGY",
+  "attemptSignature": "pr2286-v409-shared-claimed-instant-guard-twelve-direct-mutations",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.ts@81582c6b/standalone-nonblank-claimed-time-only"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02ClaimedInstant.ts",
+    "src/research/governance/forwardV02AuthorityMetadata.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/c4cb48722aa7e0a6d9119f80aa4a438b1f9192d3",
+    "commit/e4f066e34e24835d5b82f8f58691116f232f8f2a",
+    "commit/85d88db5a59e8f4b59caae2036dc5a3ed8035108",
+    "commit/d9992cfef1d74f6be95a0b75dd36256c78374bf2",
+    "research/registries/learnings/LEARN-forward-vault-hour-24-rollover-20261015.json",
+    "research/registries/learnings/LEARN-forward-vault-impossible-calendar-date-20261015.json",
+    "research/registries/learnings/LEARN-forward-vault-schema-unknown-offset-parity-20261016.json"
+  ],
+  "lesson": "Nonblank untrusted timestamp claims are not necessarily well-formed or chronologically possible. Reuse the exact strict authority-metadata instant parser and submillisecond ordering helper in the standalone digest admission boundary instead of independently approximating Date.parse checks.",
+  "guardrail": "Extract and reuse unchanged claimed-instant calendar/offset and submillisecond chronology guards across strict envelope preflight and standalone request transcript. Reject malformed or unknown-offset instants, receipt not before decision, revisions not after decision, and non-increasing correction observation times before hashing. Cover twelve direct-call negative mutations and preserve valid transcript bytes. These checks never attest a clock, settlement finality, source authenticity or scoring/production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T08:09:54.000Z",
+  "productionConnection": false,
+  "_digest": "79692db92e2691a7ef402627448d61d03d57e06350b1f15f0ceee5e6b4605092",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T08:09:54.000Z"
+}

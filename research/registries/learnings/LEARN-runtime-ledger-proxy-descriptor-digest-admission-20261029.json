@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-runtime-ledger-proxy-descriptor-digest-admission-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.proxy-get-descriptor-validation-digest-drift",
+  "subsystem": "research-governance-runtime-decision-ledger",
+  "operation": "validate-and-hash-runtime-decision-ledger-record",
+  "symptom": "A synthetic caller-owned Proxy can return a valid currentOdds from get while its own data descriptor contains an invalid negative value. The pre-fix validator reads get results, whereas canonical hashing reads descriptors, so validation can accept a digest for different, invalid persisted metadata. A revoked Proxy can also throw before the validator returns a denial. Nested Proxy diagnostic arrays are likewise outside the proven own-data boundary. This is research-only synthetic evidence, not a production incident.",
+  "rootCauseClass": "PROXY_GET_DESCRIPTOR_DISAGREEMENT_IN_LEDGER_VALIDATION_AND_HASHING",
+  "attemptSignature": "pr2286-v427-runtime-ledger-proxy-root-and-nested-array-denial-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedger.ts@37f9744cbce2/Proxy-get-versus-descriptor-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedger.ts",
+    "src/research/governance/runtimeDecisionLedger.test.ts",
+    "commit/48bf47369c195473125cf579172504178adeabf1",
+    "commit/cea7e8ffd4f6358e69fed84cdc7d6d3cfa707853",
+    "research/registries/learnings/LEARN-forward-v02-node-proxy-rejecting-ingress-20261025.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-source-row-descriptor-snapshot-20261029.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-source-array-proxy-length-20261029.json"
+  ],
+  "lesson": "Own-data descriptor checks are insufficient when the validator reads a caller-controlled Proxy through get and the canonicalizer later reads its descriptors. The validation/hash pair must share a single admitted data authority. Nested Proxy arrays and revoked Proxies must be rejected before consulting caller hooks.",
+  "guardrail": "For Node-only research ledger ingress, reject root Proxy records and nested diagnostic Proxy arrays using node:util.types.isProxy before Array.isArray, prototype, length, ownKeys, get or descriptor operations. Preserve ordinary records and existing digests. Regress get-versus-descriptor disagreement, revoked root and nested arrays, trap nonexecution and normal digest stability. This does not authenticate external data or permit production connection.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T19:01:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T19:01:00.000Z",
+  "_digest": "04f9ec0940c13e23acb64bc939958355f65915ad4c71a24fb674a2c2560c161d"
+}

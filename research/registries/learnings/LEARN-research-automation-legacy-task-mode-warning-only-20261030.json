@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-research-automation-legacy-task-mode-warning-only-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.legacy-task-mode.warning-only-deprecation",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "audit-legacy-local-research-workflow-to-task-runner-control-flow",
+  "symptom": "Pinned main and PR source show that a still-dispatchable owner-guarded manual research workflow calls the legacy automation:task alias. The task mode prints DEPRECATED but does not exit; with a valid non-dry-run request and successful preflight, control flow can reach allowlisted task executor invocation. This is a static governance enforcement mismatch, not evidence of an actual dispatch, N2 activation, production effect, or guard bypass.",
+  "rootCauseClass": "LEGACY_DEPRECATION_WARNING_WITHOUT_FAIL_CLOSED_TERMINATION",
+  "attemptSignature": "pr2286-v472-pinned-manual-workflow-package-cli-task-mode-control-flow-audit-no-dispatch",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector-pinned-static-source-review/actions-node24-existing-ci",
+    "materialStateKey": "legacy-local-workflow-95094e7/runner-cce9559/package-8b72a00/request-builder-8fdf91c"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    ".github/workflows/boat-pon-local-research.yml",
+    ".github/workflows/boat-pon-request-file-dispatch.yml",
+    ".github/workflows/boat-pon-intent-dispatch.yml",
+    "package.json",
+    "scripts/run-research-task.ts",
+    "scripts/build-research-request.mjs",
+    "reports/research/forward-v02-pr2286-legacy-task-dispatch-control-flow-audit-20261030.md"
+  ],
+  "lesson": "A deprecation notice is not an execution barrier. A deprecated workflow and a warning-only CLI branch can remain an alternate executable dispatch path even when a newer intent workflow is documented as canonical. Static reachability is distinct from observed execution or a demonstrated safety bypass.",
+  "guardrail": "Before claiming a legacy dispatch route frozen, verify the workflow trigger, package alias, CLI mode termination, request preflight and executor reachability as a single chain. Require an explicit fail-closed terminal exit or independently approved workflow deactivation and a non-executing regression check. Do not dispatch protected N2, alter operational workflows, or infer production authority from this research finding.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T12:00:43.000Z",
+  "productionConnection": false,
+  "_digest": "dfeea3fc890a6b0fec9262b32f9ecc9f4b867c449f94dc6548c2b65a99f7ada1",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T12:00:43.000Z"
+}

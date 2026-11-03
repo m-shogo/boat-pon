@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-reflect-apply-hook-ts-overload-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-v02.synthetic-reflect-apply-hook-ts-overload",
+  "subsystem": "research-governance-forward-vault-v02",
+  "operation": "typecheck-synthetic-ambient-reflect-apply-privacy-regression",
+  "symptom": "GitHub Actions research-governance Typecheck failed with TS2322 when a synthetic regression assigned a Function/unknown-typed hook directly to overloaded Reflect.apply. The verify job was separate; Post Checkout succeeded. No private data, protected N2, or production behavior was involved.",
+  "rootCauseClass": "TYPESCRIPT_OVERLOADED_REFLECT_APPLY_SIGNATURE_INCOMPATIBLE_WITH_UNTYPED_TEST_HOOK",
+  "attemptSignature": "pr2286-v501-direct-unknown-return-reflect-apply-test-hook-assignment",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-contents-api/github-actions-ubuntu-node24-typescript6-synthetic",
+    "materialStateKey": "forwardV02IndependentProofRequest.test.ts@bbb840e9/direct-overloaded-reflect-apply-assignment"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.test.ts",
+    "github-actions/run-41217870601",
+    "commit/bbb840e9829018078359fa7a5c506e506203d252",
+    "commit/7606467e37b3c31890b21282af87b91bb782c88f",
+    "reports/research/forward-v02-pr2286-ambient-reflect-apply-proof-id-privacy-20261101.md"
+  ],
+  "lesson": "A test hook can preserve runtime behavior but still fail TypeScript when directly assigned to an overloaded generic built-in signature; the broad Function/unknown callback does not satisfy every Reflect.apply overload.",
+  "guardrail": "When writing reversible synthetic hooks for overloaded Reflect.apply, explicitly preserve or cast to typeof Reflect.apply after delegating non-target calls through the captured original; run the repository TypeScript typecheck before treating the regression as CI-ready. Restore the original in finally and test both privacy denials and benign controls. This is a test-authoring guardrail only.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-31T16:07:19.000Z",
+  "productionConnection": false,
+  "_digest": "1d609ee768d5df0a7823b1e6d0303648663489ea563613fcb0421a7f35fd9d94",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-31T16:07:19.000Z"
+}

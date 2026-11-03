@@ -85,7 +85,8 @@ export type SdkOutcome = {
 };
 
 export function checkWriteScope(writtenPaths: string[], allowlist: string[]): { ok: boolean; violations: string[] } {
-  const violations = writtenPaths.filter((p) => p.includes("..") || p.startsWith("/") || !allowlist.some((a) => p === a || p.startsWith(a)));
+  // A directory allowlist must end at a path-component boundary, not a sibling prefix.
+  const violations = writtenPaths.filter((p) => p.includes("..") || p.startsWith("/") || !allowlist.some((a) => p === a || p.startsWith(a.endsWith("/") ? a : `${a}/`)));
   return { ok: violations.length === 0, violations };
 }
 
@@ -279,8 +280,28 @@ export function runExecutorLifecycle(spec: ExecutorSpec, ctx: SdkContext): SdkOu
   base.summary = artifact.summary;
 
   lifecycle.push("validatePitEvidence");
-  const pitEvidence = normalizePitEvidence(spec, ctx, artifact);
+  let pitEvidence: PitEvidence | null;
+  try {
+    pitEvidence = normalizePitEvidence(spec, ctx, artifact);
+  } catch {
+    // Callback failures are untrusted: never leak exception text into a research result.
+    return failed(base, "FAILED", ["PIT_EVIDENCE_VALIDATOR_EXCEPTION"], artifact.summary);
+  }
   if (!pitEvidence) return failed(base, "BLOCKED", ["PIT_EVIDENCE_MISSING_OR_INVALID"], artifact.summary);
+  // PIT evidence callbacks are untrusted runtime values; NaN and negative counts
+  // can bypass a comparison-only leakage guard.
+  const pitCounts = [
+    pitEvidence.checkedRecordCount, pitEvidence.sameRaceViolationCount,
+    pitEvidence.futureViolationCount, pitEvidence.ambiguousTimingCount,
+  ];
+  if (
+    (pitEvidence.status !== "PASS" && pitEvidence.status !== "NOT_APPLICABLE") ||
+    typeof pitEvidence.validatorId !== "string" || !pitEvidence.validatorId.trim() ||
+    typeof pitEvidence.validatorVersion !== "string" || !pitEvidence.validatorVersion.trim() ||
+    !pitCounts.every((count) => Number.isSafeInteger(count) && count >= 0) ||
+    (pitEvidence.status === "NOT_APPLICABLE" &&
+      (typeof pitEvidence.notApplicableReason !== "string" || !pitEvidence.notApplicableReason.trim()))
+  ) return failed(base, "BLOCKED", ["PIT_EVIDENCE_MISSING_OR_INVALID"], artifact.summary);
   if (pitEvidence.sameRaceViolationCount > 0 || pitEvidence.futureViolationCount > 0 || pitEvidence.ambiguousTimingCount > 0) {
     return failed(base, "BLOCKED", ["PIT_OR_LEAKAGE_VIOLATION"], { ...artifact.summary, pitEvidence });
   }

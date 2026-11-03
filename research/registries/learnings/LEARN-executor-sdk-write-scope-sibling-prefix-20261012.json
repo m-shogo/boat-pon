@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-executor-sdk-write-scope-sibling-prefix-20261012",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-executor-sdk.write-scope.sibling-prefix-admission",
+  "subsystem": "research-executor-sdk",
+  "operation": "check-write-scope-allowlist-boundary",
+  "symptom": "An allowlist entry without a trailing slash admits a sibling-prefix output path (e.g. reports/n2-escape/record.json for reports/n2), and an exact-file allowlist admits a filename with an appended suffix.",
+  "rootCauseClass": "UNBOUNDED_STRING_PREFIX_ALLOWLIST_MATCH",
+  "attemptSignature": "allowlist-string-prefix-without-path-component-boundary",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22.16.0/function-isolated",
+    "materialStateKey": "executor-sdk-v3/checkWriteScope-prefix-some@ddc22e20"
+  },
+  "evidenceRefs": [
+    "src/research/governance/executorSdk.ts",
+    "src/research/governance/executorSdk.test.ts",
+    "src/research/governance/executorSdk.writeScopeBoundary.test.ts"
+  ],
+  "lesson": "String startsWith is not a path-component boundary. Research write-scope allowlists should not accept a sibling directory or filename merely because it shares the same textual prefix.",
+  "guardrail": "Match an exact allowlisted path or a child path only after a directory separator; cover trailing-slash and no-trailing-slash allowlist entries, exact-file suffixes, and multi-output batches. Preserve existing path-traversal and absolute-path rejection, and require full repository CI before promotion.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-12T08:06:23.000Z",
+  "productionConnection": false,
+  "_digest": "7e6104d5f077998fbccf3e93ec638769a44d9c8907b34608b563644c29bf5fe4",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-12T08:06:23.000Z"
+}

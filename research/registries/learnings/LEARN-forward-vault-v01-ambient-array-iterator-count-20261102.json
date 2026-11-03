@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-array-iterator-count-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-array-iterator-count-admission-bypass",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "replace-v01-result-count-and-unknown-field-for-of-with-indexed-loops",
+  "symptom": "Source review and reversible Node 22.16.0 synthetic reproduction found that replacing Array.prototype[Symbol.iterator] with an empty iterator skips the RESULT includedCount/excludedCount validation loop. Fractional, negative or negative-zero counts can be admitted and their canonical digest issued. The same hook suppresses unknown-field diagnostics. This is a research-only synthetic validation bypass, not an observed attack, private K evidence or production impact.",
+  "rootCauseClass": "V01_AMBIENT_ARRAY_ITERATOR_RESULT_COUNT_ADMISSION_BYPASS",
+  "attemptSignature": "pr2286-v537-index-v01-result-count-and-unknown-field-loops-with-synthetic-empty-array-iterator",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@7ea732fe/v01-for-of-result-count-and-unknown-field-loops"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientArrayIteratorAdmission.test.ts",
+    "commit/9f4ee046f5382d70465af02abe834c5008b97a74",
+    "commit/1275909ebc7b23103ce32e069e4c854356defe6a",
+    "research/registries/learnings/LEARN-shadow-evidence-set-prototype-allowlist-iterator-20261029.json"
+  ],
+  "lesson": "An otherwise pinned record validator can still admit invalid RESULT counts when its fixed field list is traversed with a mutable ambient Array.prototype[Symbol.iterator]. This can bypass numeric validation even though the Number predicates themselves are pinned. Diagnostic iteration can likewise lose unknown-field detail.",
+  "guardrail": "Use index-based iteration for fixed count field admission and unknown-field diagnostics; never delegate these fail-closed checks to mutable Array.prototype[Symbol.iterator]. Regress fractional, negative and negative-zero count rejection, direct digest denial, append rejection, unknown-field diagnostics and valid digest/idempotency under a reversible empty iterator. No issuer, scoring, readiness, merge or production authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T02:57:15.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T02:57:15.000Z",
+  "_digest": "748da00b4535aec759455c9abd311f76365f35f6257390e3c412a5be55035154"
+}

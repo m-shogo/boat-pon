@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-candidate-preflight-late-descriptor-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-candidate-preflight-late-descriptor-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-candidate-standalone",
+  "symptom": "The standalone v0.2 candidate preflight inspected caller-owned object descriptors and then reread semantic fields. A late own-descriptor Proxy trap could repair an invalid evidence stage or refund policy before semantic checks, making an initially invalid candidate appear complete (but never scoring-authorized).",
+  "rootCauseClass": "STANDALONE_CANDIDATE_PREFLIGHT_UNPINNED_DESCRIPTOR_REPAIR",
+  "attemptSignature": "pr2286-v314-pin-candidate-graph-before-semantic-validation-two-negative-proxy-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardEvaluationProtocolV02Candidate.0.2-unapproved/pr2286-33f48670/standalone-preflight-unpinned"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationProtocolV02Candidate.ts",
+    "src/research/governance/forwardEvaluationProtocolV02Candidate.test.ts",
+    "commit/b0094059db430f33a04a3ae37ae91ec6efb6c501",
+    "commit/8eb97d88bb9182428b7e516b9081f8a02af53f72",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-reference-reconciliation-late-descriptor-repair-20261025.json"
+  ],
+  "lesson": "An exported candidate validator remains a separate untrusted admission boundary even when its callers already pin inputs. Descriptor shape checks are not a substitute for a bounded detached graph before semantic validation.",
+  "guardrail": "Pin the full standalone v0.2 candidate graph with the shared bounded own-data-descriptor snapshot before checking header, money, exclusions and evidence requirements. Preserve fail-closed behavior; malformed nested arrays may now reject earlier as INVALID_CANDIDATE_SHAPE. Negative Proxy tests must trigger and reject late stage and refund-policy repairs. Never infer independent evidence or scoring authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T02:01:48.523Z",
+  "productionConnection": false,
+  "_digest": "909b93376be5540b6ad8dd3b0416923283e71acebba2eac2b7284fe9aa502a33",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T02:01:48.523Z"
+}

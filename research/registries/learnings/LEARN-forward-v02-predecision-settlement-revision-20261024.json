@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-predecision-settlement-revision-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-predecision-settlement-revision-laundering",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-authority-metadata-revision-chronology",
+  "symptom": "The unmerged v287 authority metadata preflight accepted a synthetic settlement chain whose provisional predecessor was observed before (or exactly at) the first decision, provided a later revision was labeled FINAL. Its terminal-only decision-time check did not reject impossible earlier settlement evidence. No real outcome evidence or production path was used.",
+  "rootCauseClass": "TERMINAL_ONLY_CHRONOLOGY_CHECK_OMITS_PREDECESSOR_SETTLEMENT_REVISIONS",
+  "attemptSignature": "pr2286-v288-predecision-provisional-revision-deny-only-negative-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-pr-node24-ci",
+    "materialStateKey": "forwardV02AuthorityMetadata.0.1-untrusted/pr2286-cb16ff79/terminal-only-settlement-chronology"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02AuthorityMetadata.ts",
+    "src/research/governance/forwardV02AuthorityMetadata.test.ts",
+    "commit/245e3bf8316b2d02568e78bbcdb0e2f5b363b9ac",
+    "commit/2e5eba5a0b758b79623d7938f588406fd7e9c683"
+  ],
+  "lesson": "Checking only the terminal revision timestamp allows a caller-provided later FINAL label to conceal an impossible predecision provisional settlement predecessor. Chain shape and finality must not substitute for per-revision decision-time chronology, even in a deny-only untrusted metadata preflight.",
+  "guardrail": "Validate every settlement revision's observedAt strictly after the first decision before accepting the revision chain as structurally consistent. Keep a negative fixture for predecision/equal-time provisional predecessor plus later FINAL, and a positive postdecision provisional-to-final fixture. Preserve independentAuthorityVerified=false and scoringAuthorized=false; do not infer external source authentication.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T04:03:07.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T04:03:07.000Z",
+  "_digest": "d8cd975b1cc290ff312df34fecfe847b4b653e0ced829b19ca5e1c2709d52041"
+}

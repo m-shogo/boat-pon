@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-synthetic-reference-late-mutation-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-synthetic-reference-late-mutation-after-math",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-synthetic-reference-anchor-conflict",
+  "symptom": "The deny-only synthetic reference helper previously read a caller-controlled reference fixture only after Ed25519 signature math and claimed-anchor correlation. A descriptor-triggered mutation during those earlier phases could change an initially mismatching reference key digest or anchor identity into a matching value before the late snapshot, causing referenceCorrelationConsistent=true for a different entry-time reference. No external authority or scoring was granted.",
+  "rootCauseClass": "UNTRUSTED_REFERENCE_SNAPSHOT_DEFERRED_UNTIL_AFTER_SIGNATURE_MATH",
+  "attemptSignature": "pr2286-v307-pin-synthetic-reference-descriptor-snapshot-before-signature-math-two-negative-proxy-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02SyntheticReferenceAnchorConflict.0.1-untrusted/pr2286-d64d1e70/reference-snapshot-after-claimed-math"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02SyntheticReferenceAnchorConflict.ts",
+    "src/research/governance/forwardV02SyntheticEd25519Claim.test.ts",
+    "commit/6a51b9a3ab52bdf074bb916cb493f1838af57115",
+    "commit/2ac275948e802f13091b1ec1ff1df4e78da2d5c5",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-policy-anchor-reread-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-synthetic-claim-key-swap-20261025.json"
+  ],
+  "lesson": "Even a non-authoritative metadata correlation flag can be laundered if its caller-owned reference fixture is first snapshotted only after unrelated validation phases. A matching post-mutation reference is not the reference supplied at entry.",
+  "guardrail": "Pin the full strict own-data-descriptor synthetic reference fixture before signature math or policy comparison. Reuse only that detached snapshot for role, authority, anchor, key, state and validity-window checks. Regression tests must actually fire late key and identity mutations and show the original mismatches remain rejected, with literal independentAuthorityVerified=false and scoringAuthorized=false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T22:04:52.367Z",
+  "productionConnection": false,
+  "_digest": "c1a5167972549ef447943a4aa336e37172a007fe6d58336c9e1f6997e88a7f78",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T22:04:52.367Z"
+}

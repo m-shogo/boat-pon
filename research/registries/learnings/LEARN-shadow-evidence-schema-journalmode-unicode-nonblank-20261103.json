@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-journalmode-unicode-nonblank-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-journalmode-whitespace-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-shadow-source-journalmode-nonblank-admission-vs-runtime-trim",
+  "symptom": "The Shadow Evidence Draft 2020-12 source.journalMode rule used minLength:1 only. A schema-only consumer admitted whitespace-only strings (including U+FEFF) although the runtime validator rejects them using ECMAScript trim. Python and ECMAScript also disagree on U+0085 for generic nonblank regexes. Synthetic schema-only probes demonstrated the discrepancy; no production incident or private evidence was observed.",
+  "rootCauseClass": "SCHEMA_RUNTIME_UNICODE_NONBLANK_ADMISSION_DRIFT",
+  "attemptSignature": "pr2286-v551-shadow-journalmode-ecmascript-trim-schema-parity-and-runtime-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/python-jsonschema-draft202012/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@9ab16559/source.journalMode-minLength-only"
+  },
+  "evidenceRefs": [
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaJournalModeParity.test.ts",
+    "research/registries/learnings/LEARN-outcome-ledger-schema-unicode-nonblank-parity-20261020.json",
+    "research/registries/learnings/LEARN-forward-vault-schema-unicode-trim-parity-20261019.json",
+    "commit/97b66f7c4614e87f16cd46550a4f1e33654b70cd",
+    "commit/f59f370b319ee4c7faf664c022aecb0e48c32be3",
+    "pull/2286"
+  ],
+  "lesson": "JSON Schema minLength:1 does not enforce runtime trim-based nonblank admission. The portable explicit ECMAScript whitespace complement pattern must also cover metadata fields such as source.journalMode; generic \\S differs across JSON Schema engines for U+FEFF and U+0085.",
+  "guardrail": "Require the exact ECMAScript trim whitespace-complement pattern on source.journalMode while retaining minLength:1. Verify whitespace-only rejection, U+FEFF rejection, U+0085 acceptance, and valid journal modes against the runtime validator. This metadata check never authenticates an issuer, settlement, finality, evaluation readiness or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T15:08:54.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T15:08:54.000Z",
+  "_digest": "55e70917969eb7b883096ddd98d0c54e23c587778b0d2abe59f90129754e7d11"
+}

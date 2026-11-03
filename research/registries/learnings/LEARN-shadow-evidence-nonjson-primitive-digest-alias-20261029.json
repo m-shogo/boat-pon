@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-nonjson-primitive-digest-alias-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.nonjson-primitive-omission-null-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "canonical-shadow-evidence-build-and-validate-nonjson-scalar-ingress",
+  "symptom": "A bounded synthetic Node 22.16.0 reproduction showed JSON.stringify silently omits undefined and symbol object values and serializes NaN/Infinity as null. The shadow-evidence builder's contextDigest therefore could collide for distinct malformed context values (including required manifestId), while the validator's preflight only denied BigInt/function and could digest malformed evidence before semantic rejection. No external K archive, private odds, real paths, secrets or production records were used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_NONJSON_SCALAR_OMISSION_AND_NULL_COERCION_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v449-reject-undefined-symbol-nonfinite-at-canonicalization-and-own-data-preflight",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@1351ebb04367/primitive-canonicalization-omits-undefined-symbol-and-null-coerces-nonfinite"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-bigint-preflight-json-digest-20261029.json",
+    "research/registries/learnings/LEARN-forward-vault-nonjson-data-properties-20261008.json",
+    "research/registries/learnings/LEARN-shadow-evidence-canonical-tojson-hook-digest-20261029.json"
+  ],
+  "lesson": "A canonical key order alone cannot make a JSON digest injective over non-JSON scalar inputs. Undefined and symbol values disappear from objects, while non-finite numbers serialize as null; source/context digests can therefore alias before the validator sees the malformed source. Distinguish this silent alias from BigInt's throwing serialization and toJSON hook substitution.",
+  "guardrail": "Deny undefined, symbol, and non-finite numbers at canonicalization before JSON.stringify in the research-only shadow builder. The bounded own-data validator preflight must return a frozen fail-closed result for those scalar types before digest evaluation. Regress omitted/null aliases, builder rejection, validator denial and valid evidence digest compatibility. Do not infer K source authority or authorize any production connection.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T13:03:01.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T13:03:01.000Z",
+  "_digest": "0a2f7ab53c72a54f2b9d841c2f9e31c422568b49d0e844d6ca84ea0fcbd980a0"
+}

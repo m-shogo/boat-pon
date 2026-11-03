@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
+import { isolatedResearchNodeChildEnv } from "./researchNodeChildEnv.js";
 
 const HELPER_URL = pathToFileURL(resolve(process.cwd(), "scripts/read-safe-utf8.mjs")).href;
 const EVAL = `import { listSafeDirectoryNames } from ${JSON.stringify(HELPER_URL)};\ntry { process.stdout.write(JSON.stringify(listSafeDirectoryNames(process.argv[1], { label: "processed request directory", baseDir: process.argv[2], allowMissing: true }))); } catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exit(1); }`;
@@ -14,6 +15,7 @@ function listViaHelper(path: string, baseDir: string): { status: number; output:
     const stdout = execFileSync(process.execPath, ["--input-type=module", "--eval", EVAL, path, baseDir], {
       encoding: "utf8",
       stdio: "pipe",
+      env: isolatedResearchNodeChildEnv(),
     });
     return { status: 0, output: stdout };
   } catch (error) {

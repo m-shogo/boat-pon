@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-submillisecond-pit-truncation-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.mapper-submillisecond-source-pit-truncation",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "normalize-and-compare-source-odds-and-program-instants",
+  "symptom": "The research-only shadow mapper converted source instants through Date.parse and toISOString, truncating fractional precision beyond milliseconds. Synthetic decision .0001000 and later odds/program .0001001 normalize to the same .000Z instant, so chronology comparisons cannot detect post-decision source evidence. Node 22.16.0 source-equivalent reproduction confirmed the alias. No private evidence or production behavior was involved.",
+  "rootCauseClass": "SUBMILLISECOND_SOURCE_TIMESTAMP_TRUNCATION_ERASES_PIT_ORDER",
+  "attemptSignature": "pr2286-v419-source-fraction-preservation-odds-program-chronology-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@5edb8bda/Date.parse-toISOString-millisecond-source-truncation"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/ebc37459bacc671ae1b94c531c56242f649a1290",
+    "commit/a28833099b9d14724868d2ce3bf92278606b00af",
+    "research/registries/learnings/LEARN-forward-v02-standalone-request-claimed-instant-chronology-20261028.json",
+    "src/research/governance/runtimeDecisionLedgerExactInstant.test.ts"
+  ],
+  "lesson": "Converting a claimed high-precision timestamp to millisecond ISO before checking source point-in-time ordering irreversibly erases ordering evidence. A downstream exact-instant validator cannot restore fractions that were discarded upstream.",
+  "guardrail": "Retain original fractional digits when converting known-offset or SQLite UTC source instants to UTC ISO, and compare full normalized fractions at equal whole seconds. Regress odds and program observations one submillisecond tick after decision, valid earlier observations, offset-equivalent UTC and unchanged no-fraction mapping. Do not infer independent source timestamp authenticity or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T14:17:21.395Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T14:17:21.395Z",
+  "_digest": "183981c9dbf4f0ae8c586dfb7d5a88a89085a468a3ab1cad740c3c5b93111c98"
+}

@@ -1,0 +1,34 @@
+{
+  "learningId": "LEARN-research-automation-legacy-task-policy-binding-20261031",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.legacy-task-mode.task-policy-binding-omission",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "compare-legacy-task-queue-policy-to-canonical-intent-guards",
+  "symptom": "The deprecated request-file task runner validates request safety against global policy and requires task status READY, but does not compare request safetyLevel with the selected task safetyLevel or check its dependencies before resolving the allowlisted executor. The canonical intent path explicitly checks catalog safety and dependencies. This is conditional static reachability only: the pinned deprecated main queue contains no READY task, no workflow dispatch was performed, and current workflow enablement and runner state are unverified.",
+  "rootCauseClass": "LEGACY_TASK_SELECTION_OMITS_TASK_SAFETY_AND_DEPENDENCY_GATES",
+  "attemptSignature": "pr2286-v476-pinned-legacy-vs-intent-task-safety-dependency-static-comparison-no-execution",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector-pinned-main-and-pr-source/no-dispatch/no-runner-access",
+    "materialStateKey": "legacy-runner-cce9559/orchestrator-d912c61/queue-997c876/catalog-4d8613e/intent-runner-7ea606a/intent-builder-0838789"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "scripts/run-research-task.ts",
+    "src/automation/researchOrchestrator.ts",
+    "automation/task-queue.json",
+    "automation/task-catalog.json",
+    "scripts/run-intent-task.ts",
+    "src/automation/dispatchIntent.ts",
+    "scripts/guard-intent-push.ts",
+    "reports/research/forward-v02-pr2286-legacy-task-policy-binding-audit-20261031.md"
+  ],
+  "lesson": "Global request safety admission and task READY status are not equivalent to verifying a task's catalog safety classification and prerequisite completion. The legacy path omits these task-specific checks, while the canonical intent path includes them. A frozen queue with no READY tasks limits the present source snapshot but does not repair the latent mismatch.",
+  "guardrail": "For any executable research task path, bind request safety to the immutable catalog task safety level and require satisfied dependencies before any task claim, mutation or executor call. Reuse the canonical intent safety/dependency checks; do not make the deprecated path executable or run protected N2 for diagnosis. Prefer separately approved legacy workflow deactivation or fail-closed pre-task termination.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T16:01:00.000Z",
+  "productionConnection": false,
+  "_digest": "f0c4f11cff0c463e0f73f26ddb39c4b6e85efa2e3bf4e605744c01567772eedf",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T16:01:00.000Z"
+}

@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-pinned-root-late-child-bootstrap-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.pinned-root-late-child-bootstrap-provenance",
+  "subsystem": "research-governance-forward-vault-linux-directory-authority",
+  "operation": "disposable-pinned-root-late-final-directory-bootstrap-identity-negative-control",
+  "symptom": "In a disposable Linux synthetic test, a pinned root FD survived real-directory ancestor replacement, but a later-opened final-directory FD referred to the replacement. A writer and reader sharing that late FD consistently published and read the decoy's valid single-link JSON, not the previously authorized original. A control comparing the final FD with a simulated pre-authorized directory identity denied before publication. This is not a production incident or evidence of an authenticated authority.",
+  "rootCauseClass": "PINNED_ROOT_LATE_CHILD_BOOTSTRAP_SELF_CONSISTENT_UNAUTHENTICATED_DIRECTORY",
+  "attemptSignature": "pr2286-v389-pinned-root-late-child-bootstrap-unguarded-vs-identity-denial",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-linux-node24-python3-renameat2+local-linux-node22-python3",
+    "materialStateKey": "executor-sdk-v3/pr2286-v388-rootfd-openat2-and-dirfd-synthetic-namespace"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.pinnedRootBootstrapLinux.test.ts",
+    "reports/research/forward-vault-pinned-root-late-child-bootstrap-provenance-20261027.md",
+    "commit/69736e5305516d50e4333d5879ddb21522fc7c9f",
+    "commit/93e1d9975430331c1549ad72a09c6b4d3e13fc68"
+  ],
+  "lesson": "Reader/writer agreement on a shared final-directory FD proves object consistency only after that FD is acquired; it does not authenticate how the final FD was bootstrapped from a pinned root with mutable child names. A deterministic preauthorized-final-object mismatch can be denied before publication, but pathname-derived metadata and a one-time comparison are not an independently authenticated durable trust anchor.",
+  "guardrail": "Do not equate a pinned root FD, openat2 traversal restrictions, or self-consistent FD-relative read/write with authorized publisher identity. Require an independently reviewed final-directory bootstrap and lifecycle; reject demonstrated identity mismatch before publication; preserve fail-closed behavior across later rename/mount races. Do not treat st_dev/st_ino alone as cryptographic provenance or stable reachability. No automatic recovery, production integration, scoring, N2 activation, Current BUY, LINE, public publishing or private raw evidence.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T14:00:32.020Z",
+  "productionConnection": false,
+  "_digest": "925a13895b4fb0dfef5a8be1e69d7bcad77f3ee967ba1bd7003bbef6f09f3552",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T14:00:32.020Z"
+}

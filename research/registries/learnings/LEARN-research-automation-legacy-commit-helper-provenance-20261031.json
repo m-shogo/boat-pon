@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-research-automation-legacy-commit-helper-provenance-20261031",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.legacy-manual-commit-helper.trusted-input-provenance-gap",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "compare-legacy-manual-vs-intent-commit-helper-authority-binding",
+  "symptom": "Canonical legacy manual workflow invokes scripts/automation-commit.sh with only RUN_ID in the commit step, while the current helper requires absolute trusted Git/Node binary paths immediately and a trusted automation-branch base SHA before a nonempty commit. Unlike the canonical intent workflow, the legacy path does not bind these values from a trusted materialization step. With no externally injected values the helper exits before persistence, even if the task runner previously wrote local DRY_RUN_OK status and terminal request ledger. This is static source evidence, not a demonstrated current workflow failure or task execution.",
+  "rootCauseClass": "LEGACY_WORKFLOW_OMITS_TRUSTED_COMMIT_HELPER_INPUT_PROVENANCE",
+  "attemptSignature": "pr2286-v475-pinned-legacy-vs-intent-commit-helper-input-provenance-static-audit-no-dispatch",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector-pinned-main-pr-source/actions-self-hosted-macos-workflow-declaration",
+    "materialStateKey": "legacy-workflow-95094e7/commit-helper-bf7a0dc/intent-workflow-1db7abc"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    ".github/workflows/boat-pon-local-research.yml",
+    ".github/workflows/boat-pon-intent-dispatch.yml",
+    "scripts/automation-commit.sh",
+    "scripts/run-research-task.ts",
+    "reports/research/forward-v02-pr2286-legacy-commit-helper-trusted-input-provenance-audit-20261031.md",
+    "actions/runs/30821403218",
+    "actions/runs/41068398466"
+  ],
+  "lesson": "A previously successful dry-run/push from an older workflow revision does not prove persistence under a newer trusted-helper contract. Local task success, GitHub Actions step conclusion, and durable automation-branch persistence are distinct. A legacy route without trusted input binding can execute local side effects before its post-task persistence gate fails closed.",
+  "guardrail": "Before claiming a legacy dispatch result durably recorded, compare the workflow step's explicit trusted Git/Node paths and pinned branch-base provenance with the commit helper's current fail-closed preconditions. Never satisfy missing trusted inputs through task-controlled environment, do not dispatch for diagnostics, and seek separate operational approval for workflow deactivation or an explicit pre-task fail-closed guard.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T15:00:33.000Z",
+  "productionConnection": false,
+  "_digest": "bb18fca45e90c550530e5ddbad6c2691d71e7f1aa3cf13650e40dc48e5ba35fd",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T15:00:33.000Z"
+}

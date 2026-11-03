@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-hour-24-rollover-20261015",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.rfc3339-hour-24-rollover-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-rfc3339-clock-boundaries",
+  "symptom": "Date.parse accepts 2026-10-14T24:00:00Z as the next day. The v70 offline candidate passed 21/23 clock regression assertions; explicit clock-range candidate passed 23/23, but is not committed or CI-verified.",
+  "rootCauseClass": "DATE_PARSE_NORMALIZES_INVALID_RFC3339_HOUR_24",
+  "attemptSignature": "v70-clock-boundary-adversarial-fixture",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22.16.0-typescript5/jsonschema4.26",
+    "materialStateKey": "v70-integrated-offline-candidate-date-guard-without-clock-hour-range"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.clockBoundary.test.ts"
+  ],
+  "lesson": "Gregorian calendar validation alone does not establish RFC3339 time validity: JavaScript Date.parse can roll 24:00 to the following day.",
+  "guardrail": "Validate hour 00..23, minute 00..59, second 00..59, and timezone offset bounds before Date.parse; retain explicit 24:00 negative fixtures, and require committed repository CI before merge.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-14T19:55:11.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-14T19:55:11.000Z",
+  "_digest": "8f6e7af70f9305152b31b155daadbc891f85f7f9c5a068625520493c8add3712"
+}

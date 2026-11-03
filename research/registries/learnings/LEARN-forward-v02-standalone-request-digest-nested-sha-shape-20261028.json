@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-request-digest-nested-sha-shape-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-request-transcript-nested-digest-shape",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "digest-forward-v02-untrusted-request-standalone",
+  "symptom": "The exported v0.2 untrusted request transcript digest checked the policy digest but accepted nonempty malformed protocol, membership, witness, settlement and correction digests in direct caller-supplied requests. It could produce a SHA-256 correlation ID for metadata that the strict request builder would not admit. No independent verifier, scoring or production path was involved.",
+  "rootCauseClass": "EXPORTED_REQUEST_TRANSCRIPT_PARTIAL_NESTED_DIGEST_SHAPE_ADMISSION",
+  "attemptSignature": "pr2286-v406-standalone-transcript-six-nested-sha-mutation-denials",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.ts@f679d9931b09/standalone-transcript-policy-digest-only-validation"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/c84975242e76de0a4c5e8526e5e05468ffd6f446",
+    "commit/f217ff7a287463be767093440d6d22df2c773fe0",
+    "research/registries/learnings/LEARN-forward-vault-direct-digest-invalid-record-alias-20261020.json",
+    "research/registries/learnings/LEARN-forward-v02-standalone-request-digest-late-repair-20261025.json"
+  ],
+  "lesson": "An exported structural transcript digest is an independent runtime admission boundary. Even after detaching the caller graph, validating only one digest field lets malformed nested claims acquire a well-formed correlation digest, creating a discrepancy with the preflight-built request contract.",
+  "guardrail": "Before hashing a standalone v0.2 untrusted proof request, require lowercase 64-hex digests for all nested digest-shaped freeze, witness, settlement and correction fields; preserve nullable predecessor field semantics without claiming correction-chain completeness. Exercise direct-call mutation tests for every nested digest position and preserve valid request transcript bytes. This is shape validation only; independentAuthorityVerified and scoringAuthorized remain false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T06:03:00.000Z",
+  "productionConnection": false,
+  "_digest": "a74a598b5a074ae009c672956d2244eb081f8fdd7eb1766a1a5381a1357b0092",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T06:03:00.000Z"
+}

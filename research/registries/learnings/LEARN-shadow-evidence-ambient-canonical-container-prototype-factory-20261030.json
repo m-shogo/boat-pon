@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-canonical-container-prototype-factory-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-canonical-container-prototype-factory-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "bind-shadow-source-context-content-digests-under-ambient-object-create-and-setprototypeof-replacement",
+  "symptom": "Node 22.16.0 synthetic reproductions showed that replacing Object.create(null) with an object carrying inherited toJSON, or making Object.setPrototypeOf(array, null) a no-op while Array.prototype.toJSON is present, makes distinct canonical input objects or arrays serialize to identical JSON. Source review of the v460 research-only shadow evidence builder found both ambient helpers still used after earlier serializer and toJSON hardening. No private data, protected N2 or production behavior was accessed.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_CANONICAL_CONTAINER_PROTOTYPE_TOJSON_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v461-pin-object-create-setprototypeof-for-canonical-shadow-digests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@2c9d9c1f/ambient-object-create-and-setprototypeof-in-canonical-containers"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/c4f9182088198fb054e20d5bccfc336e55feda80",
+    "commit/b47658e6472c479377bbd94bd7e57a54c712a8c5",
+    "research/registries/learnings/LEARN-shadow-evidence-canonical-tojson-hook-digest-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-json-stringify-digest-alias-20261030.json"
+  ],
+  "lesson": "Pinning JSON.stringify and validating own data cannot bind digest identity if the newly created canonical container retains an attacker-controlled inherited toJSON hook because Object.create or Object.setPrototypeOf is mutable. Canonical container construction and serialization must share one stable prototype authority.",
+  "guardrail": "Capture Object.create and Object.setPrototypeOf at research module initialization; use captured helpers for null-prototype canonical objects, canonical arrays and internal count maps. Regress distinct source/context/content digests and zero toJSON invocation under reversible synthetic factory/setter replacements. Do not infer K issuer rights, source finality, independent time, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T01:02:50.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T01:02:50.000Z",
+  "_digest": "2e31a88b1fde2c0980f7a2934bd88b2eeba5301f5cdbb3c523fa78247b1443be"
+}

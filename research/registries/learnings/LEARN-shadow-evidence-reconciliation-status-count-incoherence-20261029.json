@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-shadow-evidence-reconciliation-status-count-incoherence-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.reconciliation-status-count-incoherence",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-reconciliation-status-against-counts",
+  "symptom": "Synthetic re-digested evidence could report reconciliation.status=PASS despite unresolvedCount>0, or reconciliation.status=FAILED with conflictCount=0. The outer verdict remained internally consistent with its own conditional/failure rules, so the validator did not enforce the mapper's count-derived reconciliation status. No private, production or external K-source data was used.",
+  "rootCauseClass": "RECONCILIATION_STATUS_NOT_BOUND_TO_MAPPER_COUNT_SEMANTICS",
+  "attemptSignature": "pr2286-v444-redigested-reconciliation-status-count-coherence-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/actions-node24+synthetic-node22.16.0",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@acc440a60/outer-verdict-only-status-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-zero-row-positive-reason-count-20261029.json"
+  ],
+  "lesson": "An outer verdict derived from counts can be correct even when an inner reconciliation.status contradicts the mapper's own status semantics. Re-digesting the object is not an authority proof. The two statuses require independent consistency checks.",
+  "guardrail": "Require reconciliation.status=FAILED iff conflictCount>0, else CONDITIONAL iff unresolvedCount>0 or rejectedCount>0, else PASS; continue to compute the outer shadow-evidence verdict separately for zero-row and bounded-limit cases. Regress both PASS-with-unresolved and FAILED-without-conflict synthetic re-digested claims.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T08:01:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T08:01:00.000Z",
+  "_digest": "d055b8e7fe2a7ca44bf5f2776b5b46dfa75a9047233fbbdfe01ec3a793a1308d"
+}

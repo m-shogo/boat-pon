@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-object-entries-privacy-path-erasure-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-object-entries-privacy-path-denial-erasure",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-privacy-flags-and-path-walk",
+  "symptom": "A synthetic empty Object.entries hook can suppress iteration over privacy flags and over the recursive sanitized-evidence path scan. With a recomputed content digest, an otherwise valid-shaped evidence object asserting rawRecordsIncluded=true or containing a path-like string can bypass those specific denial checks. A Node 22.16.0 synthetic Object.entries experiment reproduced the enumeration-erasure mechanism; no private value or production evidence was involved.",
+  "rootCauseClass": "AMBIENT_OBJECT_ENTRIES_ERASES_PRIVACY_AND_PATH_DENIAL_DIAGNOSTICS",
+  "attemptSignature": "pr2286-v436-indexed-privacy-and-own-descriptor-walk-empty-object-entries-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@5766145b/Object.entries-privacy-and-walk"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/10e4a875fb0bf66d49c4c716adcae91d87cf534c",
+    "commit/6e464909a119a9b0b93747200280fcbed6754412",
+    "actions/runs/40799037747",
+    "research/registries/learnings/LEARN-shadow-evidence-set-prototype-allowlist-iterator-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-reason-count-map-admission-20261027.json"
+  ],
+  "lesson": "A fixed-field allowlist and canonical digest do not protect semantic privacy and path denials when the validator enumerates them through mutable ambient Object.entries. Validate required flags by module-owned indexed keys and traverse the own-data graph through property descriptors.",
+  "guardrail": "Use PRIVACY_KEYS indexed reads for all false-only privacy flags, and Reflect.ownKeys plus own enumerable data descriptors for the recursive path/forbidden-key walk. Regress an empty Object.entries hook against re-digested synthetic privacy and path violations, preserving ordinary valid evidence and digest. Do not infer K issuer rights or any production authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T01:13:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T01:13:00.000Z",
+  "_digest": "9dd891a374dd575277903bf739db2d07dc99ce45fb1642c475bc2be1b2ec21c0"
+}

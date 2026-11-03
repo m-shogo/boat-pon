@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-proof-request-array-push-chain-mutation-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-proof-request-array-push-chain-mutation",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "build-forward-v02-independent-proof-request",
+  "symptom": "A synthetic ambient Array.prototype.push override can silently drop or replace claimed settlement revisions after strict metadata preflight, causing an incomplete or forged untrusted proof-request correction chain. No real evidence or production path was affected.",
+  "rootCauseClass": "MUTABLE_ARRAY_PROTOTYPE_PUSH_ALTERS_POST_PREFLIGHT_REVISION_COPY",
+  "attemptSignature": "pr2286-v295-synthetic-ambient-array-push-drop-and-forge-correction-chain",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node24/github-actions+local-node-synthetic",
+    "materialStateKey": "forwardV02IndependentProofRequest.0.1-untrusted/pr2286-758f6044/revision-copy-uses-array-prototype-push"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.ts",
+    "src/research/governance/forwardV02IndependentProofRequest.test.ts",
+    "commit/6d0f08637ae317d781c1329c2956816017f257f4",
+    "commit/3b343279b93aef48f83a87f33bc9606ec37ba8ee",
+    "github-actions/run-40088476835"
+  ],
+  "lesson": "Even after strict untrusted input preflight, a metadata-only proof handoff can lose or rewrite authenticated-looking revision claims when snapshot construction delegates to mutable Array.prototype.push. This is not external verification, but preserving every claimed predecessor is essential to a future verifier.",
+  "guardrail": "Copy each already-validated revision with direct indexed assignment into a fresh array; freeze each copied revision and the array; regression-test both dropped and forged revision copies under synthetic Array.prototype.push overrides. Reuse existing mutable-array-helper and iterator-independent admission learnings; never authorize independent proof or scoring.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T11:05:20.000Z",
+  "productionConnection": false,
+  "_digest": "56c91b29c9e36a9eb434962e45477b3bca977cb198678e578ff2061e99e75c44",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T11:05:20.000Z"
+}

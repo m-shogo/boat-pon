@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-request-whitespace-scalar-admission-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-request-whitespace-only-scalars",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "digest-forward-v02-untrusted-request-standalone",
+  "symptom": "The exported v0.2 standalone request transcript digest accepted whitespace-only string values for freeze, settlement and revision scalar claims, although the strict authority-envelope preflight rejects blank claims. A caller could obtain a correlation digest for a malformed request graph. No independently verified authority or production impact was demonstrated.",
+  "rootCauseClass": "EXPORTED_REQUEST_TRANSCRIPT_LENGTH_ONLY_SCALAR_ADMISSION",
+  "attemptSignature": "pr2286-v407-standalone-transcript-twelve-whitespace-scalar-mutations",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.ts@be53fb5e/nonempty-length-only-scalar-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/63dc702dff2a2bc4068d1278a7d2ebc7eb37f898",
+    "commit/045d316a5bc0dc518e243d34ce01d8444c63ad00",
+    "research/registries/learnings/LEARN-forward-v02-standalone-request-digest-nested-sha-shape-20261028.json",
+    "research/registries/learnings/LEARN-forward-v02-standalone-request-digest-late-repair-20261025.json"
+  ],
+  "lesson": "A detached request graph can still violate the strict preflight's nonblank scalar contract if an exported standalone digest checks only string length. A well-formed hash is a correlation ID, not a valid or independently authenticated request.",
+  "guardrail": "For standalone untrusted request transcript hashing, require trim-nonblank scalar claims on all freeze, settlement and revision string fields before correlation. Cover each of the twelve non-digest scalar positions with direct-call whitespace mutations and preserve valid transcript bytes. This is bounded scalar-shape admission, not timestamp/chain authentication, source finality, scoring permission or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T07:00:36.000Z",
+  "productionConnection": false,
+  "_digest": "50bfa2016ffd130c607833ea8d596e0f0014486a1a6a5edafb48fac4ceb66b90",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T07:00:36.000Z"
+}

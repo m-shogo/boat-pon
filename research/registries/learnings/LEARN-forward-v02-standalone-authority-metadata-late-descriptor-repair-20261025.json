@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-authority-metadata-late-descriptor-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-authority-metadata-late-descriptor-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-authority-metadata-standalone",
+  "symptom": "The exported authority metadata preflight validated own-data descriptors but then read caller-controlled fields again. A later Proxy descriptor trap could repair an initially invalid schema version or witness membership commitment, making the original invalid metadata appear structurally consistent (never independently attested or scorable).",
+  "rootCauseClass": "STANDALONE_AUTHORITY_METADATA_UNPINNED_LATE_DESCRIPTOR_REPAIR",
+  "attemptSignature": "pr2286-v315-pin-authority-metadata-graph-two-negative-proxy-tests",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02AuthorityMetadata.0.1-untrusted/pr2286-78660fc1/unpinned-standalone-descriptor-reads"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02AuthorityMetadata.ts",
+    "src/research/governance/forwardV02AuthorityMetadata.test.ts",
+    "src/research/governance/forwardV02UntrustedSnapshot.ts",
+    "commit/f40b325c57a45a8b63f31a474be5b38b09773475",
+    "research/registries/learnings/LEARN-forward-v02-standalone-candidate-preflight-late-descriptor-repair-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-reference-reconciliation-late-descriptor-repair-20261025.json"
+  ],
+  "lesson": "A standalone metadata validator is an independent untrusted-input boundary even when higher-level batch and proof-request callers already snapshot inputs. A successful own-data shape check does not pin values that later Proxy reads may change.",
+  "guardrail": "Reuse the bounded descriptor-only snapshot as a separate acyclic research module; snapshot the complete caller graph before semantic checks, reject malformed graphs, and test late repairs with explicit trigger assertions. Preserve all unverified and unscorable outcomes; never infer an independent witness, settlement finality or protocol approval.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T03:04:10.000Z",
+  "productionConnection": false,
+  "_digest": "c7f08f860cc376f8fd528ef79221eaccc88a25579aea9fb340385c5eaad9509c",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T03:04:10.000Z"
+}

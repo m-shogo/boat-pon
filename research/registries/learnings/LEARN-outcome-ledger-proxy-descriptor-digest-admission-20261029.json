@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-outcome-ledger-proxy-descriptor-digest-admission-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.proxy-get-descriptor-validation-digest-drift",
+  "subsystem": "research-governance-outcome-learning-ledger",
+  "operation": "validate-append-and-hash-outcome-learning-ledger-record",
+  "symptom": "The research-only Outcome Learning Ledger accepted caller-owned objects after checking own data descriptors but later read scalar values through ordinary property gets. A synthetic Proxy can return an admissible payoutYen through get while its own descriptor contains a negative payout; canonical hashing uses the descriptor and therefore can digest a different invalid record. Revoked Proxy records and nested Proxy evidence arrays also lack a fail-closed ingress denial. No production settlement or private evidence was used.",
+  "rootCauseClass": "PROXY_GET_DESCRIPTOR_DISAGREEMENT_IN_OUTCOME_VALIDATION_AND_HASHING",
+  "attemptSignature": "pr2286-v428-outcome-ledger-proxy-root-and-evidence-array-denial-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "outcomeLearningLedger.ts@ce2dbb57/Proxy-get-versus-descriptor-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedger.test.ts",
+    "commit/cd342ee66014449463eeddb2a1d7c8b67d4f94c7",
+    "commit/8a41ffda0852998f8ab43dbd82b3041a8fae2691",
+    "research/registries/learnings/LEARN-runtime-ledger-proxy-descriptor-digest-admission-20261029.json",
+    "research/registries/learnings/LEARN-forward-v02-node-proxy-rejecting-ingress-20261025.json"
+  ],
+  "lesson": "The same untrusted Proxy get-versus-descriptor inconsistency affects the Outcome Ledger independently of the Runtime Ledger. Validation, append classification and canonical hashing must agree on one admitted own-data graph; shape checks alone do not establish that authority.",
+  "guardrail": "Reuse the verified Node-only util.types.isProxy ingress denial before reading a caller-owned outcome record or its sourceEvidenceDigests array. Reject revoked root/nested Proxies, require normal records to retain canonical digests and append idempotency, and regress get/descriptor disagreement without invoking caller hooks. This is research-only integrity, not authenticated settlement or permission to change Current BUY.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T19:02:30.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T19:02:30.000Z",
+  "_digest": "9806116ded6c2575284aada3eb4b28d566895466cbd4482df2c79df32a8161f9"
+}

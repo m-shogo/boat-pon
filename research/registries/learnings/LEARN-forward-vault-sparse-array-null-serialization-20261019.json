@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-sparse-array-null-serialization-20261019",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.sparse-array-null-serialization-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-vault-record-and-append-classification",
+  "symptom": "Five Forward Evaluation Vault array fields admit a sparse array with one missing element: Array.every skips holes while Set counts the hole as undefined; JSON.stringify persists the hole as null.",
+  "rootCauseClass": "SPARSE_ARRAY_VALIDATION_JSON_SERIALIZATION_DIVERGENCE",
+  "attemptSignature": "negative-test-array-every-set-hole-and-mixed-hole-boundary",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/research-governance/pr2286",
+    "materialStateKey": "forwardEvaluationVault.ts@37a8d912708e7caa4174d64f9fcfcd3896bc3338/array-every-set-map"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.persistence.test.ts"
+  ],
+  "lesson": "Sparse JavaScript arrays are not equivalent to dense JSON arrays. Array.every skips absent indices, and JSON.stringify converts those holes to null. Hashing and validation must inspect the same serializable indexed values.",
+  "guardrail": "For Forward Vault arrays, require a dense sequence of own enumerable data descriptors with no accessors or extra keys, and apply the same boundary before canonical hashing and persistence. Regression-test holes, mixed holes, accessors, extra keys, and ordinary arrays.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-19T07:21:32.000Z",
+  "productionConnection": false,
+  "_digest": "6f7d705c1dfaa3cd56e95e48234b15e7ffcd4b53923f2594f85a22d597afb28c",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T07:21:32.000Z"
+}

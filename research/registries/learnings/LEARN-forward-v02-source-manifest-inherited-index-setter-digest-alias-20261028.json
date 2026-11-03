@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-source-manifest-inherited-index-setter-digest-alias-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-source-manifest-append-index-setter-digest-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "forward-v02-source-manifest-reference-digest",
+  "symptom": "The exported untrusted source-manifest reference digest appended decision and outcome digest fields using fields[fields.length] assignment. A synthetic inherited Array.prototype numeric setter at index 7 could discard every appended field and make distinct manifests with equal decision counts hash identically. A separate index-10 setter could drop the first outcome digest. Node 22.16.0 synthetic probes reproduced the alias; no independent evidence or production data was used.",
+  "rootCauseClass": "INHERITED_NUMERIC_SETTER_DROPS_SOURCE_MANIFEST_DIGEST_FIELDS",
+  "attemptSignature": "pr2286-v414-synthetic-source-manifest-index7-index10-identity-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02ReferenceReconciliation.ts@8456583c/fields-length-index-assignment"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02ReferenceReconciliation.ts",
+    "src/research/governance/forwardV02ReferenceReconciliation.test.ts",
+    "commit/f3116eebce52f4b19c2860e1d89ef3f2d0aa2cb2",
+    "commit/96d8f9f9ce30c0974c26eabd1b096ca2ac93431f",
+    "research/registries/learnings/LEARN-forward-v02-array-prototype-index-setter-snapshot-20261025.json",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-inherited-index-setter-20261026.json"
+  ],
+  "lesson": "Length-prefixing and SHA-256 do not preserve source-manifest identity if ambient prototype setters can intercept construction of the fields array before hashing. Validated detached inputs still require own-index output writes when assembling the digest transcript.",
+  "guardrail": "Append each validated decision digest, outcome count and outcome digest using Object.defineProperty on a fresh fields array, not fields[fields.length] or mutable push. Regression-test distinct synthetic decision and outcome manifests under reversible inherited setters at first-decision index 7 and first-outcome index 10; assert unchanged baseline digests, no setter invocation and no scoring/production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T12:08:57.000Z",
+  "productionConnection": false,
+  "_digest": "cab3952b160eadf75d490a8e3c449a25c58fe1ce3a6f7b5ca514f073021a0082",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T12:08:57.000Z"
+}

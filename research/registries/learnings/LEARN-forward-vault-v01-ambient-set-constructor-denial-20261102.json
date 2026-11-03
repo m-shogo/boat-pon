@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-set-constructor-denial-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-set-constructor-unique-array-denial",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-native-Set-constructor-for-v01-unique-array-admission",
+  "symptom": "Node 22.16.0 synthetic reproduction and source review showed that denseUniqueArray captured Set.prototype.has/add but still constructed its seen set through mutable global Set. A caller replacement with a pre-seeded or throwing Set constructor could reject valid EvaluationProtocol arrays and make digest/idempotency unavailable. This is bounded research evidence availability drift, not a demonstrated data leak, collision, K source issue or production impact.",
+  "rootCauseClass": "V01_AMBIENT_SET_CONSTRUCTOR_VALID_UNIQUE_ARRAY_DENIAL",
+  "attemptSignature": "pr2286-v540-pin-native-set-constructor-and-regress-throwing-seeded-replacements",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@b5524556/v01-live-global-Set-constructor-denseUniqueArray"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientSetConstructor.test.ts",
+    "commit/eb4c2b5a2e423cc2c30d577a012875c4f05900de",
+    "commit/74e0fad3b47ecd53825015a0e875ef3014ee0298",
+    "research/registries/learnings/LEARN-forward-vault-v01-ambient-set-stage-uniqueness-20261102.json"
+  ],
+  "lesson": "Pinning Set.prototype.has/add does not isolate unique-array validation if the Set constructor remains a live global dependency. A replacement constructor can seed state or throw, denying otherwise valid research records.",
+  "guardrail": "Capture the native Set constructor at module initialization and use it for private seen sets, alongside the captured native has/add methods. Regress throwing and pre-seeded ambient constructor replacements while preserving valid digest, idempotent append, conflict, duplicate rejection and stage separation. Do not infer K evidence, readiness, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T06:06:42.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T06:06:42.000Z",
+  "_digest": "ce89da40b6e6dd18a979f9d8e2a2e2d10e0c667695d56fca9763646f3f5bf770"
+}

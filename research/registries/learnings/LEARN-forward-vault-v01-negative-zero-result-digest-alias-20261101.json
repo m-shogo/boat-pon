@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-negative-zero-result-digest-alias-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.negative-zero-result-json-digest-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-v01-result-count-and-metric-canonical-sha256-admission",
+  "symptom": "A synthetic Node probe showed that Number.isSafeInteger(-0) and Number.isFinite(-0) both pass, while JSON.stringify maps -0 to 0. The v0.1 RESULT validator admitted negative-zero includedCount, excludedCount and metric values, allowing distinct in-memory research records to share canonical digest bytes and be classified as an idempotent append. No private evidence, actual settlement, exploit or production impact was observed.",
+  "rootCauseClass": "V01_RESULT_NEGATIVE_ZERO_JSON_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v525-deny-negative-zero-result-counts-and-metrics-before-canonical-hash",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@9405d527/v01-result-count-and-metric-admission-allows-negative-zero"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.negativeZeroDigest.test.ts",
+    "commit/875a6836c2ef006cbcd4da152891ec43ea4698be",
+    "commit/49a9aa2716f371e9dcc313abcd91ee6f8cee4a1d",
+    "research/registries/learnings/LEARN-shadow-evidence-negative-zero-json-digest-alias-20261030.json"
+  ],
+  "lesson": "A finite JSON number can still serialize lossily: -0 and 0 are distinct under Object.is but identical under JSON.stringify. Reuse the existing shadow-evidence negative-zero guardrail for the materially distinct Forward Vault v0.1 RESULT counter and metric admission boundary. JSON Schema cannot distinguish -0 from 0 after parsing; enforce the runtime invariant before digesting.",
+  "guardrail": "Reject Object.is(value,-0) for non-negative result counts and finite metric-map values before canonical JSON hashing. Verify malformed aliases fail validation, append classification and direct digest, while ordinary zero and legitimate finite negative metrics remain stable. Preserve research-only isolation; do not infer authenticated K rights, correction/finality, readiness, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T16:03:35.000Z",
+  "productionConnection": false,
+  "_digest": "9f277677535b55ed7633798ba2c3f879108a3278e7fc565702b099cecbe8b3d7",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T16:03:35.000Z"
+}

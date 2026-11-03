@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-node-child-ambient-options-preload-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.node-child-ambient-node-options-preload-fixture-integrity",
+  "subsystem": "research-governance-forward-vault-node-process-fixtures",
+  "operation": "synthetic-node-subprocess-handshake-and-publication-boundary",
+  "symptom": "Three research-only Forward Vault Node child-process fixtures inherited ambient NODE_OPTIONS. A local Linux Node 22.16.0 negative control showed that NODE_OPTIONS=--require=<synthetic preload> runs the preload before a child -e script, adding PRELOAD to its stdout before CHILD and changing the test process execution environment. This is a fixture-integrity exposure; no official CI false success, production compromise or external attack is claimed.",
+  "rootCauseClass": "AMBIENT_NODE_OPTIONS_PRELOAD_CONTAMINATES_SYNTHETIC_CHILD_FIXTURES",
+  "attemptSignature": "pr2286-v402-three-node-child-fixtures-preload-negative-control-and-sanitized-child-env",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-node22.16+github-actions-linux-node24-pending",
+    "materialStateKey": "pr2286-v401-three-node-spawn-fixtures-inherited-node-options-before-v402"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.nodeChildEnv.test.ts",
+    "src/research/governance/forwardEvaluationVault.nodeChildEnv.ts",
+    "reports/research/forward-vault-node-child-node-options-isolation-20261028.md"
+  ],
+  "lesson": "Node child_process.spawn inherits NODE_OPTIONS by default. An ambient --require preload can execute before a synthetic -e fixture, contaminate its handshake or mutate filesystem behavior. This is a bounded research-test harness risk, not proof of a compromised runner or production behavior.",
+  "guardrail": "For disposable Forward Vault Node child-process fixtures, copy the process environment and remove NODE_OPTIONS before spawn. Include a negative control with a harmless synthetic --require preload that proves inherited execution, then verify isolated child output and unchanged caller environment. This does not isolate the parent test runner, cleanse all environment variables, authenticate external evidence or permit scoring/production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T02:04:57.000Z",
+  "productionConnection": false,
+  "_digest": "f0286453dad52eaed7af86cadcf4a879abeb5882c5a5366db638285abd1ba411",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T02:04:57.000Z"
+}

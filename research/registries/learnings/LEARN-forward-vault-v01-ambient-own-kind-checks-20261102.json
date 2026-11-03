@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-own-kind-checks-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-own-kind-and-unknown-field-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-hasownproperty-and-fixed-kind-field-membership",
+  "symptom": "Static audit and Node 22.16.0 synthetic override show caller-replaced Object.prototype.hasOwnProperty can reject valid fixed-schema records or route an inherited kind name into a TypeError instead of REJECTED_INVALID. Replacing Array.prototype.includes can suppress the unknown-field diagnostic. No private K evidence, protected N2, production data or observed attack was involved.",
+  "rootCauseClass": "V01_AMBIENT_OWN_PROPERTY_AND_KIND_FIELD_MEMBERSHIP_DISPATCH",
+  "attemptSignature": "pr2286-v534-pin-v01-own-property-and-fixed-kind-membership-with-reversible-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@2ce23b67/v01-live-hasOwnProperty-call-and-FIELDS-includes"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientOwnKindAdmission.test.ts",
+    "commit/dd034fc8cd8ed797197b664be9f9fb8181904672",
+    "commit/75cbd27f602ed7067052552a902f3ecc3a664172",
+    "research/registries/learnings/LEARN-forward-vault-kind-prototype-dispatch-20261008.json",
+    "research/registries/learnings/LEARN-forward-vault-prototype-includes-admission-20261023.json"
+  ],
+  "lesson": "An own-property guard and a fixed-schema field allowlist are not stable when they dispatch through mutable caller-realm Object.prototype.hasOwnProperty or Array.prototype.includes. A known inherited-kind rejection can regress into an exception, and valid metadata or unknown-field diagnostics can change under ambient overrides.",
+  "guardrail": "Capture the native hasOwnProperty function at module initialization and invoke it through pinned Reflect.apply for required own fields and kind dispatch. Match fixed-kind field names using own indexed descriptors rather than ambient Array.prototype.includes. Verify valid digest stability, inherited-kind REJECTED_INVALID and unknown-field diagnostics with reversible synthetic overrides. No issuer, readiness, scoring, merge or production authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T00:09:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T00:09:00.000Z",
+  "_digest": "1a2217850e7b650ae8a8671c91d32acf1c4e3e5a7fcfe7b9075ff894686d492b"
+}

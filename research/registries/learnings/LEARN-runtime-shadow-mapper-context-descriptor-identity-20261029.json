@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-context-descriptor-identity-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.shadow-mapper-context-accessor-identity-drift",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "bind-shadow-mapping-context-across-record-and-reconciliation",
+  "symptom": "The research-only mapper used caller-owned context.decisionSystem separately in recordId and decisionSystem, so a synthetic accessor can return shadow-A and shadow-B for the same mapped record. A Node 22.16.0 two-read reproduction confirmed this identity mismatch. The same context could drift across rows in reconciliation or hide notification eligibility through an accessor. No private evidence or production behavior was involved.",
+  "rootCauseClass": "UNTRUSTED_MAPPING_CONTEXT_REREAD_SPLITS_LEDGER_IDENTITY",
+  "attemptSignature": "pr2286-v424-context-descriptor-snapshot-record-id-and-reconciliation-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@6b38fb0e/direct-context-rereads-record-id-and-reconciliation"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/dbd84d9d57e605103f804a16f1eabbd40b27c1eb",
+    "commit/0b9b32b795b4f1dd462cae2db8a9c3592909c35d",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-source-row-descriptor-snapshot-20261029.json",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-preflight-copy-toctou-20261025.json"
+  ],
+  "lesson": "Even after source rows are pinned, mutable mapping context can split recordId from decisionSystem and make reconciliation compare records under inconsistent identities. Context metadata must be pinned once for the entire reconciliation, not reread per field or per row.",
+  "guardrail": "Use a bounded own-data descriptor snapshot for all required mapping context fields and the optional notification flag. Reject accessors and missing fields without invoking getters. Bind one detached context across all rows in reconciliation; if the global context is invalid, return a conditional denial rather than mapping rows. Regress accessor and Proxy get disagreement, preserve normal record digests, and do not infer production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T17:07:11.963Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T17:07:11.963Z",
+  "_digest": "f195c1e5ccd3da8eab0bd2ea893bb6aabf65564c9d772ea35b26aa129b69c1ca"
+}

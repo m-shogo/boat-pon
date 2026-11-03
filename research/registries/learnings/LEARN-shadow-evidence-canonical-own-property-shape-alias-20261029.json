@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-canonical-own-property-shape-alias-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.canonical-own-property-shape-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "build-source-and-context-canonical-digests-from-own-data-shape",
+  "symptom": "Node 22.16.0 synthetic JSON projection showed that symbol-keyed and non-enumerable own context properties, as well as inherited metadata, serialize identically to a context lacking those properties. The shadow builder canonicalizer previously skipped symbol and hidden own keys and accepted non-plain object prototypes, allowing distinct malformed source/context objects to share a digest. No external K evidence, real private paths, raw odds, secrets or production records were used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_CANONICAL_DIGEST_OMITS_OWN_PROPERTY_SHAPE_AND_NONPLAIN_PROTOTYPE",
+  "attemptSignature": "pr2286-v450-reject-nonplain-symbol-key-and-hidden-own-data-during-shadow-canonicalization",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@774340d4/canonical-object-skips-symbol-and-nonenumerable-keys-and-nonplain-prototypes"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/854f73fcee2f9445417edfa77c29a50f15420790",
+    "commit/3caf7c4405c9e1b822355773c5f80408bf54fee0",
+    "research/registries/learnings/LEARN-forward-vault-nonjson-data-properties-20261008.json",
+    "research/registries/learnings/LEARN-shadow-evidence-nonjson-primitive-digest-alias-20261029.json"
+  ],
+  "lesson": "Canonical JSON digests must bind the admitted own-property shape, not only enumerable string-keyed values. Symbol keys and hidden own data can disappear from JSON; inherited metadata and exotic objects can be projected as a different shape. This property-key/prototype alias is distinct from non-JSON scalar value omission.",
+  "guardrail": "For research-only shadow source/context canonicalization, require plain/null object prototypes and own enumerable string-keyed data fields. Reject symbol keys and non-enumerable/accessor properties before hashing. Regression-test synthetic aliases and ordinary digest compatibility. Reuse the Forward Vault own-data property-shape guardrail. No K-source authenticity, scoring, merge or production authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T14:03:32.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T14:03:32.000Z",
+  "_digest": "e511c03506e0c61a3b5d185b4b4c9b718ac7ade68ad4af05f01d70aa9378d477"
+}

@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-nonfinite-mtime-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-nonfinite-mtime-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-draft202012-shadow-modifiedtimems-finite-parity",
+  "symptom": "Shadow Evidence source.modifiedTimeMs was constrained only by type:number and minimum:0. Python jsonschema Draft 2020-12 accepts a synthetic JSON exponent overflow parsed as positive Infinity, while the research runtime rejects nonfinite modifiedTimeMs. No private timestamp, source data or production behavior was accessed.",
+  "rootCauseClass": "SCHEMA_UNBOUNDED_NUMBER_ADMITS_POSITIVE_INFINITY_FROM_JSON_EXPONENT_OVERFLOW",
+  "attemptSignature": "pr2286-shadow-schema-modifiedtime-finite-maximum-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-4.26-draft202012/node-jsonparse/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@84c27c47/modifiedTimeMs-unbounded-number"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaFiniteMtimeParity.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-safe-integer-parity-20261102.json",
+    "commit/23301332004fa7e3ec52daf1ce059ba104584091",
+    "commit/3c0155df4b6fd27ba74ba810fcc4790c7094745e"
+  ],
+  "lesson": "JSON numeric exponent overflow can produce Infinity in JavaScript JSON.parse and Python JSON decoding. A schema number minimum alone does not guarantee a finite number for schema-only consumers; the runtime's Number.isFinite check must remain authoritative.",
+  "guardrail": "For Shadow Evidence source.modifiedTimeMs, add a JSON Schema maximum equal to Number.MAX_VALUE and retain minimum zero. Test overflowed exponent and finite boundary controls, and require runtime Number.isFinite; never interpret a caller-supplied file timestamp as authenticated source time or scoring authority. Nonstandard NaN tokens remain outside valid JSON and must be rejected by strict JSON parsers.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T21:02:21.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T21:02:21.000Z",
+  "_digest": "291ea017a89da5c40bad9796c5306a542c02c1f1bce858c9f422a89c45e78a65"
+}

@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-structural-reflection-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-structural-reflection-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-reflect-ownkeys-object-getprototypeof-getownpropertydescriptor-for-structural-admission",
+  "symptom": "Static review of v0.1 Forward Vault found live Reflect.ownKeys, Object.getPrototypeOf and Object.getOwnPropertyDescriptor calls in fixed-schema admission and canonicalization. Reversible synthetic overrides can hide an extra own field, mislabel an inherited prototype as plain or disguise an accessor descriptor. Those calls can make validation disagree with actual persisted object shape and potentially alias research record digests. No private K evidence, protected N2, production data or observed attack was involved.",
+  "rootCauseClass": "V01_AMBIENT_STRUCTURAL_REFLECTION_ADMISSION_AND_DIGEST_MISMATCH",
+  "attemptSignature": "pr2286-v532-pin-v01-ownkeys-prototype-descriptor-and-regress",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@c528ba1e/v01-live-reflection-primitives"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientStructuralReflection.test.ts",
+    "commit/be75bcff60062a64a4391ea5811d001279bd573b",
+    "commit/ebb9bfee15ca80ccfa4124290436a044c712f239",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-structural-inspection-20261030.json"
+  ],
+  "lesson": "A fixed-schema own-data validator is not fail-closed if it trusts mutable caller-realm reflection helpers to enumerate own keys, identify prototypes or inspect descriptors. Structural admission and digest canonicalization must use the same pinned native inspection methods.",
+  "guardrail": "Capture Reflect.ownKeys, Object.getPrototypeOf and Object.getOwnPropertyDescriptor at module initialization and use the captured methods throughout v0.1 validation, canonicalization and stage checks. Test hidden own keys, exotic inherited prototypes and forged accessor descriptors under reversible synthetic hooks, including rejection, no getter execution and stable valid digests. This is research-only and grants no issuer, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T22:07:08.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T22:07:08.000Z",
+  "_digest": "18ef2e7fccd982474fd549b47f6dcec972467139f71227e54a1edc9f506556ee"
+}

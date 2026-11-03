@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-dirfd-ancestor-symlink-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.dirfd-ancestor-symlink-final-component-nofollow",
+  "subsystem": "research-governance-forward-vault-persistence",
+  "operation": "linux-nested-O_NOFOLLOW-vs-component-wise-dirfd-admission-probe",
+  "symptom": "A synthetic Linux nested directory open with O_DIRECTORY|O_NOFOLLOW followed an intermediate symlink and returned an FD for a decoy vault. Walking the same alias as a separate dirfd-relative no-follow component rejected it; walking ordinary real components succeeded. No publication or production failure was observed.",
+  "rootCauseClass": "FINAL_COMPONENT_NOFOLLOW_DOES_NOT_REJECT_SYMLINK_ANCESTOR",
+  "attemptSignature": "pr2286-v381-nested-ancestor-symlink-unsafe-open-vs-component-dirfd-walk",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-python3+github-actions-linux-node24-python3",
+    "materialStateKey": "executor-sdk-v3/pr2286-v380-dirfd-reachability-fixture-v381-ancestor-component-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.dirfdAncestorSymlinkLinux.test.ts",
+    "reports/research/forward-vault-dirfd-ancestor-symlink-admission-20261027.md",
+    "commit/3dc0ea7427076c9b6fe8587b4983af34cb8163d3",
+    "commit/f97fd02e755bd009c9ccced8f0290af5c8c08ddb",
+    "actions/runs/40478161256"
+  ],
+  "lesson": "O_NOFOLLOW applies to the final component of each open call, not to all intermediate path components. An attacker-controlled ancestor symlink can redirect a nested directory FD despite O_DIRECTORY|O_NOFOLLOW. An explicitly trusted root FD and per-component no-follow walk reject this specific alias while admitting normal directories.",
+  "guardrail": "Do not treat O_NOFOLLOW on a nested absolute path as full-path directory authentication. For a future Linux research candidate, start from an explicitly trusted root and review per-component openat or openat2 resolution constraints, then separately test concurrent ancestor renames, mounts, canonical-path reachability, same-FD read/write namespace, collision handling and crash durability. Never infer production authority, weaken strict readback, or delete files by stale pathname.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T09:09:21.462Z",
+  "productionConnection": false,
+  "_digest": "d88ac3d55e3d894ed13cb84b79b40b9f6f7d2cf896a77b4399b7a5558eee8762",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T09:09:21.462Z"
+}

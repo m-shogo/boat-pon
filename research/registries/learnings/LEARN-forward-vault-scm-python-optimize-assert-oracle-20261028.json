@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-scm-python-optimize-assert-oracle-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.scm-rights-ambient-python-optimize-assert-oracle",
+  "subsystem": "research-governance-forward-vault-linux-scm-rights-fixtures",
+  "operation": "python-assert-based-disposable-admission-under-ambient-pythonoptimize",
+  "symptom": "The five research-only Linux SCM_RIGHTS/dirfd-transfer probes invoke Python without isolated mode and use assert for their synthetic admission and denial oracles. Python honors ambient PYTHONOPTIMIZE for -c and removes assert statements, allowing a synthetic negative-control branch to print its success marker without executing its assert checks. An isolated local Python 3.13 probe confirmed optimization level 2 under PYTHONOPTIMIZE=2 and level 0 with -I. No official CI false green, production issue, or external attack is claimed.",
+  "rootCauseClass": "PYTHON_OPTIMIZE_REMOVES_ASSERT_BASED_SYNTHETIC_SAFETY_ORACLES",
+  "attemptSignature": "pr2286-v399-scm-five-fixtures-python-isolated-mode-nested-child-and-ambient-optimize-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-python3.13-node22+github-actions-linux-node24-python3",
+    "materialStateKey": "pr2286-v398-five-scm-dirfd-fixtures-python-c-with-inherited-environment-assert-oracles"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.scmRightsAdmissionLinux.test.ts",
+    "src/research/governance/forwardEvaluationVault.dirfdTransferLinux.test.ts",
+    "reports/research/forward-vault-scm-python-optimize-assert-oracle-20261028.md"
+  ],
+  "lesson": "Python assert is an optimization-sensitive test oracle. Ambient PYTHONOPTIMIZE can silently remove synthetic admission checks and invalidate a green fixture result; nested Python children must be isolated independently. This is test harness integrity, not a production authentication implementation.",
+  "guardrail": "Run all research-only SCM_RIGHTS/dirfd synthetic Python probes and nested children with -I so ambient PYTHONOPTIMIZE and PYTHONPATH are ignored; fail explicitly if sys.flags.optimize is nonzero. Exercise at least one parent and nested-child path with injected PYTHONOPTIMIZE=2. Preserve received-FD close-on-reject and String.raw/errno/output-flag guardrails; do not infer independent trust, scoring or production readiness.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T00:06:00.000Z",
+  "productionConnection": false,
+  "_digest": "2622b3f552777263f38af96c66c2634762ffd80a8fe7563a365e363399f54da0",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T00:06:00.000Z"
+}

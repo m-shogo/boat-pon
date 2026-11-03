@@ -1,0 +1,29 @@
+{
+  "learningId": "LEARN-forward-vault-year-zero-formatchecker-parity-20261015",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.year-zero-schema-runtime-admission-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "compare-forward-vault-rfc3339-runtime-with-canonical-jsonschema-formatchecker",
+  "symptom": "A year-0000 timestamp is admitted by the v71 offline TypeScript candidate but rejected by the canonical JSON Schema 2020-12 date-time FormatChecker. The validators disagree on prospective record admission; this is a validator-compatibility issue, not a universal RFC3339 claim.",
+  "rootCauseClass": "DATE_TIME_VALIDATOR_YEAR_ZERO_COMPATIBILITY_DRIFT",
+  "attemptSignature": "v71-rfc3339-runtime-versus-canonical-jsonschema-formatchecker-differential-908-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/typescript5.8.3/python-jsonschema4-formatchecker",
+    "materialStateKey": "v71-integrated-offline-candidate-rfc3339-date-guard-accepts-year-0000"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/forward-evaluation-vault.schema.json",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "artifact/boatpon-v72-year-zero-parity-handoff-20261015.zip"
+  ],
+  "lesson": "Validator agreement is an explicit acceptance criterion. A runtime-only valid timestamp can be rejected by the canonical JSON Schema validator, so date-time admission must be tested against both with fixed fixtures.",
+  "guardrail": "Before promoting a Forward Vault validator patch, run deterministic date-time differential fixtures against canonical JSON Schema 2020-12 FormatChecker. For year 0000 fail closed to the chosen current validator compatibility contract; preserve the lower-case t/z conservative rejection as documented residual mismatch. Re-run repository CI on committed code; offline tests are not CI.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-14T18:02:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-14T18:02:00.000Z",
+  "_digest": "ed1d1e4d5486cbd9c9cb7da38f6a4a525be318c37ee6f7a75b8a685d016b4306"
+}

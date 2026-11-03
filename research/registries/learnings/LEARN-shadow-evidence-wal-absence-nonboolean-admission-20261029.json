@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-wal-absence-nonboolean-admission-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.wal-absence-nonboolean-claim-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-source-wal-absence",
+  "symptom": "The research-only sanitized shadow-evidence validator checked source.walPresent by truthiness, so re-digested synthetic evidence with walPresent=0, empty string, null or undefined could be admitted even though the declared source descriptor requires a boolean false to attest WAL absence. Node 22.16.0 reproduced the falsy-versus-exact-false mechanism; no operational SQLite state, K archive or production evidence was accessed.",
+  "rootCauseClass": "TRUTHY_WAL_ABSENCE_ADMISSION_ACCEPTS_NONBOOLEAN_SOURCE_CLAIMS",
+  "attemptSignature": "pr2286-v437-exact-false-wal-absence-rehashed-falsy-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@2fee939d/walPresent-truthiness-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/0f302839d52766f5be8c42c5266cc7abf302c187",
+    "commit/bdd2b58a15e2e3366083148385c554a8a126cad6",
+    "actions/runs/40800929815",
+    "research/registries/learnings/LEARN-outcome-ledger-reconciliation-nonboolean-exact-20261020.json"
+  ],
+  "lesson": "An integrity-sensitive boolean claim must be admitted by exact type and value, not by truthiness. Canonical content/source digests do not establish the type of the WAL-absence assertion.",
+  "guardrail": "Require source.walPresent === false after own-enumerable-data shape checks. Regress rehashed synthetic values 0, empty string, null, undefined and true, while preserving valid false evidence and ordinary digests. Do not infer an authenticated source, settlement finality or production authorization.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T01:33:15.385Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T01:33:15.385Z",
+  "_digest": "b2226f07c21b73dc8500e4d1d1776027cc0d0a30274ba5b6238d9ed3e9e21d0c"
+}

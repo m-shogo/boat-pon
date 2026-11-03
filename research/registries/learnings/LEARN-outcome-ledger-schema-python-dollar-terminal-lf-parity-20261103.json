@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-outcome-ledger-schema-python-dollar-terminal-lf-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.schema-python-dollar-terminal-lf-admission",
+  "subsystem": "research-governance-outcome-learning-ledger",
+  "operation": "schema-only-draft202012-outcome-settledat-evidence-digest-terminal-parity",
+  "symptom": "Synthetic Python jsonschema Draft 2020-12 accepts a trailing LF after Outcome Ledger settledAt and sourceEvidenceDigests values because regex dollar can match before a final newline; the Node runtime rejects both noncanonical values. This is a schema-only cross-engine lexical mismatch, not observed private data corruption or a production incident.",
+  "rootCauseClass": "SCHEMA_PYTHON_REGEX_DOLLAR_ANCHOR_FINAL_NEWLINE_ADMISSION",
+  "attemptSignature": "pr2286-outcome-ledger-strict-terminal-digest-instant-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-4.26-draft202012/node-ecmascript/github-actions-node24-research-only",
+    "materialStateKey": "outcome-learning-ledger.schema.json@2232959c/settledAt-sourceEvidenceDigests-dollar-anchors"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/outcome-learning-ledger.schema.json",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedgerSchemaTerminalParity.test.ts",
+    "research/registries/learnings/LEARN-runtime-ledger-schema-python-dollar-terminal-lf-parity-20261103.json",
+    "commit/78ac5ca152ba053946798eedc2306f5c95a1c59d",
+    "commit/30c68435e7cd6895c2ad7fa5cfb1f4c3e082daa2"
+  ],
+  "lesson": "A JSON Schema regex dollar anchor does not guarantee exact terminal matching in Python: a final LF can be admitted despite runtime rejection. Schema-only evidence consumers must not treat lexical acceptance as authenticated settlement or provenance.",
+  "guardrail": "Reuse the K1 and Shadow Evidence portable exact-end assertion (?![\\s\\S]) for Outcome Ledger settledAt and sourceEvidenceDigests; retain positive canonical controls plus LF, CRLF and Unicode terminator negative regressions. Keep runtime date and digest validation authoritative, with productionConnection=false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-03T00:03:06.936Z",
+  "productionConnection": false,
+  "_digest": "457a35ba790f07db423212174ed1f04678dd24a575511c1db468ff6485171598",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-03T00:03:06.936Z"
+}

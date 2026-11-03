@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-offline-replay-handoff-missing-sdk-fixture-20261013",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.offline-handoff.missing-required-replay-dependency",
+  "subsystem": "research-evaluation-handoff-reproducibility",
+  "operation": "fresh-extraction-v43-provenance-replay",
+  "symptom": "The v43 handoff archive replay fails with FileNotFoundError for boatpon-v40-sdk-atomic-write-test-double.ts after patch provenance and source reconstruction; the replay script refers to a file omitted from the ZIP.",
+  "rootCauseClass": "INCOMPLETE_SELF_CONTAINED_REPLAY_PACKAGE",
+  "attemptSignature": "fresh-unzip-and-run-v43-reproduce-provenance-guarded",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22/python3.13/research-only-replay",
+    "materialStateKey": "v43-handoff-zip-sha256:1884ec5ac3609eaaba3607b8f12592dda35f7a2042c7054b287cab518e600e8a"
+  },
+  "evidenceRefs": [
+    "artifact/boatpon-v43-chronology-authority-handoff-20261013.zip",
+    "artifact/boatpon-v44-standalone-replay-20261013.zip",
+    "pull/2286"
+  ],
+  "lesson": "A green replay in a populated working directory does not prove that a distributed archive is independently reproducible. Required local test-double dependencies must be packaged and validated before reconstruction or TypeScript checks.",
+  "guardrail": "Every offline handoff must be tested from a freshly extracted archive with a manifest of required files and SHA-256 digests. Fail before worktree creation on missing or modified dependencies; include negative missing-file and tamper controls. Local SDK test doubles never establish canonical SDK integration.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-13T13:01:13.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-13T13:01:13.000Z",
+  "_digest": "b23d8fbee9c2b62f2b5efdeb0126735aa12048afcd318f3f2645ecd18d11009f"
+}

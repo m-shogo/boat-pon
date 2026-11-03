@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-string-trim-nonblank-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-string-trim-nonblank-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-v01-nonblank-record-and-protocol-fields-under-ambient-trim-replacement",
+  "symptom": "Source inspection and synthetic Node 22.16.0 probe identify v0.1 Forward Vault nonblank admission via mutable String.prototype.trim. An identity override can admit whitespace-only record identifiers and protocol rule strings; an always-empty override can deny valid metadata. This is a research-only integrity gap, not an observed exploit, private-data incident or production impact.",
+  "rootCauseClass": "V01_AMBIENT_STRING_TRIM_NONBLANK_ADMISSION",
+  "attemptSignature": "pr2286-v523-pin-v01-trim-with-synthetic-ambient-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@02ee9a27/ambient-String.prototype.trim-before-v523"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientTrimAdmission.test.ts",
+    "commit/43201c6aa702889acfec1782f8099a7c94435806",
+    "commit/5dcd25c54b074133bb9dd2cb81db76e8fd3ff0f2",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-string-trim-nonblank-admission-20261030.json",
+    "research/registries/learnings/LEARN-forward-vault-schema-unicode-trim-parity-20261019.json"
+  ],
+  "lesson": "A reusable pinned-trim guardrail in shadow evidence does not automatically protect a distinct v0.1 Forward Vault admission path. Bind nonblank validation to module-initialization String.prototype.trim and captured Reflect.apply; preserve ECMAScript Unicode whitespace semantics across runtime and schema.",
+  "guardrail": "Pin String.prototype.trim and Reflect.apply at Forward Vault module initialization, use them for scalar and array nonblank checks, and regress both whitespace-only admission under an identity trim override and valid-record rejection under an always-empty override. Restore globals after synthetic probes. This never grants K issuer rights, finality, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T14:03:44.000Z",
+  "productionConnection": false,
+  "_digest": "a188fc96e5ddaee8e4396a5d25f778898e8ebbfd08005ea0d6b1f4f817fe35d7",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T14:03:44.000Z"
+}

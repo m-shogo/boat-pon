@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-unmatched-decision-coverage-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-manifest-decision-outcome-coverage-gap",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-outcome-link-preflight-decision-coverage",
+  "symptom": "A source manifest with two valid decision digests and only one linked outcome digest could pass the v0.2 cross-ledger preflight as outcomeReferencesLinked=true. Per-list digest/cardinality equality did not prove every manifest decision had a terminal outcome or explicit exclusion.",
+  "rootCauseClass": "SELF_CONSISTENT_MANIFEST_WITH_INCOMPLETE_DECISION_TO_OUTCOME_COVERAGE",
+  "attemptSignature": "pr2286-v283-two-decisions-one-outcome-self-consistent-manifest-negative",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-pr-node24-ci",
+    "materialStateKey": "forwardV02OutcomeLinkPreflight.ts@4719b788b9976495a06a2586641662c794bfe9e8/unchecked-unmatched-decision-set"
+  },
+  "evidenceRefs": [
+    "src/research/governance/forwardV02OutcomeLinkPreflight.ts",
+    "src/research/governance/forwardV02OutcomeLinkPreflight.test.ts",
+    "docs/architecture/forward-evaluation-vault.md",
+    "pull/2286",
+    "commit/bd7d30630b0fdc0e7c8a6e89a3f53c571f93c6ff",
+    "commit/534eda2fa2a4b1ca6a88ac6cd76b939b0ac6b0d9"
+  ],
+  "lesson": "Digest equality within a caller-assembled source manifest proves content consistency, not completeness of the decision population. Missing outcomes can silently shrink the apparent comparison denominator even when every supplied outcome is linked.",
+  "guardrail": "Require one explicit linked outcome per manifest decision before declaring complete cross-ledger linkage; deny unmatched decisions until a versioned frozen exclusion/missingness contract can account for them. Regression-test both a two-decision/one-outcome manifest and a complete two-decision/two-outcome manifest. Do not infer independent settlement finality or scoring authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-23T22:58:29.194Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-23T22:58:29.194Z",
+  "_digest": "3095e4efc3754d945ac63e16a14def8fe59948e480b449bac7976fcf01e3cd62"
+}

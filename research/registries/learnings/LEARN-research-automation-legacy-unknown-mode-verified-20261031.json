@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-research-automation-legacy-unknown-mode-verified-20261031",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-automation.legacy-task-mode.unknown-subcommand-fallthrough",
+  "subsystem": "research-automation-dispatch-governance",
+  "operation": "verify-unknown-mode-denial-before-request-parse",
+  "symptom": "The Draft PR's unknown-mode allowlist denies run-task, execute and TASK before legacy request parsing. Official Actions run 41103940614 completed SUCCESS; its verify log executed the named no-request regression, and both verify and research-governance jobs, including post-job steps, succeeded. This proves the bounded CLI regression on that PR HEAD, not live workflow disablement, valid-request behavior, N2 execution or canonical main protection.",
+  "rootCauseClass": "LEGACY_CLI_UNRECOGNIZED_MODE_EXECUTION_FALLTHROUGH",
+  "attemptSignature": "pr2286-v478-unknown-subcommand-allowlist-before-request-parse",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector-pinned-pr-source/github-actions-ubuntu-node24-no-request-cli",
+    "materialStateKey": "legacy-runner-b5274c57/unknown-mode-allowlist-before-request-parse"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/95310ffb2a8b67c1edb78df91a56cac57f7c742a",
+    "commit/ea92faaeca1ed23072980bed9f7c072dd32f9899",
+    "actions/runs/41103940614",
+    "scripts/run-research-task.ts",
+    "src/automation/legacyRunnerTaskDisabled.test.ts",
+    "research/registries/learnings/LEARN-research-automation-legacy-unknown-mode-fallthrough-20261031.json"
+  ],
+  "lesson": "A deprecated task command needs an explicit allowlist for every positional mode, not only a deny rule for the literal task string. Verify source-order and real CLI exit 3 for deliberately missing synthetic requests; confirm the named regression in completed official job logs before claiming success.",
+  "guardrail": "Preserve the unknown-mode exit 3 before request parsing and the earlier task-mode denial; keep source-order plus no-request CLI tests for run-task, execute and TASK. A green workflow verifies only this synthetic branch behavior. Do not dispatch a valid legacy request, activate protected N2, change production paths, or infer that the main workflow is disabled.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-30T18:57:15.000Z",
+  "productionConnection": false,
+  "_digest": "3e39265727fbf068e643d2ee3458db580ae4cc95aabf1397eb765d53588a4178",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T18:57:15.000Z"
+}

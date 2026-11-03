@@ -20,7 +20,7 @@
   ],
   "properties": {
     "schemaVersion": { "const": "runtime-decision-ledger-shadow-evidence.0.1" },
-    "generatedAt": { "type": "string", "format": "date-time" },
+    "generatedAt": { "type": "string", "format": "date-time", "pattern": "^(?!0000-)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\\.[0-9]{3}Z(?![\\s\\S])", "description": "Caller-supplied report generation time; canonical syntax only. Intentionally excluded from contentDigest and not a trusted clock, predecision witness, source timestamp, or independent finality proof." },
     "verdict": { "enum": ["PASS", "CONDITIONAL", "FAILED"] },
     "sourceDescriptorDigest": { "$ref": "#/$defs/sha256" },
     "contextDigest": { "$ref": "#/$defs/sha256" },
@@ -29,12 +29,12 @@
       "additionalProperties": false,
       "required": ["runKind", "modelVersion", "from", "to", "limit", "returnedRows", "limitReached", "bounded"],
       "properties": {
-        "runKind": { "type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$" },
-        "modelVersion": { "type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$" },
-        "from": { "type": "string", "format": "date" },
-        "to": { "type": "string", "format": "date" },
+        "runKind": { "type": "string", "minLength": 1, "pattern": "^[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF](?:[\\s\\S]*[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])?(?![\\s\\S])", "allOf": [{ "not": { "$ref": "#/$defs/pathToken" } }] },
+        "modelVersion": { "type": "string", "minLength": 1, "pattern": "^[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF](?:[\\s\\S]*[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])?(?![\\s\\S])", "allOf": [{ "not": { "$ref": "#/$defs/pathToken" } }] },
+        "from": { "type": "string", "format": "date", "pattern": "^(?!0000-)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])(?![\\s\\S])" },
+        "to": { "type": "string", "format": "date", "pattern": "^(?!0000-)[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])(?![\\s\\S])" },
         "limit": { "type": "integer", "minimum": 1, "maximum": 5000 },
-        "returnedRows": { "type": "integer", "minimum": 0 },
+        "returnedRows": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "limitReached": { "type": "boolean" },
         "bounded": { "const": true }
       }
@@ -56,14 +56,14 @@
         "queryOnly"
       ],
       "properties": {
-        "fileSizeBytes": { "type": "integer", "minimum": 0 },
-        "modifiedTimeMs": { "type": "number", "minimum": 0 },
-        "sqliteSchemaVersion": { "type": "integer", "minimum": 0 },
-        "sqliteUserVersion": { "type": "integer", "minimum": 0 },
-        "pageCount": { "type": "integer", "minimum": 0 },
-        "pageSizeBytes": { "type": "integer", "minimum": 1 },
-        "freelistCount": { "type": "integer", "minimum": 0 },
-        "journalMode": { "type": "string", "minLength": 1 },
+        "fileSizeBytes": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "modifiedTimeMs": { "type": "number", "minimum": 0, "maximum": 1.7976931348623157e308 },
+        "sqliteSchemaVersion": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "sqliteUserVersion": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "pageCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "pageSizeBytes": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "freelistCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "journalMode": { "type": "string", "minLength": 1, "pattern": "[^\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]", "allOf": [{ "not": { "$ref": "#/$defs/pathToken" } }] },
         "walPresent": { "const": false },
         "readOnly": { "const": true },
         "queryOnly": { "const": true }
@@ -84,12 +84,12 @@
       ],
       "properties": {
         "status": { "enum": ["PASS", "CONDITIONAL", "FAILED"] },
-        "sourceRows": { "type": "integer", "minimum": 0 },
-        "mappedUnique": { "type": "integer", "minimum": 0 },
-        "exactDuplicates": { "type": "integer", "minimum": 0 },
-        "unresolvedCount": { "type": "integer", "minimum": 0 },
-        "rejectedCount": { "type": "integer", "minimum": 0 },
-        "conflictCount": { "type": "integer", "minimum": 0 },
+        "sourceRows": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "mappedUnique": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "exactDuplicates": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "unresolvedCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "rejectedCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "conflictCount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "recordsDigest": { "$ref": "#/$defs/sha256" }
       }
     },
@@ -157,10 +157,11 @@
         "productionPromotion": { "const": false }
       }
     },
-    "contentDigest": { "$ref": "#/$defs/sha256" }
+    "contentDigest": { "$ref": "#/$defs/sha256", "description": "Canonical digest of sanitized evidence content excluding generatedAt and contentDigest itself; content identity only, not proof of capture time, issuer, rights, correction completeness, or scoring authorization." }
   },
   "$defs": {
-    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "pathToken": { "type": "string", "pattern": "(?:^|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF\"'(=:])(?:file:\\/\\/|\\/(?!\\/|[\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|[A-Za-z]:[\\\\\\/]|\\\\\\\\[^\\\\\\u0009-\\u000D\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF])|\\/Users\\/|\\\\Users\\\\" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])" },
     "rateOrNull": {
       "oneOf": [
         { "type": "number", "minimum": 0, "maximum": 1 },
@@ -169,7 +170,25 @@
     },
     "countMap": {
       "type": "object",
-      "additionalProperties": { "type": "integer", "minimum": 0 }
+      "propertyNames": {
+        "allOf": [
+          {
+            "not": {
+              "enum": [
+              "records", "record", "sourceDecisionHistoryId", "decisionId",
+              "canonicalRaceId", "raceId", "selection", "dbPath",
+              "localPath", "result", "payoutYen", "stakeYen"
+              ]
+            }
+          },
+          {
+            "not": {
+              "$ref": "#/$defs/pathToken"
+            }
+          }
+        ]
+      },
+      "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
     }
   }
 }

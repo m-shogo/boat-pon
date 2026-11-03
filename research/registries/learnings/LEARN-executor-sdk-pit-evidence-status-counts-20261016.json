@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-executor-sdk-pit-evidence-status-counts-20261016",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-executor-sdk.pit-evidence.invalid-status-or-count-admission",
+  "subsystem": "research-executor-sdk",
+  "operation": "runExecutorLifecycle-validatePitEvidence",
+  "symptom": "A PIT evidence callback may return an invalid status, negative count or non-finite count while the lifecycle still proceeds to DRY_RUN_OK or PASS if the three violation counts do not compare greater than zero.",
+  "rootCauseClass": "PIT_EVIDENCE_RUNTIME_SHAPE_NOT_VALIDATED_BEFORE_PASS",
+  "attemptSignature": "adversarial-pit-status-negative-nan-infinity-and-na-reason-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22/research-executor-sdk-isolated-pr2286",
+    "materialStateKey": "executorSdk.ts@ad8de47bb4590ae7a640359d9c34874781dcb7f5-unchecked-pit-evidence"
+  },
+  "evidenceRefs": [
+    "src/research/governance/executorSdk.ts",
+    "src/research/governance/executorSdk.pitEvidenceBoundary.test.ts",
+    "pull/2286"
+  ],
+  "lesson": "PIT evidence is a runtime trust boundary, not a TypeScript guarantee. Relational comparisons against zero do not reject NaN, negative or missing counters, and do not validate status or NOT_APPLICABLE reason.",
+  "guardrail": "Before reporting DRY_RUN_OK or PASS, require PASS/NOT_APPLICABLE status, non-empty validator identity/version, nonnegative safe-integer counts and an explicit NOT_APPLICABLE reason. Preserve existing positive-violation rejection and never infer research readiness.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-16T10:59:41.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-16T10:59:41.000Z",
+  "_digest": "8db019b45051ef61b58a4f68df0ee05530441fc64d99be8aff31dc582bd5ebd3"
+}

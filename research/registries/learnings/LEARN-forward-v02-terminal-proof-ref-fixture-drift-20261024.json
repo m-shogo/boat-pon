@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-terminal-proof-ref-fixture-drift-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-terminal-proof-ref-fixture-drift",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "test-forward-v02-trust-policy-multi-revision-anchor-window",
+  "symptom": "Official PR CI #40080644535 failed two newly added synthetic correction-chain tests because their settlementRevisionId proof references still named the original provisional revision after a FINAL revision was appended. The existing UNBOUND_PROOF_REFS gate fired before the new per-revision anchor-window assertion; this was a test fixture error, not a regression of the trust-policy validator.",
+  "rootCauseClass": "SYNTHETIC_CORRECTION_CHAIN_EXTENSION_LEFT_TERMINAL_PROOF_REFERENCE_STALE",
+  "attemptSignature": "pr2286-v293-extend-synthetic-settlement-chain-without-terminal-ref-update",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions/node24/pr2286",
+    "materialStateKey": "forwardV02TrustPolicyPreflight.0.1-untrusted/pr2286-92a35dc7/extended-chain-stale-terminal-proof-ref"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "github-actions/run-40080644535/job-120833284355",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "commit/92a35dc7fb73ac84437af1ffe908dd192c8f26dc",
+    "commit/fc1115f9d1d457ad7f489ee42a4227cc29f66864"
+  ],
+  "lesson": "A synthetic correction-chain test must keep the terminal proof-reference identity synchronized with the final revision. Otherwise an earlier fail-closed proof binding masks the intended later validator branch and yields a misleading failure attribution.",
+  "guardrail": "When a trust-policy fixture appends a settlement revision, update proofRefs.settlementRevisionId to the new terminal revision before asserting downstream key-window behavior. Verify the first blocker against the intended boundary, and inspect full official CI logs to distinguish fixture mismatch from implementation failure.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T09:10:06.000Z",
+  "productionConnection": false,
+  "_digest": "dd92553813b0ebdc9662dd84f3a6fb86d3e6051513089ae09fbc8fcccc0b41b8",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T09:10:06.000Z"
+}

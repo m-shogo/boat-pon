@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-string-trim-nonblank-admission-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-string-trim-nonblank-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-shadow-evidence-nonblank-source-and-scope-under-ambient-string-trim-replacement",
+  "symptom": "Node 22.16.0 synthetic probe showed that replacing String.prototype.trim with an identity function changes whitespace-only nonblank checks from false to true. The v462 shadow validator called ambient trim for scope runKind/modelVersion and source journalMode, so a caller could re-digest malformed strings and obtain semantic admission while the override was active. No private evidence or protected N2 was used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_STRING_TRIM_NONBLANK_ADMISSION",
+  "attemptSignature": "pr2286-v463-pin-string-prototype-trim-in-shadow-validation",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@9d910103/ambient-String.prototype.trim-in-nonblank-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/428a693cc8d85a0e36ee3616fcfb14c05fc09e01",
+    "commit/3b4ccfe5d7a6b398ddba863a73cbec236de7f9f0",
+    "research/registries/learnings/LEARN-forward-vault-schema-unicode-trim-parity-20261019.json"
+  ],
+  "lesson": "A canonical string and nonblank check is not fail-closed when it calls caller-mutable String.prototype.trim after module initialization. Even digest-consistent shadow evidence can carry whitespace-only or padded source/scope metadata under an ambient identity trim override.",
+  "guardrail": "Capture String.prototype.trim at research module initialization and invoke it through captured Reflect.apply for source journalMode and scope runKind/modelVersion validation. Regress malformed re-digested evidence and a valid baseline under reversible synthetic trim replacement; restore the global before assertions. Do not infer issuer rights, trusted time, correction finality, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T02:59:30.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T02:59:30.000Z",
+  "_digest": "1a0141098a1bac16e5fe942927690d83873dd275c8a776bc14ee19fe3289db6b"
+}

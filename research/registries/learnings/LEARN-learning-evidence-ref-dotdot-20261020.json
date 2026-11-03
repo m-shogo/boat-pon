@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-learning-evidence-ref-dotdot-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-governance.learning-evidence-ref-traversal-lexeme",
+  "subsystem": "research-automation-governance",
+  "operation": "write-verified-success-learning-record",
+  "symptom": "The new learning record used a Git compare-style evidence reference containing two adjacent dots; governance rejected the entire registry check even though no private path was present.",
+  "rootCauseClass": "EVIDENCE_REF_DOTDOT_LEXICAL_GUARD",
+  "attemptSignature": "learning-evidence-ref-compare-triple-dot",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions/node24/research-governance",
+    "materialStateKey": "learning-validator-isSafeLearningEvidenceRef-rejects-dotdot"
+  },
+  "evidenceRefs": [
+    "actions/runs/39316183731",
+    "pull/2286",
+    "src/research/governance/contracts.ts"
+  ],
+  "lesson": "Evidence refs in LEARN records are metadata identifiers, not Git compare expressions; the canonical sanitizer rejects any double-dot substring as a traversal marker, including Git compare notation.",
+  "guardrail": "Before creating a LEARN record, reject any evidenceRef containing adjacent dots, absolute prefixes, backslashes or private path markers; represent a commit comparison as two separate commit refs or a hyphenated metadata label; recompute canonical-v2 digest after correction and require research-governance CI.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-19T20:05:29.476Z",
+  "productionConnection": false,
+  "_digest": "03c4035f2e52133d1e43e47dd3569d547e83b279dfd2dd2a14ef704d5e775c3d",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-19T20:05:29.476Z"
+}

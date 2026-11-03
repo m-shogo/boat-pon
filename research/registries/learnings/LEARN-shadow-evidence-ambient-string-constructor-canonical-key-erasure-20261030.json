@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-string-constructor-canonical-key-erasure-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-string-constructor-canonical-key-erasure",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "bind-all-canonical-shadow-object-keys-under-ambient-global-string-constructor-replacement",
+  "symptom": "Node synthetic reproduction showed that replacing global String(number) with a constant \"0\" makes Object.defineProperty(keys, String(keys.length), ...) repeatedly overwrite index zero. The v461 shadow canonicalizer used this ambient conversion when accumulating sorted own keys, so earlier distinct source/context fields could be erased from SHA-256 input. No private evidence or production paths were used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_STRING_CONSTRUCTOR_CANONICAL_KEY_ERASURE",
+  "attemptSignature": "pr2286-v462-pin-global-string-coercion-in-shadow-canonical-indexing",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@c62a6c99/ambient-String-in-own-key-index-materialization"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/9d57d401a9c44df8e91f1a5e1db175dfa738e1ad",
+    "commit/79e20c3f90f6b26e285702b2199e2c36bd851bb8",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-defineproperty-error-suppression-20261030.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-json-stringify-digest-alias-20261030.json"
+  ],
+  "lesson": "Capturing defineProperty, structural inspectors and JSON.stringify does not bind canonical digest identity when key-list index coercion still uses a mutable global String constructor. A constant index can collapse distinct own fields before hashing.",
+  "guardrail": "Capture String at research module initialization and use the captured function for every shadow canonical index and error-path coercion. Regress source/context/content digest differentiation with a reversible synthetic String(number) override; restore the global before assertions. This is not independent issuer, clock, finality, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T02:02:06.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T02:02:06.000Z",
+  "_digest": "d73a04d1b3cd50b09ab5601e1b1ad3c2bc9beea0abf10329ebfcf5d1b9b322e7"
+}

@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-shadow-evidence-partial-proxy-guard-nested-countmap-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.partial-proxy-guard-nested-countmap-throw",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-with-nested-dynamic-count-map",
+  "symptom": "Official PR CI verify jobs #40784400480 and #40784454262 failed one new synthetic regression (4,624 pass, 2 skip, 1 fail). A hostile Proxy nested in completeness.unresolvedReasonCounts was correctly marked invalid by validateCountMap, but validation continued to compute the content digest and canonicalize rejected the Proxy by throwing TypeError instead of returning a fail-closed result. The two red runs exercised unchanged material code. Research-governance passed; verify Test exited 1; post-job checkout cleanup succeeded, with no runner fault established.",
+  "rootCauseClass": "PARTIAL_PROXY_GUARD_DYNAMIC_COUNT_MAP_REACHED_DIGEST_AFTER_DENIAL",
+  "attemptSignature": "pr2286-v433-root-only-proxy-denial-regression-with-nested-countmap",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-node24.21-24.22-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@909b0a37/root-and-fixed-nested-proxy-denial-without-recursive-preflight"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "actions/runs/40784400480",
+    "actions/runs/40784454262",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/11450a50cb286bf8e814c72c64b8b9d6bf920f27",
+    "commit/d6878d8b49e803658e84569d2b52a31ab407efb2",
+    "research/registries/learnings/LEARN-shadow-evidence-proxy-trap-revoked-ingress-20261029.json"
+  ],
+  "lesson": "Rejecting root and fixed nested Proxy objects is not sufficient if a dynamic count-map Proxy can be flagged invalid and still reach later digest canonicalization. A validation error must not be followed by an unguarded traversal that throws instead of returning a denial.",
+  "guardrail": "Before any semantic reads or digest calculation, scan the sanitized evidence own-data graph with an index-based, bounded, cycle-safe traversal that rejects Proxy values (including revoked and leaf Proxies) without calling their traps. Regress dynamic reason-count Proxy, nested leaf Proxy, revoked root and valid baseline digest. Do not retry the same root-only fix without material change.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T23:07:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T23:07:00.000Z",
+  "_digest": "bf5583cc8aa4a1f21257e51694186d5b697a8e994fc7c1caaab9124749a142c4"
+}

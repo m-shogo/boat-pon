@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-vault-canonical-array-inherited-index-setter-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.canonical-array-inherited-index-setter-digest-alias",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "canonical-digest-and-append-idempotency-classification",
+  "symptom": "A synthetic inherited Array.prototype numeric-index setter at index 17 can intercept canonical array output[i] writes. Two otherwise valid evaluation protocols differing only in their eighteenth metric-family entry then hash to the same truncated canonical array and may be classified as IDEMPOTENT_NOOP instead of CONFLICT. This was reproduced with synthetic metadata only; no real evidence or production path was affected.",
+  "rootCauseClass": "INHERITED_NUMERIC_SETTER_ERASES_CANONICAL_DIGEST_ARRAY_ENTRY",
+  "attemptSignature": "pr2286-v360-synthetic-index-17-canonical-digest-alias-own-descriptor-fix",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-local-synthetic+github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-vault.0.1/pr2286-v359-canonical-array-index-assignment"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.canonicalArrayHelpers.test.ts",
+    "commit/af6802ac9f912b126a1398c0d87fcdfad7a9b3ee",
+    "commit/0d07b5bae396477467549ddc46e89f73d8f0e2e9",
+    "research/registries/learnings/LEARN-forward-v02-array-prototype-index-setter-snapshot-20261025.json",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-helpers-20261024.json"
+  ],
+  "lesson": "An own-descriptor read does not protect a canonical digest if the fresh output array is populated through ordinary numeric assignment. Inherited setters can discard a validated last element and alias distinct append-only records; this is the same array-output trust-boundary mechanism previously found in untrusted snapshots, now affecting the vault digest.",
+  "guardrail": "When constructing canonical arrays, define every numeric index as an own enumerable data property with Object.defineProperty. Regression-test two valid synthetic protocols differing only at a high index under a reversible inherited setter, assert stable distinct digests and CONFLICT, and preserve the historical fixed digest vectors. This does not authorize scoring or production connection.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T14:14:57.000Z",
+  "productionConnection": false,
+  "_digest": "8e31a057cea1c40a2e9ad14fba4892c847e567465ee2cf426956b29aa526491e",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T14:14:57.000Z"
+}

@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-executor-sdk-pit-callback-exception-20261017",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-executor-sdk.pit-evidence-callback-exception-escape",
+  "subsystem": "research-executor-sdk",
+  "operation": "runExecutorLifecycle-validatePitEvidence",
+  "symptom": "Throwing PIT evidence and legacy guarantee callbacks escape the executor lifecycle instead of returning a typed fail-closed outcome.",
+  "rootCauseClass": "UNCATCHED_PIT_VALIDATOR_CALLBACK_EXCEPTION",
+  "attemptSignature": "adversarial-pit-callback-throws-before-dry-run-outcome",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22/isolated-research-replay+github-connector",
+    "materialStateKey": "pr2286-e95df064/sdk-ad8de47bb459/uncaught-pit-callback"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/executorSdk.ts",
+    "src/research/governance/executorSdk.pitCallbackException.test.ts"
+  ],
+  "lesson": "Callback exceptions are untrusted failures, not unhandled lifecycle crashes; a failed PIT validator must not yield DRY_RUN_OK.",
+  "guardrail": "Catch PIT evidence and legacy guarantee callback exceptions at the validation boundary; return a stable FAILED block code without exception text, and preserve valid dry-run behavior.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-16T19:55:54.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-16T19:55:54.000Z",
+  "_digest": "0ab5ca7ca719e53866bbc73a0529f2a5d8eb91dc6f5d466f7fa73a28d3f9ca5a"
+}

@@ -1,0 +1,35 @@
+{
+  "learningId": "LEARN-github-generated-regex-literal-escape-drift-20261031",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.github-source.generated-regex-escape-drift",
+  "subsystem": "research-automation-github-source-authoring",
+  "operation": "insert-typescript-regular-expression-through-github-contents-api",
+  "symptom": "An intermediate research-only GitHub contents write emitted doubled backslashes inside a TypeScript regular-expression literal. Official CI research-governance typecheck failed with TS1127/TS1134/TS1135/TS1005, and verify test execution reported 14 transform failures. The exact source was read back and corrected before the next material attempt; no research data or runner failure was involved.",
+  "rootCauseClass": "GENERATED_TYPESCRIPT_REGEX_LITERAL_DOUBLE_ESCAPING",
+  "attemptSignature": "pr2286-v498-template-string-regex-source-double-escape-corrected-with-string-raw",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-contents-api/github-actions-ubuntu-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02IndependentProofRequest.ts@0701a25c/double-escaped-regex-literal"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.ts",
+    "commit/0701a25c65d10fe8889bec11041d090bc41791dd",
+    "commit/3194b65100bb818e8702cd8c3e459017f5a9852e",
+    "github-actions/run-41203485277",
+    "github-actions/job-124543806103",
+    "github-actions/job-124543806262",
+    "github-actions/run-41203512264",
+    "LEARN-forward-v02-utf16-test-double-escape-fixture-20261028",
+    "LEARN-shadow-evidence-escaped-newline-source-typecheck-20261029"
+  ],
+  "lesson": "When authoring regex literals through a JavaScript template string, source-level backslashes can be doubled before GitHub writes the file. Readback of exact emitted characters and compiler diagnostics is necessary; retries of unchanged source cannot resolve a parse error.",
+  "guardrail": "Construct regex source with String.raw or an explicitly verified single-escape representation; read back exact emitted source and inspect character counts before relying on CI. On red CI, separate parser/typecheck and test-transform exits from workflow conclusion and successful post-job cleanup. Reuse earlier generated-source escaping guardrails, repair the material source, and never rerun protected N2 for diagnostics.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-31T13:04:00.000Z",
+  "productionConnection": false,
+  "_digest": "ed7779cd38b61a948c040e3a0166470d16f0a63bb6dea838b3861672714bb0d5",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-31T13:04:00.000Z"
+}

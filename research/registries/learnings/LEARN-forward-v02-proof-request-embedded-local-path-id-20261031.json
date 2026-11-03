@@ -1,0 +1,35 @@
+{
+  "learningId": "LEARN-forward-v02-proof-request-embedded-local-path-id-20261031",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-v02.proof-request-embedded-local-path-id",
+  "subsystem": "research-governance-forward-vault-v02",
+  "operation": "export-untrusted-independent-proof-request-identifiers",
+  "symptom": "Source-level inspection of the metadata-only proof-request builder showed nonblank caller identifiers copied into the exported request without local-path token denial. Synthetic embedded POSIX, drive-letter, UNC and file-URL forms could be carried in allowlisted identifier fields. No real private path or secret was observed or accessed.",
+  "rootCauseClass": "ALLOWLISTED_IDENTIFIER_FIELD_WITHOUT_EMBEDDED_LOCAL_PATH_LEXICAL_DENIAL",
+  "attemptSignature": "pr2286-v498-deny-embedded-local-path-tokens-in-request-identifiers-with-benign-uri-controls",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-ubuntu-node24-synthetic",
+    "materialStateKey": "forwardV02IndependentProofRequest.ts@464af094/trim-nonblank-identifier-export-before-local-path-guard"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02IndependentProofRequest.ts",
+    "src/research/governance/forwardV02IndependentProofRequest.test.ts",
+    "reports/research/forward-v02-pr2286-proof-request-embedded-local-path-privacy-guard-20261031.md",
+    "commit/0701a25c65d10fe8889bec11041d090bc41791dd",
+    "commit/3194b65100bb818e8702cd8c3e459017f5a9852e",
+    "commit/0ae9a8b58db4ceeeed53fab759534b130534c5d2",
+    "commit/745a2de845097aff39f4125807dd02838fe7251d",
+    "github-actions/run-41203512264",
+    "LEARN-shadow-evidence-embedded-absolute-path-token-admission-20261029"
+  ],
+  "lesson": "An exact-field allowlist does not prevent a caller from embedding path-like data in free-form identifier values. Privacy controls must inspect exported identifier contents without confusing a synthetic correlation request with authenticated evidence or allowing error messages to echo inputs.",
+  "guardrail": "Before constructing any exported untrusted proof request, deny bounded synthetic POSIX, drive-letter, UNC and file-URL path tokens across every free-form projected identifier and correction revision ID. Use generic blockers, keep request null and both authority/scoring flags false, preserve benign HTTPS and namespace identifiers, and reuse the existing embedded-path guardrail. Treat this as lexical risk reduction only, not universal redaction or source proof.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-31T13:03:00.000Z",
+  "productionConnection": false,
+  "_digest": "a2391dd1deb3b084d88ef339357b6f7aaf81701d1726bb4a047cf743925546e0",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-31T13:03:00.000Z"
+}

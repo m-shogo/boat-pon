@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-recursive-child-sibling-reference-repair-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-recursive-child-sibling-reference-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "snapshot-forward-v02-untrusted-graph-and-trust-policy-preflight",
+  "symptom": "A nested child Proxy getPrototypeOf trap could replace a later sibling object in the caller's array or generic object while the shared graph snapshot recursively copied the first child. The later sibling descriptor was then read after the repair. In an offline old/new reproduction, an initially revoked sibling was captured as ACTIVE by the old traversal, including a synthetic policy anchor replacement. No independent authority or scoring was granted.",
+  "rootCauseClass": "RECURSIVE_CHILD_PROXY_REPLACES_UNPINNED_LATER_SIBLING_REFERENCE",
+  "attemptSignature": "pr2286-v332-two-phase-own-descriptor-pinning-before-recursive-child-copy-three-negative-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedSnapshot.0.1/pr2286-5b8fde95/interleaved-sibling-descriptor-and-child-recursion"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedSnapshot.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "commit/eb5156408ca8ce81bb18978d4fa77c54563422fe",
+    "commit/af4c3e284ea240d6cc0b9831f43922953a9e58ae",
+    "research/registries/learnings/LEARN-forward-v02-array-prototype-ownkeys-precopy-repair-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-array-prototype-index-setter-snapshot-20261025.json"
+  ],
+  "lesson": "Pinning an array's length or iterating own descriptors is not enough when each element is recursively traversed before the next sibling's descriptor is obtained. A nested child trap can replace a later sibling reference before its capture; generic objects have the same intra-object phase boundary.",
+  "guardrail": "Capture all immediate own enumerable data descriptors into setter-safe own-index slots before recursing into any child, for both dense arrays and generic objects. Test that nested getPrototypeOf traps actually replace a later sibling yet the detached snapshot and deny-only policy preflight retain the original revoked sibling. This does not freeze mutable fields within sibling objects, make generic ownKeys atomic, authenticate evidence, or permit scoring.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T12:08:00.000Z",
+  "productionConnection": false,
+  "_digest": "e70d0660858b0ed7abf7cd439fb9fe5a054fefddac4ae3ee140444b215c4377c",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T12:08:00.000Z"
+}

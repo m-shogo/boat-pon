@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { isolatedResearchNodeChildEnv } from "./researchNodeChildEnv.js";
 import { validateRuntimeDecisionLedgerShadowEvidence } from "./runtimeDecisionLedgerShadowEvidence";
 
 const scriptPath = fileURLToPath(
@@ -122,7 +123,7 @@ function runCommand(
       "--private-store-dir",
       privateStoreDir,
     ],
-    { encoding: "utf8" },
+    { encoding: "utf8", env: isolatedResearchNodeChildEnv() },
   );
 }
 

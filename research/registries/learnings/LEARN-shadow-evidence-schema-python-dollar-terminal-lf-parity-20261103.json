@@ -1,0 +1,34 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-python-dollar-terminal-lf-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-python-dollar-terminal-lf-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-python-draft202012-terminal-lf-parity-vs-runtime",
+  "symptom": "The Draft 2020-12 Shadow Evidence schema used dollar end anchors for generatedAt, scope.from, scope.to and SHA-256 digests. Python jsonschema 4.26 uses re.search, where a terminal LF is admitted before dollar, whereas the runtime rejects noncanonical date/time strings and digest mismatches. Synthetic newline-only probes reproduced the cross-engine lexical gap; no private values or production records were used.",
+  "rootCauseClass": "SCHEMA_PYTHON_REGEX_DOLLAR_ANCHOR_FINAL_NEWLINE_ADMISSION",
+  "attemptSignature": "pr2286-shadow-schema-portable-exact-terminal-boundary-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-4.26-draft202012/node-ecmascript/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger-shadow-evidence.schema.json@eb319821/python-dollar-end-anchors"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaTerminalBoundaryParity.test.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-generatedat-format-annotation-20261102.json",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-scope-date-format-annotation-20261102.json",
+    "research/registries/learnings/LEARN-shadow-evidence-scope-regex-anychar-test-assumption-20261103.json",
+    "commit/8895ad565622a9e3d7001c82e2da8321244fa59e",
+    "commit/dd04fb3479f3372f2a9fc4b1a630b55c5886c64c"
+  ],
+  "lesson": "Regex dollar anchors are not a portable exact-end guard across JSON Schema implementations: Python re.search admits one trailing LF while ECMAScript RegExp does not. Schema-only validation can therefore accept noncanonical metadata even when the runtime rejects it. This is lexical validation only, not proof of timestamp authority or source trust.",
+  "guardrail": "Use a portable negative-lookahead end assertion (?![\\s\\S]) for canonical Shadow Evidence generatedAt, scope.from/to and SHA-256 schema patterns. Add explicit terminal LF/CRLF, Unicode line terminator and valid-control regressions; retain runtime Gregorian roundtrip, digest equality and research/production separation. Avoid brittle tests that forbid legitimate [\\s\\S] interior classes.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T20:08:18.160Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T20:08:18.160Z",
+  "_digest": "1c671f2d4b5f1a2e0c524c4d8b7ce4a418a1075538aa282d41f3e72feaad56d2"
+}

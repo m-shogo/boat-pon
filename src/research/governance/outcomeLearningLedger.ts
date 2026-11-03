@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { types as nodeTypes } from "node:util";
 
 export const OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION = "outcome-learning-ledger.0.1" as const;
 
@@ -40,17 +41,59 @@ export type OutcomeReconciliationState =
 export type OutcomeLedgerAppendDecision = "APPEND" | "IDEMPOTENT_NOOP" | "CONFLICT" | "REJECTED_INVALID";
 export type OutcomeLearningLedgerValidation = { valid: boolean; errors: string[] };
 
-const ALLOWED_FIELDS = new Set<keyof OutcomeLearningLedgerRecord>([
+const REQUIRED_FIELDS: ReadonlyArray<keyof OutcomeLearningLedgerRecord> = [
   "schemaVersion", "outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId",
   "ticketType", "selection", "settlementId", "settledAt", "finality", "disposition",
   "evaluable", "stakeYen", "payoutYen", "refundYen", "refundReason", "popularity",
   "sourceEvidenceDigests", "provenanceVersion",
-]);
+];
+// Module-owned indexed membership must not depend on ambient Set.prototype.has.
+function isAllowedField(field: string): boolean {
+  for (let index = 0; index < REQUIRED_FIELDS.length; index++) {
+    if (REQUIRED_FIELDS[index] === field) return true;
+  }
+  return false;
+}
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const EXACT_INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
+  if (value === null || typeof value !== "object" || nodeTypes.isProxy(value) || Array.isArray(value)) return false;
+  try {
+    const proto = Object.getPrototypeOf(value);
+    return (proto === Object.prototype || proto === null) && !("toJSON" in value);
+  } catch { return false; }
+}
+// JSON persistence and canonical digest must observe exactly the same own data fields.
+function hasOwnEnumerableDataFields(value: Record<string, unknown>): boolean {
+  try {
+    const keys = Reflect.ownKeys(value);
+    for (let index = 0; index < keys.length; index++) {
+      const key = keys[index];
+      if (typeof key !== "string") return false;
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) return false;
+    }
+    for (let index = 0; index < REQUIRED_FIELDS.length; index++) {
+      if (!Object.prototype.hasOwnProperty.call(value, REQUIRED_FIELDS[index]!)) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+function hasDenseDigestArray(value: unknown): value is string[] {
+  // Caller-controlled Proxy arrays can disagree between validation and digest descriptors.
+  // Reject them (including revoked Proxies) before reading length or traps.
+  if (nodeTypes.isProxy(value) || !Array.isArray(value) || value.length === 0) return false;
+  try {
+    if (Object.getPrototypeOf(value) !== Array.prototype || "toJSON" in value ||
+        Reflect.ownKeys(value).length !== value.length + 1) return false;
+    for (let i = 0; i < value.length; i++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor) ||
+          typeof descriptor.value !== "string" || !SHA256_RE.test(descriptor.value)) return false;
+    }
+    return true;
+  } catch { return false; }
 }
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -63,21 +106,58 @@ function isLeapYear(year: number): boolean {
 }
 function isExactInstant(value: string): boolean {
   const match = EXACT_INSTANT_RE.exec(value);
-  if (!match) return false;
-  const [, y, mo, d, h, mi, s, oh, om] = match;
+  if (!match || value.endsWith("-00:00")) return false;
+  // RegExp captures are indexed: destructuring would use a mutable array iterator.
+  const y = match[1], mo = match[2], d = match[3];
+  const h = match[4], mi = match[5], s = match[6];
+  const oh = match[7], om = match[8];
   const year = Number(y), month = Number(mo), day = Number(d);
-  if (month < 1 || month > 12 || Number(h) > 23 || Number(mi) > 59 || Number(s) > 59) return false;
+  if (year === 0 || month < 1 || month > 12 || Number(h) > 23 || Number(mi) > 59 || Number(s) > 59) return false;
   const days = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
   if (day < 1 || day > days) return false;
   return oh === undefined || (Number(oh) <= 23 && Number(om) <= 59);
 }
 function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
+  if (Array.isArray(value)) {
+    const result: unknown[] = [];
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+        throw new TypeError("invalid canonical array data");
+      }
+      Object.defineProperty(result, String(index), {
+      value: canonicalize(descriptor.value), enumerable: true, writable: true, configurable: true,
+    });
+    }
+    return result;
+  }
   if (!isRecord(value)) return value;
-  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+  const keys = Object.keys(value);
+  // Avoid mutable Array.prototype.map/sort and inherited array iterators.
+  for (let index = 1; index < keys.length; index++) {
+    const key = keys[index]!;
+    let previous = index - 1;
+    while (previous >= 0 && keys[previous]! > key) {
+      keys[previous + 1] = keys[previous]!;
+      previous--;
+    }
+    keys[previous + 1] = key;
+  }
+  const result: Record<string, unknown> = Object.create(null);
+  for (let index = 0; index < keys.length; index++) {
+    const key = keys[index]!;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !("value" in descriptor)) {
+      throw new TypeError("invalid canonical object data");
+    }
+    result[key] = canonicalize(descriptor.value);
+  }
+  return result;
 }
 
 export function outcomeLearningLedgerDigest(record: OutcomeLearningLedgerRecord): string {
+  // Direct hashing must enforce the same admission contract as append classification.
+  if (!validateOutcomeLearningLedgerRecord(record).valid) throw new TypeError("invalid Outcome Learning Ledger record");
   return createHash("sha256").update(JSON.stringify(canonicalize(record))).digest("hex");
 }
 
@@ -89,6 +169,7 @@ export function classifyOutcomeLedgerAppend(
   if (!validation.valid) return "REJECTED_INVALID";
   const next = candidate as OutcomeLearningLedgerRecord;
   if (existing === undefined) return "APPEND";
+  if (!validateOutcomeLearningLedgerRecord(existing).valid) return "REJECTED_INVALID";
   if (existing.outcomeRecordId !== next.outcomeRecordId) return "CONFLICT";
   return outcomeLearningLedgerDigest(existing) === outcomeLearningLedgerDigest(next)
     ? "IDEMPOTENT_NOOP"
@@ -102,57 +183,111 @@ export function classifyOutcomeReconciliation(input: {
   refundOrInvalidationExact: boolean;
   finalityExact: boolean;
 }): OutcomeReconciliationState {
-  if (!input.decisionExact) return "UNRESOLVED_DECISION";
-  if (!input.settlementIdentityExact) return "UNRESOLVED_SETTLEMENT_IDENTITY";
-  if (!input.ticketLinkExact) return "UNRESOLVED_TICKET_LINK";
-  if (!input.refundOrInvalidationExact) return "UNRESOLVED_REFUND_OR_INVALIDATION";
-  if (!input.finalityExact) return "UNRESOLVED_FINALITY";
+  // TypeScript annotations do not validate evidence supplied at runtime.
+  // Read own data descriptors so malformed accessors cannot manufacture EXACT.
+  const fields = [
+    "decisionExact", "settlementIdentityExact", "ticketLinkExact",
+    "refundOrInvalidationExact", "finalityExact",
+  ] as const;
+  const flags: boolean[] = [];
+  try {
+    if (!isRecord(input) || Reflect.ownKeys(input).length !== fields.length) return "REJECTED_INVALID";
+    for (let index = 0; index < fields.length; index++) {
+      const field = fields[index]!;
+      const descriptor = Object.getOwnPropertyDescriptor(input, field);
+      if (!descriptor || !descriptor.enumerable || !("value" in descriptor) || typeof descriptor.value !== "boolean") {
+        return "REJECTED_INVALID";
+      }
+      // Define an own flag: an inherited Array.prototype numeric setter/getter
+      // must not turn a caller's false reconciliation claim into EXACT.
+      Object.defineProperty(flags, String(index), {
+        value: descriptor.value, enumerable: true, writable: true, configurable: true,
+      });
+    }
+  } catch {
+    return "REJECTED_INVALID";
+  }
+  if (!flags[0]) return "UNRESOLVED_DECISION";
+  if (!flags[1]) return "UNRESOLVED_SETTLEMENT_IDENTITY";
+  if (!flags[2]) return "UNRESOLVED_TICKET_LINK";
+  if (!flags[3]) return "UNRESOLVED_REFUND_OR_INVALIDATION";
+  if (!flags[4]) return "UNRESOLVED_FINALITY";
   return "EXACT";
+}
+
+function validationResult(valid: boolean, errors: string[]): OutcomeLearningLedgerValidation {
+  Object.freeze(errors);
+  return Object.freeze({ valid, errors });
 }
 
 export function validateOutcomeLearningLedgerRecord(value: unknown): OutcomeLearningLedgerValidation {
   const errors: string[] = [];
-  if (!isRecord(value)) return { valid: false, errors: ["record must be an object"] };
-  for (const field of Object.keys(value)) {
-    if (!ALLOWED_FIELDS.has(field as keyof OutcomeLearningLedgerRecord)) errors.push(`unknown field is not allowed: ${field}`);
+  // Indexed assignment is intercepted by inherited numeric setters; preserve every rejection as an own property.
+  const appendError = (message: string): void => {
+    Object.defineProperty(errors, String(errors.length), {
+      value: message, enumerable: true, writable: true, configurable: true,
+    });
+  };
+  if (!isRecord(value)) return validationResult(false, ["record must be an object"]);
+  if (!hasOwnEnumerableDataFields(value)) return validationResult(false, ["record fields must be enumerable own data properties"]);
+  const actualFields = Object.keys(value);
+  for (let index = 0; index < actualFields.length; index++) {
+    const field = actualFields[index]!;
+    if (!isAllowedField(field)) appendError(`unknown field is not allowed: ${field}`);
   }
-  if (value.schemaVersion !== OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION) errors.push(`schemaVersion must be ${OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION}`);
-  for (const field of ["outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId", "ticketType", "selection", "settlementId", "provenanceVersion"] as const) {
-    if (!isNonEmptyString(value[field])) errors.push(`${field} must be a non-empty string`);
+  if (value.schemaVersion !== OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION) appendError(`schemaVersion must be ${OUTCOME_LEARNING_LEDGER_SCHEMA_VERSION}`);
+  const requiredStrings = ["outcomeRecordId", "decisionRecordId", "decisionId", "canonicalRaceId", "ticketType", "selection", "settlementId", "provenanceVersion"] as const;
+  for (let index = 0; index < requiredStrings.length; index++) {
+    const field = requiredStrings[index]!;
+    if (!isNonEmptyString(value[field])) appendError(`${field} must be a non-empty string`);
   }
   if (!isNonEmptyString(value.settledAt) || !isExactInstant(value.settledAt) || !Number.isFinite(Date.parse(value.settledAt))) {
-    errors.push("settledAt must be a valid timezone-bound ISO timestamp");
+    appendError("settledAt must be a valid timezone-bound ISO timestamp");
   }
-  if (value.finality !== "FINAL" && value.finality !== "VOID") errors.push("finality must be FINAL or VOID");
-  if (value.disposition !== "SETTLED" && value.disposition !== "REFUNDED" && value.disposition !== "VOID") errors.push("disposition is invalid");
-  if (typeof value.evaluable !== "boolean") errors.push("evaluable must be boolean");
-  for (const field of ["stakeYen", "payoutYen", "refundYen"] as const) {
-    if (!isSafeNonNegativeInteger(value[field])) errors.push(`${field} must be a non-negative safe integer`);
+  if (value.finality !== "FINAL" && value.finality !== "VOID") appendError("finality must be FINAL or VOID");
+  if (value.disposition !== "SETTLED" && value.disposition !== "REFUNDED" && value.disposition !== "VOID") appendError("disposition is invalid");
+  if (typeof value.evaluable !== "boolean") appendError("evaluable must be boolean");
+  const monetaryFields = ["stakeYen", "payoutYen", "refundYen"] as const;
+  for (let index = 0; index < monetaryFields.length; index++) {
+    const field = monetaryFields[index]!;
+    if (!isSafeNonNegativeInteger(value[field])) appendError(`${field} must be a non-negative safe integer`);
   }
-  if (value.refundReason !== null && !isNonEmptyString(value.refundReason)) errors.push("refundReason must be a non-empty string or null");
-  if (value.popularity !== null && (!Number.isSafeInteger(value.popularity) || (value.popularity as number) <= 0)) errors.push("popularity must be a positive safe integer or null");
-  if (!Array.isArray(value.sourceEvidenceDigests) || value.sourceEvidenceDigests.length === 0 || value.sourceEvidenceDigests.some((digest) => typeof digest !== "string" || !SHA256_RE.test(digest))) {
-    errors.push("sourceEvidenceDigests must contain one or more lowercase SHA-256 digests");
-  } else if (new Set(value.sourceEvidenceDigests).size !== value.sourceEvidenceDigests.length) {
-    errors.push("sourceEvidenceDigests must not contain duplicates");
+  if (value.refundReason !== null && !isNonEmptyString(value.refundReason)) appendError("refundReason must be a non-empty string or null");
+  if (value.popularity !== null && (!Number.isSafeInteger(value.popularity) || (value.popularity as number) <= 0)) appendError("popularity must be a positive safe integer or null");
+  if (!hasDenseDigestArray(value.sourceEvidenceDigests)) {
+    appendError("sourceEvidenceDigests must contain one or more lowercase SHA-256 digests");
+  } else {
+    // Null-prototype own-data keys preserve duplicate evidence detection even
+    // if Set.prototype.has/add are replaced by an ambient no-op.
+    const seen: Record<string, true> = Object.create(null);
+    for (let index = 0; index < value.sourceEvidenceDigests.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value.sourceEvidenceDigests, String(index));
+      if (!descriptor || Object.getOwnPropertyDescriptor(seen, descriptor.value as string)) {
+        appendError("sourceEvidenceDigests must not contain duplicates");
+        break;
+      }
+      Object.defineProperty(seen, descriptor.value as string, {
+        value: true, enumerable: true, writable: false, configurable: false,
+      });
+    }
   }
 
   if (value.disposition === "SETTLED") {
-    if (value.finality !== "FINAL") errors.push("SETTLED requires finality=FINAL");
-    if (value.refundYen !== 0) errors.push("SETTLED requires refundYen=0");
-    if (value.refundReason !== null) errors.push("SETTLED requires refundReason=null");
+    if (value.finality !== "FINAL") appendError("SETTLED requires finality=FINAL");
+    if (value.refundYen !== 0) appendError("SETTLED requires refundYen=0");
+    if (value.refundReason !== null) appendError("SETTLED requires refundReason=null");
   }
   if (value.disposition === "REFUNDED") {
-    if (value.finality !== "FINAL") errors.push("REFUNDED requires finality=FINAL");
-    if (!isSafeNonNegativeInteger(value.refundYen) || value.refundYen === 0) errors.push("REFUNDED requires refundYen greater than 0");
-    if (!isNonEmptyString(value.refundReason)) errors.push("REFUNDED requires refundReason");
-    if (value.evaluable !== false) errors.push("REFUNDED must not be evaluable by default");
+    if (value.finality !== "FINAL") appendError("REFUNDED requires finality=FINAL");
+    if (!isSafeNonNegativeInteger(value.refundYen) || value.refundYen === 0) appendError("REFUNDED requires refundYen greater than 0");
+    if (!isNonEmptyString(value.refundReason)) appendError("REFUNDED requires refundReason");
+    if (value.evaluable !== false) appendError("REFUNDED must not be evaluable by default");
   }
   if (value.disposition === "VOID") {
-    if (value.finality !== "VOID") errors.push("VOID disposition requires finality=VOID");
-    if (value.evaluable !== false) errors.push("VOID must not be evaluable");
-    if (!isNonEmptyString(value.refundReason)) errors.push("VOID requires an explicit reason");
+    if (value.finality !== "VOID") appendError("VOID disposition requires finality=VOID");
+    if (value.evaluable !== false) appendError("VOID must not be evaluable");
+    if (!isNonEmptyString(value.refundReason)) appendError("VOID requires an explicit reason");
   }
-  if (value.evaluable === true && value.finality !== "FINAL") errors.push("evaluable outcome requires finality=FINAL");
-  return { valid: errors.length === 0, errors };
+  if (value.evaluable === true && value.finality !== "FINAL") appendError("evaluable outcome requires finality=FINAL");
+  return validationResult(errors.length === 0, errors);
 }

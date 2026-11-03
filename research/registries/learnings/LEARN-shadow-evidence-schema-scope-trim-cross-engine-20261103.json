@@ -1,0 +1,34 @@
+{
+  "learningId": "LEARN-shadow-evidence-schema-scope-trim-cross-engine-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.schema-scope-trim-unicode-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "schema-only-shadow-scope-runKind-modelVersion-trim-canonical-parity",
+  "symptom": "Shadow Evidence scope.runKind/modelVersion used generic \\S boundary regexes. Draft 2020-12 schema-only consumers could disagree with the ECMAScript trim-canonical runtime on U+FEFF and U+0085; terminal-newline anchoring was also weaker than exact string admission. Synthetic Python/JavaScript probes confirmed the lexical mismatch. No private data, production incident or external source authority was observed.",
+  "rootCauseClass": "SCHEMA_RUNTIME_CROSS_ENGINE_TRIM_CANONICAL_BOUNDARY_DRIFT",
+  "attemptSignature": "pr2286-v553-shadow-scope-runKind-modelVersion-portable-trim-canonical-parity",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-regex-and-v8-js/github-actions-node24-research-only",
+    "materialStateKey": "shadow-evidence-schema@8233ce013a14/scope-runKind-modelVersion-generic-backslash-S"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaScopeTrimParity.test.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-journalmode-unicode-nonblank-20261103.json",
+    "research/registries/learnings/LEARN-outcome-ledger-schema-unicode-nonblank-parity-20261020.json",
+    "commit/93a0a1e5df39e6c3c415da74e34f778bdd9017aa",
+    "commit/6b3a9d6a424b26c3849a4b50827ad3f4086fb50c",
+    "commit/0d854d34f03d80ce157939a9883a1841e9a88c96"
+  ],
+  "lesson": "A scope identity requiring exact trim-canonical strings needs both nonblank admission and rejection of leading/trailing ECMAScript trim code points. Generic \\S is not portable across Python and JavaScript, and a $ anchor may admit terminal newline in some engines.",
+  "guardrail": "For scope.runKind and scope.modelVersion, use the explicit ECMAScript whitespace complement at both edges, permit internal Unicode/line breaks, and require true end-of-string via negative lookahead. Retain runtime digest, semantic checks and path/privacy scans. This is schema-only lexical parity, not source authenticity, evaluation readiness or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T16:58:21.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T16:58:21.000Z",
+  "_digest": "a7709fa4bf376372ead840e176cb3655580b611a9dc1048c96b7c44c06daa06b"
+}

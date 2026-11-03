@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-v02-independent-oracle-lcg-lowbit-coverage-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-v02.independent-oracle-lcg-lowbit-sampling",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "verify-forward-v02-claimed-instant-independent-gregorian-oracle",
+  "symptom": "The deterministic 1,024-case synthetic Gregorian oracle used an LCG with eight draws per case. Low-bit periodicity locked its sampled month to 3/12 values, hour to 3/24, minute and second to 15/60 each, and fraction to 3/6. The four explicit edge cases did not restore full coverage. Both oracle tests passed despite these blind spots; no production comparator defect or private-data impact was observed.",
+  "rootCauseClass": "DETERMINISTIC_LCG_MODULO_LOWBIT_PHASE_LOCK_IN_TEST_FIXTURE",
+  "attemptSignature": "pr2286-v519-replace-lcg-with-xorshift32-and-assert-sampler-dimension-coverage",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-ubuntu-node24-tsx",
+    "materialStateKey": "forwardV02ClaimedInstantIndependentOracle.test.ts@e5558d0d-lcg-eight-draw-modulo-phase-lock"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02ClaimedInstantIndependentOracle.test.ts",
+    "commit/85c6291171dd58cbb64cdd0b08a35c43386dd27a",
+    "commit/5386f636cfb125d5a7bbdb4ce36174ef4fc6fe18",
+    "research/registries/learnings/LEARN-forward-v02-test-antisymmetry-negative-zero-20261101.json"
+  ],
+  "lesson": "A seeded LCG is deterministic but not automatically diverse: taking modulo small even bounds at a fixed eight-draw stride can phase-lock low bits and silently under-sample declared dimensions. Passing oracle comparisons does not establish coverage without independent sampling checks.",
+  "guardrail": "Use a deterministic xorshift32 sampler for this synthetic Gregorian/UTC oracle and assert that the generated cases cover every declared year, all 12 months, 24 hours, 60 minutes, 60 seconds, six fractional forms, and seven offset choices. Treat marginal coverage as a regression guard, not as proof of pairwise or exhaustive chronology correctness. Do not infer trusted clock or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T10:03:00.000Z",
+  "productionConnection": false,
+  "_digest": "546b40513be11d3c7982d3ce4d09fc94345e9d131aac637b6d17f98ebd09e468",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T10:03:00.000Z"
+}

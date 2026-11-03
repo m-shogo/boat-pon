@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-outcome-ledger-exact-instant-schema-parity-20261020",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.exact-instant-year-zero-unknown-offset-parity",
+  "subsystem": "research-governance-outcome-ledger",
+  "operation": "validate-outcome-settledat-against-k1-and-forward-vault-known-offset-contract",
+  "symptom": "Outcome Ledger 0.1 accepted year-0000 and RFC3339 -00:00 unknown-offset settledAt values that K1 and Forward Vault reject; the outcome schema date-time format alone does not exclude unknown offsets.",
+  "rootCauseClass": "CROSS_LEDGER_EXACT_INSTANT_ADMISSION_DRIFT",
+  "attemptSignature": "outcome-settledat-year-zero-and-unknown-offset-negative-fixtures-with-schema-runtime-parity",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/pr2286-research-ci-node22",
+    "materialStateKey": "outcomeLearningLedger.ts@b7b48ab55e50+outcome-schema@59725f363b75/no-known-offset-year-zero-guard"
+  },
+  "evidenceRefs": [
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedger.test.ts",
+    "config/research-governance/outcome-learning-ledger.schema.json",
+    "research/registries/learnings/LEARN-forward-vault-year-zero-formatchecker-parity-20261015.json",
+    "research/registries/learnings/LEARN-forward-vault-schema-unknown-offset-parity-20261016.json",
+    "pull/2286"
+  ],
+  "lesson": "An ISO-shaped timestamp and finite Date.parse value do not establish a known-offset, cross-ledger-compatible settlement instant. A -00:00 offset explicitly denotes unknown local offset, and year 0000 is rejected by the current canonical validator compatibility policy.",
+  "guardrail": "Reuse the K1/Forward Vault exact-instant guard at the Outcome Ledger boundary: reject year 0000 and -00:00 before digest/append admission, enforce the same conservative lexical boundary for schema-only consumers, and regression-test positive Z/+00:00/real offsets. Do not infer official settlement finality or ROI readiness from timestamp syntax.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-20T01:58:29.961Z",
+  "productionConnection": false,
+  "_digest": "45721e6ceb143a15920f94af32e026c07fe98d7a4d2e09a144fef74aae966776",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-20T01:58:29.961Z"
+}

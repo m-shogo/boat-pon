@@ -1,0 +1,28 @@
+{
+  "learningId": "LEARN-forward-vault-schema-format-annotation-lexical-bypass-20261016",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.schema-format-annotation-lexical-bypass",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "schema-only-timestamp-validation-without-format-checker",
+  "symptom": "Vault v109 schema exactInstant accepted arbitrary non-date strings and lowercase t/z when a Draft 2020-12 consumer did not opt into format assertion, while runtime rejected those values.",
+  "rootCauseClass": "JSON_SCHEMA_DATE_TIME_FORMAT_ANNOTATION_WITH_UNBOUNDED_LEXICAL_PATTERN",
+  "attemptSignature": "v110-offline-schema-without-format-checker-five-field-negative-fixtures",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0/typescript5.8.3/python-jsonschema/draft202012/offline-v109-pr-head-fixture",
+    "materialStateKey": "pr2286-e95df064-plus-v109-exactInstant-format-annotation-and-negative-offset-only-pattern"
+  },
+  "evidenceRefs": [
+    "config/research-governance/forward-evaluation-vault.schema.json",
+    "src/research/governance/forwardEvaluationVault.schemaLexicalParity.test.ts",
+    "pull/2286"
+  ],
+  "lesson": "JSON Schema format:date-time is annotation unless the consumer enables format assertion; a negative-offset-only regex does not enforce timestamp syntax. Schema-only preflight must fail closed on malformed lexical input independent of format-checker configuration.",
+  "guardrail": "Use a shared exactInstant lexical pattern with uppercase T/Z, bounded date/time/offset components, year-zero and unknown-offset exclusion for all five fields. Keep runtime/format-checker validation for Gregorian calendar validity and do not claim regex alone proves a real instant.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-16T07:57:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-16T07:57:00.000Z",
+  "_digest": "f16c9f0a0cd13d6167f1709d679ea8f14d53bb38c253002746c991929767cc6e"
+}

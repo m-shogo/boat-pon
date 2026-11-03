@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-openat2-trust-root-mount-boundaries-20261027",
+  "classification": "VERIFIED_SUCCESS",
+  "fingerprintKey": "research-k3.forward-vault.openat2-rootfd-mount-and-intermediate-rename-boundaries",
+  "subsystem": "research-governance-forward-vault-linux-reader-namespace",
+  "operation": "linux-openat2-rootfd-symlink-escape-mount-and-real-ancestor-swap-probe",
+  "symptom": "In two disposable Linux tests, openat2 RESOLVE_BENEATH|RESOLVE_NO_SYMLINKS rejected ancestor symlink and root escape while a pinned root FD still resolved a substituted real intermediate directory to decoy JSON; a pre-pinned vault FD retained original bytes. Adding RESOLVE_NO_XDEV rejected an existing /proc mount crossing without mounting anything. Both tests passed official CI. This is not a live SDK exploit or production incident.",
+  "rootCauseClass": "OPENAT2_TRAVERSAL_GUARDS_DO_NOT_PIN_MUTABLE_INTERMEDIATE_DIRECTORY_IDENTITY",
+  "attemptSignature": "pr2286-v386-openat2-rootfd-symlink-escape-mount-and-real-ancestor-swap",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-linux-node24-python3-openat2-syscall437",
+    "materialStateKey": "executor-sdk-v3/pr2286-v385-path-reader-and-dirfd-probes-v386-openat2-negative-fixtures"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.openat2TrustRootLinux.test.ts",
+    "reports/research/forward-vault-openat2-trust-root-mount-boundaries-20261027.md",
+    "commit/4a76bd20dd3ad035abf31dc7c1e1a5c302a508ec",
+    "actions/runs/40500626997"
+  ],
+  "lesson": "On supported Linux, openat2 resolver flags constrain all-component symlinks, escapes and existing mount traversal. A trusted root FD with those flags does not bind a later lookup to a previously observed real intermediate directory object: rename-and-replacement can redirect it. A pre-pinned final directory FD preserves object-relative readback, but canonical reachability remains separate.",
+  "guardrail": "Reuse RESOLVE_BENEATH|RESOLVE_NO_SYMLINKS and security-justified RESOLVE_NO_XDEV as bounded traversal constraints only, never as proof of publisher identity or canonical reachability. Pin and independently authenticate the common reader/writer directory object; account for EAGAIN under concurrent rename, unsupported kernels, bind mounts and power loss before any native integration. Never auto-delete by stale path, weaken strict SDK readback, activate N2, connect BUY or infer merge/production authority.",
+  "repeatPolicy": "REUSE_VERIFIED_GUARDRAIL",
+  "createdAt": "2026-10-27T12:06:12.000Z",
+  "productionConnection": false,
+  "_digest": "57b09002112560ffe93615d3e88d771fbcdb09aef454cb787dc81e6706e189bc",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T12:06:12.000Z"
+}

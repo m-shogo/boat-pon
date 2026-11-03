@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-interrupted-hardlink-readback-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.atomic-hardlink-interruption-readback-unavailable",
+  "subsystem": "research-governance-forward-vault-persistence",
+  "operation": "atomic-no-replace-publication-and-single-link-readback",
+  "symptom": "A synthetic interruption state after linkSync(temp, destination) but before unlinkSync(temp) preserves the complete published JSON yet leaves two hard links. Strict verifyJsonReadback then rejects the destination (nlink=2); a repeat append cannot replace it. This is a reproducible recovery/availability gap, not an observed real process crash or data loss.",
+  "rootCauseClass": "POST_PUBLICATION_TEMP_HARDLINK_SURVIVES_INTERRUPTION",
+  "attemptSignature": "pr2286-v370-synthetic-hardlink-postpublish-precleanup-recovery-fixture",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-local-synthetic+github-actions-node24-typescript6.0.3",
+    "materialStateKey": "executor-sdk-v3/pr2286-v369-linkSync-unlinkSync-no-replace-and-single-link-readback"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/executorSdk.ts",
+    "src/research/governance/forwardEvaluationVault.persistence.test.ts",
+    "reports/research/forward-vault-interrupted-hardlink-publication-readback-gate-20261027.md",
+    "commit/5bed4ea4feaf4f5689b860a70491c61287d1ee65",
+    "commit/4998e3f4031d6e65c93cfd22a9b283b98b7064e5"
+  ],
+  "lesson": "Hard-link publication and temporary-name cleanup are separate operations. A durable-looking published JSON record can fail the single-link readback invariant after an interruption even though its bytes and append-only identity are preserved. Successful normal-path CI is not crash-recovery evidence.",
+  "guardrail": "Keep strict single-link readback and no-replace append behavior. Before claiming crash-safe recovery, test the post-link/pre-unlink state with synthetic files, require inode-verified and scope-limited cleanup or a vetted no-replace publication primitive, and assess directory fsync and concurrent/symlink cases. Never auto-delete unverified files or relax readback globally; no production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T22:06:07.000Z",
+  "productionConnection": false,
+  "_digest": "bb797d64318d7c54de0f898c197e11e85203073c6d76a27c7ab6479b8c6636c2",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T22:06:07.000Z"
+}

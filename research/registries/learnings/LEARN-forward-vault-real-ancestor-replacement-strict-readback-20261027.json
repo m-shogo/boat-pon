@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-real-ancestor-replacement-strict-readback-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.real-ancestor-replacement-strict-path-readback",
+  "subsystem": "research-governance-forward-vault-linux-dirfd-namespace",
+  "operation": "pinned-dirfd-publisher-versus-strict-pathname-reader-real-directory-replacement-probe",
+  "symptom": "A disposable Linux fixture renames the original publisher ancestor and replaces its old name with a different real directory containing valid single-link JSON. Pinned-FD publication/readback preserves the original bytes, while strict SDK pathname readback accepts the unrelated JSON under the replacement real directory, even when both JSON objects declare the same synthetic outputDigest. This is a candidate design counterexample, not a production incident.",
+  "rootCauseClass": "REAL_DIRECTORY_ANCESTOR_SUBSTITUTION_NOT_DETECTED_BY_STRICT_PATH_READBACK",
+  "attemptSignature": "pr2286-v384-rename-real-ancestor-and-replace-with-real-decoy-dirfd-publish-strict-readback",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-linux-python3-glibc+github-actions-linux-node24-python3",
+    "materialStateKey": "executor-sdk-v3/pr2286-v383-strict-ancestor-guard-v384-real-directory-substitution-fixture"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.dirfdRealAncestorReplacementLinux.test.ts",
+    "src/research/governance/executorSdk.ts",
+    "reports/research/forward-vault-real-ancestor-replacement-strict-readback-20261027.md",
+    "commit/45f172e63fe6dda103aa1238d692d796217914b4"
+  ],
+  "lesson": "Reject the assumption that a pinned writer directory FD plus the existing strict pathname reader proves common publisher/consumer object identity. Ancestor-symlink rejection does not reject replacement by an unrelated real directory. The outputDigest check compares a parsed field with a caller-supplied string; it does not authenticate the entire payload or pinned publisher directory.",
+  "guardrail": "For a future candidate, bind reader and writer to an explicitly reviewed common directory-object authority and trust-root lifecycle; test real-directory ancestor replacement as well as symlinks, mount/rename races and post-admission swaps. Preserve the existing symlink and single-link guards, do not use preflight-only path identity as proof, do not auto-delete stale names, and do not infer native portability, power-loss durability, approved scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T10:12:52.472Z",
+  "productionConnection": false,
+  "_digest": "faa2d2ed298b92804513dfee8b2e0aad467f1fd7fb9b64e947e125e4111297bc",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T10:12:52.472Z"
+}

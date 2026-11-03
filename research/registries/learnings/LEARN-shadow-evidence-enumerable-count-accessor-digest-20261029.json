@@ -1,0 +1,34 @@
+{
+  "learningId": "LEARN-shadow-evidence-enumerable-count-accessor-digest-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.enumerable-count-accessor-post-denial-digest-throw",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-dynamic-count-maps-before-digest",
+  "symptom": "An enumerable accessor inserted into a synthetic unresolved reason-count map is detected by own-descriptor validation, but the previous validator continued into canonical JSON digest generation, which invoked the untrusted getter and could throw instead of returning a fail-closed validation result. A Node 22.16.0 synthetic descriptor/JSON experiment reproduced the getter-execution mechanism. No real evidence or production impact was observed.",
+  "rootCauseClass": "MALFORMED_DYNAMIC_COUNT_MAP_CONTINUES_TO_CANONICAL_DIGEST_AND_EXECUTES_ACCESSOR",
+  "attemptSignature": "pr2286-v435-early-return-on-invalid-count-map-before-digest-with-enumerable-getter-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@b5be8868/validateCountMap-null-then-canonical-digest"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/a9cbda9a033b775728ae606a4cd9994dc8c0ab20",
+    "commit/b745978cc8cc781bbca78e0ddd3f8b85b0978b3e",
+    "actions/runs/40798010596",
+    "research/registries/learnings/LEARN-shadow-evidence-reason-count-map-admission-20261027.json",
+    "research/registries/learnings/LEARN-shadow-evidence-partial-proxy-guard-nested-countmap-20261029.json",
+    "actions/runs/40798327842"
+  ],
+  "lesson": "Detecting malformed dynamic count-map accessors is insufficient if a later digest or graph walk re-reads them. Return the descriptor-based denial result before any canonical JSON serialization of rejected count maps.",
+  "guardrail": "After validating all three sanitized reason/taxonomy count maps by own descriptors, immediately return a frozen invalid result if any map is rejected. Regress an enumerable getter that throws and verify it is never called, while ordinary evidence and digests remain unchanged. This does not authenticate K sources or grant production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T01:05:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T01:05:00.000Z",
+  "_digest": "223bfa3e1f126eca1b626352c8673770e11e898f9fa4f273d9160b45fcc66a86"
+}

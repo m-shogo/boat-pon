@@ -10,7 +10,7 @@ import {
   ORCHESTRATOR_VERSION, STATUS_SCHEMA_VERSION, canTransition, classifyFailure, decideSafety, foreignDirtyPaths, preflight, validateRequest,
   type SafetyLevel, type TaskRequest, type TaskStatus,
 } from "../src/automation/researchOrchestrator";
-import { resolveExecutor, type ExecutorResult } from "../src/automation/taskExecutors";
+import type { ExecutorResult } from "../src/automation/taskExecutors";
 
 const root = resolve(process.cwd());
 const arg = (n: string): string | null => {
@@ -21,6 +21,20 @@ const arg = (n: string): string | null => {
 };
 const hasFlag = (n: string): boolean => process.argv.includes(`--${n}`);
 const mode = process.argv[2] && !process.argv[2].startsWith("--") ? process.argv[2] : "task";
+
+// Reject deprecated execution and unsupported positional modes before loading
+// even the legacy policy. This is a research-only dispatch boundary; it does
+// not disable GitHub Actions workflows or change canonical intent dispatch.
+if (mode === "task") {
+  console.error("DEPRECATED_DISABLED: request-file task execution is disabled; use the canonical intent dispatch.");
+  process.exit(3);
+}
+if (mode !== "validate-request" &&
+    mode !== "status" && mode !== "pause" && mode !== "resume" &&
+    mode !== "emergency-stop" && mode !== "clear-emergency-stop") {
+  console.error("UNSUPPORTED_MODE: only validate-request may parse a legacy request file.");
+  process.exit(3);
+}
 
 const policy = JSON.parse(readFileSync(join(root, "config/research-automation-policy.json"), "utf8"));
 const LOCK_PATH = join(root, policy.lock.path);
@@ -121,9 +135,7 @@ if (mode === "clear-emergency-stop") { rmSync(EMERGENCY, { force: true }); conso
 // ---- validate-request / task ----
 // NOTE: task/validate-request モードは request-file 経路（DEPRECATED）用。
 // 現行の正式経路は scripts/run-intent-task.ts（intent 方式・automation branch 状態）。
-if (mode === "task") {
-  console.error("DEPRECATED: use run-intent-task.ts (intent dispatch). request-file task mode は凍結。");
-}
+// Only validate-request reaches this legacy request parser.
 const requestPath = arg("request");
 if (!requestPath) throw new Error("--request=<request.json> は必須です");
 const raw = JSON.parse(readFileSync(resolve(requestPath), "utf8"));
@@ -219,6 +231,9 @@ try {
   // 実タスク実行は allowlist registry の executor のみ（arbitrary shell / free-form command 禁止）。
   const runId = process.env.GITHUB_RUN_ID ?? `local-${Date.now()}`;
   mkdirSync(HISTORY_DIR, { recursive: true });
+  // Do not evaluate the executor/N2 import graph for denied or validation-only CLI modes.
+  // The legacy execution branch is unreachable while task/unknown modes fail closed.
+  const { resolveExecutor } = await import("../src/automation/taskExecutors");
   const { executor, code } = resolveExecutor(task.taskType);
   if (!executor) {
     // 未登録 taskType は BLOCK。queue は READY のまま維持し、NO_CHANGE を成功扱いにしない。

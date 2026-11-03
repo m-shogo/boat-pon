@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-canonical-tojson-hook-digest-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.canonical-tojson-hook-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "build-canonical-shadow-evidence-digest-without-caller-tojson-execution",
+  "symptom": "A synthetic own enumerable callable toJSON on the research mapping context was invoked by JSON.stringify after canonicalization and could replace the contextDigest input. An ambient Array.prototype.toJSON could likewise rewrite a synthetic nested array during canonical digest construction. Both were reproduced with isolated Node 22.16.0 fixtures; no K archive, private paths, odds, database or production evidence was used.",
+  "rootCauseClass": "CANONICAL_SHADOW_DIGEST_EXECUTES_OWN_OR_AMBIENT_TOJSON_HOOKS",
+  "attemptSignature": "pr2286-v448-reject-callable-own-tojson-and-null-prototype-canonical-arrays",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@077026a8/canonical-object-callable-tojson-and-array-prototype-hook"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "commit/4fa03aae67461c3ffe823a62211843d01d0a10b0",
+    "commit/a8a4e681144f1f7399464df5e6839f0247f6f861",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "research/registries/learnings/LEARN-forward-vault-array-prototype-tojson-20261024.json",
+    "research/registries/learnings/LEARN-forward-vault-prototype-serialization-divergence-20261009.json"
+  ],
+  "lesson": "Sorting own enumerable fields into a canonical object does not make JSON.stringify immune to callable own toJSON or an inherited array toJSON hook. A digest can be computed over a substituted value even when the original source fields were enumerated. The Forward Vault toJSON learning applies to the separate shadow-evidence builder as a reusable guardrail.",
+  "guardrail": "Reject callable scalar values during shadow canonicalization before JSON.stringify, and give newly constructed canonical arrays a null prototype so ambient Array.prototype.toJSON cannot rewrite digest bytes. Regress both synthetic hooks with invocation counters, restore ambient prototypes, and preserve baseline digest and valid shadow evidence. This is research-only and never authorizes K data, Current BUY, LINE, public publishing or production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T12:04:39.000Z",
+  "productionConnection": false,
+  "_digest": "1a2ec78676d607f94a7bdbb0e9474c01d3a7d9b273deb3a9bbe5bab674dfd8dd",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T12:04:39.000Z"
+}

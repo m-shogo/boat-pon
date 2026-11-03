@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-n2-daily-readiness-postjob-metadata-log-availability-20261031",
+  "classification": "TRANSIENT_UNCLASSIFIED",
+  "fingerprintKey": "n2.daily-readiness.postjob-incomplete-metadata-log-unavailable",
+  "subsystem": "n2-private-market-research-governance",
+  "operation": "read-only-natural-run-layered-triage",
+  "symptom": "A naturally scheduled N2 readiness run failed its evidence-building step in about one second, but the job lasted about ten minutes and the Post Checkout step remained in_progress/null in the completed job metadata. The full job log returned HTTP 404 BlobNotFound. An earlier natural run had the same failing step but a full log proving DAILY_PLAN_MISSING and exit 3, with completed cleanup.",
+  "rootCauseClass": "POST_JOB_STATE_UNRESOLVED_WITH_LOG_BLOB_UNAVAILABLE",
+  "attemptSignature": "compare-natural-readiness-runs-with-old-full-log-and-new-job-step-timestamps",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions/self-hosted-macos-node24/read-only-job-metadata",
+    "materialStateKey": "readiness-v1/late-natural-run-post-checkout-incomplete-and-job-log-blob-unavailable"
+  },
+  "evidenceRefs": [
+    "github-actions/run-41117305706",
+    "github-actions/job-124274764755",
+    "github-actions/run-40218434947",
+    "github-actions/job-121244536663",
+    "reports/research/forward-v02-pr2286-natural-n2-red-run-layered-evidence-audit-20261031.md",
+    "LEARN-n2-daily-readiness-day-index-missing-20260920",
+    "LEARN-n2-daily-readiness-day-index-restored-20260921"
+  ],
+  "lesson": "An early research payload failure and a prolonged unresolved post-job phase can coexist. A prior missing-plan payload cause must not be copied to a later run without its own process log; a completed job with an in_progress post-step and an unavailable log does not by itself prove a runner crash or platform root cause.",
+  "guardrail": "For natural N2 red runs, separate payload, process exit, workflow/job conclusion, post-job cleanup, and runner/platform evidence. Compare job-step timestamps and full logs when available. With BlobNotFound, keep later payload exit and cleanup/runner cause unknown, do not infer readiness, and do not activate or rerun protected N2 for diagnostics. Reuse the missing-day-index guardrail only when the matching payload evidence exists.",
+  "repeatPolicy": "OBSERVE_ONLY",
+  "createdAt": "2026-10-31T10:05:41.000Z",
+  "productionConnection": false,
+  "_digest": "e5287a8e01d4f8ea2f0cecf54b376e52b33e4616aad0f5ba5d2ffcb6f34a3893",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-31T10:05:41.000Z"
+}

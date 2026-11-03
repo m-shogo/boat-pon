@@ -1,0 +1,30 @@
+{
+  "learningId": "LEARN-forward-vault-scm-session-errno-import-fixture-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.scm-session-embedded-python-errno-import-missing",
+  "subsystem": "research-governance-forward-vault-linux-scm-rights-session-test",
+  "operation": "github-actions-new-live-process-ebadf-assertion",
+  "symptom": "Official code-head GitHub Actions run 40591990631 failed 1 new research-only session FD cleanup test while 4587 passed and 2 skipped. Full verify job log showed Python NameError: name errno is not defined inside the new EBADF assertion, masking the intended successful rejection; process exit 1 caused verify FAILURE. Research Governance and Post Checkout were SUCCESS, with no runner/platform failure evidence. Local disposable probe had imported errno, but the embedded Python source committed to GitHub had not. The code was corrected by adding the missing import.",
+  "rootCauseClass": "EMBEDDED_PYTHON_TEST_IMPORT_PARITY_DRIFT",
+  "attemptSignature": "pr2286-v397-new-rejected-session-ebadf-assertion-without-errno-import",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-ubuntu24-node24-python3+local-linux-python3.13-node22",
+    "materialStateKey": "pr2286-v397-session-test-embedded-python-without-errno-import-before-f3103728"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "actions/runs/40591990631",
+    "src/research/governance/forwardEvaluationVault.scmRightsSessionReplayLinux.test.ts",
+    "commit/f310372832a0d8b635138364ace8e3473a4d3fcb",
+    "reports/research/forward-vault-scm-rights-session-prehandoff-ownership-20261028.md"
+  ],
+  "lesson": "A locally executed disposable Python probe is not proof that the embedded Python literal committed inside a TypeScript test has the same imports. A newly added exception-branch assertion can be masked by a missing module import even when the underlying FD cleanup succeeded. Verify the exact committed embedded source and run its negative path; distinguish test harness NameError from the research mechanism.",
+  "guardrail": "When porting disposable Python into String.raw TypeScript tests, compare imports and all newly referenced symbols, execute the exact embedded source (not only a separately maintained local probe), and inspect full red CI job logs before inferring an FD or runner failure. Import errno wherever errno.EBADF is asserted. Reuse prior embedded-Python escaping and blob-readback guardrails; research only, no production/BUY/LINE/public/Owner Dashboard/protected N2.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-27T22:08:59.000Z",
+  "productionConnection": false,
+  "_digest": "e1be4dbaf70c10874929259549240e22291fd8b02c8974274fd0c79afdae6742",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-27T22:08:59.000Z"
+}

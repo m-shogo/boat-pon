@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-cross-envelope-authority-id-replay-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-cross-envelope-authority-id-replay",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-authority-metadata-batch-replay",
+  "symptom": "The unmerged v290 metadata preflight validates each untrusted envelope independently, so a caller can reuse an issuer-scoped witness receipt for a different frozen cohort/partition or a source-scoped revision ID for a different outcome without any cross-envelope conflict signal. Synthetic fixtures only; no independently verified evidence or production path.",
+  "rootCauseClass": "UNTRUSTED_AUTHORITY_RECEIPT_AND_REVISION_IDENTITY_NOT_RECONCILED_ACROSS_ENVELOPES",
+  "attemptSignature": "pr2286-v291-synthetic-issuer-receipt-and-source-revision-replay-conflict-preflight",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-pr-node24-ci",
+    "materialStateKey": "forwardV02AuthorityMetadata.0.1-untrusted/pr2286-d986f628/single-envelope-only-no-cross-record-replay"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02AuthorityMetadata.ts",
+    "src/research/governance/forwardV02AuthorityBatch.ts",
+    "src/research/governance/forwardV02AuthorityBatch.test.ts",
+    "commit/68bc653acb60e968e9aec9f7f2f223cbe02f1d45",
+    "commit/e0355a5ea2c78d0b86ffbee264d4c12eeb4e90e5"
+  ],
+  "lesson": "Individually well-formed self-reported witness and terminal revision metadata does not establish batch-wide identity uniqueness. Replaying the same issuer receipt or source revision identity with a different commitment can hide contradictory cohorts or outcomes unless the batch reconciles those namespaces.",
+  "guardrail": "Before any future independent verifier considers an evidence batch, compare issuer-scoped receipt IDs against frozen cohort, membership partition, protocol and witness commitments, and source-scoped revision IDs against exact decision/ticket/outcome/revision content. Permit exact idempotent duplicates, reject changed reuse, and keep all metadata-only results unverified and unscorable.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T07:04:40.381Z",
+  "productionConnection": false,
+  "_digest": "4089e3ecf17b75bcc35b9832423c912958e4fe502378624a4cecb42e8e248ce7",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T07:04:40.381Z"
+}

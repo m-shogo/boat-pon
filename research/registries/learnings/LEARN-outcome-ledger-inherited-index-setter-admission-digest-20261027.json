@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-outcome-ledger-inherited-index-setter-admission-digest-20261027",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.inherited-index-setter-admission-digest",
+  "subsystem": "research-governance-outcome-learning-ledger",
+  "operation": "validate-outcome-record-and-canonical-append-digest",
+  "symptom": "An inherited Array.prototype index-zero setter can intercept indexed validation-error writes, leaving an invalid Outcome Ledger record with an empty error array. An inherited index-17 setter can drop the last canonical evidence digest, causing distinct valid records to hash identically and potentially be classified IDEMPOTENT_NOOP rather than CONFLICT. Both are synthetic runtime conditions; no production or real settlement evidence was affected.",
+  "rootCauseClass": "INHERITED_NUMERIC_SETTER_INTERCEPTS_ERROR_SINK_AND_CANONICAL_ARRAY",
+  "attemptSignature": "pr2286-v363-outcome-ledger-index-zero-error-and-index17-digest-synthetic-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic+github-actions-node24-typescript6.0.3",
+    "materialStateKey": "outcome-learning-ledger.0.1/pr2286-v362-index-assignment-error-and-canonical-array"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedger.inheritedIndexSetterBoundary.test.ts",
+    "commit/973f16cabeb37f036789e568bdc8fa06ff6b44e3",
+    "commit/097a377c434486d6c6861970815180438273d837",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-inherited-index-setter-20261026.json",
+    "research/registries/learnings/LEARN-ledger-validation-error-sink-push-bypass-20261022.json"
+  ],
+  "lesson": "Replacing Array.prototype.push with errors[errors.length] still leaves a validation sink vulnerable to inherited numeric setters; likewise descriptor-safe reads cannot protect canonical hashes when output arrays are populated through inherited-setter-sensitive assignment. This is the same previously learned ambient prototype boundary in a distinct ledger.",
+  "guardrail": "Define each validation error and canonical array index as an own enumerable data property with Object.defineProperty. Verify invalid admission, direct digest rejection, unchanged baseline digests, distinct high-index digest identity and append CONFLICT under reversible inherited numeric setters. Never treat the tests as proof of independent settlement authenticity.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T17:09:33.468Z",
+  "productionConnection": false,
+  "_digest": "1023d8cc5c99d62392cb5783664eaba177a01a5810e1a9433de2920b1f852e92",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T17:09:33.468Z"
+}

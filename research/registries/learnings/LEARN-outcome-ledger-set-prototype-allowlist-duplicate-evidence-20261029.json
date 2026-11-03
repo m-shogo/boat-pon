@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-outcome-ledger-set-prototype-allowlist-duplicate-evidence-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.outcome-ledger.ambient-set-membership-and-evidence-dedup-bypass",
+  "subsystem": "research-governance-outcome-learning-ledger",
+  "operation": "validate-and-hash-outcome-allowlist-and-source-evidence-uniqueness",
+  "symptom": "Node 22.16.0 synthetic Set.prototype.has overrides can make the Outcome Learning Ledger admit an unknown record field when the module allowlist Set is treated as always containing it, or admit repeated sourceEvidenceDigests when the temporary seen Set reports no members. The pre-fix validator used ambient Set.has in both admission checks. This is research-only synthetic metadata, not a production settlement incident or external evidence authentication.",
+  "rootCauseClass": "AMBIENT_SET_HAS_BYPASSES_OUTCOME_ALLOWLIST_AND_EVIDENCE_UNIQUENESS",
+  "attemptSignature": "pr2286-v430-outcome-set-allowlist-evidence-duplicate-failclosed-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "outcomeLearningLedger.ts@8992fbd60f33/Set.has-allowlist-and-evidence-duplicate-validation"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/outcomeLearningLedger.ts",
+    "src/research/governance/outcomeLearningLedger.setPrototypeBoundary.test.ts",
+    "commit/f13d8c2298ebe297aa77917324fe3e211734235d",
+    "commit/d2ae672afd0a2ad0edc60debbb74c42c44c155ba",
+    "research/registries/learnings/LEARN-runtime-ledger-set-prototype-admission-bypass-20261029.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-set-prototype-diagnostic-20261029.json"
+  ],
+  "lesson": "A previously verified Runtime Ledger Set admission guardrail also applies to a distinct Outcome Ledger authority. Set.has is not a stable validator for allowed fields or evidence digest uniqueness when mutable ambient prototype hooks can alter membership independently of persisted metadata.",
+  "guardrail": "Use indexed module-owned required-field membership checks and null-prototype own-data digest keys instead of Set.has/add. Under reversible size-selective and always-false synthetic Set.has hooks, reject unknown fields and duplicate sourceEvidenceDigests through validation, direct digest and append classification; preserve normal digests. No production connection or source authentication follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T21:07:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T21:07:00.000Z",
+  "_digest": "a8bd6d2be1c2b357e83dcfdc681c2ce6df1fdc0c2ecc0cb4b6675c1a4294a6f0"
+}

@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-runtime-ledger-schema-python-dollar-terminal-lf-parity-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.schema-python-dollar-terminal-lf-admission",
+  "subsystem": "research-governance-runtime-decision-ledger",
+  "operation": "schema-only-draft202012-k1-exact-instant-digest-terminal-parity",
+  "symptom": "Python jsonschema Draft 2020-12 accepts a synthetic trailing LF after a 64-hex sourceRowDigest and after a timestamp matched by the Runtime Decision Ledger exactInstant pattern because dollar can match before a final newline. The Node runtime rejects the corresponding noncanonical values. This is a schema-only cross-engine lexical mismatch, not an observed private record or production incident.",
+  "rootCauseClass": "SCHEMA_PYTHON_REGEX_DOLLAR_ANCHOR_FINAL_NEWLINE_ADMISSION",
+  "attemptSignature": "pr2286-runtime-ledger-portable-exact-terminal-schema-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/python-jsonschema-draft202012/node-ecmascript/github-actions-node24-research-only",
+    "materialStateKey": "runtime-decision-ledger.schema.json@abf99795/exactInstant-sourceRowDigest-dollar-anchors"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "config/research-governance/runtime-decision-ledger.schema.json",
+    "src/research/governance/runtimeDecisionLedgerSchemaParity.test.ts",
+    "src/research/governance/runtimeDecisionLedger.ts",
+    "research/registries/learnings/LEARN-shadow-evidence-schema-python-dollar-terminal-lf-parity-20261103.json",
+    "commit/69dfe09c3bf01402df0514c65d3cd16747d697b8",
+    "commit/a3ed0d74e93a4b1cb7f6e522d759665e38439d70"
+  ],
+  "lesson": "JSON Schema regex dollar anchors are not portable exact-end assertions: Python re.search admits a final LF that the JavaScript runtime rejects. Schema-only consumers must not treat lexical acceptance as authenticated timing or digest evidence.",
+  "guardrail": "Use (?![\\\\s\\\\S]) as the strict terminal assertion for K1 exactInstant and sourceRowDigest schema patterns. Keep runtime timestamp parsing and digest checks authoritative; retain LF, CRLF, Unicode terminator and valid-control tests. Reuse the Shadow Evidence terminal-boundary guardrail without changing Current BUY or production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T23:07:30.000Z",
+  "productionConnection": false,
+  "_digest": "0cba0493eec8e8632e786d7a9ed8781e47767ff3f29d1789f7c4597bf658d1a1",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T23:07:30.000Z"
+}

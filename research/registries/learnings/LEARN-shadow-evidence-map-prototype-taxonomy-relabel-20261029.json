@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-map-prototype-taxonomy-relabel-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-map-taxonomy-relabel-admission-bypass",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-sanitized-shadow-evidence-taxonomy-reconciliation",
+  "symptom": "A synthetic Node 22.16.0 override of Map.prototype.has/get could make the shadow-evidence validator accept a re-digested taxonomyCounts object with the wrong taxonomy key but the same count and cardinality. The pre-fix taxonomyMatches used a temporary Map for expected counts and consulted mutable Map.has/get during comparison. This was a research-only synthetic integrity case, not a production or external evidence incident.",
+  "rootCauseClass": "AMBIENT_MAP_MEMBERSHIP_FORGED_TAXONOMY_RECONCILIATION",
+  "attemptSignature": "pr2286-v432-shadow-evidence-map-taxonomy-relabel-failclosed-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@21e6eba3/taxonomyMatches-Map.has-get-set"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/9b0ba691673689103c5bb86f868db1fccd7ad449",
+    "commit/d1b06cc265a0f1ff196937346ba3732009590560",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-map-prototype-membership-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-reason-count-map-admission-20261027.json"
+  ],
+  "lesson": "The shadow-evidence taxonomy validator can accept a re-signed incorrect reason taxonomy when its expected-count Map is queried through mutable ambient Map methods. A content digest does not replace an independent, deterministic semantic reconciliation.",
+  "guardrail": "Recompute expected taxonomy counts in a null-prototype own-data dictionary, compare exact own count descriptors and key cardinality, and avoid Map.prototype.has/get/set for the admission verdict. Regression-test a wrong-key re-digested taxonomy under reversible Map hooks while preserving valid synthetic evidence and digest.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T22:11:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T22:11:00.000Z",
+  "_digest": "dabe7bd7d77c4b79e34c74d7a5a70d24763e2e5a08459c9e536995ad8e9b1740"
+}

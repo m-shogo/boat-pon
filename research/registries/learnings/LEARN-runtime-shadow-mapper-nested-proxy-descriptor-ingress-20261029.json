@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-runtime-shadow-mapper-nested-proxy-descriptor-ingress-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.runtime-ledger.shadow-mapper-nested-row-context-proxy-descriptor-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-mapper",
+  "operation": "map-and-reconcile-decision-history-row-with-context",
+  "symptom": "The research-only shadow mapper pinned source-row and mapping-context fields through own property descriptors but did not reject a caller-owned Proxy before consulting descriptor traps. A transparent Proxy could be treated as an admitted row/context; a synthetic descriptor trap can fabricate the purported own-data snapshot. A revoked Proxy also reaches the descriptor boundary before denial. This is a synthetic ingress-integrity gap, not authenticated external evidence or a production incident.",
+  "rootCauseClass": "NESTED_ROW_CONTEXT_PROXY_DESCRIPTOR_TRUST_BEFORE_SNAPSHOT",
+  "attemptSignature": "pr2286-v429-nested-row-context-proxy-denial-and-revoked-regression",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerMapper.ts@172effd12121/source-row-and-context-own-descriptor-snapshot-without-proxy-denial"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerMapper.ts",
+    "src/research/governance/runtimeDecisionLedgerMapper.test.ts",
+    "commit/0cfcadf2babced30176960f042bf7307ef9bfec7",
+    "commit/c830bd333c8458676f5c77e192f75bef7b95ab1f",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-source-row-descriptor-snapshot-20261029.json",
+    "research/registries/learnings/LEARN-runtime-shadow-mapper-source-array-proxy-length-20261029.json",
+    "research/registries/learnings/LEARN-runtime-ledger-proxy-descriptor-digest-admission-20261029.json"
+  ],
+  "lesson": "A detached own-descriptor snapshot is stable only after the input object is admitted. A caller-controlled Proxy can fabricate the descriptors being pinned; rejecting the outer array Proxy alone does not protect nested source rows or mapping context.",
+  "guardrail": "At Node-only research shadow mapper ingress, reuse util.types.isProxy to deny source-row and mapping-context Proxies, including revoked instances, before Array.isArray or any caller descriptor/get trap. Preserve normal own-data row/context snapshots and baseline ledger digests. Regression must cover direct mapping, reconciliation, trap nonexecution, revoked inputs and unchanged ordinary results. No production or external source authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T20:00:31.685Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T20:00:31.685Z",
+  "_digest": "008dbe81a6de8205be7d3b2d702f3715555d16755abe47804b3469b2d1859bca"
+}

@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-finite-mtime-test-ts7022-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.finite-mtime-test-implicit-boolean-ts7022",
+  "subsystem": "research-governance-shadow-evidence-regression-tests",
+  "operation": "typescript-typecheck-synthetic-finite-mtime-schema-test",
+  "symptom": "GitHub Actions research-governance Typecheck on the new finite-mtime schema regression test failed with TS7022 for an inferred schemaRangeAdmits local. Research payload and schema checks were not reached in that job. The failure is test compilation, not a research result or runner/platform failure.",
+  "rootCauseClass": "SYNTHETIC_TEST_BOOLEAN_INFERENCE_TS7022_TYPECHECK_FAILURE",
+  "attemptSignature": "pr2286-shadow-schema-mtime-test-inferred-boolean-20261103",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-node24-typescript-research-governance",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.schemaFiniteMtimeParity.test.ts@3c0155df/inferred-schemaRangeAdmits"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaFiniteMtimeParity.test.ts",
+    "actions/runs/41524669460",
+    "actions/jobs/125549212959",
+    "commit/3c0155df4b6fd27ba74ba810fcc4790c7094745e",
+    "commit/38bc40da4e1dcae5e2c6c132ea3b03ad2e9230cf",
+    "research/registries/learnings/LEARN-shadow-evidence-scope-regex-anychar-test-assumption-20261103.json"
+  ],
+  "lesson": "A synthetic schema parity regression can fail before executing its assertions because the TypeScript checker rejects an inferred local as TS7022. Treat such a red workflow as a test compilation failure, not as evidence about the schema or research payload.",
+  "guardrail": "When a new synthetic test encounters TS7022 for a simple derived boolean, annotate the local explicitly as boolean and rerun Typecheck plus the full official research-governance and verify jobs. Inspect job logs and separate process exit, workflow conclusion, post-job cleanup and runner evidence; do not retry protected N2 or change production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T21:04:13.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T21:04:13.000Z",
+  "_digest": "1add6e0234ce1d67223b475886da16407338c7abfc0b01ebef3e51e8f4edbf4a"
+}

@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-escaped-newline-source-typecheck-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-automation.github-file-write.escaped-newline-source-typecheck",
+  "subsystem": "research-automation-github-source-authoring",
+  "operation": "write-typescript-source-through-github-contents-api",
+  "symptom": "A GitHub contents write inserted literal backslash-n text rather than line breaks in a new TypeScript helper. Two already-triggered research-governance jobs on unchanged code reported TS1128 at line 257 with process exit 1; checkout/post-job cleanup completed and no runner/platform fault was evidenced. The source was read back and corrected in a materially changed commit before any third identical attempt.",
+  "rootCauseClass": "ESCAPED_NEWLINE_LITERAL_IN_GENERATED_TYPESCRIPT_SOURCE",
+  "attemptSignature": "pr2286-v440-template-literal-double-escaped-newline-helper-insertion",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-contents-api/typescript6.0.3/github-actions-node24",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@48dcc89a/literal-backslash-n-helper-source"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "commit/48dcc89a0abc5aa32eea1dc6b1016bfb0f70c23d",
+    "commit/32bc8e9ccd34580872917526583dc537bf43b250",
+    "actions/runs/40815800842",
+    "actions/runs/40815862369",
+    "research/registries/learnings/LEARN-shadow-evidence-string-includes-taxonomy-privacy-bypass-20261029.json"
+  ],
+  "lesson": "A string used to construct source content can contain escaped newline characters rather than actual line breaks. Multiple workflows triggered by adjacent commits may repeat the same unchanged parse failure; a new main SHA or extra workflow does not change that root cause.",
+  "guardrail": "Before writing generated source through the GitHub contents API, inspect the exact inserted lines or parse a local equivalent. After a write, fetch the exact branch file and verify real line breaks before relying on CI. Treat repeated TS1128 at the same source line as the same fingerprint; repair the source representation rather than retrying unchanged workflows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T04:07:12.117Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T04:07:12.117Z",
+  "_digest": "9e6d21178dc46fc4ff420630e585c1dba8f46adebdc8779b702e69976dec5e89"
+}

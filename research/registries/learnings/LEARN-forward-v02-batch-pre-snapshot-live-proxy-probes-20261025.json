@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-batch-pre-snapshot-live-proxy-probes-20261025",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-batch-pre-snapshot-proxy-repair",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-authority-metadata-batch-replay",
+  "symptom": "The standalone batch checker ran denseOwnDataArray on the caller's live Proxy before taking the detached graph snapshot. Its length getter and toJSON membership check could repair an initially conflicting issuer receipt cohort or source revision content digest, causing later replay comparison to accept the repaired metadata as consistent. No independent authority or scoring was granted.",
+  "rootCauseClass": "BATCH_LIVE_PROXY_PREFLIGHT_SIDE_EFFECT_BEFORE_DETACHED_SNAPSHOT",
+  "attemptSignature": "pr2286-v321-snapshot-first-no-live-length-has-probes-two-negative-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02AuthorityBatch.0.1-untrusted/pr2286-6c015954/live-dense-array-precheck-before-snapshot"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02AuthorityBatch.ts",
+    "src/research/governance/forwardV02AuthorityBatch.test.ts",
+    "commit/01b02b0da6dbe23c5b2bc0066f30c5c40eda373d",
+    "commit/f42288cc8338a2bbf451e9a2696808497c5ec53e",
+    "research/registries/learnings/LEARN-forward-v02-batch-replay-late-reference-mutation-20261025.json",
+    "research/registries/learnings/LEARN-forward-v02-proxy-regression-trigger-drift-20261025.json"
+  ],
+  "lesson": "A defensive shape preflight is not inert on a caller-owned Proxy: property reads and membership checks can mutate other fields before the supposed first snapshot. Snapshot-first means no live shape probe, including length and toJSON membership, may run before detaching the graph.",
+  "guardrail": "Run the bounded descriptor-only snapshot as the first operation on a caller-controlled batch; then validate dense array shape and reconcile replay identities solely on the detached copy. Regression tests must show that live length getter and toJSON has traps do not run, that original cohort/revision conflicts remain rejected, and that existing later-index mutation tests still fire at the new descriptor phase. Preserve literal independentAuthorityVerified=false and scoringAuthorized=false.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-25T06:04:10.000Z",
+  "productionConnection": false,
+  "_digest": "c3d0e1b99d8d8f6dbed01d46b292f34364532b5a5dbb158a43b7dc651b44e634",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-25T06:04:10.000Z"
+}

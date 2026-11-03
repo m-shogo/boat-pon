@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-date-parse-iso-admission-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-date-normalization-admission",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-shadow-generated-at-and-bounded-scope-canonical-utc-dates",
+  "symptom": "Synthetic Node 22.16.0 reproduction showed that mutable ambient Date.parse and Date.prototype.toISOString could relabel a noncanonical generatedAt offset string and an impossible bounded scope calendar date as canonical. The validator used both ambient methods after own-data graph preflight. No private evidence or production execution was involved.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_DATE_PARSE_ISO_CANONICAL_ADMISSION",
+  "attemptSignature": "pr2286-v455-pin-native-date-parse-and-iso-for-shadow-utc-date-admission",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@bae8f851/canonicalGeneratedAt-and-canonicalDate-use-ambient-Date.parse-and-Date.prototype.toISOString"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/3ac0be414ce0384b7493d07a95c54903854afe93",
+    "commit/34c763fefa2bb25a6051de5ce9f1e1a167e3a718",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-regexp-test-exec-admission-20261029.json"
+  ],
+  "lesson": "Validating a claimed UTC instant or date with ambient Date.parse and Date.prototype.toISOString permits caller-realm prototype mutation to change canonical admission without changing the evidence content digest. This is a syntactic integrity gap only; even a correct canonical date is not an independent clock or K-source attestation.",
+  "guardrail": "Capture native Date constructor, parse and toISOString at module initialization and call the captured intrinsics during fixed-schema canonical checks. Regress offset-format generatedAt and impossible calendar scope dates while ambient Date methods are mutated; preserve normal valid input and digest behavior. Keep generatedAt untrusted and outside contentDigest by v0.1 contract. No K rights/finality, scoring, merge or production authority follows.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T18:59:02.352Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T18:59:02.352Z",
+  "_digest": "d93f2d3c620ed4ddc4c6b18453d45ec35416dc1c7c8cd3e30b846db4c68fb293"
+}

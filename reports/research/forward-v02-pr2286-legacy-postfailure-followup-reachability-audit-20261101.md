@@ -1,0 +1,36 @@
+# Forward Vault v0.2 — legacy post-failure follow-up reachability (2026-11-01 JST)
+
+**Disposition: NEW_FAILURE (static workflow governance gap); ENGINEERING_REQUIRED / DO_NOT_MERGE_CANDIDATE.** Research-only source inspection; no workflow dispatch, N2 activation, private evidence, Current BUY, LINE, public publishing, automated betting, production settings, or Owner Dashboard changes. No readiness count or live runner availability is inferred.
+
+## Question, hypothesis, authority
+
+**Question:** If the Draft PR's legacy `task` command is disabled with exit code 3, does that also make the entire existing manual workflow inert?
+
+**Hypothesis:** No. The task process and `run-one-task` job can fail while the workflow's separately conditioned follow-up jobs still become eligible. A post-run read-only audit may also be triggered on workflow completion, regardless of its conclusion.
+
+Pinned canonical main `2342494f6581c167a5648681ca7374b26d6659d4`; pre-write Draft PR #2286 `25969ac0f3dce020b28b90036e83e55d336f66f0`; separately owned #2287 was not modified. Source blobs on main: local workflow `95094e7`, retained-state audit `5fb01c0`, standalone retention snapshot `87a4c90`, commit helper `bf7a0dc`, legacy runner `cce9559`. The Draft runner's fail-closed mode and synthetic regression are unmerged. Main's legacy `task` mode is still warning-only. Merged #2284/#2285 establish research Forward Vault foundations, not operational deprecation authority.
+
+## Conditional job and side-effect matrix (static, not observed execution)
+
+| Route | Predicate and consequence | Authority / limit |
+| --- | --- | --- |
+| `guard` in [local workflow](https://github.com/m-shogo/boat-pon/blob/2342494f6581c167a5648681ca7374b26d6659d4/.github/workflows/boat-pon-local-research.yml) | Owner, repository, main ref, workflow_dispatch and safety-level checks must pass. | No evidence that a real dispatch passed or the self-hosted runner was available. |
+| `run-one-task` | If guard passes, builds/validates a legacy request and invokes `pnpm automation:task`. Under **hypothetical post-merge Draft CLI**, `task` exits 3 before request/policy/executor; main does **not** yet have this guard. | Conditional task-process failure, not a live workflow failure. |
+| `Show status` and `Commit automation results` | Both have `if: always()`, so failure of the task step alone does not skip them. The legacy commit step supplies `RUN_ID` but not the helper's trusted Git/Node binaries or pinned automation-branch base. | The pre-existing [helper provenance LEARN](https://github.com/m-shogo/boat-pon/blob/25969ac0f3dce020b28b90036e83e55d336f66f0/research/registries/learnings/LEARN-research-automation-legacy-commit-helper-provenance-20261031.json) predicts fail-closed persistence absent external trusted inputs; no push is asserted. |
+| `daily-retention-snapshot` in local workflow | `needs: [guard, run-one-task]` with `if: always() && needs.guard.outputs.ok == 'true'`. Thus **run-one-task success is not required**. At JST hour 23, it may build a sanitized snapshot and, only if changed and CAS/allowlist checks pass, append to `automation/boat-pon-research`. | This is a conditional **separate automation-branch write path**, not a Current BUY/LINE write or proof of an actual append. At other hours the gate skips persistence. |
+| [Post-run retained-state audit](https://github.com/m-shogo/boat-pon/blob/2342494f6581c167a5648681ca7374b26d6659d4/.github/workflows/research-retained-state-audit.yml) | `workflow_run` on completion of `boat-pon local research (one-shot)`; filter checks dispatch event, main branch and owner actor, **not** upstream conclusion. | It can audit a failed workflow, but is explicitly read-only (`contents: read`); not a separate write path. |
+| [Standalone retention snapshot](https://github.com/m-shogo/boat-pon/blob/2342494f6581c167a5648681ca7374b26d6659d4/.github/workflows/research-durable-retention-snapshot.yml) | Separate owner/main `workflow_dispatch`, also has sanitized conditional CAS append. | Distinct workflow, not evidence of automatic execution from the failed local workflow. |
+
+**New bounded finding:** A CLI-level deprecation guard does not imply workflow-level inertness. In particular, the legacy local workflow's JST-23 retention writer can remain conditionally eligible after the task job fails. This is a governance/operational review gap; the retained snapshot may be intentional and is separately guarded. No production connection, unauthorized write, actual workflow run, or runner/platform failure is demonstrated.
+
+## Evidence, learning gate and falsification
+
+- Read latest-main `docs/architecture/research-learning-loop.md` and `docs/architecture/research-knowledge-retention-contract.md`; the main Experiment `EXP-dataset-expand-701398c2` and Discovery `DISC-dataset-coverage-701398c2` are historical inventory, not K issuer rights or Forward scoring evidence. Rejection registry has no substantive entry.
+- Reused `LEARN-research-automation-legacy-task-mode-warning-only-20261030`, `LEARN-research-automation-legacy-task-fail-closed-verified-20261031`, `LEARN-research-automation-legacy-commit-helper-provenance-20261031`, and `LEARN-research-automation-legacy-prepolicy-denial-verified-20261031`. The **workflow-level retention writer after task failure** is a distinct previously unrecorded branch of the control-flow graph; no unchanged failed attempt was rerun.
+- Fingerprint: `research-automation.legacy-manual-workflow.postfailure-retention-write-reachability`; attempt: `pr2286-v504-pinned-postfailure-retention-and-retained-audit-workflow-graph-no-dispatch`; environment: `github-connector-pinned-main-draft-workflow-static-trace/no-dispatch`; material: `manual-workflow-95094e7/retained-audit-5fb01c0/draft-cli-25969ac0`. Gate: **PROCEED_DISTINCT / REUSE_GUARDRAIL**.
+- [Official PR-head CI #41227520756](https://github.com/m-shogo/boat-pon/actions/runs/41227520756) passed Verify and Research Governance on `25969ac0` with **4,692 PASS / 2 SKIP / 0 FAIL**. Full job logs show successful typecheck, build, replay, governance, secret/production-isolation checks and post-job cleanup. This CI did not dispatch the legacy workflow or prove its GitHub enabled state.
+- Falsification requires an independently approved workflow-level change that prevents the follow-up writer when legacy execution is disabled, or an explicit documented operator decision to retain it. A future operational test would need separately authorized, non-N2 inputs; this research run intentionally does not perform one.
+
+## Decision / next safe action
+
+Keep PR #2286 Draft and **DO_NOT_MERGE_CANDIDATE**. Request operational-owner review of the manual workflow's `always()` steps, JST-23 retention job, write permission, and conclusion-agnostic read-only audit **as separate decisions**. Do not restore legacy task execution merely to make old workflow green. Live workflow enablement and self-hosted runner state remain unverified. K issuer/usage rights, independently authenticated ticket-level settlement/corrections/finality, frozen cohort and approved protocol remain external blockers. `independentAuthorityVerified=false`, `scoringAuthorized=false`, `productionConnection=false`.

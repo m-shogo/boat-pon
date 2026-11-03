@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-scope-regex-anychar-test-assumption-20261103",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.scope-regex-anychar-test-assumption",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence-tests",
+  "operation": "test-scope-schema-portable-whitespace-boundary",
+  "symptom": "The first scope schema parity regression used a broad substring assertion that prohibited any literal backslash-S in the pattern, even though the portable [backslash-s backslash-S] any-character class legitimately contains it. CI verify failed exactly one synthetic test (4786 pass, 2 skip, 1 fail); research-governance succeeded, process exited 1 and post-job cleanup succeeded. No evidence of a runner/platform failure or production impact.",
+  "rootCauseClass": "REGRESSION_TEST_ASSERTION_CONFLATED_GENERIC_BOUNDARY_WITH_ANY_CHARACTER_CLASS",
+  "attemptSignature": "pr2286-v553-test-reject-any-backslash-S-substring-in-portable-regex",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-actions-ubuntu-node24-verify-research-only",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.schemaScopeTrimParity.test.ts@0d854d34/overbroad-backslashS-substring-assertion"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.schemaScopeTrimParity.test.ts",
+    "config/research-governance/runtime-decision-ledger-shadow-evidence.schema.json",
+    "commit/0d854d34f03d80ce157939a9883a1841e9a88c96",
+    "commit/1ca87d9d95e16eb539a88bcc4487bb376b6b8f5d",
+    "actions/runs/41487148377"
+  ],
+  "lesson": "A cross-engine portable regex may use [backslash-s backslash-S] to match all characters. Testing for absence of any backslash-S substring falsely rejects the correct expression; distinguish prohibited generic boundary anchors from valid interior any-character classes.",
+  "guardrail": "Assert that the scope pattern does not start with generic caret-backslash-S, and separately check exact ECMAScript trim parity over Unicode and terminal-newline vectors. Do not infer a runtime validation failure from a test-only assertion mismatch; inspect full job logs and post-job outcome.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T17:05:36.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T17:05:36.000Z",
+  "_digest": "308782f051665f7f57068fd41e2825d513aed014e71b592203d71c9a6234926b"
+}

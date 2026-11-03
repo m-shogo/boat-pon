@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-v02-claimed-instant-unbounded-fraction-20261101",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-v02.claimed-instant-unbounded-fraction",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-forward-v02-claimed-instant",
+  "symptom": "The shared untrusted claimed-instant validator admitted a syntactically valid timestamp with a 1,000,000-digit fractional second; its chronology comparator pads fractions to the larger input length. The corresponding authority-metadata schema also admitted arbitrary fractional length. This creates an avoidable unbounded string-processing and allocation surface for caller-provided metadata; no external exploitation, N2 execution, scoring or production impact was observed.",
+  "rootCauseClass": "UNBOUNDED_CLAIMED_INSTANT_FRACTION_AND_SCHEMA_LENGTH",
+  "attemptSignature": "pr2286-v516-bound-fraction-to-64-digits-in-shared-helper-and-authority-schema",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "local-node22.16.0-synthetic/github-actions-ubuntu-node24",
+    "materialStateKey": "forwardV02ClaimedInstant.ts@6a3e22ad-unbounded-fraction/schema@2b06afd6-unbounded-fraction"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02ClaimedInstant.ts",
+    "config/research-governance/forward-v02-authority-metadata.schema.json",
+    "src/research/governance/forwardV02ClaimedInstantFractionBound.test.ts",
+    "research/registries/learnings/LEARN-forward-v02-standalone-request-claimed-instant-chronology-20261028.json",
+    "research/registries/learnings/LEARN-outcome-ledger-exact-instant-schema-parity-20261020.json"
+  ],
+  "lesson": "Arbitrary fractional precision is not required to preserve nanosecond ordering and permits unbounded caller-controlled timestamp length. Bound input length before regex and Date.parse, align the schema's lexical fractional limit, and retain high-precision synthetic chronology coverage.",
+  "guardrail": "Reject claimed timestamps longer than 90 characters and fractional seconds longer than 64 ASCII digits in the shared untrusted helper; mirror the 64-digit limit and maxLength 90 in the authority-metadata schema. Verify 64-digit acceptance, 65-digit rejection, long-input rejection, manifest digest parity and submillisecond comparison. These are structural resource bounds only, never trusted time or scoring authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T06:55:25.000Z",
+  "productionConnection": false,
+  "_digest": "f7aed65690a13ab230dc78d8d61635fee8f89611eace715557360dc01a0ac0d1",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T06:55:25.000Z"
+}

@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-object-freeze-verdict-mutability-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-object-freeze-verdict-mutability",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "validate-shadow-evidence-immutable-result-under-ambient-object-freeze-replacement",
+  "symptom": "Node 22.16.0 synthetic reproduction showed that replacing Object.freeze with a no-op after module initialization leaves a validation verdict object and its error array mutable. The v463 shadow validator called ambient Object.freeze for both result and error collection, allowing post-validation alteration of an invalid result without changing evidence digests. No protected N2 or private inputs were used.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_OBJECT_FREEZE_VERDICT_MUTABILITY",
+  "attemptSignature": "pr2286-v464-pin-object-freeze-for-shadow-validation-envelope-and-errors",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@d31457ca/ambient-Object.freeze-in-validation-result"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/92edae90a09b07fd7b7f54b1523ed1afcd1ccb4d",
+    "commit/02000147a142c8812bfe3e5880dcdc9493b3d3d4",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-defineproperty-error-suppression-20261030.json"
+  ],
+  "lesson": "An immutable validation envelope is not actually immutable if its error array and verdict are frozen through a caller-mutable Object.freeze reference. A valid/invalid decision can be relabeled by downstream code after validation when the ambient freeze method is replaced.",
+  "guardrail": "Capture Object.freeze when the research module initializes and use that fixed intrinsic for both the validation error array and returned verdict envelope. Regress valid and malformed synthetic evidence under reversible no-op freeze replacement, then verify both remain frozen and reject mutation after restoration. This does not freeze caller-owned evidence or establish external issuer, finality, scoring, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T04:01:54.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T04:01:54.000Z",
+  "_digest": "3ab6892fa7d419f849c1558a4cce511c51f7779fb1094a6ab132cafb39014129"
+}

@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-set-stage-uniqueness-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-set-stage-and-unique-array-admission",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-set-membership-and-insertion-for-stage-and-unique-array-validation",
+  "symptom": "Node 22.16.0 synthetic reproduction and v0.1 source inspection showed that caller-replaced Set.prototype.has can admit unknown evidence stages (always true), reject valid stages (always false), or miss duplicate protocol entries; a no-op Set.prototype.add also permits duplicate array entries. These affect research-only stage separation and append-only record admission. No real odds, K evidence, production data or observed attack were used.",
+  "rootCauseClass": "V01_AMBIENT_SET_METHOD_STAGE_AND_DUPLICATE_ADMISSION_BYPASS",
+  "attemptSignature": "pr2286-v529-pin-native-set-has-add-and-regress-stage-unique-array-admission",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@366d97cd/v01-live-Set.prototype.has-add-for-stage-and-unique-array-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientSetAdmission.test.ts",
+    "commit/ed494db2d46857e5ce6a36416899a2b560c207e8",
+    "commit/2ddda44743340c834af6961edbefa87717d96243",
+    "research/registries/learnings/LEARN-shadow-evidence-set-prototype-allowlist-iterator-20261029.json",
+    "research/registries/learnings/LEARN-forward-vault-stage-pooling-unknown-stage-20261016.json"
+  ],
+  "lesson": "Stage allowlist membership and unique-array admission are mutable even when the Set instances are module-private: invoking live Set.prototype.has or add lets later ambient replacements change which research records and stage pools are accepted. A frozen canonical digest does not repair a bypassed validation decision.",
+  "guardrail": "Capture native Set.prototype.has and Set.prototype.add at module initialization and dispatch through captured Reflect.apply for stage membership and duplicate detection/insertion. Regress always-true and always-false has plus no-op add using reversible synthetic hooks; preserve baseline SHA and conflict semantics. Keep protected N2, Current BUY, LINE, public publishing, betting, private values and production outside this authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T20:07:12.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T20:07:12.000Z",
+  "_digest": "90fb74aa160d774d254acf647088e244ca2ca740c23e1b19d20c9843e56b7c42"
+}

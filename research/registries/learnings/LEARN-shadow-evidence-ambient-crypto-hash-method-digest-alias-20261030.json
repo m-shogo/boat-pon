@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-ambient-crypto-hash-method-digest-alias-20261030",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-crypto-hash-method-digest-alias",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "bind-shadow-source-context-content-sha256-to-native-hash-update-and-digest-methods",
+  "symptom": "Node 22.16.0 synthetic reproduction showed that replacing the writable crypto.Hash prototype update method with a no-op makes distinct JSON inputs hash as the same empty string; replacing digest with a constant hex result also aliases distinct inputs. The v465 shadow digest() captured JSON.stringify but still invoked mutable hash.update() and hash.digest() through the caller realm. This is a synthetic integrity failure, not an observed production or external K-data incident.",
+  "rootCauseClass": "SHADOW_EVIDENCE_AMBIENT_CRYPTO_HASH_METHOD_DIGEST_ALIAS",
+  "attemptSignature": "pr2286-v466-pin-crypto-hash-update-and-digest-for-shadow-canonical-sha256",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@05762737/ambient-Hash.prototype.update-and-digest-in-canonical-sha256"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/58aa10b22002778a821e4c6ef88844ae783209c3",
+    "commit/76a618dc08182f13587998adc60807b200e00b6a",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-json-stringify-digest-alias-20261030.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-reflect-apply-dispatch-admission-20261030.json"
+  ],
+  "lesson": "Capturing a canonical JSON serializer does not stabilize SHA-256 if the returned crypto.Hash instance still dispatches update/digest through mutable prototype methods. A no-op update or constant digest can collapse otherwise distinct source/context/content identities after module initialization.",
+  "guardrail": "Capture the native crypto Hash.update and Hash.digest methods at research module initialization and invoke them through the already pinned Reflect.apply. Regress both reversible prototype replacements against distinct synthetic source/context/content digests, valid evidence and denial of changed-source stale-digest evidence. Keep external K issuer, rights, corrections, trusted time, scoring and production authorization independently blocked.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-30T05:59:59.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-30T05:59:59.000Z",
+  "_digest": "07d1e17d1369e01d831c62bf6bbe024fb611fe9a3188b953089b603a957601ab"
+}

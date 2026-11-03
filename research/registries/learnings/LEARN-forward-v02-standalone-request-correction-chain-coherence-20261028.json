@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-standalone-request-correction-chain-coherence-20261028",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-standalone-request-correction-chain-coherence",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "digest-forward-v02-untrusted-request-standalone",
+  "symptom": "The exported standalone untrusted request transcript admitted digest-shaped but incoherent correction-chain claims: nonconsecutive sequence numbers, broken predecessor links, duplicate revision IDs or content digests, unsupported finality labels, and a terminal ID or finality inconsistent with the last revision. The strict authority-envelope builder rejects those cases. A correlation digest is not evidence of source finality or a production impact.",
+  "rootCauseClass": "STANDALONE_REQUEST_TRANSCRIPT_OMITS_CORRECTION_CHAIN_TOPOLOGY_ADMISSION",
+  "attemptSignature": "pr2286-v408-standalone-correction-chain-nine-direct-mutations",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forwardV02UntrustedVerifierResponse.ts@add9d10cd/standalone-revision-shape-without-chain-topology"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.ts",
+    "src/research/governance/forwardV02UntrustedVerifierResponse.test.ts",
+    "commit/7b93c00b15256d52659e7e6b8287bcaafea40d1f",
+    "commit/24c67f730d9506ff585be5799e1376ea8b63db33",
+    "commit/3f8878f1fe597b40e6ab6bc918a7ecb9fc37260f",
+    "research/registries/learnings/LEARN-forward-v02-standalone-request-whitespace-scalar-admission-20261028.json",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-array-push-chain-mutation-20261024.json"
+  ],
+  "lesson": "Detached, digest-shaped caller metadata can still describe an impossible revision chain. A standalone transcript must enforce the same bounded correction-chain topology invariants as the strict envelope preflight before producing a structural correlation ID.",
+  "guardrail": "Before hashing a standalone v0.2 untrusted proof request, reject nonconsecutive sequences, broken predecessor digests, duplicate revision IDs/content digests, unsupported claimed finality labels, and mismatched/non-FINAL terminal revision. Exercise nine direct-call mutations and preserve the valid transcript hash. This remains claim-shape consistency only: no independent authentication, source finality proof, scoring or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-28T08:03:30.000Z",
+  "productionConnection": false,
+  "_digest": "a11cbcb9a1766f5f88026ff4ea35754eee582fdcde8dcc9b82c1ae6d6f99f6b6",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-28T08:03:30.000Z"
+}

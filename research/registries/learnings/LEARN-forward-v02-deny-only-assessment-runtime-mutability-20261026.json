@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-v02-deny-only-assessment-runtime-mutability-20261026",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-deny-only-assessment-runtime-mutability",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "preserve-runtime-fail-closed-untrusted-assessment-results",
+  "symptom": "Three untrusted Forward v0.2 assessment APIs (authority metadata, trust-policy preflight, and cross-envelope authority batch) returned writable objects and writable blocker arrays even though their TypeScript types declared literal false authorization. A consumer holding a returned result could mutate scoringAuthorized or independentAuthorityVerified at runtime and alter blockers without re-running the structural checks. This is an output-integrity gap in research-only metadata, not proof of independent evidence or a production admission path.",
+  "rootCauseClass": "DENY_ONLY_ASSESSMENT_OUTPUT_NOT_RUNTIME_FROZEN",
+  "attemptSignature": "pr2286-v357-freeze-authority-batch-metadata-policy-results-and-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "forward-v02-pr2286-v356-authority-batch-metadata-policy-mutable-return-objects"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02AuthorityBatch.ts",
+    "src/research/governance/forwardV02AuthorityMetadata.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.ts",
+    "src/research/governance/forwardV02AuthorityBatch.test.ts",
+    "src/research/governance/forwardV02AuthorityMetadata.test.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "commit/65f87c372da1abf07c17ffa453c1ec3bd7d45554"
+  ],
+  "lesson": "Compile-time readonly and literal false fields do not prevent a runtime consumer from rewriting a deny-only research assessment. Even a correct preflight can hand off a mutable object whose flags and denial reasons no longer reflect its actual result.",
+  "guardrail": "Freeze every returned deny-only assessment object and its blocker array at the return boundary. Regression-test both consistent-but-unverified and rejected paths by attempting to mutate authority flags and blocker arrays; require TypeError and preserved false flags. This protects research metadata only and does not authenticate evidence, grant scoring, or connect production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-26T11:06:19.466Z",
+  "productionConnection": false,
+  "_digest": "30d30e8e48ecb4b22db6cbbad3a20278e7b3211f262c2e27320c3b86d9966bdb",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-26T11:06:19.466Z"
+}

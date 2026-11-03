@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-v02-trust-policy-anchor-push-forgery-20261024",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v02-trust-policy-anchor-push-forgery",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "assess-forward-v02-trust-policy-preflight",
+  "symptom": "A synthetic ambient Array.prototype.push replacement can substitute an ACTIVE anchor for a validated REVOKED witness or settlement anchor during policy collection, or erase a valid anchor, changing the untrusted policy-consistency result. No independent trust verification or production path is involved.",
+  "rootCauseClass": "MUTABLE_ARRAY_PROTOTYPE_PUSH_ALTERS_POST_VALIDATION_POLICY_ANCHORS",
+  "attemptSignature": "pr2286-v296-synthetic-push-forged-revoked-anchor-and-dropped-valid-anchor",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "github-connector/research-pr-node24-ci+synthetic-ambient-array-push",
+    "materialStateKey": "forwardV02TrustPolicyPreflight.0.1-untrusted/pr2286-c0f1ea08/validated-anchor-copy-uses-array-prototype-push"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardV02TrustPolicyPreflight.ts",
+    "src/research/governance/forwardV02TrustPolicyPreflight.test.ts",
+    "research/registries/learnings/LEARN-forward-v02-proof-request-array-push-chain-mutation-20261024.json",
+    "commit/39c09cc8544fe871584d52a07b92edbb5a238f19",
+    "commit/acd4b42d45fa0c52665877416c0a675c7c9755f4",
+    "github-actions/run-40092362785"
+  ],
+  "lesson": "A strict descriptor/shape check does not protect an intermediate policy-anchor array when a later append uses ambient mutable Array.prototype.push. A forged ACTIVE anchor can launder a revoked caller-supplied policy anchor into a structurally consistent but still UNTRUSTED result; dropping anchors can also create false denials.",
+  "guardrail": "Reuse the previously recorded push-mutation guardrail: copy each validated anchor by indexed assignment into a fresh local array, and regression-test both revoked-key substitution and dropped valid anchors under synthetic Array.prototype.push overrides. Keep independentAuthorityVerified=false and scoringAuthorized=false; no external signature, clock or trust-root authentication is implied.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-24T12:04:00.000Z",
+  "productionConnection": false,
+  "_digest": "7276d10bddcdbf3d79403f7ccf43ea24108e1c020df7772882abff2ddd03538f",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-24T12:04:00.000Z"
+}

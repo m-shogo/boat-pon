@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-shadow-evidence-string-includes-taxonomy-privacy-bypass-20261029",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.shadow-evidence.ambient-string-includes-taxonomy-privacy-bypass",
+  "subsystem": "research-governance-runtime-decision-ledger-shadow-evidence",
+  "operation": "build-and-validate-sanitized-shadow-evidence-taxonomy-and-path-admission",
+  "symptom": "Synthetic Node 22.16.0 override of String.prototype.includes to return false changed close-time reason taxonomy from temporal_provenance to schema_or_value and could suppress embedded path-marker denial during sanitized evidence validation. Recomputed digests do not independently establish semantic classification or privacy. No actual private paths, SQLite, K source or production data were accessed.",
+  "rootCauseClass": "AMBIENT_STRING_INCLUDES_ALTERS_REASON_TAXONOMY_AND_EMBEDDED_PATH_DENIAL",
+  "attemptSignature": "pr2286-v440-indexed-literal-substring-taxonomy-and-path-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-typescript6.0.3",
+    "materialStateKey": "runtimeDecisionLedgerShadowEvidence.ts@1c6a8289/ambient-String.prototype.includes-for-taxonomy-and-path-admission"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.ts",
+    "src/research/governance/runtimeDecisionLedgerShadowEvidence.test.ts",
+    "commit/48dcc89a0abc5aa32eea1dc6b1016bfb0f70c23d",
+    "commit/ec6d182da405ed79518fb12350ffec7a16fe13a3",
+    "research/registries/learnings/LEARN-shadow-evidence-object-entries-privacy-path-erasure-20261029.json",
+    "research/registries/learnings/LEARN-shadow-evidence-map-prototype-taxonomy-relabel-20261029.json"
+  ],
+  "lesson": "Hardening enumeration and Map count comparisons is insufficient when taxonomy and embedded path checks still call mutable ambient String.prototype.includes. A re-digested sanitized artifact can be semantically misclassified or lose privacy-path diagnostics under the same ambient hook.",
+  "guardrail": "Use a module-owned indexed UTF-16 literal substring check for taxonomy tokens and embedded path markers, avoiding ambient String.prototype.includes. Regress taxonomy stability and fail-closed embedded synthetic path denial under reversible String.prototype hooks; preserve ordinary evidence digest and keep all research isolated from production.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-10-29T04:06:14.073Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-10-29T04:06:14.073Z",
+  "_digest": "a6d9f4a33b6ce17cf9fdae3ec75d9d4040e5acdd486eb9beec5bab79fc65292b"
+}

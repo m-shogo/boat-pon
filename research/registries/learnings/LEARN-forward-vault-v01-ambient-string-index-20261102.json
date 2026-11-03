@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-string-index-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-string-index-stage-pooling",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-global-String-numeric-index-and-denial-slot-coercion",
+  "symptom": "Node synthetic reproduction showed caller-replaced global String(number) mapping all numeric indices to '0' changes mixed SHADOW_FORWARD/HISTORICAL stage pooling from false to true. The same live coercion could reject valid multi-entry protocol arrays and overwrite distinct validation denial slots. No private K evidence, protected N2 or production execution was involved.",
+  "rootCauseClass": "V01_AMBIENT_GLOBAL_STRING_NUMERIC_INDEX_ALIAS",
+  "attemptSignature": "pr2286-v535-pin-v01-numeric-index-string-and-reversible-regressions",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@b5a5fbcd/v01-live-global-String-numeric-index-coercion"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientStringIndex.test.ts",
+    "commit/75970ee06562c466d995fc5bedd4788fb759d98e",
+    "commit/8f36f08da067248ab5b433246076ed0c1c194ce0",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-string-constructor-canonical-key-erasure-20261030.json"
+  ],
+  "lesson": "Pinned descriptor inspection still becomes caller-controlled if numeric index conversion dispatches through mutable global String. A mixed-stage array can be read as the same first element twice, bypassing the stage separation boundary.",
+  "guardrail": "Capture the native String function at module initialization and use it for all numeric descriptor indices and validation denial slots. Regress mixed-stage denial, multi-entry protocol digest stability, and distinct denial diagnostics under reversible synthetic global String replacement. This is research-only integrity evidence, not issuer, finality, scoring, readiness or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T00:58:00.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T00:58:00.000Z",
+  "_digest": "6aa035f1ae1d5bdc25dd6cb6854e783f30b62401bda2a27ea1c8baa86e8275c9"
+}

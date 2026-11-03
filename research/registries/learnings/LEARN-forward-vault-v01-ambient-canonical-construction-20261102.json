@@ -1,0 +1,32 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-canonical-construction-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-canonical-construction-and-error-sink",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-v01-object-defineproperty-and-object-create-for-failclosed-validation-and-canonical-digests",
+  "symptom": "Node 22.16.0 synthetic reproduction and source review showed that replacing Object.defineProperty with a no-op can discard v0.1 validation denial errors and erase canonical array elements; replacing Object.create with a toJSON-bearing factory can collapse distinct canonical record digests. Both mutable helpers were called after input admission, despite pinned JSON.stringify and Hash methods. No private evidence, protected N2, production data, or observed attack was involved.",
+  "rootCauseClass": "V01_AMBIENT_CANONICAL_CONTAINER_CONSTRUCTION_AND_DENIAL_SINK_BYPASS",
+  "attemptSignature": "pr2286-v530-pin-v01-object-defineproperty-create-and-regress-denial-digest",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@6d70a0c2/v01-live-Object.defineProperty-and-Object.create"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientCanonicalFactory.test.ts",
+    "commit/a560b9c948110a64d80454c2166a723e802ba361",
+    "commit/a168f2feb141174a9cd06af9995d86e0ad35580f",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-defineproperty-error-suppression-20261030.json",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-canonical-container-prototype-factory-20261030.json"
+  ],
+  "lesson": "Pinning canonical JSON serialization and SHA methods is insufficient when canonical container construction and error collection still call mutable ambient object helpers. Suppressed validation errors can turn malformed metadata into accepted records, and inherited toJSON on newly constructed canonical objects can alias different research digests.",
+  "guardrail": "Capture Object.defineProperty and Object.create at module initialization; use captured references for validation denial indices, canonical array elements, and null-prototype canonical objects. Regression-test rejection with nonempty errors and stable distinct digests under reversible synthetic no-op/property-factory overrides. Do not infer issuer rights, settlement finality, frozen cohort, scoring approval, merge readiness or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T20:58:14.000Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T20:58:14.000Z",
+  "_digest": "089ef680f5bc46ac6f52b8460a5a246abf0e32c14954a8490a152d4a63a3dd2d"
+}

@@ -1,0 +1,31 @@
+{
+  "learningId": "LEARN-forward-vault-v01-global-constructor-prototype-denial-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-global-constructor-prototype-denial",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "pin-intrinsic-array-object-prototype-identities-for-v01-validation-canonicalization-stage-pooling",
+  "symptom": "Source review identified live Object.prototype and Array.prototype comparisons after module initialization. Replacing the ambient global constructors can deny otherwise valid synthetic Forward Vault protocols, prevent their SHA-256 digest/idempotency classification, or change same-stage pooling from true to false. The research-only regression tests cover the bounded denial scenario; no K issuer, real attack, production impact or readiness evidence is implied.",
+  "rootCauseClass": "V01_AMBIENT_GLOBAL_CONSTRUCTOR_PROTOTYPE_IDENTITY_DENIAL",
+  "attemptSignature": "pr2286-v541-pin-intrinsic-prototype-identities-and-regress-global-constructor-replacement",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22.16.0-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@c4ed47ef/v01-live-global-Array-Object-prototype-comparisons"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientGlobalConstructorPrototypes.test.ts",
+    "commit/1c229f37b01e28fbd56da6cc87a819a5be30c8f8",
+    "commit/426dfd21ec9905b8aa6dc29d1ef683b82f803942",
+    "research/registries/learnings/LEARN-shadow-evidence-ambient-global-constructor-prototype-denial-20261030.json"
+  ],
+  "lesson": "Capturing reflection and array classification methods does not preserve admissible prototype identity when expected Array.prototype and Object.prototype are still read from replaceable global constructors. This same guardrail was established for the distinct shadow-evidence module and must also be applied to Forward Vault v0.1.",
+  "guardrail": "Capture native Array.prototype and Object.prototype at module initialization; compare all plain-object, dense-array, canonical-array and stage-pooling prototype checks to those stable identities. Regress global Object/Array replacement while preserving valid admission, digest, idempotent append, conflict, malformed rejection and stage separation. Research-only; no scoring, K rights, N2, merge or production authority.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-02T07:06:58.282Z",
+  "productionConnection": false,
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-02T07:06:58.282Z",
+  "_digest": "360e6a1a5f78300c064786b41f43fb124ab37b311a6fc42c5bc8e272d823adbb"
+}

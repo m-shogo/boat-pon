@@ -1,0 +1,33 @@
+{
+  "learningId": "LEARN-forward-vault-v01-ambient-object-keys-erasure-20261102",
+  "classification": "NEW_FAILURE",
+  "fingerprintKey": "research-k3.forward-vault.v01.ambient-object-keys-canonical-erasure",
+  "subsystem": "research-governance-forward-vault",
+  "operation": "validate-v01-metric-map-and-canonical-sha256-own-key-enumeration",
+  "symptom": "Synthetic Node reproduction showed that replacing Object.keys after module initialization could erase complete v0.1 canonical record fields and alias distinct research record digests; selective key omission could hide a nonfinite metric during validation and canonical hashing. No private odds, settlement data, actual exploit or production impact was observed.",
+  "rootCauseClass": "V01_AMBIENT_OBJECT_KEYS_CANONICAL_AND_METRIC_FIELD_ERASURE",
+  "attemptSignature": "pr2286-v526-pin-object-keys-and-regress-canonical-digest-metric-admission",
+  "authorityState": {
+    "mainSha": "2342494f6581c167a5648681ca7374b26d6659d4",
+    "environmentKey": "node22-synthetic/github-actions-node24-research-only",
+    "materialStateKey": "forwardEvaluationVault.ts@3cca34e6/v01-ambient-Object.keys-enumeration-before-v526"
+  },
+  "evidenceRefs": [
+    "pull/2286",
+    "src/research/governance/forwardEvaluationVault.ts",
+    "src/research/governance/forwardEvaluationVault.ambientObjectKeys.test.ts",
+    "commit/fd955e514bd4f7c31f3ad7c1571e29d458f456c7",
+    "commit/dcf57e5d7aaaa208d98d6a30911ddb64f88b1136",
+    "github-actions/run-41329529767",
+    "research/registries/learnings/LEARN-shadow-evidence-object-entries-privacy-path-erasure-20261029.json",
+    "research/registries/learnings/LEARN-forward-vault-canonical-array-helpers-20261024.json"
+  ],
+  "lesson": "Runtime validation and canonical JSON digest must enumerate the same complete own-data key set. A mutable ambient Object.keys can omit valid record fields or invalid metric fields, creating digest aliases or bypassing finite-number admission despite descriptor shape checks. Reuse the prior ambient-enumeration erasure guardrail for this materially distinct Forward Vault v0.1 boundary.",
+  "guardrail": "Capture native Object.keys at module initialization and use the captured method consistently in v0.1 metric validation, record unknown-field checks and canonical digest enumeration. Regress both whole-record digest erasure and selectively hidden nonfinite metrics with reversible synthetic ambient overrides; preserve existing canonical digest vectors and production isolation.",
+  "repeatPolicy": "BLOCK_SAME_ATTEMPT_UNTIL_CHANGE",
+  "createdAt": "2026-11-01T17:06:00.000Z",
+  "productionConnection": false,
+  "_digest": "347c447fb8717860d30b8aa31df13da4076e652149a72bbc38cd50390760863d",
+  "_digestVersion": "canonical-v2",
+  "_recordedAt": "2026-11-01T17:06:00.000Z"
+}
