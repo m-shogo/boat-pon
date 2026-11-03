@@ -17,7 +17,7 @@ const schema = JSON.parse(readFileSync("config/research-governance/outcome-learn
     sourceEvidenceDigests: { items: { pattern: string } };
   };
 };
-const exactEnd = String.raw`(?![\\s\\S])`;
+const exactEnd = String.raw`(?![\s\S])`;
 function fixture(): OutcomeLearningLedgerRecord {
   return {
     schemaVersion: V,
