@@ -76,3 +76,52 @@ test("K ファイル: 特払いはその券種だけの払戻で、レース全�
     "win:特払=70:false", "place:3=150:false", "place:2=150:false", "trifecta:3-2-4=5200:false",
   ]);
 });
+
+test("K ファイル: 同着のレースは、2 つ目の払戻も読む（2025-01-04 津 2R。3 着が同着）", () => {
+  const text = header("津　　") +
+    "   2R       一　般　　　                 H1800m  晴　  風  北　　 3m  波　  2cm\n" + columns + entries(1, 2) + "\n" +
+    "        単勝     1          130  \n" +
+    "        複勝     1          100  2          100  \n" +
+    "        ２連単   1-2        200  人気     1 \n" +
+    "        ２連複   1-2        150  人気     1 \n" +
+    "        拡連複   1-2        100  人気     2 \n" +
+    "                 1-3        100  人気     1 \n" +
+    "                 1-4        110  人気     4 \n" +
+    "                 2-3        100  人気     3 \n" +
+    "                 2-4        110  人気     5 \n" +
+    "        ３連単   1-2-3      280  人気     1 \n" +
+    "                 1-2-4      390  人気     2 \n" +
+    "        ３連複   1-2-3      130  人気     1 \n" +
+    "                 1-2-4      150  人気     2 \n\n\n" +
+    "   3R       一　般　　　                 H1800m  晴　  風  北　　 3m  波　  2cm\n" + columns + entries(5, 2) + "\n" +
+    "        ２連単   5-2        890  人気     2 \n" +
+    "                 2-5        640  人気     1 \n" +
+    "        ２連複   2-5        480  人気     1 \n";
+  const parsed = parseOfficialResultDetail(text, defaults);
+  const of = (raceNo: number, t: string) => parsed.payouts.filter((p) => p.raceNo === raceNo && p.betType === t).map((p) => `${p.combination}=${p.payoutYen}`);
+  assert.deepEqual(of(2, "exacta"), ["1-2=200"]);
+  assert.deepEqual(of(2, "wide"), ["1-2=100", "1-3=100", "1-4=110", "2-3=100", "2-4=110"]);
+  assert.deepEqual(of(2, "trifecta"), ["1-2-3=280", "1-2-4=390"]);
+  assert.deepEqual(of(2, "trio"), ["1-2-3=130", "1-2-4=150"]);
+  // 1 着が同着: ２連単が 2 つ
+  assert.deepEqual(of(3, "exacta"), ["5-2=890", "2-5=640"]);
+  assert.deepEqual(of(3, "quinella"), ["2-5=480"]);
+});
+
+test("K ファイル: 拡連複の 1 行目が空でも、続きの行は拡連複として読む（2004-06-03 下関 3R）", () => {
+  const text = header("下　関") +
+    "   3R       予　　選　　                 H1800m  晴　  風  南西　 3m  波　  3cm\n" + columns + entries(4, 3) + "\n" +
+    "        単勝     \n" +
+    "        複勝     \n" +
+    "        ２連単   4-3       2170  人気    10 \n" +
+    "        ２連複   3-4       6400  人気    12 \n" +
+    "        拡連複   \n" +
+    "                 1-4        250  人気     2 \n" +
+    "                 1-3        600  人気     6 \n" +
+    "        ３連単   4-3-1    12970  人気    46 \n" +
+    "        ３連複   1-3-4     2070  人気     9 \n";
+  const parsed = parseOfficialResultDetail(text, defaults);
+  assert.deepEqual(parsed.payouts.map((p) => `${p.betType}:${p.combination}=${p.payoutYen}`), [
+    "exacta:4-3=2170", "quinella:3-4=6400", "wide:1-4=250", "wide:1-3=600", "trifecta:4-3-1=12970", "trio:1-3-4=2070",
+  ]);
+});

@@ -80,6 +80,8 @@ const SPECIAL_PAYOUT_LABELS: Record<string, BetType> = {
   "３連複": "trio",
 };
 
+const PAYOUT_LABEL = /単勝|複勝|２連単|２連複|拡連複|３連単|３連複/;
+
 type OfficialResultDetailSemantics = "v2" | "legacy_v1_audit";
 
 function parseOfficialResultDetailWithSemantics(
@@ -96,7 +98,8 @@ function parseOfficialResultDetailWithSemantics(
   let date = defaults.date;
   let raceNo: number | null = null;
   let returned = false;
-  let continuationBetType: "wide" | null = null;
+  // 直前に読んだ券種。ラベルの無い続きの行（拡連複の 2・3 行目、同着のときの 2 つ目の払戻）をこの券種として読む。
+  let continuationBetType: BetType | null = null;
 
   const raceId = () => `${date.replaceAll("-", "")}-${venue}-${String(raceNo).padStart(2, "0")}`;
 
@@ -205,7 +208,10 @@ function parseOfficialResultDetailWithSemantics(
       /(単勝|複勝|２連単|２連複|拡連複|３連単|３連複)[\s　]+特払(?:い)?[\s　]+([0-9,]+)/,
     );
     if (semantics === "v2" && specialPayout) {
-      pushPay(SPECIAL_PAYOUT_LABELS[specialPayout[1]], "特払", specialPayout[2], null);
+      const specialType = SPECIAL_PAYOUT_LABELS[specialPayout[1]];
+      pushPay(specialType, "特払", specialPayout[2], null);
+      // この券種の続きの行があれば、同じ券種として読む（前の券種に付けない）
+      continuationBetType = specialType === "win" || specialType === "place" ? null : specialType;
       continue;
     }
     const win = line.match(/単勝[\s　]+([1-6])[\s　]+([0-9,]+)/);
@@ -216,25 +222,35 @@ function parseOfficialResultDetailWithSemantics(
         pushPay("place", match[1], match[2], null);
       }
     }
-    if (continuationBetType === "wide" && !line.includes("拡連複")) {
-      const continuation = line.match(/^\s+(\d)-(\d)[\s　]+([0-9,]+)[\s　]+人気[\s　]+(\d+)/);
+    // 券種のラベルがある行は、払戻が空でもその券種の始まり。拡連複の 1 行目が空で 2 行目から払戻が並ぶ日がある
+    // （2004-06-03 下関 3R）。ここで切り替えないと、続きの行が前の券種（２連複）に付く。
+    const labelM = line.match(PAYOUT_LABEL);
+    if (labelM) {
+      const labelType = SPECIAL_PAYOUT_LABELS[labelM[0]];
+      continuationBetType = labelType === "win" || labelType === "place" ? null : labelType;
+    } else if (continuationBetType) {
       // 空行では続きを打ち切らない: 拡連複の 2 行目が空で 3 行目に払戻がある日がある（2004-08-21 三国 2R）。
       // 続きは、次の券種の行・次のレースの見出し・次の場の見出しで終わる。
-      if (continuation) {
-        pushPay("wide", `${continuation[1]}-${continuation[2]}`, continuation[3], continuation[4]);
+      // 同着のレースは、３連単・３連複（1・2 着の同着なら２連単・２連複も）に 2 つ目の払戻の行が続く（2025-01-04 津 2R）。
+      if (continuationBetType === "trifecta" || continuationBetType === "trio") {
+        const continuation = line.match(/^\s+(\d)-(\d)-(\d)[\s　]+([0-9,]+)[\s　]+人気[\s　]+(\d+)/);
+        if (continuation) pushPay(continuationBetType, `${continuation[1]}-${continuation[2]}-${continuation[3]}`, continuation[4], continuation[5]);
+      } else {
+        const continuation = line.match(/^\s+(\d)-(\d)[\s　]+([0-9,]+)[\s　]+人気[\s　]+(\d+)/);
+        if (continuation) pushPay(continuationBetType, `${continuation[1]}-${continuation[2]}`, continuation[3], continuation[4]);
       }
     }
     for (const { label, betType } of TWO_DIGIT) {
       const m = line.match(new RegExp(`${label}[\\s　]+(\\d)-(\\d)[\\s　]+([0-9,]+)[\\s　]+人気[\\s　]+(\\d+)`));
       if (m) {
         pushPay(betType, `${m[1]}-${m[2]}`, m[3], m[4]);
-        continuationBetType = betType === "wide" ? "wide" : null;
+        continuationBetType = betType;
       }
     }
     for (const { label, betType } of THREE_DIGIT) {
       const m = line.match(new RegExp(`${label}[\\s　]+(\\d)-(\\d)-(\\d)[\\s　]+([0-9,]+)[\\s　]+人気[\\s　]+(\\d+)`));
       if (m) {
-        continuationBetType = null;
+        continuationBetType = betType;
         pushPay(betType, `${m[1]}-${m[2]}-${m[3]}`, m[4], m[5]);
       }
     }
