@@ -57,7 +57,7 @@
 | auto-odds | 08:00〜21:05、5分ごと | オッズの取得、直前情報のその場取得（締切 5〜25 分前で無いもの）、判定（締め切りと通知で固定。11/18 からは BUY＝本命予想、v3 の BUY は WATCH に下げて記録だけ）、BUY 通知（T-10/T-5 で BUY、締切 5 分以上前） |
 | auto-exhibition | 30分ごと | 直前情報の一括取得 |
 | daily-programs | 01:00〜07:30 に数回 | 番組表の取り込み |
-| daily-results | 21:30 | 結果と全券種の払戻の取り込み、確定結果の通知（速報と同じなら省く） |
+| daily-results | 21:30 | 結果と全券種の払戻の取り込み、欠けた日の払戻の埋め戻し（直近 200 日・手元の K ファイルだけ。昼に動いた回は 5 日分まで）、確定結果の通知（速報と同じなら省く） |
 | daily-notify | 21:30 | `daily-line-summary.sh`: 成長ループ（週1の改善処理 → スコアカードを `data/reports/scorecard/` に記録）→ 締切前のオッズの時系列と、取り直せない記録（判定・通知・設定）の書き出し（`data/exports/`、Google Drive に複製）→ 今日の BUY の当たり外れ（速報が未送信の分を公式の結果ページで）→ 日次まとめ → 月1回の DB の点検（`monthly-db-check.ts`。壊れていないか・書き出しから戻せるか・複製先） |
 | weekly-forward-notify | 月曜 09:00 | 週次の成長まとめ（`report-growth.ts --no-months` → 先週との比較を LINE で1通）。名前は旧名のまま |
 | buy-results-fast | 10分ごと | 当たり外れの速報（`scripts/notify-buy-results-fast.ts`。締切の8〜120分後に公式の結果ページを見る）。2026-10-15 にユーザーが登録 |
