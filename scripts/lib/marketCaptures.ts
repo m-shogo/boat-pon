@@ -65,16 +65,18 @@ export function loadMarketRaces(db: DatabaseSync, fromDate: string, toDate: stri
 }
 
 /** BUY 通知用: そのレースの最新の完全スナップショットと、その1つ前。 */
-export function loadLatestCapturesForRace(db: DatabaseSync, raceId: string): { latest: OddsMap | null; earlier: OddsMap | null } {
-  const captures = db.prepare(`SELECT captured_at FROM odds_timeseries_snapshots WHERE race_id = ?
-    GROUP BY captured_at HAVING ${selectionHaving} ORDER BY captured_at DESC LIMIT 2`).all(raceId) as Array<{ captured_at: string }>;
+export function loadLatestCapturesForRace(db: DatabaseSync, raceId: string): { latest: OddsMap | null; earlier: OddsMap | null; latestCheckpointLabel: string | null } {
+  // 1回の取得（同じ captured_at）は1つのチェックポイントに属する。本命予想の BUY は、最新が T-10 / T-5 のときだけ判定する。
+  const captures = db.prepare(`SELECT captured_at, MAX(checkpoint_label) AS checkpoint_label FROM odds_timeseries_snapshots WHERE race_id = ?
+    GROUP BY captured_at HAVING ${selectionHaving} ORDER BY captured_at DESC LIMIT 2`).all(raceId) as Array<{ captured_at: string; checkpoint_label: string | null }>;
   const load = (capturedAt: string | undefined) => {
     if (!capturedAt) return null;
     const rows = db.prepare(`SELECT selection, odds FROM odds_timeseries_snapshots WHERE race_id = ? AND captured_at = ?`).all(raceId, capturedAt) as Array<{ selection: string; odds: number }>;
     const odds = new Map(rows.map((row) => [row.selection, row.odds]));
     return isCanonicalT5CompleteMarketSelections(odds.keys()) ? odds : null;
   };
-  return { latest: load(captures[0]?.captured_at), earlier: load(captures[1]?.captured_at) };
+  const latest = load(captures[0]?.captured_at);
+  return { latest, earlier: load(captures[1]?.captured_at), latestCheckpointLabel: latest ? captures[0]?.checkpoint_label ?? null : null };
 }
 
 /** 週次の改善処理で入れ替わった市場補正パラメータ。ファイルが無い・壊れているときは初期値。 */

@@ -30,24 +30,46 @@ export type BuyAlertInput = {
   officialRaceUrl?: string;
   /** 現役の代の仮想の財布（この BUY を買う前の資産）。賭け金は財布の決まり（1回100円）で、推奨額とは別。 */
   wallet?: { generation: number; balanceYen: number; stakeYen: number };
+  /**
+   * "favorite" = 本命予想の BUY（3代目〜、src/domain/favoriteBuy.ts）。当たりやすさで選んだ買い目で、期待回収は 100% を下回るのがふつう。
+   * 見出しに「本命」を出し、v3 の予想と、v3 のころを含む通算成績は出さない。省略時はこれまでの v3 の BUY。
+   */
+  kind?: "favorite" | "v3";
 };
 
+/** 「約4回に1回」。確率から、おおよその頻度を平易に言う。 */
+function oneIn(probability: number): string | null {
+  if (!(probability > 0) || probability >= 1) return null;
+  const n = Math.round(1 / probability);
+  return n >= 2 ? `約${n}回に1回` : null;
+}
+
 export function formatBuyAlert(input: BuyAlertInput): { title: string; body: string } {
-  const title = `🔔 BUY ${input.venue}${input.raceNo}R ${input.selection}${input.closeAt ? `（締切 ${input.closeAt}）` : ""}`;
+  const favorite = input.kind === "favorite";
+  const title = `🔔 BUY ${favorite ? "本命 " : ""}${input.venue}${input.raceNo}R ${input.selection}${input.closeAt ? `（締切 ${input.closeAt}）` : ""}`;
   const lines: string[] = [];
   // 買うときに入力するものを最初に1行で（2026-10-15、ユーザーの要望「BUY は簡単に買えるように」）
   lines.push(`買い方: ${input.venue} ${input.raceNo}R・3連単 ${input.selection}${input.stakeYen ? `・${yen(input.stakeYen)}` : ""}${input.closeAt ? `（締切 ${input.closeAt} まで）` : ""}`);
   if (input.quoteOdds != null) lines.push(`オッズ ${input.quoteOdds.toFixed(1)}倍 → 当たれば 100円が ${yen(input.quoteOdds * 100)}`);
-  if (input.calibratedProbability != null) {
+  if (input.calibratedProbability != null && favorite) {
+    const frequency = oneIn(input.calibratedProbability);
+    lines.push(`当たる確率: 約${pct1(input.calibratedProbability)}${frequency ? `（${frequency}）` : ""}`);
+    if (input.quoteOdds != null) {
+      const back = Math.round(input.calibratedProbability * input.quoteOdds * 100);
+      lines.push(`期待回収: ${back}%（続けると 100円あたり約${back}円が戻る計算。当たりやすさで選んだ買い目で、プラスの見込みではない）`);
+    }
+  } else if (input.calibratedProbability != null) {
     lines.push(`当たる確率: 約${pct1(input.calibratedProbability)}${input.v3Probability != null ? `（v3 の予想は ${pct1(input.v3Probability)}）` : ""}`);
     if (input.quoteOdds != null) {
       const back = Math.round(input.calibratedProbability * input.quoteOdds * 100);
       lines.push(`期待回収: ${back}%（続けると 100円あたり約${back}円が戻る計算）`);
     }
+  } else if (favorite) {
+    lines.push("当たる確率: 計算できず（オッズを読み直せなかった）");
   } else if (input.v3Probability != null) {
     lines.push(`当たる確率: v3 の予想で ${pct1(input.v3Probability)}（市場補正は計算できず）`);
   }
-  if (input.total && input.total.settled > 0) {
+  if (!favorite && input.total && input.total.settled > 0) {
     lines.push(`これまでの BUY: ${formatTally(input.total)}・回収率 ${Math.round((input.total.officialRoi ?? 0) * 100)}%`);
   }
   if (input.wallet) {

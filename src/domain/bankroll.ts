@@ -23,6 +23,8 @@ export type Wallet = {
 export const WALLETS: readonly Wallet[] = [
   { generation: 1, from: "2026-07-20", startYen: 10_000, stakeYen: 100, note: "締切の後も判定を上書きしていたころの v3 の BUY（締切前に届いた分だけ数える）" },
   { generation: 2, from: "2026-10-10", startYen: 10_000, stakeYen: 100, note: "判定を締め切りで固定した後の v3 の BUY" },
+  // from は src/domain/favoriteBuy.ts の FAVORITE_BUY.from と同じ日（テストで確かめている）
+  { generation: 3, from: "2026-11-18", startYen: 10_000, stakeYen: 100, note: "本命予想（市場補正の確率が 22% 以上の買い目・1日 2 件まで）" },
 ];
 
 export const walletName = (generation: number) => (generation === 1 ? "初代" : `${generation}代目`);

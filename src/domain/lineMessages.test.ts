@@ -17,6 +17,30 @@ test("BUY の通知は 🔔 で始まり、オッズ・当たる確率・期待�
   assert.doesNotMatch(`${title}\n${body}`, /🎯|EV|logloss/);
 });
 
+test("本命予想の BUY は、見出しに「本命」、確率を頻度でも言い、プラスの見込みではないと書く", () => {
+  const { title, body } = formatBuyAlert({
+    kind: "favorite",
+    venue: "芦屋", raceNo: 6, selection: "1-2-3", closeAt: "11:00", quoteOdds: 3.5,
+    calibratedProbability: 0.254, v3Probability: 0.065, voteUrl: "https://example.invalid/vote", stakeYen: 100,
+    total: summarizeBuyLedger([{ date: "2026-08-01", hit: true, payoutYen: 4_270 }, { date: "2026-10-13", hit: false, payoutYen: null }]),
+    wallet: { generation: 3, balanceYen: 10_000, stakeYen: 100 },
+  });
+  assert.equal(title, "🔔 BUY 本命 芦屋6R 1-2-3（締切 11:00）");
+  assert.match(body, /^買い方: 芦屋 6R・3連単 1-2-3・100円（締切 11:00 まで）\nオッズ 3\.5倍 → 当たれば 100円が 350円/);
+  assert.match(body, /当たる確率: 約25\.4%（約4回に1回）/);
+  assert.match(body, /期待回収: 89%（続けると 100円あたり約89円が戻る計算。当たりやすさで選んだ買い目で、プラスの見込みではない）/);
+  // v3 の予想と、v3 のころを含む通算成績は出さない（代が違う）
+  assert.doesNotMatch(body, /v3|これまでの BUY/);
+  assert.match(body, /🚤 3代目の財布: 10,000円 → この BUY に 100円（当たれば 10,250円 前後）/);
+  assert.match(body, /※paper検証（実際の購入なし）$/);
+  const noProbability = formatBuyAlert({
+    kind: "favorite", venue: "芦屋", raceNo: 6, selection: "1-2-3", closeAt: null, quoteOdds: 3.5,
+    calibratedProbability: null, v3Probability: 0.065, voteUrl: "https://example.invalid/vote",
+  });
+  assert.match(noProbability.body, /当たる確率: 計算できず/);
+  assert.doesNotMatch(noProbability.body, /v3/);
+});
+
 test("市場補正が計算できないときは v3 の予想だけを出す", () => {
   const { body } = formatBuyAlert({
     venue: "福岡", raceNo: 5, selection: "1-2-3", closeAt: null, quoteOdds: null,

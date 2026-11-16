@@ -23,6 +23,7 @@ import {
 } from "../src/domain/accuracyScorecard";
 import { formatTally } from "../src/domain/buyResultNotification";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
+import { favoriteBuyActive } from "../src/domain/favoriteBuy";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
 
 const args = process.argv.slice(2);
@@ -85,16 +86,18 @@ function measure(w: Window): Row {
   let programs = 0, t5Races = 0;
   for (const [date, n] of programsByDate) if (date >= w.from && date <= w.to) programs += n;
   for (const raceId of t5.keys()) { const date = `${raceId.slice(0, 4)}-${raceId.slice(4, 6)}-${raceId.slice(6, 8)}`; if (date >= w.from && date <= w.to) t5Races += 1; }
-  const scored: Array<{ hit: 0 | 1; v3: number; cal: number; buy: boolean }> = [];
+  const scored: Array<{ hit: 0 | 1; v3: number; cal: number; buy: boolean; buyBasis: number }> = [];
   for (const d of inWindow) {
     if (!isSettled(d)) continue;
     const odds = t5.get(d.race_id);
     if (!odds) continue;
     const cal = calibratedMarketProbabilities(odds, t10.get(d.race_id) ?? t20.get(d.race_id) ?? null, champion);
     if (!cal || !normalizedMarketProbabilities(odds)?.has(d.selection)) continue;
-    scored.push({ hit: d.trifecta === d.selection ? 1 : 0, v3: d.est, cal: cal.get(d.selection)!, buy: d.decision === "BUY" });
+    // BUY の「予測」は、その BUY を選んだ確率で数える: 本命予想の BUY（3代目〜）は市場補正の確率、それより前は v3 の推定
+    const calibrated = cal.get(d.selection)!;
+    scored.push({ hit: d.trifecta === d.selection ? 1 : 0, v3: d.est, cal: calibrated, buy: d.decision === "BUY", buyBasis: favoriteBuyActive(d.date) ? calibrated : d.est });
   }
-  const m = (rows: typeof scored, k: "v3" | "cal") => binaryMetrics(rows.map((r): BinaryPrediction => ({ p: r[k], hit: r.hit })));
+  const m = (rows: typeof scored, k: "v3" | "cal" | "buyBasis") => binaryMetrics(rows.map((r): BinaryPrediction => ({ p: r[k], hit: r.hit })));
   const buyRows = scored.filter((r) => r.buy);
   return {
     key: w.key, label: w.label, from: w.from, to: w.to,
@@ -102,7 +105,7 @@ function measure(w: Window): Row {
     decisionCoverage: programs ? inWindow.length / programs : null,
     t5Coverage: programs && w.to >= accuracyFrom ? t5Races / programs : null,
     v3LogLoss: m(scored, "v3").logLoss, calibratedLogLoss: m(scored, "cal").logLoss,
-    v3BuyRatio: buyRows.length >= 10 ? m(buyRows, "v3").actualToPredicted : null, comparedRaces: scored.length,
+    v3BuyRatio: buyRows.length >= 10 ? m(buyRows, "buyBasis").actualToPredicted : null, comparedRaces: scored.length,
   };
 }
 const rows = allWindows.map(measure);

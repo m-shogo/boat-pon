@@ -21,6 +21,8 @@ import {
   type BinaryMetrics, type BinaryPrediction, type BuyTimingKind,
 } from "../src/domain/accuracyScorecard";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
+import { startedWallets, walletName } from "../src/domain/bankroll";
+import { favoriteBuyActive } from "../src/domain/favoriteBuy";
 
 const args = process.argv.slice(2);
 const arg = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -88,7 +90,7 @@ const recentBuys = buys.slice(-10).reverse().map((d) => ({
 }));
 
 // ─── 確率の精度（同じレースだけで比較） ───
-type Scored = { decision: string; hit: 0 | 1; v3: number; market: number; calibrated: number; t5Odds: number; quoteOdds: number | null };
+type Scored = { date: string; decision: string; hit: 0 | 1; v3: number; market: number; calibrated: number; t5Odds: number; quoteOdds: number | null };
 const scored: Scored[] = [];
 for (const d of decisions) {
   if (d.date < ACCURACY_FROM || !isSettled(d)) continue;
@@ -97,7 +99,7 @@ for (const d of decisions) {
   const market = normalizedMarketProbabilities(odds);
   const calibrated = calibratedMarketProbabilities(odds, t10.get(d.race_id) ?? t20.get(d.race_id) ?? null, champion);
   if (!market || !calibrated || !market.has(d.selection)) continue;
-  scored.push({ decision: d.decision, hit: d.trifecta === d.selection ? 1 : 0, v3: d.est, market: market.get(d.selection)!, calibrated: calibrated.get(d.selection)!, t5Odds: odds.get(d.selection)!, quoteOdds: d.cur });
+  scored.push({ date: d.date, decision: d.decision, hit: d.trifecta === d.selection ? 1 : 0, v3: d.est, market: market.get(d.selection)!, calibrated: calibrated.get(d.selection)!, t5Odds: odds.get(d.selection)!, quoteOdds: d.cur });
 }
 const predictors = [
   { key: "v3", label: "v3 推定的中率" },
@@ -106,7 +108,9 @@ const predictors = [
 ] as const;
 const accuracyFor = (rows: Scored[]) => predictors.map((p) => ({ ...p, metrics: binaryMetrics(rows.map((r): BinaryPrediction => ({ p: r[p.key], hit: r.hit }))) }));
 const accuracyAll = accuracyFor(scored);
-const scoredBuys = scored.filter((r) => r.decision === "BUY");
+// BUY の精度は、いまの代（財布の代＝BUY の選び方が同じ期間）だけで見る。代をまたぐと、v3 の BUY（大穴）と本命予想の BUY が混ざって読めない。
+const currentWallet = startedWallets(TO).at(-1)!;
+const scoredBuys = scored.filter((r) => r.decision === "BUY" && r.date >= currentWallet.from);
 const accuracyBuy = accuracyFor(scoredBuys);
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const buyEv = {
@@ -222,6 +226,10 @@ if (coverage7d != null && coverage7d < 0.7) alerts.push(`T-5 完全市場の7日
 if (lastCapture && now.getTime() - Date.parse(lastCapture) > 24 * 3600_000) alerts.push(`最後のオッズ取得から24時間以上経過（${lastCapture}）`);
 const v3All = accuracyAll[0].metrics, calAll = accuracyAll[2].metrics;
 const v3Buy = accuracyBuy[0].metrics;
+// BUY の「実績/予測」は、その BUY を選んだ確率で数える: 本命予想の BUY（3代目〜）は市場補正の確率、それより前は v3 の推定。
+// 履歴と LINE の項目名（v3BuyActualToPredicted）は、前の記録と並べるためにそのままにする。
+const favoriteGeneration = favoriteBuyActive(currentWallet.from);
+const buyBasis = favoriteGeneration ? accuracyBuy[2].metrics : v3Buy;
 // 通知のタイミングの修正（T-10 でも通知・判定の時刻）は 2026-10-14 の夜に入った。それ以降の直近7日で、締切前に通知できなかった BUY を数える。
 const unnotifiedFrom = [addDays(todayJst(), -7), "2026-10-15"].sort()[1];
 const unnotifiedRecent = buysSinceFix.filter((d) => d.date >= unnotifiedFrom && d.date < todayJst() && timingByRace.get(d.race_id) !== "notified").length;
@@ -243,7 +251,7 @@ if (dbCheck && now.getTime() - Date.parse(dbCheck.checkedAt) > 40 * 86_400_000) 
 const knownFacts: string[] = [];
 if (!dbCheck) knownFacts.push("DB の月1回の点検（scripts/monthly-db-check.ts）はまだ動いていない。毎晩の daily-notify が、前回から 28 日たつと動かす");
 if (v3All.logLoss != null && calAll.logLoss != null && v3All.logLoss > calAll.logLoss) knownFacts.push(`v3 の確率は市場補正より不正確（logloss ${num(v3All.logLoss, 5)} > ${num(calAll.logLoss, 5)}。知識ベース K6）`);
-if (v3Buy.actualToPredicted != null && v3Buy.n >= 30 && v3Buy.actualToPredicted < 0.5) knownFacts.push(`BUY での v3 の的中予測が過大（実績/予測 = ${num(v3Buy.actualToPredicted, 2)}）`);
+if (!favoriteGeneration && v3Buy.actualToPredicted != null && v3Buy.n >= 30 && v3Buy.actualToPredicted < 0.5) knownFacts.push(`BUY での v3 の的中予測が過大（実績/予測 = ${num(v3Buy.actualToPredicted, 2)}）`);
 if (notifiedShare != null && buys.length >= 20 && notifiedShare < 0.5) knownFacts.push(`通算で締切前に通知できた BUY は ${pct(notifiedShare)}（${ledgerByTiming[0].buys}/${buys.length}）。${LIVE_RECORD_FIX_DATE} より前は、締切後に BUY のラベルが付いたものが多い（知識ベース K5）`);
 if (captureExpiresAt && Date.parse(captureExpiresAt) < now.getTime()) knownFacts.push(`private capture の認可が期限切れ（${captureExpiresAt}。研究工場は停止の方針）`);
 
@@ -273,7 +281,7 @@ if (STATE_DIR && !NO_RECORD) {
   newAlerts = alerts.filter((a) => !previousKeys.has(alertKey(a)));
   appendFileSync(`${STATE_DIR}/history.jsonl`, `${JSON.stringify({
     generatedAt: report.generatedAt, to: TO, ledger: { buys: ledger.buys, settled: ledger.settled, hits: ledger.hits, officialRoi: ledger.officialRoi },
-    accuracy: { comparedRaces: scored.length, v3LogLoss: v3All.logLoss, calibratedLogLoss: calAll.logLoss, v3BuyActualToPredicted: v3Buy.actualToPredicted },
+    accuracy: { comparedRaces: scored.length, v3LogLoss: v3All.logLoss, calibratedLogLoss: calAll.logLoss, v3BuyActualToPredicted: buyBasis.actualToPredicted },
     coverage7d, notifiedShare, notifiedLedger: { buys: ledgerByTiming[0].buys, hits: ledgerByTiming[0].hits, officialRoi: ledgerByTiming[0].officialRoi },
     calibration: describeCalibration(champion), alerts,
   })}\n`);
@@ -332,7 +340,7 @@ function renderMarkdown() {
     head,
     ...accuracyAll.map((a) => metricRow(a.label, a.metrics)),
     "",
-    "### BUY のみ",
+    `### BUY のみ（${walletName(currentWallet.generation)}・${currentWallet.from}〜。${currentWallet.note}）`,
     "",
     head,
     ...accuracyBuy.map((a) => metricRow(a.label, a.metrics)),

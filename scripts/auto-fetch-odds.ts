@@ -24,6 +24,8 @@ import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients
 import { officialOddsUrl, teleBoatUrl } from "../src/domain/officialLinks";
 import { selectTopModelCandidatePerRace } from "../src/domain/candidateSelection";
 import { judgeCandidate } from "../src/domain/decision";
+import { demoteV3Decision, favoriteBuyActive, isFavoriteBuyWindow, judgeFavoriteBuy, mergeSkippedFavorite } from "../src/domain/favoriteBuy";
+import { pickFavorite } from "../src/domain/favoritePick";
 import { realtimeBuyNotSentReason, shouldSendRealtimeBuyNotification } from "../src/domain/buyNotification";
 import { calibratedSelectionProbability } from "../src/domain/accuracyScorecard";
 import { formatBuyAlert } from "../src/domain/lineMessages";
@@ -369,15 +371,58 @@ try {
       }
     }
     const frozenBuyCount = buyCountToday;
+    // 本命予想の BUY（3代目、src/domain/favoriteBuy.ts）: 有効な日は、v3 の BUY を通知せず（WATCH に下げて記録だけ）、
+    // 締切 6〜15 分前のレースで「市場補正の確率がいちばん高い買い目」が基準以上なら、その買い目を BUY として記録する。
+    // 記録に使うのは v3 のその買い目の候補（estimated_hit_rate に v3 の推定が残る）。通知・速報・財布は BUY の経路をそのまま通る。
+    const favoriteMode = favoriteBuyActive(today);
+    const favoriteCalibration = favoriteMode ? loadChampionCalibration() : null;
+    const candidateBySelection = new Map<string, (typeof selectedCandidates)[number]>();
+    if (favoriteMode) {
+      for (const row of freshRows) {
+        if (row.candidate.source === "sample") continue;
+        candidateBySelection.set(`${row.candidate.raceId}/${row.candidate.selection.join("-")}`, row.candidate);
+      }
+    }
+    let favoriteBuys = 0;
     for (const candidate of selectedCandidates) {
       if (isFrozen(candidate)) continue;
-      const decision = judgeCandidate(candidate, settings, { now: judgeNow, buyCountToday, reservedBudgetYen });
+      let recordCandidate = candidate;
+      let decision = judgeCandidate(candidate, settings, { now: judgeNow, buyCountToday, reservedBudgetYen });
+      if (favoriteMode && favoriteCalibration) {
+        const minutesBeforeClose = minutesUntilRaceClose(candidate.date, candidate.closeAt, judgeNow);
+        if (!isFavoriteBuyWindow(minutesBeforeClose)) {
+          decision = demoteV3Decision(decision);
+        } else {
+          // 読めなければ見送る（本命予想の失敗で、ほかのレースの判定と記録を止めない）
+          let captures: ReturnType<typeof loadLatestCapturesForRace> = { latest: null, earlier: null, latestCheckpointLabel: null };
+          try { captures = loadLatestCapturesForRace(db, candidate.raceId); } catch (err) { console.error(`favorite-buy captures skipped: ${candidate.raceId}`, err instanceof Error ? err.message : err); }
+          const pick = captures.latest ? pickFavorite(candidate.raceId, captures.latest, captures.earlier, favoriteCalibration) : null;
+          const favoriteCandidate = pick ? candidateBySelection.get(`${candidate.raceId}/${pick.selection}`) : undefined;
+          const favoriteDecision = judgeFavoriteBuy({
+            pick,
+            latestCheckpointLabel: captures.latestCheckpointLabel,
+            minutesBeforeClose,
+            buyCountToday,
+            hasCandidate: favoriteCandidate != null,
+            stakeYen: Math.min(settings.stakePerBetYen, settings.maxStakePerRaceYen),
+          });
+          if (favoriteDecision.status === "BUY" && favoriteCandidate && pick) {
+            // 判定時のオッズは、確率を計算した取得のもの（v3 の候補のオッズは別の読み込みなので、そろえる）
+            recordCandidate = { ...favoriteCandidate, currentOdds: pick.t5Odds };
+            decision = favoriteDecision;
+            favoriteBuys += 1;
+            console.log(`favorite-buy: ${candidate.raceId} ${pick.selection} p=${(pick.probability * 100).toFixed(1)}% odds=${pick.t5Odds} checkpoint=${captures.latestCheckpointLabel} minutes=${minutesBeforeClose.toFixed(1)}`);
+          } else {
+            decision = mergeSkippedFavorite(decision, favoriteDecision);
+          }
+        }
+      }
       if (decision.status === "BUY") {
         buyCountToday += 1;
         reservedBudgetYen += decision.recommendedAmount;
       }
-      if (persistHistory && shouldPersistDecisionHistory(candidate, settings, LIVE_MONITOR_FROM, judgeNow)) {
-        insertDecisionHistory(db, candidate, decision, { replaceRace: true });
+      if (persistHistory && shouldPersistDecisionHistory(recordCandidate, settings, LIVE_MONITOR_FROM, judgeNow)) {
+        insertDecisionHistory(db, recordCandidate, decision, { replaceRace: true });
         saved += 1;
       }
     }
@@ -468,6 +513,7 @@ try {
               stakeYen: buy.recommended_stake_yen,
               officialRaceUrl: oddsUrl,
               wallet: wallet && walletYen != null ? { generation: wallet.wallet.generation, balanceYen: walletYen, stakeYen: wallet.wallet.stakeYen } : undefined,
+              kind: favoriteMode ? "favorite" : "v3",
             });
             // 公式ページのリンクは本文の「買い方」の下に出すので、末尾の「公式:」は付けない
             const text = buildLineText(title, body);
@@ -511,7 +557,7 @@ try {
         console.error("LINE realtime notify error:", err instanceof Error ? err.message : err);
       }
     }
-    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt} frozen=${frozenCount} frozenBuys=${frozenBuyCount} buysToday=${buyCountToday} phaseMs=fetch:${fetchPhaseEndedAt - runStartedAt},beforeinfoWait:${beforeInfoWaitEndedAt - fetchPhaseEndedAt},build:${candidatesBuiltAt - decisionPhaseStartedAt},judge:${judgedAt - candidatesBuiltAt},notify:${Date.now() - judgedAt}`);
+    console.log(`decision-phase: clockLagMs=${decisionPhaseStartedAt - runStartedAt} frozen=${frozenCount} frozenBuys=${frozenBuyCount} buysToday=${buyCountToday} favoriteBuys=${favoriteMode ? favoriteBuys : "-"} phaseMs=fetch:${fetchPhaseEndedAt - runStartedAt},beforeinfoWait:${beforeInfoWaitEndedAt - fetchPhaseEndedAt},build:${candidatesBuiltAt - decisionPhaseStartedAt},judge:${judgedAt - candidatesBuiltAt},notify:${Date.now() - judgedAt}`);
   }
 
   console.log(`auto-fetch-odds done: fetched=${fetched} skipped=${skipped} checkpointCompleteSkipped=${checkpointCompleteSkipped} failed=${failed} saved=${saved} dryRun=${dryRun} elapsedMs=${Date.now() - runStartedAt}`);
