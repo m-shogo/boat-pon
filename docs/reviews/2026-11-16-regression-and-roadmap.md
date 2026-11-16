@@ -36,6 +36,7 @@
 
 - main を 10月版＋この文書までそろえた（fast-forward。push 済み）。
 - 古い枝をタグにして消した: 研究工場の再稼働分（`archive/research-relapse-20261030`。4 本ともこの中）、8月の研究用（`archive/automation-boat-pon-research-local-20260805`）、5月の WIP（`archive/wip-live-validation-preset-20260527`）。
+- main に入った枝（`docs/strict-review-20261008`・`improve/weekly-20261014`・`cleanup/minimal-20261015`）と、使い終えた worktree（`boat-pon-cleanup`）を消した。残りは main・本番がいまいる枝・Codex 連携の枝の 3 本。
 - **していないこと**: 本番の作業コピーの切り替え（レースの無い夜間に行う決まり。手順は 6 章）、launchd の操作（ユーザー作業）、DB への書き込み。
 
 ## 3. なぜ当たらないか（実測）
@@ -115,7 +116,11 @@ git stash push -m "zombie weekly-review output 20261116" docs/rule-candidates.md
 git switch main
 git log -1 --format='%h %s'
 npm run health
+npm run reparse:official-results -- --from 260704 --to 261114 --skip-existing
 ```
+
+- 最後の行は全券種の払戻の埋め戻し（手元の K ファイルだけを読む。外部へのアクセスなし。DB に書くので夜間に回し、件数をログに残す）。6/2〜7/3 は K ファイルが手元に無いので埋まらない。
+- 切り替えが済んだら、`agent/codex-brief-line-miss-review` を手元とリモートから消す（タグ `archive/agent-codex-brief-line-miss-review-remote-20261030` に、リモートにだけあった 10/30 の1コミットを含めて残した）。
 
 - 依存は同じ（`package-lock.json` に差が無い）ので `npm ci` は要らない。
 - 戻し方: `git switch agent/codex-brief-line-miss-review`（勧めない。タグにも残してある）。
