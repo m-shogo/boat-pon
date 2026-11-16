@@ -188,14 +188,22 @@ test("再試行キーがあれば、届いたかわからない失敗と 5xx を
 });
 
 test("応答が返らない送信は期限で打ち切る（キーが無ければ送り直さない）", async () => {
-  await assert.rejects(
-    sendLinePushText({
-      channelAccessToken: "t", to: "U123", text: "hi", endpoint: "https://example.test/push", timeoutMs: 20,
-      fetchImpl: (_input, init) => new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason))),
-      sleepImpl: async () => assert.fail("unexpected retry"),
-    }),
-    /timeout|aborted/i,
-  );
+  // AbortSignal.timeout のタイマーは、それだけではプロセスを生かしておかない。本物の fetch は通信が開いているので待てるが、
+  // このテストの偽の fetch は何も開かないので、Node 22 ではタイムアウトの前にテストが打ち切られた（Node 24 では通っていた）。
+  // テストの間だけ、ふつうのタイマーでプロセスを生かしておく。
+  const keepAlive = setTimeout(() => {}, 5_000);
+  try {
+    await assert.rejects(
+      sendLinePushText({
+        channelAccessToken: "t", to: "U123", text: "hi", endpoint: "https://example.test/push", timeoutMs: 20,
+        fetchImpl: (_input, init) => new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason))),
+        sleepImpl: async () => assert.fail("unexpected retry"),
+      }),
+      /timeout|aborted/i,
+    );
+  } finally {
+    clearTimeout(keepAlive);
+  }
 });
 
 test("409 は再試行キーが無ければ失敗のまま", async () => {
