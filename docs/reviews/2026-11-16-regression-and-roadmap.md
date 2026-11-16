@@ -36,8 +36,11 @@
 
 - main を 10月版＋この文書までそろえた（fast-forward。push 済み）。
 - 古い枝をタグにして消した: 研究工場の再稼働分（`archive/research-relapse-20261030`。4 本ともこの中）、8月の研究用（`archive/automation-boat-pon-research-local-20260805`）、5月の WIP（`archive/wip-live-validation-preset-20260527`）。
-- main に入った枝（`docs/strict-review-20261008`・`improve/weekly-20261014`・`cleanup/minimal-20261015`）と、使い終えた worktree（`boat-pon-cleanup`）を消した。残りは main・本番がいまいる枝・Codex 連携の枝の 3 本。
-- **していないこと**: 本番の作業コピーの切り替え（レースの無い夜間に行う決まり。手順は 6 章）、launchd の操作（ユーザー作業）、DB への書き込み。
+- main に入った枝（`docs/strict-review-20261008`・`improve/weekly-20261014`・`cleanup/minimal-20261015`）と、使い終えた worktree（`boat-pon-cleanup`）を消した。残りは main と Codex 連携の枝（別の worktree。古い main の上）だけ。
+- **本番の作業コピーを 10:52 に main へ切り替えた。** 夜間に行う決まりだが、ユーザーの指示（「今切り替えは良くない？進めたい」）で日中に行った。auto-odds の実行の合間（前の回が終わった約 2分後・次の回の約 2分前）に、1秒で済んだ。
+  - 確かめたこと: 速報（buy-results-fast）は 10:53 の回から正常終了（`date=2026-11-16 buys=0 … done`、launchd の終了コード 1 → 0）。auto-odds は 10:55 の回が新しいコードで完走（`frozen=18 frozenBuys=0 buysToday=0`、直前情報のその場取得 4/4、44.9 秒。古いコードは 81〜84 秒）。エラーログの追記なし。
+  - 11/16 の判定は、10:52 より前が古いコード、後が新しいコードの記録。
+- **していないこと**: launchd の操作（ユーザー作業）、DB への手での書き込み、`npm run health`（16GB の DB の integrity_check を含み、日中は 3分で終わらなかったので止めた。夜間に回す）。
 
 ## 3. なぜ当たらないか（実測）
 
@@ -98,7 +101,7 @@
 
 | 段階 | いつ | すること | 合格の基準 |
 |---|---|---|---|
-| 0 復旧 | 11/16 夜 | 本番の作業コピーを main に戻す（6 章）。K ファイルの再パースで 10/29 以降の全券種の払戻を入れる（夜間・件数をログに残す） | 翌晩のスコアカードが更新される。速報のエラーが 0。`npm run health` が 0 ERROR |
+| 0 復旧 | 11/16 | 本番の作業コピーを main に戻す（済み）。K ファイルの再パースで全券種の払戻を入れる（夜間・6 章） | 翌晩のスコアカードが更新される。速報のエラーが 0。`npm run health` が 0 ERROR |
 | 1 再発防止 | 〜11/23 | 本番用の作業コピーを開発と分ける（課題 #13）。他のエージェント向けの指示（AGENTS.md・Codex の手順）に「最新の main から切る・本番で枝を切り替えない」を入れる。ユーザー作業: 研究用ジョブの `launchctl bootout` と `disable`、ChatGPT のタスクの停止、`gh auth login` | 本番の枝が main 以外なら、スコアカードの外から気づける |
 | 2 通知の置き換え | 復旧を1日確かめてから | BUY の通知を、市場補正の確率で選んだ「本命予想」の通知に置き換える（判定の変更。財布は 3代目から）。LINE は月 200 通なので、1日の上限つきで、その日いちばん当たりやすい数点だけ送る。的中率と期待回収率（約 76〜80%）を文面に出す | 4週間の paper で、的中率が市場補正の見込みの ±20% に入る（実績/予測 0.8〜1.2） |
 | 3 研究は1本だけ | 段階 2 が動いてから・4週間で打ち切り | ベンター式（K12）の確率で、1〜10倍の買い目を選んだときの回収率を forward の paper で測る。事前登録してから始める | 約 750 件で、回収率の片側 95% の下限が 100% を超える。届かなければ閉じ、条件を変えて救済しない |
@@ -108,29 +111,23 @@
 
 閉じた道（もう提案しない）: 券種間のずれ（K11）、還元（K10）、条件の細分化（R2・R5）、late money（K1）、公開情報の単軸（K3）。
 
-## 6. 夜間の手順（21:40〜翌 00:50。21:30 のジョブが終わってから、01:00 の番組表の取り込みの前）
+## 6. 残っている夜間の作業（21:40〜翌 00:50）
 
 ```bash
 cd ~/Developer/personal/boat-pon
-git stash push -m "zombie weekly-review output 20261116" docs/rule-candidates.md
-git switch main
-git log -1 --format='%h %s'
 npm run health
 npm run reparse:official-results -- --from 260704 --to 261114 --skip-existing
 ```
 
-- 最後の行は全券種の払戻の埋め戻し（手元の K ファイルだけを読む。外部へのアクセスなし。DB に書くので夜間に回し、件数をログに残す）。6/2〜7/3 は K ファイルが手元に無いので埋まらない。
-- 切り替えが済んだら、`agent/codex-brief-line-miss-review` を手元とリモートから消す（タグ `archive/agent-codex-brief-line-miss-review-remote-20261030` に、リモートにだけあった 10/30 の1コミットを含めて残した）。
-
-- 依存は同じ（`package-lock.json` に差が無い）ので `npm ci` は要らない。
-- 戻し方: `git switch agent/codex-brief-line-miss-review`（勧めない。タグにも残してある）。
-- 切り替えた後に確かめること: 翌朝 8:00 以降の `data/logs/auto-odds.log`、`buy-results-fast.log` が更新されること、21:30 のあとに `data/reports/scorecard/history.jsonl` に行が足されること。
+- 2行目は全券種の払戻の埋め戻し（手元の K ファイルだけを読む。外部へのアクセスなし。DB に書くので夜間に回し、件数をログに残す）。6/2〜7/3 は K ファイルが手元に無いので埋まらない。
+- 11/16 の 21:30 のあとに確かめること: `data/reports/scorecard/history.jsonl` に行が足されること、`data/exports/` の書き出しが更新されること、日次まとめが新しい文面（財布・注意）で届くこと。
+- 本番を前の枝に戻す必要が出たら: タグ `archive/agent-codex-brief-line-miss-review-remote-20261030`（リモートにだけあった 10/30 の1コミットを含む）。枝は 11/16 に手元とリモートから消した。
 
 ## 7. いまできていない事
 
 | 項目 | 状態 | 誰が |
 |---|---|---|
-| 本番の作業コピーを main に戻す | 夜間に実行（6 章） | Claude かユーザー |
+| 本番の作業コピーを main に戻す | 済み（11/16 10:52） | — |
 | 研究用ジョブの停止（runner・weekly-review・private capture）と `launchctl disable` | 再登録されて動いている | ユーザー（エージェントからは安全判定で拒否される） |
 | 全券種の払戻の埋め戻し | 6/2〜10/6 と 10/29〜 が空。7/4 以降は手元の K ファイルで埋められる | Claude（夜間） |
 | `gh` のトークン | 無効 | ユーザー（`gh auth login`） |
