@@ -4,7 +4,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { parseOfficialResultsText } from "../src/domain/officialResultParser";
-import { isLzhArchive, isResultDayComplete } from "../src/domain/resultIngest";
+import { isLzhArchive, isResultDayComplete, parseMaxDownloads, shouldSkipResultDay } from "../src/domain/resultIngest";
 import { insertResult, openDb, saveResultDetail } from "../server/db";
 import { parseOfficialResultDetail } from "../src/domain/officialResultDetailParser";
 import type { RaceResult } from "../src/domain/types";
@@ -21,6 +21,10 @@ const FETCH_TIMEOUT_MS = 60_000;
 const MAX_RANGE_DAYS = 10000;
 const DL_ONLY = process.env.BOAT_PON_DL_ONLY === "1";
 const SKIP_EXISTING = process.env.BOAT_PON_SKIP_EXISTING === "1";
+// 穴埋め用: 手元に K ファイルが無い日だけを取りに行く（毎晩の daily-results.sh が直近 200 日に対して使う）。
+const ONLY_MISSING_ARCHIVE = process.env.BOAT_PON_ONLY_MISSING_ARCHIVE === "1";
+// 1回の実行で新しく取るファイルの数の上限（穴埋めは 200 まで）。
+const MAX_DOWNLOADS = parseMaxDownloads(process.env.BOAT_PON_MAX_DOWNLOADS);
 
 async function main() {
   const [fromArg, toArg] = process.argv.slice(2);
@@ -49,6 +53,8 @@ async function main() {
   let failedDays = 0;
   let detailFailedDays = 0;
   let totalPayouts = 0;
+  let downloads = 0;
+  let deferredDays = 0;
 
   // SKIP_EXISTING: 結果がそろっている日だけを飛ばす（高速チェック用）。
   // 以前は、その日の行が1つでもあれば飛ばしていたため、取り込みが途中で止まった日（スリープ・失敗）が自動では直らなかった
@@ -70,18 +76,23 @@ async function main() {
     for (let i = 0; i < dates.length; i += 1) {
       const date = dates[i];
 
-      if (SKIP_EXISTING && existingDates.has(date)) {
-        alreadyHaveDays += 1;
-        continue;
-      }
-
       const yymm = toYymm(date);
       const yymmdd = toYymmdd(date);
       const lzhPath = path.join(RAW_DIR, `k${yymmdd}.lzh`);
       const url = `https://www1.mbrace.or.jp/od2/K/${yymm}/k${yymmdd}.lzh`;
-
       const cached = existsSync(lzhPath);
+
+      if (shouldSkipResultDay({ skipExisting: SKIP_EXISTING, resultsComplete: existingDates.has(date), onlyMissingArchive: ONLY_MISSING_ARCHIVE, archiveCached: cached })) {
+        alreadyHaveDays += 1;
+        continue;
+      }
+
       if (!cached) {
+        if (downloads >= MAX_DOWNLOADS) {
+          deferredDays += 1;
+          continue;
+        }
+        downloads += 1;
         try {
           await downloadFileWithRetry(url, lzhPath);
         } catch (err) {
@@ -142,7 +153,7 @@ async function main() {
     db.close();
   }
 
-  console.log(`--- done: ${dates.length} days / ${totalRaces} races / payouts=${totalPayouts} / cached=${skippedDays} / already=${alreadyHaveDays} / failed=${failedDays} / detailFailed=${detailFailedDays}`);
+  console.log(`--- done: ${dates.length} days / ${totalRaces} races / payouts=${totalPayouts} / cached=${skippedDays} / already=${alreadyHaveDays} / failed=${failedDays} / detailFailed=${detailFailedDays} / downloaded=${downloads} / deferred=${deferredDays}`);
   if (failedDays > 0) process.exitCode = 1;
 }
 

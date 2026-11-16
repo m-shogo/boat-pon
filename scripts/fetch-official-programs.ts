@@ -10,6 +10,7 @@ import {
   summarizeOfficialProgramDayInventory,
 } from "../src/domain/officialProgramRefreshPolicy";
 import { insertOfficialProgram, openDb } from "../server/db";
+import { parseMaxDownloads } from "../src/domain/resultIngest";
 
 const execFile = promisify(execFileCb);
 
@@ -23,6 +24,8 @@ const MAX_ARCHIVE_BYTES = 20_000_000;
 const MAX_RANGE_DAYS = 10000;
 const DL_ONLY = process.env.BOAT_PON_DL_ONLY === "1";
 const SKIP_EXISTING = process.env.BOAT_PON_SKIP_EXISTING === "1";
+// 1回の実行で新しく取るファイルの数の上限（穴埋めは 200 まで）。当日の強制の取り直しは数えない。
+const MAX_DOWNLOADS = parseMaxDownloads(process.env.BOAT_PON_MAX_DOWNLOADS);
 const FORCED_REFRESH_DATES = parseForcedProgramRefreshDates(
   process.env.BOAT_PON_FORCE_PROGRAM_REFRESH_DATES,
 );
@@ -52,6 +55,8 @@ async function main() {
   let alreadyHaveDays = 0;
   let refreshedDays = 0;
   let failedDays = 0;
+  let downloads = 0;
+  let deferredDays = 0;
 
   const existingDates = new Set<string>();
   if (SKIP_EXISTING) {
@@ -96,6 +101,11 @@ async function main() {
           continue;
         }
       } else if (!cached) {
+        if (downloads >= MAX_DOWNLOADS) {
+          deferredDays += 1;
+          continue;
+        }
+        downloads += 1;
         try {
           await downloadFileWithRetry(url, lzhPath);
         } catch (err) {
@@ -161,7 +171,7 @@ async function main() {
   }
 
   console.log(
-    `--- done: ${dates.length} days / ${totalRows} programs / cached=${skippedDays} / already=${alreadyHaveDays} / refreshed=${refreshedDays} / failed=${failedDays}`,
+    `--- done: ${dates.length} days / ${totalRows} programs / cached=${skippedDays} / already=${alreadyHaveDays} / refreshed=${refreshedDays} / failed=${failedDays} / downloaded=${downloads} / deferred=${deferredDays}`,
   );
   if (failedDays > 0) process.exitCode = 1;
 }

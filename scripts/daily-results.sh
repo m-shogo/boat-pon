@@ -32,6 +32,20 @@ export BOAT_PON_SKIP_EXISTING=1
 # set -e のまま止めると、取り込めた日の BUY 結果通知まで送られなくなるので、ここでは止めない。
 run_tsx scripts/fetch-official-results.ts "$FROM" "$TO" || echo "${LOG_PREFIX} fetch:official-results partial failure (exit=$?); continuing to notify"
 
+# 手元に K ファイルが無い日（直近 200 日）を、公式アーカイブから取り直す。結果・全券種の払戻・各艇の成績・気象が入る。
+# 2026-05-21〜25・06-02〜07-03 は、結果だけ別の経路で入って K ファイルが無く、払戻が空のまま残っていた。
+# 公式サイトへの取得なので、レースの無い時間（21:05〜07:30）だけ。1.5 秒間隔・1回 200 ファイルまで（CLAUDE.md の 3 章）。
+# 欠けが無い晩は、何も取りに行かない。失敗しても、下の処理は止めない。
+ARCHIVE_GAP_FROM=$(TZ=Asia/Tokyo date -v-200d '+%Y-%m-%d')
+ARCHIVE_NOW_HM=$((10#$(TZ=Asia/Tokyo date '+%H%M')))
+if (( ARCHIVE_NOW_HM >= 2105 || ARCHIVE_NOW_HM < 730 )); then
+  echo "${LOG_PREFIX} fetch:official-results (missing archives only) ${ARCHIVE_GAP_FROM}..${TO}"
+  ( export BOAT_PON_ONLY_MISSING_ARCHIVE=1 BOAT_PON_MAX_DOWNLOADS=200; run_tsx scripts/fetch-official-results.ts "$ARCHIVE_GAP_FROM" "$TO" ) \
+    || echo "${LOG_PREFIX} fetch:official-results (missing archives) partial failure (exit=$?); continuing"
+else
+  echo "${LOG_PREFIX} fetch:official-results (missing archives) skipped: daytime"
+fi
+
 # 全券種の払戻・各艇の成績・気象の欠けを、手元の K ファイルから埋める（外部へのアクセスなし。取り込み済みの日は飛ばす）。
 # 上の取り込みは「結果が入っている日」を飛ばすので、古いコードが結果だけを入れた日（2026-06-02〜10-06、10-29〜11-14）は
 # 払戻が空のまま残った。一度きりの手作業にせず、毎晩ここで直近 200 日の欠けを見て埋める（知識ベースの教訓 3）。
