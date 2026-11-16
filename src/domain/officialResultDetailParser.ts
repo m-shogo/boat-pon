@@ -104,7 +104,7 @@ function parseOfficialResultDetailWithSemantics(
     const line = raw.replace(/\t/g, " ");
 
     const venueMatch = line.match(/^(.+?)［成績］/);
-    if (venueMatch) { venue = normalizeVenue(venueMatch[1].replace(/[\s　]/g, "")); continue; }
+    if (venueMatch) { venue = normalizeVenue(venueMatch[1].replace(/[\s　]/g, "")); continuationBetType = null; continue; }
 
     const dateMatch = line.match(/(\d{4})\/\s*(\d{1,2})\/\s*(\d{1,2})/);
     if (dateMatch && line.includes("ボートレース")) {
@@ -114,12 +114,15 @@ function parseOfficialResultDetailWithSemantics(
 
     // 気象ヘッダ行 = レース開始: "1R 予選 H1800m 晴れ 風 西 1m 波 0cm"
     // raceType は「予　選」のように全角スペースを含むため (.+?) で H の前まで取る（\sは全角スペースを含む）
+    // 風速が 2 桁で風向が 3 文字のときは間の空白が無い（「風  北北東10m」。2009-11-11 下関 3R）。
+    // ここで読み落とすと、そのレースの成績と払戻が前のレースの race_id に付いてしまう。
     const condM = line.match(
-      /^\s*(\d{1,2})R\s+(.+?)\s+H(\d+)m\s+(\S+?)\s+風\s+(\S+?)\s+(\d+)m\s+波\s+(\d+)cm/,
+      /^\s*(\d{1,2})R\s+(.+?)\s+H(\d+)m\s+(\S+?)\s+風\s+(\D+?)\s*(\d+)m\s+波\s*(\d+)cm/,
     );
     if (condM && venue) {
       raceNo = Number(condM[1]);
       returned = false;
+      continuationBetType = null;
       conditions.push({
         raceId: raceId(), date, venue, raceNo,
         raceType: condM[2].replace(/[\s　]/g, "") || null,
@@ -215,10 +218,10 @@ function parseOfficialResultDetailWithSemantics(
     }
     if (continuationBetType === "wide" && !line.includes("拡連複")) {
       const continuation = line.match(/^\s+(\d)-(\d)[\s　]+([0-9,]+)[\s　]+人気[\s　]+(\d+)/);
+      // 空行では続きを打ち切らない: 拡連複の 2 行目が空で 3 行目に払戻がある日がある（2004-08-21 三国 2R）。
+      // 続きは、次の券種の行・次のレースの見出し・次の場の見出しで終わる。
       if (continuation) {
         pushPay("wide", `${continuation[1]}-${continuation[2]}`, continuation[3], continuation[4]);
-      } else if (!line.trim()) {
-        continuationBetType = null;
       }
     }
     for (const { label, betType } of TWO_DIGIT) {
