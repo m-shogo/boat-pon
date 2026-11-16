@@ -47,7 +47,8 @@
 - `/Users/m-shogo/Developer/personal/boat-pon` は launchd の本番実行場所。**ここでブランチを切り替えたり、作業したりしない。**
 - 開発は `git worktree add ../boat-pon-<作業名> -b <ブランチ>` で別のディレクトリに作る。データを読むスクリプトは、本番の作業コピーをカレントにして worktree 側のスクリプトを実行する。
 - 本番への反映は、テストを通してから本番の作業コピーで `git merge --ff-only <ブランチ>` をして push する。auto-odds・通知などライブ経路の変更は、レースの無い 21:05〜07:30 にだけ反映する。実行中のジョブがあれば終わるまで待つ。
-- 2026-10-14 時点では、本番の作業コピーは修正ブランチ `docs/strict-review-20261008` で動いている。PR がマージされたら `git switch main && git pull --ff-only` で main に戻す。
+- 本番の作業コピーは **main** で動かす（2026-11-16 に main を 10月版までそろえた）。新しい枝は、必ず最新の main から、別の worktree で切る。
+- セッションの最初に `git -C /Users/m-shogo/Developer/personal/boat-pon branch --show-current` を見る。main でなければ退行を疑い、ユーザーに伝える（2026-10-30 に別のエージェントが古い main の枝へ切り替え、本番が 17日間 10月より前のコードで動いた。[`docs/reviews/2026-11-16-regression-and-roadmap.md`](docs/reviews/2026-11-16-regression-and-roadmap.md)）。
 
 ## 7. 動いているもの（2026-10-15 時点）
 
