@@ -7,7 +7,7 @@
  * 実行（本番の作業コピーで）: npx tsx scripts/review-20261117-factor-residual.ts [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--split YYYY-MM-DD]
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -27,7 +27,7 @@ const db = new DatabaseSync(process.env.BOAT_PON_DB_URI ?? "file:data/boat.sqlit
 
 // ─── 市場（締切5分前の市場補正の確率を 1着ごとに足す）と確定した 1着 ───
 type ProgramBoat = { course: number; registrationNo?: string; className?: string; nationalWinRate?: number; localWinRate?: number; motorNo?: string };
-type EvalRace = { raceId: string; date: string; venue: string; closeAt: string; marketWin: number[]; winner: number; boats: ProgramBoat[]; drift: number | null };
+type EvalRace = { raceId: string; date: string; venue: string; closeAt: string; marketWin: number[]; winner: number; boats: ProgramBoat[]; drift: number | null; tri: Map<string, number>; combo: string; odds: Map<string, number>; payoutYen: number | null };
 const { t5, t10, t20 } = loadCompleteCaptures(db, FROM, TO);
 const champion = loadChampionCalibration();
 log(`締切5分前の完全な市場 ${t5.size} レース`);
@@ -47,14 +47,14 @@ for (const r of db.prepare("SELECT race_id, trifecta, payout_yen FROM race_resul
   if (!odds || !program || !/^[1-6]-[1-6]-[1-6]$/.test(r.trifecta)) continue;
   if (program.boats.length !== 6 || new Set(program.boats.map((b) => b.course)).size !== 6) continue;
   const p = calibratedMarketProbabilities(odds, t10.get(r.race_id) ?? t20.get(r.race_id) ?? null, champion);
-  if (!p) continue;
+  if (!p || p.size !== 120 || !p.has(r.trifecta)) continue;
   const marketWin = [0, 0, 0, 0, 0, 0];
   for (const [selection, prob] of p) marketWin[Number(selection[0]) - 1] += prob;
   if (marketWin.some((v) => !(v > 0))) continue;
   // 当たった買い目の、確定の払戻 ÷ 締切5分前のオッズ（対数）。締切までの資金の動きを見るため
   const o5 = odds.get(r.trifecta);
   const drift = o5 != null && o5 > 0 && r.payout_yen != null && r.payout_yen > 0 ? Math.log(r.payout_yen / 100 / o5) : null;
-  evalRaces.set(r.race_id, { raceId: r.race_id, date: program.date, venue: program.venue, closeAt: program.closeAt, marketWin, winner: Number(r.trifecta[0]), boats: [...program.boats].sort((a, b) => a.course - b.course), drift });
+  evalRaces.set(r.race_id, { raceId: r.race_id, date: program.date, venue: program.venue, closeAt: program.closeAt, marketWin, winner: Number(r.trifecta[0]), boats: [...program.boats].sort((a, b) => a.course - b.course), drift, tri: p, combo: r.trifecta, odds, payoutYen: r.payout_yen });
 }
 log(`評価するレース ${evalRaces.size}`);
 
@@ -95,6 +95,50 @@ const ageWeightByRacerDay = new Map<string, [number, number]>(); // `${date}|${�
   log(`B ファイル ${files} 日分（支部 ${branchByRacerDay.size} 走）`);
 }
 
+// ─── 公式のレーサー期別成績（ファン手帳のデータ。data/raw/official/fan/fanYYMM.lzh。2026-11-17 に取得） ───
+// 期の成績は、その期が終わった後のレースにだけ使う。評価の期間より前に終わった期だけを足す。
+type FanRacer = { birthMonthDay: string; female: boolean; term: number; entries: number[]; wins: number[] };
+const fanByReg = new Map<string, FanRacer>();
+const fanClassCourse = new Map<string, number[]>(); // `${級別}|${コース}` → [進入, 1着]
+{
+  const dir = path.join("data", "raw", "official", "fan");
+  const tmp = mkdtempSync(path.join(tmpdir(), "boatpon-fan-"));
+  let periods = 0;
+  for (const file of existsSync(dir) ? readdirSync(dir).filter((f) => /^fan\d{4}\.lzh$/.test(f)).sort() : []) {
+    const out = path.join(tmp, file.replace(".lzh", ""));
+    try {
+      execFileSync("unar", ["-q", "-o", out, "-f", path.join(dir, file)]);
+      const bytes = readFileSync(path.join(out, readdirSync(out)[0]));
+      const ascii = (record: Buffer, from: number, length: number) => record.subarray(from, from + length).toString("latin1");
+      let used = false;
+      for (let offset = 0; offset + 416 <= bytes.length; offset += 418) {
+        const record = bytes.subarray(offset, offset + 416);
+        const reg = ascii(record, 0, 4);
+        if (!/^\d{4}$/.test(reg)) continue;
+        const end = ascii(record, 187, 8);
+        const periodEnd = `${end.slice(0, 4)}-${end.slice(4, 6)}-${end.slice(6, 8)}`;
+        const racer = fanByReg.get(reg) ?? { birthMonthDay: "", female: false, term: 0, entries: [0, 0, 0, 0, 0, 0], wins: [0, 0, 0, 0, 0, 0] };
+        racer.birthMonthDay = `${ascii(record, 44, 2)}-${ascii(record, 46, 2)}`;
+        racer.female = ascii(record, 48, 1) === "2";
+        racer.term = Number(ascii(record, 195, 3));
+        if (periodEnd < FROM) {
+          used = true;
+          const cls = ascii(record, 39, 2);
+          for (let c = 0; c < 6; c += 1) {
+            const entries = Number(ascii(record, 82 + 13 * c, 3)), wins = Number(ascii(record, 198 + 34 * c, 3));
+            racer.entries[c] += entries; racer.wins[c] += wins;
+            const base = fanClassCourse.get(`${cls}|${c + 1}`) ?? [0, 0]; base[0] += entries; base[1] += wins; fanClassCourse.set(`${cls}|${c + 1}`, base);
+          }
+        }
+        fanByReg.set(reg, racer);
+      }
+      if (used) periods += 1;
+    } catch (error) { log(`期別成績 ${file} を読めない: ${(error as Error).message}`); }
+  }
+  rmSync(tmp, { recursive: true, force: true });
+  log(`期別成績 ${fanByReg.size} 人（コース別の成績は ${periods} 期分）`);
+}
+
 // ─── 展示タイム（直前情報）。締切5分前までに 6艇とも手元にあったレースだけ使う ───
 const exhibitionAtT5 = new Map<string, Map<number, number>>();
 {
@@ -122,6 +166,12 @@ const raceGroup = (type: string) => /準優/.test(type) ? "準優勝戦" : /優�
 type Entry = { race_id: string; date: string; boat: number; finish_pos: number | null; status_code: string | null; racer_reg: string | null; motor_no: number | null; exhibition_time: number | null; st: number | null; st_flying: number | null };
 const history = db.prepare("SELECT race_id, date, boat, finish_pos, status_code, racer_reg, motor_no, exhibition_time, st, st_flying FROM race_entries WHERE date >= ? AND date <= ? ORDER BY date, race_id").all(H2H_FROM, TO) as Entry[];
 log(`過去の成績 ${history.length} 走（${H2H_FROM}〜）`);
+// 通算の 1着の数（手元の K ファイルの範囲）。2005年以降に初めて走った選手だけ、通算として使う
+const careerWins = new Map<string, number>(), firstStart = new Map<string, string>();
+for (const r of db.prepare("SELECT racer_reg, MIN(date) first, SUM(finish_pos = 1) wins FROM race_entries WHERE date < ? AND racer_reg IS NOT NULL GROUP BY racer_reg").all(H2H_FROM) as Array<{ racer_reg: string; first: string; wins: number | null }>) {
+  careerWins.set(r.racer_reg, r.wins ?? 0); firstStart.set(r.racer_reg, r.first);
+}
+log(`通算の 1着（${H2H_FROM} より前）${careerWins.size} 人`);
 const racerLane = new Map<string, number[]>(); // `${登番}|${枠}` → [走, 1着]
 const classLane = new Map<string, number[]>(); // `${級別}|${枠}` → [走, 1着]
 const racerLaneLag = new Map<string, number[]>(), classLaneLag = new Map<string, number[]>(); // 30 日より前の成績だけで作る版（先取りが混ざっていないかの確認用）
@@ -232,6 +282,27 @@ function evaluate(race: EvalRace) {
       const let2 = lane2Let.get(regs[1]);
       if (let2 && let2[0] >= 20 && lane2All[0] > 0) obs.f["15 2号艇の選手の逃がし率（1号艇に付ける）"] = let2[1] / let2[0] - lane2All[1] / lane2All[0];
     }
+    // ── 育成枠の第 3 回の材料（期別成績ファイル・通算の 1着） ──
+    const fan = fanByReg.get(reg);
+    if (fan) {
+      const year = Number(race.date.slice(0, 4));
+      const gap = Math.min(...[year - 1, year, year + 1].map((y) => Math.abs(dayDiff(`${y}-${fan.birthMonthDay}`, race.date))).filter((d) => Number.isFinite(d)));
+      obs.f["24 誕生日の前後 3 日"] = gap <= 3 ? 1 : 0;
+      const fans = regs.map((r) => fanByReg.get(r));
+      if (fans.every((v) => v != null)) {
+        const mixed = fans.some((v) => v!.female) && fans.some((v) => !v!.female);
+        obs.f["27 男女混合のレースの女子"] = mixed && fan.female ? 1 : 0;
+        obs.f["28 養成期（10 期あたり・新しいほど正）"] = (fan.term - fans.reduce((sum, v) => sum + v!.term, 0) / 6) / 10;
+      }
+      const base = fanClassCourse.get(`${boat.className}|${boat.course}`);
+      if (fan.entries[boat.course - 1] >= 20 && base && base[0] >= 200) obs.f["29 公式の進入コース別の 1着率"] = fan.wins[boat.course - 1] / fan.entries[boat.course - 1] - base[1] / base[0];
+    }
+    const first = firstStart.get(reg);
+    if (reg && first != null && first >= "2005-01-01") {
+      const remainder = (careerWins.get(reg) ?? 0) % 100;
+      obs.f["26 次の 1着が 100 勝ごとの節目"] = remainder === 99 ? 1 : 0;
+      obs.f["26.5 節目まであと 3 勝以内"] = remainder >= 97 ? 1 : 0;
+    }
     // 対照: 市場の確率の帯
     tags.push(`0 市場の確率 ${obs.p < 0.05 ? "① 5% 未満" : obs.p < 0.1 ? "② 5〜10%" : obs.p < 0.2 ? "③ 10〜20%" : obs.p < 0.4 ? "④ 20〜40%" : obs.p < 0.6 ? "⑤ 40〜60%" : "⑥ 60% 以上"}`);
     observations.push(obs);
@@ -278,6 +349,8 @@ function update(entries: Entry[]) {
     }
     if (date >= LANE_FROM && exMean != null) { const a = racerEx.get(e.racer_reg) ?? [0, 0]; a[0] += 1; a[1] += e.exhibition_time! - exMean; racerEx.set(e.racer_reg, a); }
     lastStart.set(e.racer_reg, date);
+    if (!firstStart.has(e.racer_reg)) firstStart.set(e.racer_reg, date);
+    if (e.finish_pos === 1) careerWins.set(e.racer_reg, (careerWins.get(e.racer_reg) ?? 0) + 1);
   }
   for (const e of entries) if (e.racer_reg && e.status_code === "F") fDates.set(e.racer_reg, [...(fDates.get(e.racer_reg) ?? []), date]);
   for (let i = 0; i < entries.length; i += 1) for (let j = i + 1; j < entries.length; j += 1) {
@@ -510,6 +583,7 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
 {
   const firstHalf = (d: string) => d < SPLIT, secondHalf = (d: string) => d >= SPLIT;
   const names = [...new Set(observations.flatMap((o) => Object.keys(o.f)))].sort((a, b) => Number(a.split(" ")[0]) - Number(b.split(" ")[0]));
+  const V1 = ["8 モーターの素性", "10 展示タイム（速いほど正）", "11 展示タイムの本人比", "14 年齢（10 歳あたり）"]; // 第 2 回で残った材料（第 1 版）。第 3 回の結果では入れ替えない
   // 大きさをそろえる: 前半の、値がある艇の標準偏差で割る（1 か 0 の材料はそのまま）。値が無い艇は 0（レースの平均と同じ扱い）
   const scale = new Map(names.map((name) => {
     const values = observations.filter((o) => firstHalf(o.date) && o.f[name] != null).map((o) => o.f[name]!);
@@ -529,6 +603,7 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
   console.log("| 材料 | 値がある艇 | 前半の係数 | 標準誤差 | 何倍 | 後半の logloss の改善 | 標準誤差 | 何倍 | 判定 |");
   console.log("|---|---:|---:|---:|---:|---:|---:|---:|---|");
   const passed: string[] = [];
+  const passedNew: string[] = [];
   for (const name of names) {
     const x = (o: Obs) => [...base2(o), value(name)(o)];
     const first = fitWith(x, 8, firstHalf);
@@ -536,7 +611,8 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
     const diffs = test.map((list) => loglossOf(list, baseFirst.beta, base2) - loglossOf(list, first.beta, x));
     const gain = mean(diffs), gainSe = sd(diffs) / Math.sqrt(diffs.length);
     const candidate = Math.abs(z) >= 3, ok = candidate && gain / gainSe >= 2;
-    if (ok) passed.push(name);
+    if (ok && V1.includes(name)) passed.push(name);
+    if (ok && !V1.includes(name)) passedNew.push(name);
     console.log(`| ${name} | ${observations.filter((o) => o.f[name] != null).length} | ${first.beta[7].toFixed(4)} | ${first.se[7].toFixed(4)} | ${z.toFixed(1)} | ${gain.toFixed(5)} | ${gainSe.toFixed(5)} | ${(gain / gainSe).toFixed(1)} | ${ok ? "**兆しあり**" : candidate ? "候補だが後半で残らない" : "閉じる"} |`);
   }
   // 兆しありの材料を全部入れた式（前半で決める）を、後半で「市場の確率そのまま」と比べる
@@ -549,7 +625,117 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
     const vsBase = part.map((list) => loglossOf(list, baseFirst.beta, base2) - loglossOf(list, all.beta, xAll));
     console.log(`- ${label} ${part.length} レース: 市場そのまま ${mean(part.map(market)).toFixed(4)} → 全部入り ${mean(part.map((list) => loglossOf(list, all.beta, xAll))).toFixed(4)}（改善 ${mean(vsMarket).toFixed(5)}・標準誤差 ${(sd(vsMarket) / Math.sqrt(part.length)).toFixed(5)}・説明力 ΔR² ${(mean(vsMarket) / Math.log(6)).toFixed(4)}）／土台からの改善 ${mean(vsBase).toFixed(5)}（${(mean(vsBase) / (sd(vsBase) / Math.sqrt(part.length))).toFixed(1)} 倍）`);
   };
+  console.log(`\n第 3 回 B: 新しい材料（24〜29）で兆しあり: ${passedNew.join("・") || "なし"}`);
   console.log(`\n兆しありの材料（${passed.length} 個）を全部入れた式を前半で決め、後半に当てる: ${passed.join("・") || "なし"}`);
   line("後半全体", secondHalf); line("9月", (d) => d.startsWith("2026-09")); line("10月", (d) => d.startsWith("2026-10")); line("11月", (d) => d.startsWith("2026-11"));
   console.log(`  前半で決めた係数: 市場 ${all.beta[0].toFixed(3)}・枠 2〜6 ${all.beta.slice(1, 6).map((v) => v.toFixed(2)).join(" / ")}・枠の得意度 ${all.beta[6].toFixed(3)}${passed.map((name, i) => `・${name.split("（")[0]} ${all.beta[7 + i].toFixed(3)}（1 つ分 = ${scale.get(name)!.toFixed(4)}）`).join("")}`);
+}
+
+// ─── 育成枠の第 3 回（事前登録: docs/reviews/2026-11-17-second-prediction-track.md） ───
+{
+  const firstHalf = (d: string) => d < SPLIT;
+  const V1 = ["8 モーターの素性", "10 展示タイム（速いほど正）", "11 展示タイムの本人比", "14 年齢（10 歳あたり）"];
+  const scaleOf = (name: string) => { const values = observations.filter((o) => firstHalf(o.date) && o.f[name] != null).map((o) => o.f[name]!); return values.every((v) => v === 0 || v === 1) ? 1 : sd(values); };
+  const scales = new Map([...V1, "28 養成期（10 期あたり・新しいほど正）"].map((name) => [name, scaleOf(name)]));
+  const scaled = (o: Obs, name: string) => (o.f[name] == null ? 0 : o.f[name]! / scales.get(name)!);
+  const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
+  const se = (v: number[]) => sd(v) / Math.sqrt(v.length);
+
+  // B の補足: 年齢と養成期を一緒に入れる（年齢の効き目は、年齢か経験か）
+  const ageTerm = fitWith((o) => [...baseX(o), laneValue(o), scaled(o, "14 年齢（10 歳あたり）"), scaled(o, "28 養成期（10 期あたり・新しいほど正）")], 9, firstHalf);
+  console.log(`\n第 3 回 B の補足（前半）: 年齢と養成期を一緒に入れる → 年齢 ${ageTerm.beta[7].toFixed(4)}（${(ageTerm.beta[7] / ageTerm.se[7]).toFixed(1)} 倍）・養成期 ${ageTerm.beta[8].toFixed(4)}（${(ageTerm.beta[8] / ageTerm.se[8]).toFixed(1)} 倍）`);
+
+  // A. 3連単へ広げる: 点数 = γ × log(市場の 3連単の確率) + 1着・2着・3着の艇の材料（着順ごとに別の係数）
+  const boatX = (o: Obs) => [...[2, 3, 4, 5, 6].map((lane) => (o.course === lane ? 1 : 0)), laneValue(o), ...V1.map((name) => scaled(o, name))]; // 10 個
+  const G = 10;
+  type TriRace = { date: string; logq: Float64Array; x: Float64Array[]; winner: number; odds: Float64Array; payoutYen: number | null }; // x[c] は 1 + 3G 個
+  const triRaces: TriRace[] = [];
+  for (const list of complete) {
+    const race = evalRaces.get(list[0].raceId)!;
+    const byCourse = new Map(list.map((o) => [o.course, boatX(o)]));
+    const combos = [...race.tri.keys()];
+    const x = combos.map((combo) => {
+      const row = new Float64Array(1 + 3 * G);
+      row[0] = Math.log(race.tri.get(combo)!);
+      combo.split("-").forEach((boat, position) => byCourse.get(Number(boat))!.forEach((v, i) => { row[1 + position * G + i] = v; }));
+      return row;
+    });
+    triRaces.push({ date: race.date, logq: Float64Array.from(combos, (combo) => Math.log(race.tri.get(combo)!)), x, winner: combos.indexOf(race.combo), odds: Float64Array.from(combos, (combo) => race.odds.get(combo) ?? NaN), payoutYen: race.payoutYen });
+  }
+  const fitTri = (k: number) => fit(triRaces.filter((r) => firstHalf(r.date)).map((r) => r.x.map((row, c) => ({ x: Array.from(row.subarray(0, k)), win: (c === r.winner ? 1 : 0) as 0 | 1 }))), k);
+  const lossTri = (r: TriRace, beta: number[]) => {
+    let max = -Infinity; const scores = r.x.map((row) => { let v = 0; for (let i = 0; i < beta.length; i += 1) v += row[i] * beta[i]; if (v > max) max = v; return v; });
+    return -(scores[r.winner] - max - Math.log(scores.reduce((sum, v) => sum + Math.exp(v - max), 0)));
+  };
+  const topTri = (r: TriRace, beta: number[] | null) => { let best = 0, bestScore = -Infinity; r.x.forEach((row, c) => { let v = 0; if (beta) for (let i = 0; i < beta.length; i += 1) v += row[i] * beta[i]; else v = row[0]; if (v > bestScore) { bestScore = v; best = c; } }); return best; };
+  const models = [1, 1 + G, 1 + 2 * G, 1 + 3 * G].map((k, i) => { const r = fitTri(k); log(`3連単 M${i} を前半で合わせた（係数 ${k} 個）`); return r; });
+  const test = triRaces.filter((r) => !firstHalf(r.date));
+  const market = (r: TriRace) => -r.logq[r.winner];
+  console.log(`\n第 3 回 A: 3連単へ広げる。前半 ${triRaces.length - test.length} レースで式を決め、後半 ${test.length} レースに当てる（3連単の logloss。小さいほど良い）`);
+  console.log(`- 市場の確率そのまま ${mean(test.map(market)).toFixed(4)} / M0（市場だけ・γ=${models[0].beta[0].toFixed(3)}）${mean(test.map((r) => lossTri(r, models[0].beta))).toFixed(4)} / M1（＋1着）${mean(test.map((r) => lossTri(r, models[1].beta))).toFixed(4)} / M2（＋2着）${mean(test.map((r) => lossTri(r, models[2].beta))).toFixed(4)} / M3（＋3着）${mean(test.map((r) => lossTri(r, models[3].beta))).toFixed(4)}`);
+  const step = (label: string, from: (r: TriRace) => number, to: (r: TriRace) => number, rows = test) => { const d = rows.map((r) => from(r) - to(r)); console.log(`- ${label}: 改善 ${mean(d).toFixed(5)}（標準誤差 ${se(d).toFixed(5)}・${(mean(d) / se(d)).toFixed(1)} 倍・${rows.length} レース）`); };
+  step("市場そのまま → M3", market, (r) => lossTri(r, models[3].beta));
+  step("M0 → M1（1着の艇の材料）", (r) => lossTri(r, models[0].beta), (r) => lossTri(r, models[1].beta));
+  step("M1 → M2（2着の艇の材料）", (r) => lossTri(r, models[1].beta), (r) => lossTri(r, models[2].beta));
+  step("M2 → M3（3着の艇の材料）", (r) => lossTri(r, models[2].beta), (r) => lossTri(r, models[3].beta));
+  for (const month of ["2026-09", "2026-10", "2026-11"]) step(`市場そのまま → M3（${month}）`, market, (r) => lossTri(r, models[3].beta), test.filter((r) => r.date.startsWith(month)));
+  const hits = (beta: number[] | null) => test.filter((r) => topTri(r, beta) === r.winner).length;
+  console.log(`- いちばん確率が高い 1 点が当たった数（後半 ${test.length} レース）: 市場 ${hits(null)}（${((hits(null) / test.length) * 100).toFixed(2)}%）/ M3 ${hits(models[3].beta)}（${((hits(models[3].beta) / test.length) * 100).toFixed(2)}%）・1 点が同じレース ${test.filter((r) => topTri(r, null) === topTri(r, models[3].beta)).length}`);
+  const names = ["枠2", "枠3", "枠4", "枠5", "枠6", "枠の得意度", "モーター", "展示", "展示の本人比", "年齢"];
+  for (let position = 0; position < 3; position += 1) console.log(`  M3 の ${position + 1}着の係数（標準誤差の何倍）: ${names.map((n, i) => `${n} ${models[3].beta[1 + position * G + i].toFixed(3)}（${(models[3].beta[1 + position * G + i] / models[3].se[1 + position * G + i]).toFixed(1)}）`).join("・")}`);
+  console.log(`  γ（市場の確率の対数の係数）: ${models[3].beta[0].toFixed(3)}`);
+
+  // C. 回収率の試算（買い方は数える前に固定: M2 の確率 × 締切5分前のオッズ ≥ 1.20 かつ 確率 ≥ 3%。公式の確定払戻）
+  const probsOf = (r: TriRace, beta: number[] | null): number[] => {
+    if (!beta) return Array.from(r.logq, (v) => Math.exp(v));
+    let max = -Infinity; const scores = r.x.map((row) => { let v = 0; for (let i = 0; i < beta.length; i += 1) v += row[i] * beta[i]; if (v > max) max = v; return v; });
+    const e = scores.map((v) => Math.exp(v - max)), sum = e.reduce((a, b) => a + b, 0);
+    return e.map((v) => v / sum);
+  };
+  const backtest = (rows: TriRace[], beta: number[] | null, evMin: number, pMin: number) => {
+    let picks = 0, hits = 0, stake = 0, payout = 0; const perRace: Array<[number, number]> = [];
+    for (const r of rows) {
+      const p = probsOf(r, beta); let s = 0, ret = 0;
+      for (let c = 0; c < p.length; c += 1) {
+        if (!(p[c] >= pMin) || !(r.odds[c] > 0) || !(p[c] * r.odds[c] >= evMin)) continue;
+        picks += 1; s += 100;
+        if (c === r.winner && r.payoutYen != null) { hits += 1; ret += r.payoutYen; }
+      }
+      if (s > 0) { perRace.push([s, ret]); stake += s; payout += ret; }
+    }
+    const roi = stake ? payout / stake : NaN;
+    const seRoi = stake ? Math.sqrt(perRace.reduce((sum, [s, ret]) => sum + (ret - roi * s) ** 2, 0)) / stake : NaN;
+    return { picks, hits, races: perRace.length, roi, seRoi };
+  };
+  const pctOf = (v: number) => `${(v * 100).toFixed(1)}%`;
+  const show = (label: string, b: ReturnType<typeof backtest>) => console.log(`- ${label}: 買い目 ${b.picks}（${b.races} レース）・的中 ${b.hits}（${b.picks ? pctOf(b.hits / b.picks) : "-"}）・回収率 ${pctOf(b.roi)}（標準誤差 ${pctOf(b.seRoi)}）`);
+  const m2 = models[2].beta;
+  console.log(`\n第 3 回 C: 回収率の試算（式は前半で決めた M2。後半 ${test.length} レース・公式の確定払戻・1 点 100 円）`);
+  show("**主の決まり**（期待値 1.20 以上・確率 3% 以上）", backtest(test, m2, 1.2, 0.03));
+  for (const month of ["2026-09", "2026-10", "2026-11"]) show(`  ${month}`, backtest(test.filter((r) => r.date.startsWith(month)), m2, 1.2, 0.03));
+  show("同じ決まりを「市場の確率そのまま」に当てる", backtest(test, null, 1.2, 0.03));
+  console.log("参考（判定には使わない）: 期待値の線 × 確率の下限");
+  console.log("| 期待値の線 | 確率 1% 以上 | 確率 3% 以上 | 確率 5% 以上 |");
+  console.log("|---|---|---|---|");
+  for (const ev of [1.0, 1.1, 1.2, 1.3]) console.log(`| ${ev.toFixed(2)} 以上 | ${[0.01, 0.03, 0.05].map((pm) => { const b = backtest(test, m2, ev, pm); return `${b.picks} 点・${pctOf(b.roi)}（±${pctOf(b.seRoi)}）`; }).join(" | ")} |`);
+  const everyCombo = backtest(test, m2, 0, 0.03);
+  console.log(`参考: 確率 3% 以上の買い目を全部買うと ${everyCombo.picks} 点・回収率 ${pctOf(everyCombo.roi)}（控除率の水準の確認）`);
+
+  // forward（11/18〜）で使う式を固定する: 7/1〜11/15 の全部で合わせ直した M2
+  const freezeAt = args.indexOf("--freeze");
+  if (freezeAt >= 0) {
+    const all = fit(triRaces.map((r) => r.x.map((row, c) => ({ x: Array.from(row.subarray(0, 1 + 2 * G)), win: (c === r.winner ? 1 : 0) as 0 | 1 }))), 1 + 2 * G);
+    writeFileSync(args[freezeAt + 1], `${JSON.stringify({
+      name: "育成枠の第 1 版（M2: 市場の 3連単の確率 + 1着・2着の艇の材料）",
+      fittedOn: { from: FROM, to: TO, races: triRaces.length },
+      score: "買い目 a-b-c の点数 = gamma × log(市場補正の 3連単の確率) + Σ first[i] × 材料_i(a) + Σ second[i] × 材料_i(b)。確率は 120 通りの softmax",
+      features: names,
+      gamma: all.beta[0], first: all.beta.slice(1, 1 + G), second: all.beta.slice(1 + G, 1 + 2 * G),
+      laneAffinitySdByLane: [1, 2, 3, 4, 5, 6].map((lane) => laneSd.get(lane)),
+      scales: Object.fromEntries(V1.map((name) => [name, scales.get(name)])),
+      betRule: { minExpectedValue: 1.2, minProbability: 0.03, oddsAt: "締切5分前", stakeYen: 100 },
+      definitions: "docs/reviews/2026-11-17-second-prediction-track.md と scripts/review-20261117-factor-residual.ts",
+    }, null, 2)}\n`);
+    log(`固定した式を書き出した: ${args[freezeAt + 1]}`);
+  }
 }
