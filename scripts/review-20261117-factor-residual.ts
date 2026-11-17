@@ -26,18 +26,18 @@ const log = (message: string) => console.log(`[${Math.round((Date.now() - t0) / 
 const db = new DatabaseSync(process.env.BOAT_PON_DB_URI ?? "file:data/boat.sqlite?mode=ro", { readOnly: true });
 
 // ─── 市場（締切5分前の市場補正の確率を 1着ごとに足す）と確定した 1着 ───
-type ProgramBoat = { course: number; registrationNo?: string; className?: string; nationalWinRate?: number; localWinRate?: number };
-type EvalRace = { raceId: string; date: string; venue: string; marketWin: number[]; winner: number; boats: ProgramBoat[]; drift: number | null };
+type ProgramBoat = { course: number; registrationNo?: string; className?: string; nationalWinRate?: number; localWinRate?: number; motorNo?: string };
+type EvalRace = { raceId: string; date: string; venue: string; closeAt: string; marketWin: number[]; winner: number; boats: ProgramBoat[]; drift: number | null };
 const { t5, t10, t20 } = loadCompleteCaptures(db, FROM, TO);
 const champion = loadChampionCalibration();
 log(`締切5分前の完全な市場 ${t5.size} レース`);
-const programs = new Map<string, { date: string; venue: string; boats: ProgramBoat[] }>();
+const programs = new Map<string, { date: string; venue: string; closeAt: string; boats: ProgramBoat[] }>();
 const classByStart = new Map<string, string>(); // `${raceId}|${枠}` → 級別（枠の基準を作るため。2024-01〜）
-for (const r of db.prepare("SELECT race_id, date, venue, raw_json FROM official_programs WHERE date >= ? AND date <= ?").iterate(LANE_FROM, TO) as Iterable<{ race_id: string; date: string; venue: string; raw_json: string }>) {
+for (const r of db.prepare("SELECT race_id, date, venue, close_at, raw_json FROM official_programs WHERE date >= ? AND date <= ?").iterate(LANE_FROM, TO) as Iterable<{ race_id: string; date: string; venue: string; close_at: string; raw_json: string }>) {
   let boats: ProgramBoat[] = [];
   try { boats = (JSON.parse(r.raw_json) as { boats?: ProgramBoat[] }).boats ?? []; } catch { continue; }
   for (const b of boats) if (b.className) classByStart.set(`${r.race_id}|${b.course}`, b.className);
-  if (r.date >= FROM) programs.set(r.race_id, { date: r.date, venue: r.venue, boats });
+  if (r.date >= FROM) programs.set(r.race_id, { date: r.date, venue: r.venue, closeAt: r.close_at, boats });
 }
 log(`番組表 ${programs.size} レース（評価の期間）・級別 ${classByStart.size} 走`);
 const evalRaces = new Map<string, EvalRace>();
@@ -54,7 +54,7 @@ for (const r of db.prepare("SELECT race_id, trifecta, payout_yen FROM race_resul
   // 当たった買い目の、確定の払戻 ÷ 締切5分前のオッズ（対数）。締切までの資金の動きを見るため
   const o5 = odds.get(r.trifecta);
   const drift = o5 != null && o5 > 0 && r.payout_yen != null && r.payout_yen > 0 ? Math.log(r.payout_yen / 100 / o5) : null;
-  evalRaces.set(r.race_id, { raceId: r.race_id, date: program.date, venue: program.venue, marketWin, winner: Number(r.trifecta[0]), boats: [...program.boats].sort((a, b) => a.course - b.course), drift });
+  evalRaces.set(r.race_id, { raceId: r.race_id, date: program.date, venue: program.venue, closeAt: program.closeAt, marketWin, winner: Number(r.trifecta[0]), boats: [...program.boats].sort((a, b) => a.course - b.course), drift });
 }
 log(`評価するレース ${evalRaces.size}`);
 
@@ -66,6 +66,7 @@ const LOCAL_BRANCH: Record<string, string> = {
 };
 const branchByRacerDay = new Map<string, string>(); // `${date}|${登番}` → 支部
 const titleByRacerDay = new Map<string, string>(); // `${date}|${登番}` → 節の名前
+const ageWeightByRacerDay = new Map<string, [number, number]>(); // `${date}|${登番}` → [年齢, 体重]
 {
   const tmp = mkdtempSync(path.join(tmpdir(), "boatpon-bfile-"));
   let files = 0;
@@ -85,6 +86,7 @@ const titleByRacerDay = new Map<string, string>(); // `${date}|${登番}` → �
         if (!m) continue;
         branchByRacerDay.set(`${date}|${m[2]}`, m[5]);
         titleByRacerDay.set(`${date}|${m[2]}`, title);
+        ageWeightByRacerDay.set(`${date}|${m[2]}`, [Number(m[4]), Number(m[6])]);
       }
       files += 1;
     } catch { /* 読めない日は、支部・節の名前なしで数える */ } finally { try { rmSync(txtPath); } catch { /* */ } }
@@ -93,18 +95,49 @@ const titleByRacerDay = new Map<string, string>(); // `${date}|${登番}` → �
   log(`B ファイル ${files} 日分（支部 ${branchByRacerDay.size} 走）`);
 }
 
+// ─── 展示タイム（直前情報）。締切5分前までに 6艇とも手元にあったレースだけ使う ───
+const exhibitionAtT5 = new Map<string, Map<number, number>>();
+{
+  const times = new Map<string, Map<number, number>>(), fetched = new Map<string, number>();
+  for (const r of db.prepare("SELECT race_id, course, exhibition_time, fetched_at FROM exhibition_data WHERE race_id >= ? AND race_id < ? AND exhibition_time > 0")
+    .iterate(FROM.replaceAll("-", ""), `${TO.replaceAll("-", "")}~`) as Iterable<{ race_id: string; course: number; exhibition_time: number; fetched_at: string }>) {
+    const m = times.get(r.race_id) ?? new Map<number, number>(); m.set(r.course, r.exhibition_time); times.set(r.race_id, m);
+    const at = Date.parse(r.fetched_at.includes("T") ? r.fetched_at : `${r.fetched_at.replace(" ", "T")}Z`);
+    if (Number.isFinite(at)) fetched.set(r.race_id, Math.max(fetched.get(r.race_id) ?? 0, at));
+  }
+  for (const [raceId, m] of times) {
+    const race = evalRaces.get(raceId), at = fetched.get(raceId);
+    if (!race || m.size !== 6 || at == null) continue;
+    const close = Date.parse(`${race.date}T${race.closeAt}:00+09:00`);
+    if (Number.isFinite(close) && at <= close - 5 * 60_000) exhibitionAtT5.set(raceId, m);
+  }
+  log(`締切5分前までに展示が 6艇そろっていたレース ${exhibitionAtT5.size}`);
+}
+
 // ─── レースの種類 ───
 const raceTypeById = new Map((db.prepare("SELECT race_id, race_type FROM race_conditions WHERE date >= ? AND date <= ?").all(FROM, TO) as Array<{ race_id: string; race_type: string | null }>).map((r) => [r.race_id, r.race_type ?? ""]));
 const raceGroup = (type: string) => /準優/.test(type) ? "準優勝戦" : /優勝戦/.test(type) ? "優勝戦" : /予選/.test(type) ? "予選" : /選抜|特選|特賞|ドリーム/.test(type) ? "選抜・特選など" : /一般/.test(type) ? "一般" : "そのほか";
 
 // ─── 過去の成績を日付の順にたどり、その日より前の記録だけで事情を作る ───
-type Entry = { race_id: string; date: string; boat: number; finish_pos: number | null; status_code: string | null; racer_reg: string | null };
-const history = db.prepare("SELECT race_id, date, boat, finish_pos, status_code, racer_reg FROM race_entries WHERE date >= ? AND date <= ? ORDER BY date, race_id").all(H2H_FROM, TO) as Entry[];
+type Entry = { race_id: string; date: string; boat: number; finish_pos: number | null; status_code: string | null; racer_reg: string | null; motor_no: number | null; exhibition_time: number | null; st: number | null; st_flying: number | null };
+const history = db.prepare("SELECT race_id, date, boat, finish_pos, status_code, racer_reg, motor_no, exhibition_time, st, st_flying FROM race_entries WHERE date >= ? AND date <= ? ORDER BY date, race_id").all(H2H_FROM, TO) as Entry[];
 log(`過去の成績 ${history.length} 走（${H2H_FROM}〜）`);
 const racerLane = new Map<string, number[]>(); // `${登番}|${枠}` → [走, 1着]
 const classLane = new Map<string, number[]>(); // `${級別}|${枠}` → [走, 1着]
 const racerLaneLag = new Map<string, number[]>(), classLaneLag = new Map<string, number[]>(); // 30 日より前の成績だけで作る版（先取りが混ざっていないかの確認用）
 const lagQueue: Entry[][] = [];
+// 育成枠の第 2 回の材料（docs/reviews/2026-11-17-second-prediction-track.md）
+const POINTS = [0, 10, 8, 6, 4, 2, 1];
+const points = (finish: number | null) => (finish != null && finish >= 1 && finish <= 6 ? POINTS[finish] : 0);
+const classLanePts = new Map<string, number[]>(); // `${級別}|${枠}` → [走, 点数の合計]
+const racerForm = new Map<string, Array<[string, number, string]>>(); // 登番 → [日付, 調子（点数 − 級別と枠の平均）, 場]
+const motorForm = new Map<string, Array<[string, number]>>(); // `${場}|${モーター}` → [日付, 調子]
+const racerLaneSt = new Map<string, number[]>(), laneSt = new Map<string, number[]>(); // [走, ST の合計]
+const racerEx = new Map<string, number[]>(); // 登番 → [走, 展示タイムのレース内の差の合計]
+const lastStart = new Map<string, string>(); // 登番 → 最後に走った日
+const lane2Let = new Map<string, number[]>(); // 2号艇の選手の登番 → [走, 1号艇が勝った]
+const lane2All = [0, 0];
+const dayDiff = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 const venueLane = new Map<string, number[]>(); // `${場}|${枠}` → [走, 1着]（その場でその枠がどれだけ勝つか）
 const allLane = new Map<string, number[]>(); // 枠 → [走, 1着]
 const pair = new Map<string, number[]>(); // `${a}|${b}`（a < b）→ [a が先着, b が先着]
@@ -112,7 +145,7 @@ const fDates = new Map<string, string[]>(); // 登番 → F の日付
 const bump = (map: Map<string, number[]>, key: string, i: number) => { const v = map.get(key) ?? [0, 0]; v[i] += 1; map.set(key, v); };
 const periodStart = (date: string) => { const [y, m] = [Number(date.slice(0, 4)), Number(date.slice(5, 7))]; return m >= 11 ? `${y}-11-01` : m >= 5 ? `${y}-05-01` : `${y - 1}-11-01`; };
 
-type Obs = { date: string; p: number; win: 0 | 1; tags: string[]; lane?: number; h2h?: number; raceId: string; course: number; venueDiff?: number; fCount: number; local: boolean; branchKnown: boolean; national: number; venue: string; venueLane: number; drift: number | null; laneLag?: number };
+type Obs = { date: string; p: number; win: 0 | 1; tags: string[]; lane?: number; h2h?: number; raceId: string; course: number; venueDiff?: number; fCount: number; local: boolean; branchKnown: boolean; national: number; venue: string; venueLane: number; drift: number | null; laneLag?: number; f: Record<string, number | undefined> };
 const observations: Obs[] = [];
 function evaluate(race: EvalRace) {
   const type = raceGroup(raceTypeById.get(race.raceId) ?? "");
@@ -120,10 +153,11 @@ function evaluate(race: EvalRace) {
   const regs = race.boats.map((b) => b.registrationNo ?? "");
   const title = titleByRacerDay.get(`${race.date}|${regs[0]}`) ?? "";
   const anniversary = /周年/.test(title);
+  const since90 = addDays(race.date, -90), since7 = addDays(race.date, -7), since120 = addDays(race.date, -120);
   race.boats.forEach((boat, i) => {
     const reg = regs[i];
     const tags: string[] = [];
-    const obs: Obs = { date: race.date, p: race.marketWin[i], win: race.winner === boat.course ? 1 : 0, tags, raceId: race.raceId, course: boat.course, fCount: 0, local: false, branchKnown: false, venue: race.venue, drift: race.drift, venueLane: (() => { const v = venueLane.get(`${race.venue}|${boat.course}`), g = allLane.get(String(boat.course)); return v && g && v[0] >= 300 && v[1] > 0 && g[1] > 0 ? Math.log(v[1] / v[0]) - Math.log(g[1] / g[0]) : 0; })(), national: (boat.nationalWinRate ?? 0) - race.boats.reduce((sum, b) => sum + (b.nationalWinRate ?? 0), 0) / 6 };
+    const obs: Obs = { f: {}, date: race.date, p: race.marketWin[i], win: race.winner === boat.course ? 1 : 0, tags, raceId: race.raceId, course: boat.course, fCount: 0, local: false, branchKnown: false, venue: race.venue, drift: race.drift, venueLane: (() => { const v = venueLane.get(`${race.venue}|${boat.course}`), g = allLane.get(String(boat.course)); return v && g && v[0] >= 300 && v[1] > 0 && g[1] > 0 ? Math.log(v[1] / v[0]) - Math.log(g[1] / g[0]) : 0; })(), national: (boat.nationalWinRate ?? 0) - race.boats.reduce((sum, b) => sum + (b.nationalWinRate ?? 0), 0) / 6 };
     // 1. 枠の得意・苦手（上位・下位 2 割は、全部の艇を集めてから決める）
     const mine = racerLane.get(`${reg}|${boat.course}`);
     const base = classLane.get(`${boat.className}|${boat.course}`);
@@ -167,6 +201,37 @@ function evaluate(race: EvalRace) {
       if (i === favorite) tags.push(anniversary ? "6 人気の艇｜周年の節" : "6 人気の艇｜周年ではない節");
       if (anniversary && branch != null) tags.push(local ? "6 周年の節の地元の艇" : "6 周年の節の地元ではない艇");
     }
+    // ── 育成枠の第 2 回の材料 ──
+    if (reg) {
+      const form = racerForm.get(reg) ?? [];
+      const recent = form.filter(([d]) => d >= since90);
+      if (recent.length >= 10) obs.f["6 直近 90 日の調子"] = recent.reduce((sum, [, v]) => sum + v, 0) / recent.length;
+      const series = form.filter(([d, , venue]) => d >= since7 && venue === race.venue);
+      if (series.length >= 2) obs.f["7 今節の調子"] = series.reduce((sum, [, v]) => sum + v, 0) / series.length;
+      const st = racerLaneSt.get(`${reg}|${boat.course}`), stAll = laneSt.get(String(boat.course));
+      if (st && st[0] >= 20 && stAll && stAll[0] > 0) obs.f["9 その枠での平均スタート（速いほど正）"] = stAll[1] / stAll[0] - st[1] / st[0];
+      const last = lastStart.get(reg);
+      obs.f["12 休み明け（30 日以上）"] = last != null && dayDiff(last, race.date) >= 30 ? 1 : 0;
+    }
+    const motor = motorForm.get(`${race.venue}|${Number(boat.motorNo)}`)?.filter(([d]) => d >= since120);
+    if (motor && motor.length >= 12) obs.f["8 モーターの素性"] = motor.reduce((sum, [, v]) => sum + v, 0) / motor.length;
+    const exhibition = exhibitionAtT5.get(race.raceId);
+    if (exhibition) {
+      const mean = [...exhibition.values()].reduce((a, b) => a + b, 0) / 6;
+      const raw = -(exhibition.get(boat.course)! - mean) * 10;
+      obs.f["10 展示タイム（速いほど正）"] = raw;
+      const usual = racerEx.get(reg);
+      obs.f["11 展示タイムの本人比"] = usual && usual[0] >= 20 ? raw - -(usual[1] / usual[0]) * 10 : raw;
+    }
+    const ageWeight = regs.map((r) => ageWeightByRacerDay.get(`${race.date}|${r}`));
+    if (ageWeight.every((v) => v != null)) {
+      obs.f["13 体重（重いほど正・kg）"] = ageWeight[i]![1] - ageWeight.reduce((sum, v) => sum + v![1], 0) / 6;
+      obs.f["14 年齢（10 歳あたり）"] = (ageWeight[i]![0] - ageWeight.reduce((sum, v) => sum + v![0], 0) / 6) / 10;
+    }
+    if (boat.course === 1 && regs[1]) {
+      const let2 = lane2Let.get(regs[1]);
+      if (let2 && let2[0] >= 20 && lane2All[0] > 0) obs.f["15 2号艇の選手の逃がし率（1号艇に付ける）"] = let2[1] / let2[0] - lane2All[1] / lane2All[0];
+    }
     // 対照: 市場の確率の帯
     tags.push(`0 市場の確率 ${obs.p < 0.05 ? "① 5% 未満" : obs.p < 0.1 ? "② 5〜10%" : obs.p < 0.2 ? "③ 10〜20%" : obs.p < 0.4 ? "④ 20〜40%" : obs.p < 0.6 ? "⑤ 40〜60%" : "⑥ 60% 以上"}`);
     observations.push(obs);
@@ -185,6 +250,34 @@ function update(entries: Entry[]) {
       const cls = classByStart.get(`${e.race_id}|${e.boat}`);
       if (cls) { bump(classLane, `${cls}|${e.boat}`, 0); if (win) bump(classLane, `${cls}|${e.boat}`, 1); }
     }
+  }
+  // 育成枠の第 2 回の材料
+  const exValid = entries.filter((e) => e.exhibition_time != null && e.exhibition_time > 0);
+  const exMean = exValid.length === 6 ? exValid.reduce((sum, e) => sum + e.exhibition_time!, 0) / 6 : null;
+  const lane1 = entries.find((e) => e.boat === 1), lane2 = entries.find((e) => e.boat === 2);
+  if (date >= LANE_FROM && lane1 && lane2?.racer_reg) {
+    bump(lane2Let, lane2.racer_reg, 0); lane2All[0] += 1;
+    if (lane1.finish_pos === 1) { bump(lane2Let, lane2.racer_reg, 1); lane2All[1] += 1; }
+  }
+  for (const e of entries) {
+    if (!e.racer_reg) continue;
+    const cls = classByStart.get(`${e.race_id}|${e.boat}`);
+    const pts = points(e.finish_pos);
+    if (cls && date >= LANE_FROM) {
+      const base = classLanePts.get(`${cls}|${e.boat}`);
+      if (base && base[0] >= 200) {
+        const excess = pts - base[1] / base[0];
+        const list = racerForm.get(e.racer_reg) ?? []; list.push([date, excess, e.race_id.split("-")[1]]); racerForm.set(e.racer_reg, list);
+        if (e.motor_no != null) { const key = `${e.race_id.split("-")[1]}|${e.motor_no}`; const m = motorForm.get(key) ?? []; m.push([date, excess]); motorForm.set(key, m); }
+      }
+      const v = classLanePts.get(`${cls}|${e.boat}`) ?? [0, 0]; v[0] += 1; v[1] += pts; classLanePts.set(`${cls}|${e.boat}`, v);
+    }
+    if (date >= LANE_FROM && e.st != null && !e.st_flying) {
+      const a = racerLaneSt.get(`${e.racer_reg}|${e.boat}`) ?? [0, 0]; a[0] += 1; a[1] += e.st; racerLaneSt.set(`${e.racer_reg}|${e.boat}`, a);
+      const b = laneSt.get(String(e.boat)) ?? [0, 0]; b[0] += 1; b[1] += e.st; laneSt.set(String(e.boat), b);
+    }
+    if (date >= LANE_FROM && exMean != null) { const a = racerEx.get(e.racer_reg) ?? [0, 0]; a[0] += 1; a[1] += e.exhibition_time! - exMean; racerEx.set(e.racer_reg, a); }
+    lastStart.set(e.racer_reg, date);
   }
   for (const e of entries) if (e.racer_reg && e.status_code === "F") fDates.set(e.racer_reg, [...(fDates.get(e.racer_reg) ?? []), date]);
   for (let i = 0; i < entries.length; i += 1) for (let j = i + 1; j < entries.length; j += 1) {
@@ -411,4 +504,52 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
   const frozen = fitWith((o) => [...baseX(o), laneValue(o)], 7);
   console.log(`\n固定する式（${FROM}〜${TO} の全部で合わせた）: 1着の点数 = ${frozen.beta[0].toFixed(4)} × log(市場の確率) + 枠 [0, ${frozen.beta.slice(1, 6).map((v) => v.toFixed(4)).join(", ")}] + ${frozen.beta[6].toFixed(4)} × 枠の得意度`);
   console.log(`枠の得意度 = (本人のその枠の 1着率 − 同じ級別のその枠の 1着率) ÷ 枠ごとの標準偏差 [${[1, 2, 3, 4, 5, 6].map((lane) => laneSd.get(lane)!.toFixed(4)).join(", ")}]（20 走未満は 0）`);
+}
+
+// ─── 育成枠の第 2 回のふるい（事前登録: docs/reviews/2026-11-17-second-prediction-track.md） ───
+{
+  const firstHalf = (d: string) => d < SPLIT, secondHalf = (d: string) => d >= SPLIT;
+  const names = [...new Set(observations.flatMap((o) => Object.keys(o.f)))].sort((a, b) => Number(a.split(" ")[0]) - Number(b.split(" ")[0]));
+  // 大きさをそろえる: 前半の、値がある艇の標準偏差で割る（1 か 0 の材料はそのまま）。値が無い艇は 0（レースの平均と同じ扱い）
+  const scale = new Map(names.map((name) => {
+    const values = observations.filter((o) => firstHalf(o.date) && o.f[name] != null).map((o) => o.f[name]!);
+    return [name, values.every((v) => v === 0 || v === 1) ? 1 : sd(values)];
+  }));
+  const value = (name: string) => (o: Obs) => (o.f[name] == null ? 0 : o.f[name]! / scale.get(name)!);
+  const base2 = (o: Obs) => [...baseX(o), laneValue(o)];
+  const loglossOf = (list: Obs[], beta: number[], x: (o: Obs) => number[]) => {
+    const scores = list.map((o) => x(o).reduce((sum, v, i) => sum + v * beta[i], 0));
+    const max = Math.max(...scores);
+    return -(scores[list.findIndex((o) => o.win)] - max - Math.log(scores.reduce((sum, v) => sum + Math.exp(v - max), 0)));
+  };
+  const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length;
+  const test = complete.filter((list) => secondHalf(list[0].date));
+  const baseFirst = fitWith(base2, 7, firstHalf);
+  console.log(`\n育成枠・第 2 回のふるい: 土台は「市場 + 枠 + 枠の得意度」。前半 ${complete.length - test.length} レースで係数を見て、後半 ${test.length} レースに当てる`);
+  console.log("| 材料 | 値がある艇 | 前半の係数 | 標準誤差 | 何倍 | 後半の logloss の改善 | 標準誤差 | 何倍 | 判定 |");
+  console.log("|---|---:|---:|---:|---:|---:|---:|---:|---|");
+  const passed: string[] = [];
+  for (const name of names) {
+    const x = (o: Obs) => [...base2(o), value(name)(o)];
+    const first = fitWith(x, 8, firstHalf);
+    const z = first.beta[7] / first.se[7];
+    const diffs = test.map((list) => loglossOf(list, baseFirst.beta, base2) - loglossOf(list, first.beta, x));
+    const gain = mean(diffs), gainSe = sd(diffs) / Math.sqrt(diffs.length);
+    const candidate = Math.abs(z) >= 3, ok = candidate && gain / gainSe >= 2;
+    if (ok) passed.push(name);
+    console.log(`| ${name} | ${observations.filter((o) => o.f[name] != null).length} | ${first.beta[7].toFixed(4)} | ${first.se[7].toFixed(4)} | ${z.toFixed(1)} | ${gain.toFixed(5)} | ${gainSe.toFixed(5)} | ${(gain / gainSe).toFixed(1)} | ${ok ? "**兆しあり**" : candidate ? "候補だが後半で残らない" : "閉じる"} |`);
+  }
+  // 兆しありの材料を全部入れた式（前半で決める）を、後半で「市場の確率そのまま」と比べる
+  const xAll = (o: Obs) => [...base2(o), ...passed.map((name) => value(name)(o))];
+  const all = fitWith(xAll, 7 + passed.length, firstHalf);
+  const market = (list: Obs[]) => -Math.log(list.find((o) => o.win)!.p);
+  const line = (label: string, filter: (d: string) => boolean) => {
+    const part = test.filter((list) => filter(list[0].date));
+    const vsMarket = part.map((list) => market(list) - loglossOf(list, all.beta, xAll));
+    const vsBase = part.map((list) => loglossOf(list, baseFirst.beta, base2) - loglossOf(list, all.beta, xAll));
+    console.log(`- ${label} ${part.length} レース: 市場そのまま ${mean(part.map(market)).toFixed(4)} → 全部入り ${mean(part.map((list) => loglossOf(list, all.beta, xAll))).toFixed(4)}（改善 ${mean(vsMarket).toFixed(5)}・標準誤差 ${(sd(vsMarket) / Math.sqrt(part.length)).toFixed(5)}・説明力 ΔR² ${(mean(vsMarket) / Math.log(6)).toFixed(4)}）／土台からの改善 ${mean(vsBase).toFixed(5)}（${(mean(vsBase) / (sd(vsBase) / Math.sqrt(part.length))).toFixed(1)} 倍）`);
+  };
+  console.log(`\n兆しありの材料（${passed.length} 個）を全部入れた式を前半で決め、後半に当てる: ${passed.join("・") || "なし"}`);
+  line("後半全体", secondHalf); line("9月", (d) => d.startsWith("2026-09")); line("10月", (d) => d.startsWith("2026-10")); line("11月", (d) => d.startsWith("2026-11"));
+  console.log(`  前半で決めた係数: 市場 ${all.beta[0].toFixed(3)}・枠 2〜6 ${all.beta.slice(1, 6).map((v) => v.toFixed(2)).join(" / ")}・枠の得意度 ${all.beta[6].toFixed(3)}${passed.map((name, i) => `・${name.split("（")[0]} ${all.beta[7 + i].toFixed(3)}（1 つ分 = ${scale.get(name)!.toFixed(4)}）`).join("")}`);
 }
