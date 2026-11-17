@@ -16,6 +16,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { buildBuyResultNotification } from "../src/domain/buyResultNotification";
+import { settleTrifectaBuy } from "../src/domain/buySettlement";
 import { loadEnvFiles } from "../src/domain/envFile";
 import { buildLineText, lineMessagingConfigFromEnv, sendLinePushTextToRecipients } from "../src/domain/lineMessaging";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
@@ -87,20 +88,29 @@ ORDER BY p.close_at
       continue;
     }
 
-    const hit = parsed.combinations.includes(buy.selection);
+    // 買い目ごとに精算する（src/domain/buySettlement.ts）: 買い目に返還の艇（フライングなど）があれば返還、同着はどちらの組番でも的中。
     const deadHeat = parsed.combinations.length > 1;
+    const settlement = settleTrifectaBuy(buy.selection, {
+      // 同着のときは、ページの払戻がどの組番のものか決められないので、払戻は翌日の確定に任せる
+      winners: parsed.combinations.map((combination) => ({ combination, payoutYen: deadHeat ? null : parsed.payoutYen })),
+      refundBoats: parsed.refundBoats,
+      voided: false,
+      legacyReturned: false,
+    });
+    const hit = settlement.status === "hit";
+    const returned = settlement.status === "returned";
     const message = buildBuyResultNotification({
       venue: buy.venue,
       raceNo: buy.race_no,
       betType: buy.bet_type,
       selection: buy.selection,
-      resultSelection: hit ? buy.selection : parsed.combinations[0],
-      winningPayoutYen: deadHeat ? null : parsed.payoutYen,
-      returned: false,
+      resultSelection: settlement.resultSelection,
+      winningPayoutYen: settlement.payoutYen,
+      returned,
       currentOdds: buy.current_odds,
       // 速報の時点では確定結果（race_results）が無いので、このレースの結果を足して今月・通算を出す。
       ...(() => {
-        const ledgers = loadBuyLedgers(db, buy.date, new Map([...loadFastOutcomes(db), [buy.race_id, { hit, payoutYen: hit ? parsed.payoutYen : null, selection: buy.selection }]]));
+        const ledgers = loadBuyLedgers(db, buy.date, new Map([...loadFastOutcomes(db), [buy.race_id, { hit, payoutYen: hit ? settlement.payoutYen : null, selection: buy.selection, returned }]]));
         const wallet = walletFor(ledgers.wallets, buy.date);
         return { tally: { month: ledgers.month, total: ledgers.total }, bankrollLine: wallet ? formatBankrollLine(wallet) : undefined };
       })(),
@@ -130,7 +140,7 @@ ON CONFLICT(race_id, channel) DO UPDATE SET status='IN_SUMMARY', title=excluded.
 WHERE notification_log.status <> 'SENT'
 `).run(key, title, body, oddsUrl);
       folded += 1;
-      console.log(`fast-result folded into daily summary: ${buy.race_id} miss`);
+      console.log(`fast-result folded into daily summary: ${buy.race_id} ${returned ? "returned" : "miss"}`);
       continue;
     }
     loadEnvFiles([".env"]);
@@ -164,7 +174,7 @@ VALUES (?, 'line', 'SENT', ?, ?, ?, CURRENT_TIMESTAMP)
 ON CONFLICT(race_id, channel) DO UPDATE SET status='SENT', title=?, body=?, official_url=?, sent_at=CURRENT_TIMESTAMP
 `).run(key, title, body, oddsUrl, title, body, oddsUrl);
     sent += 1;
-    console.log(`fast-result sent: ${buy.race_id} ${hit ? "hit" : "miss"}`);
+    console.log(`fast-result sent: ${buy.race_id} ${hit ? "hit" : returned ? "returned" : "miss"}`);
   }
   console.log(`notify-buy-results-fast done: date=${DATE} buys=${buys.length} fetches=${fetches} sent=${sent} folded=${folded} pending=${pending} dryRun=${DRY_RUN} catchUp=${CATCH_UP}`);
 } finally {

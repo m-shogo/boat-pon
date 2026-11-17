@@ -23,6 +23,8 @@ import {
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
 import { startedWallets, walletName } from "../src/domain/bankroll";
 import { favoriteBuyActive } from "../src/domain/favoriteBuy";
+import { NO_TRIFECTA_FACTS, settleTrifectaBuy, toBuyOutcome } from "../src/domain/buySettlement";
+import { loadTrifectaFacts } from "./lib/trifectaFacts";
 
 const args = process.argv.slice(2);
 const arg = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -68,25 +70,33 @@ const maxDates = db.prepare(`SELECT
     (SELECT MAX(date) FROM race_payouts WHERE bet_type = 'trifecta') AS payouts,
     (SELECT MAX(date) FROM official_programs) AS programs`).get() as { results: string | null; payouts: string | null; programs: string | null };
 const programsByDate = new Map((db.prepare(`SELECT date, COUNT(*) n FROM official_programs WHERE date >= ? AND date <= ? GROUP BY date`).all(healthFrom, TO) as Array<{ date: string; n: number }>).map((r) => [r.date, r.n]));
+// BUY の当たり外れは買い目ごとに精算する（src/domain/buySettlement.ts。通知・財布と同じ決め方）
+const buyFacts = loadTrifectaFacts(db, decisions.filter((d) => d.decision === "BUY").map((d) => d.race_id));
 const unsentNotifications = (db.prepare(`SELECT COUNT(*) n FROM notification_log WHERE channel = 'line' AND status NOT IN ('SENT', 'IN_SUMMARY') AND created_at >= datetime('now', '-3 days')`).get() as { n: number }).n;
 db.close();
 
 // ─── 当たり外れ ───
 const buys = decisions.filter((d) => d.decision === "BUY").sort((a, b) => a.race_id.localeCompare(b.race_id));
 const isSettled = (d: Decision) => d.trifecta != null && d.trifecta !== "" && !d.returned && d.payout != null;
-const ledger = summarizeBuyLedger(buys.map((d) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout })));
+const settleBuy = (d: Decision) => settleTrifectaBuy(d.selection, buyFacts.get(d.race_id) ?? NO_TRIFECTA_FACTS);
+const buyOutcome = (d: Decision) => toBuyOutcome(d.date, settleBuy(d));
+const ledger = summarizeBuyLedger(buys.map(buyOutcome));
 const timingKinds: BuyTimingKind[] = ["notified", "info-after-close", "not-notified", "no-info"];
 const ledgerByTiming = timingKinds.map((kind) => ({
   kind, label: BUY_TIMING_LABEL[kind],
-  ...summarizeBuyLedger(buys.filter((d) => (timingByRace.get(d.race_id) ?? "not-notified") === kind).map((d) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout }))),
+  ...summarizeBuyLedger(buys.filter((d) => (timingByRace.get(d.race_id) ?? "not-notified") === kind).map(buyOutcome)),
 }));
 const notifiedShare = buys.length ? ledgerByTiming[0].buys / buys.length : null;
 const buysSinceFix = buys.filter((d) => d.date >= LIVE_RECORD_FIX_DATE);
-const ledgerSinceFix = summarizeBuyLedger(buysSinceFix.map((d) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout })));
+const ledgerSinceFix = summarizeBuyLedger(buysSinceFix.map(buyOutcome));
 const notifiedSinceFix = buysSinceFix.filter((d) => timingByRace.get(d.race_id) === "notified").length;
 const recentBuys = buys.slice(-10).reverse().map((d) => ({
   date: d.date, venue: d.venue, raceNo: d.race_no, selection: d.selection, quoteOdds: d.cur,
-  result: isSettled(d) ? (d.trifecta === d.selection ? "的中" : "外れ") : "結果待ち", resultSelection: d.trifecta, payoutYen: isSettled(d) ? (d.trifecta === d.selection ? d.payout : 0) : null,
+  ...(() => {
+    const s = settleBuy(d);
+    const result = s.status === "hit" ? "的中" : s.status === "miss" ? "外れ" : s.status === "returned" ? "返還" : "結果待ち";
+    return { result, resultSelection: s.resultSelection, payoutYen: s.status === "hit" ? s.payoutYen : s.status === "miss" ? 0 : null };
+  })(),
 }));
 
 // ─── 確率の精度（同じレースだけで比較） ───
@@ -234,7 +244,8 @@ const buyBasis = favoriteGeneration ? accuracyBuy[2].metrics : v3Buy;
 const unnotifiedFrom = [addDays(todayJst(), -7), "2026-10-15"].sort()[1];
 const unnotifiedRecent = buysSinceFix.filter((d) => d.date >= unnotifiedFrom && d.date < todayJst() && timingByRace.get(d.race_id) !== "notified").length;
 if (unnotifiedRecent > 0) alerts.push(`${unnotifiedFrom} 以降に、締切前に通知できなかった BUY が ${unnotifiedRecent} 件ある（auto-odds.log の「LINE realtime not-sent」で理由を確認）`);
-const pendingOld = buys.filter((d) => !isSettled(d) && d.date <= addDays(todayJst(), -3)).length;
+// 返還は結果が出ているので、結果待ちに数えない（以前は古い「返還」の印のレースも、ここで結果待ちに数えていた）
+const pendingOld = buys.filter((d) => { const o = buyOutcome(d); return o.hit == null && !o.returned && d.date <= addDays(todayJst(), -3); }).length;
 if (pendingOld > 0) alerts.push(`3日以上前の BUY のうち ${pendingOld} 件の結果が未取り込み（結果の取り込みが止まっていないか確認）`);
 if (STATE_DIR && (!lastGrowth || now.getTime() - Date.parse(lastGrowth.evaluatedAt) > 9 * 24 * 3600_000)) alerts.push("週次の改善処理（run-accuracy-growth）が9日以上動いていない");
 
@@ -311,7 +322,7 @@ function renderMarkdown() {
     "",
     "## 当たり外れ（paper-live BUY・公式払戻で精算）",
     "",
-    `- 累計: BUY ${ledger.buys} / 精算 ${ledger.settled} / 的中 ${ledger.hits} / 外れ ${ledger.misses} / 結果待ち ${ledger.buys - ledger.settled} / ROI ${pct(ledger.officialRoi)}`,
+    `- 累計: BUY ${ledger.buys} / 精算 ${ledger.settled} / 的中 ${ledger.hits} / 外れ ${ledger.misses} / 返還 ${ledger.returned ?? 0} / 結果待ち ${ledger.buys - ledger.settled - (ledger.returned ?? 0)} / ROI ${pct(ledger.officialRoi)}`,
     "",
     "| 月 | BUY | 精算 | 的中 | ROI |",
     "|---|---:|---:|---:|---:|",

@@ -3,7 +3,7 @@
  *
  * 記録: data/reports/scorecard/favorite-picks/YYYY-MM-DD.json（その日の締切5分前の全120通りがそろったレースごとに1点）。
  * 一度作った日のファイルは書き直さない（後から市場補正のパラメータが変わっても、その日の予想は変えない）。当日分は 21:10 以降だけ作る。
- * 精算: 公式の確定結果（race_results）。返還は除く。100 円ずつ買った場合として数える（購入の推奨ではない）。
+ * 精算: 公式の確定結果を買い目ごとに見る（BUY と同じ決め方）。返還は除く。100 円ずつ買った場合として数える（購入の推奨ではない）。
  *
  * 性格（Codex のレビュー 2026-10-15）: 本命予想は通知していない「後から集計した参考」。使うオッズは収集の仕組み上すべて締切前
  * （締切1分前まで）に取れたものだが、BUY のように行動の締め切り（締切5分前）で固定した記録ではない。
@@ -14,6 +14,8 @@ import { existsSync, linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSyn
 import type { DatabaseSync } from "node:sqlite";
 import { summarizeBuyLedger, type BuyLedgerSummary, type BuyOutcome } from "../../src/domain/accuracyScorecard";
 import { pickFavorite, type FavoritePick } from "../../src/domain/favoritePick";
+import { NO_TRIFECTA_FACTS, settleTrifectaBuy, toBuyOutcome } from "../../src/domain/buySettlement";
+import { loadTrifectaFacts } from "./trifectaFacts";
 import { addDays, DEFAULT_SCORECARD_STATE_DIR, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./marketCaptures";
 
 /** 締切5分前の全120通りがそろい始めた月（6月は 5% しかない）。 */
@@ -81,14 +83,11 @@ export function loadFavoriteLedgers(db: DatabaseSync, today: string, stateDir = 
     if (!existsSync(path)) continue;
     try { picks.push(...(JSON.parse(readFileSync(path, "utf8")) as DayFile).picks); } catch { /* 壊れたファイルは数えない */ }
   }
-  const results = new Map((db.prepare(`SELECT race_id, trifecta, payout_yen, returned FROM race_results WHERE date >= ? AND date <= ?`)
-    .all(FAVORITE_FROM, today) as Array<{ race_id: string; trifecta: string | null; payout_yen: number | null; returned: number | null }>)
-    .map((r) => [r.race_id, r]));
+  // BUY と同じく、買い目ごとに精算する（src/domain/buySettlement.ts）。返還・結果待ちは未精算。
+  const facts = loadTrifectaFacts(db, picks.map((pick) => pick.raceId));
   const outcomes: BuyOutcome[] = picks.map((pick) => {
     const date = `${pick.raceId.slice(0, 4)}-${pick.raceId.slice(4, 6)}-${pick.raceId.slice(6, 8)}`;
-    const r = results.get(pick.raceId);
-    const settled = r != null && r.trifecta != null && r.trifecta !== "" && !r.returned && r.payout_yen != null;
-    return { date, hit: settled ? r!.trifecta === pick.selection : null, payoutYen: settled ? r!.payout_yen : null };
+    return toBuyOutcome(date, settleTrifectaBuy(pick.selection, facts.get(pick.raceId) ?? NO_TRIFECTA_FACTS));
   });
   const month = today.slice(0, 7);
   let lastSettledDay: FavoriteLedgers["lastSettledDay"] = null;

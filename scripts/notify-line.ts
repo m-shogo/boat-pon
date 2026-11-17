@@ -8,6 +8,8 @@ import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { accuracySnapshotFromReport, classifyBuyTiming } from "../src/domain/accuracyScorecard";
 import { BUY_REVIEW_DATE, formatDailySummary, formatWeeklySummary, type DailyBuy, type WeeklyWindow } from "../src/domain/lineMessages";
 import { loadBuyLedgers } from "./lib/buyLedger";
+import { NO_TRIFECTA_FACTS, parseFastResultNotification, settleTrifectaBuy, settlementOrFast, type BuySettlement } from "../src/domain/buySettlement";
+import { loadTrifectaFacts } from "./lib/trifectaFacts";
 import { formatBankrollLine, walletFor } from "../src/domain/bankroll";
 import { ensureFavoritePicks, FAVORITE_FROM, loadFavoriteLedgers } from "./lib/favoriteLedger";
 import { claimNotification, recoverStuckNotifications, releaseNotification, upsertPendingRow } from "./lib/notificationLog";
@@ -211,34 +213,35 @@ WITH buy_rows AS (
   FROM decision_history dh
   WHERE dh.date = ? AND dh.decision = 'BUY' AND dh.model_version = ? AND dh.run_kind = 'paper-live'
 )
-SELECT dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, p.close_at, rr.trifecta, rr.payout_yen, rr.returned,
+SELECT dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, p.close_at,
   -- 通知の記録はレースに1行。見出しの買い目で、この買い目を通知したかを確かめる（財布の台帳 scripts/lib/buyLedger.ts と同じ）
   (SELECT n.sent_at FROM notification_log n WHERE n.race_id = dh.race_id AND n.channel = 'line' AND n.status = 'SENT'
     AND n.title LIKE '% ' || dh.selection || '%') AS sent_at,
   (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = dh.race_id) AS info_at,
+  (SELECT n.title FROM notification_log n WHERE n.race_id = 'line-buy-result-fast-' || dh.race_id AND n.channel = 'line' AND n.status IN ('SENT', 'IN_SUMMARY')) AS fast_title,
   (SELECT n.body FROM notification_log n WHERE n.race_id = 'line-buy-result-fast-' || dh.race_id AND n.channel = 'line' AND n.status IN ('SENT', 'IN_SUMMARY')) AS fast_body
 FROM buy_rows dh
 LEFT JOIN official_programs p ON p.race_id = dh.race_id
-LEFT JOIN race_results rr ON rr.race_id = dh.race_id
 WHERE dh.row_num = 1
 ORDER BY p.close_at, dh.venue, dh.race_no
 `).all(date, LIVE_MONITOR_MODEL_VERSION) as Array<{
     race_id: string; date: string; venue: string; race_no: number; selection: string; close_at: string | null;
-    trifecta: string | null; payout_yen: number | null; returned: number | null; sent_at: string | null; info_at: string | null; fast_body: string | null;
+    sent_at: string | null; info_at: string | null; fast_title: string | null; fast_body: string | null;
   }>;
+  // 確定結果があれば買い目ごとに精算し（src/domain/buySettlement.ts）、無ければ速報の通知文の結論を使う。
+  const facts = loadTrifectaFacts(db, rows.map((row) => row.race_id));
   const todayBuys: DailyBuy[] = rows.map((row) => {
-    const fastResult = row.fast_body?.match(/実着順: (\d-\d-\d)\n/)?.[1] ?? null;
-    const fastPayout = row.fast_body?.match(/払戻 ([\d,]+)円/)?.[1];
-    const resultSelection = row.trifecta ?? fastResult;
-    const result: DailyBuy["result"] = row.returned ? "returned" : resultSelection == null ? "pending" : resultSelection === row.selection ? "hit" : "miss";
-    const payoutYen = row.trifecta != null ? row.payout_yen : fastPayout ? Number(fastPayout.replaceAll(",", "")) : null;
+    const settlement = settlementOrFast(
+      settleTrifectaBuy(row.selection, facts.get(row.race_id) ?? NO_TRIFECTA_FACTS),
+      parseFastResultNotification(row.fast_title, row.fast_body),
+    );
     return {
       venue: row.venue,
       raceNo: row.race_no,
       selection: row.selection,
       notified: classifyBuyTiming({ date: row.date, closeAt: row.close_at, sentAt: row.sent_at, infoAt: row.info_at }) === "notified",
-      result,
-      payoutYen,
+      result: settlement.status,
+      payoutYen: settlement.status === "hit" ? settlement.payoutYen : null,
     };
   });
   const ledgers = loadBuyLedgers(db, date);
@@ -327,13 +330,12 @@ type ResultRow = {
   bet_type: string;
   current_odds: number | null;
   recommended_stake_yen: number;
-  trifecta: string | null;
-  winning_payout_yen: number | null;
-  returned: number | null;
+  /** 買い目ごとの精算（確定結果から。結果待ちの行は一覧に入れない）。 */
+  settlement: BuySettlement;
 };
 
 function listBuyResults(db: DatabaseSync, from: string, to: string): ResultRow[] {
-  return db.prepare(`
+  const rows = db.prepare(`
 WITH buy_rows AS (
   SELECT dh.*,
     ROW_NUMBER() OVER (
@@ -348,17 +350,17 @@ WITH buy_rows AS (
 )
 SELECT
   dh.race_id, dh.date, dh.venue, dh.race_no, dh.selection, dh.bet_type,
-  dh.current_odds, dh.recommended_stake_yen,
-  rr.trifecta,
-  rr.payout_yen AS winning_payout_yen,
-  rr.returned
+  dh.current_odds, dh.recommended_stake_yen
 FROM buy_rows dh
-JOIN race_results rr ON rr.race_id = dh.race_id
 WHERE dh.row_num = 1
   AND dh.bet_type IN ('trifecta', '3連単')
-  AND (rr.trifecta IS NOT NULL OR rr.returned != 0)
 ORDER BY dh.date ASC, dh.venue ASC, dh.race_no ASC
-`).all(from, to, LIVE_MONITOR_MODEL_VERSION) as ResultRow[];
+`).all(from, to, LIVE_MONITOR_MODEL_VERSION) as Array<Omit<ResultRow, "settlement">>;
+  // 確定結果が入ったレースだけ。3連単が成立しなかったレース（結果表に行が無い）も、返還として知らせる。
+  const facts = loadTrifectaFacts(db, rows.map((row) => row.race_id));
+  return rows
+    .map((row) => ({ ...row, settlement: settleTrifectaBuy(row.selection, facts.get(row.race_id) ?? NO_TRIFECTA_FACTS) }))
+    .filter((row) => row.settlement.status !== "pending");
 }
 
 function buildResultsNotifications(db: DatabaseSync, from: string, to: string, dryRun: boolean): NotificationRow[] {
@@ -367,22 +369,26 @@ function buildResultsNotifications(db: DatabaseSync, from: string, to: string, d
   const ledgers = loadBuyLedgers(db, todayJst());
   for (const row of rows) {
     // 締切後の速報（scripts/notify-buy-results-fast.ts）を送っていて（はずれを日次まとめに載せた IN_SUMMARY も含む）、着順が確定と同じなら、確定通知は送らない。
-    const fast = db.prepare("SELECT status, body FROM notification_log WHERE race_id = ? AND channel = 'line' AND status IN ('SENT', 'IN_SUMMARY')")
-      .get(`line-buy-result-fast-${row.race_id}`) as { status: string; body: string } | undefined;
+    const fast = db.prepare("SELECT status, title, body FROM notification_log WHERE race_id = ? AND channel = 'line' AND status IN ('SENT', 'IN_SUMMARY')")
+      .get(`line-buy-result-fast-${row.race_id}`) as { status: string; title: string; body: string } | undefined;
     // IN_SUMMARY（はずれを日次まとめに載せた）は、その日の日次まとめが実際に送れたときだけ「伝えた」とみなす。
     // 日次まとめが失敗していたら、確定通知で知らせる（Codex のレビューの指摘）。
     const delivered = fast?.status === "SENT" || (fast?.status === "IN_SUMMARY" && db.prepare(
       "SELECT 1 FROM notification_log WHERE race_id = ? AND channel = 'line' AND status = 'SENT'",
     ).get(`line-daily-${row.date}`) != null);
-    if (fast && delivered && row.trifecta && fast.body.includes(`実着順: ${row.trifecta}\n`)) continue;
+    // 速報と確定で結論（的中・はずれ・返還）が違えば、確定通知で知らせ直す（速報は「はずれ」、確定は買い目の艇のフライングで「返還」など）。
+    const fastSettlement = fast ? parseFastResultNotification(fast.title, fast.body) : null;
+    const sameAsFast = fastSettlement != null && fastSettlement.status === row.settlement.status
+      && (row.settlement.status === "returned" || (row.settlement.resultSelection != null && fast!.body.includes(`実着順: ${row.settlement.resultSelection}\n`)));
+    if (fast && delivered && sameAsFast) continue;
     const message = buildBuyResultNotification({
       venue: row.venue,
       raceNo: row.race_no,
       betType: row.bet_type,
       selection: row.selection,
-      resultSelection: row.trifecta,
-      winningPayoutYen: row.winning_payout_yen,
-      returned: row.returned !== 0,
+      resultSelection: row.settlement.resultSelection,
+      winningPayoutYen: row.settlement.payoutYen,
+      returned: row.settlement.status === "returned",
       currentOdds: row.current_odds,
       tally: { month: ledgers.month, total: ledgers.total },
       bankrollLine: (() => { const w = walletFor(ledgers.wallets, row.date); return w ? formatBankrollLine(w) : undefined; })(),

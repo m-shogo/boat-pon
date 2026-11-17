@@ -24,6 +24,8 @@ import {
 import { formatTally } from "../src/domain/buyResultNotification";
 import { LIVE_MONITOR_MODEL_VERSION } from "../src/domain/liveMonitor";
 import { favoriteBuyActive } from "../src/domain/favoriteBuy";
+import { NO_TRIFECTA_FACTS, settleTrifectaBuy, toBuyOutcome } from "../src/domain/buySettlement";
+import { loadTrifectaFacts } from "./lib/trifectaFacts";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
 
 const args = process.argv.slice(2);
@@ -68,11 +70,13 @@ const programsByDate = new Map((db.prepare(`SELECT date, COUNT(*) n FROM officia
 // しかも 6〜7月の時系列オッズは量が多く、6月分を読むだけで約7分かかる（2026-10-14 の実測。8月の同じ長さは約3秒）。
 const accuracyFrom = [FROM, "2026-07-01"].sort()[1];
 const { t5, t10, t20 } = loadCompleteCaptures(db, accuracyFrom, TO);
+// BUY の当たり外れは買い目ごとに精算する（src/domain/buySettlement.ts。通知・財布・スコアカードと同じ決め方）
+const buyFacts = loadTrifectaFacts(db, decisions.filter((d) => d.decision === "BUY").map((d) => d.race_id));
 db.close();
 const champion = loadChampionCalibration(STATE_DIR);
 
 const isSettled = (d: Dec) => d.trifecta != null && d.trifecta !== "" && !d.returned && d.payout != null;
-const outcome = (d: Dec) => ({ date: d.date, hit: isSettled(d) ? d.trifecta === d.selection : null, payoutYen: d.payout });
+const outcome = (d: Dec) => toBuyOutcome(d.date, settleTrifectaBuy(d.selection, buyFacts.get(d.race_id) ?? NO_TRIFECTA_FACTS));
 
 type Row = {
   key: string; label: string; from: string; to: string;

@@ -79,13 +79,16 @@ export function calibratedMarketProbabilities(
   return new Map([...weights].map(([selection, weight]) => [selection, weight / total]));
 }
 
-export type BuyOutcome = { date: string; hit: boolean | null; payoutYen: number | null };
+/** returned は返還（100 円が戻る）。hit=null のうち、結果待ちと分けて数える。 */
+export type BuyOutcome = { date: string; hit: boolean | null; payoutYen: number | null; returned?: boolean };
 
 export type BuyLedgerSummary = {
   buys: number;
   settled: number;
   hits: number;
   misses: number;
+  /** 返還の件数（精算には入れない）。2026-11-17 より前に書き出した記録には無い。 */
+  returned?: number;
   officialRoi: number | null;
   byMonth: Array<{ month: string; buys: number; settled: number; hits: number; officialRoi: number | null }>;
 };
@@ -93,8 +96,9 @@ export type BuyLedgerSummary = {
 /** hit=null は未精算（結果未取得または返還）。ROI は精算済みだけを分母にする（100円ベット）。 */
 export function summarizeBuyLedger(rows: BuyOutcome[]): BuyLedgerSummary {
   const months = new Map<string, { buys: number; settled: number; hits: number; payout: number }>();
-  let settled = 0, hits = 0, payout = 0;
+  let settled = 0, hits = 0, payout = 0, returned = 0;
   for (const row of rows) {
+    if (row.hit == null && row.returned) returned += 1;
     const month = row.date.slice(0, 7);
     const bucket = months.get(month) ?? { buys: 0, settled: 0, hits: 0, payout: 0 };
     bucket.buys += 1;
@@ -115,6 +119,7 @@ export function summarizeBuyLedger(rows: BuyOutcome[]): BuyLedgerSummary {
     settled,
     hits,
     misses: settled - hits,
+    returned,
     officialRoi: settled ? payout / (settled * 100) : null,
     byMonth: [...months].sort(([a], [b]) => a.localeCompare(b)).map(([month, b]) => ({
       month, buys: b.buys, settled: b.settled, hits: b.hits, officialRoi: b.settled ? b.payout / (b.settled * 100) : null,
@@ -252,8 +257,9 @@ const pctText = (value: number | null) => (value == null ? "-" : `${(value * 100
  * notifiedLedger（締切前に通知できた BUY だけの台帳）を渡すと、行動できた分の成績を別の行で出す。
  */
 export function formatLedgerAndAccuracyLines(ledger: BuyLedgerSummary, accuracy: AccuracySnapshot | null, now: Date, notifiedLedger?: BuyLedgerSummary): string[] {
-  const pending = ledger.buys - ledger.settled;
-  const lines = [`当たり外れ累計: BUY ${ledger.buys} / 的中 ${ledger.hits} / 外れ ${ledger.misses}${pending ? ` / 結果待ち ${pending}` : ""} / ROI ${pctText(ledger.officialRoi)}（公式払戻）`];
+  const returned = ledger.returned ?? 0;
+  const pending = ledger.buys - ledger.settled - returned;
+  const lines = [`当たり外れ累計: BUY ${ledger.buys} / 的中 ${ledger.hits} / 外れ ${ledger.misses}${returned ? ` / 返還 ${returned}` : ""}${pending ? ` / 結果待ち ${pending}` : ""} / ROI ${pctText(ledger.officialRoi)}（公式払戻）`];
   if (notifiedLedger) {
     lines.push(`うち締切前に通知できた BUY: ${notifiedLedger.buys} 件・的中 ${notifiedLedger.hits} / ROI ${pctText(notifiedLedger.officialRoi)}（残り ${ledger.buys - notifiedLedger.buys} 件は締切後に BUY 判定）`);
   }

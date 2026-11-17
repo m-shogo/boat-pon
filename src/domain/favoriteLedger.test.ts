@@ -10,7 +10,9 @@ function oddsDb() {
   const db = new DatabaseSync(":memory:");
   db.exec(`CREATE TABLE odds_timeseries_snapshots (id INTEGER PRIMARY KEY, race_id TEXT, selection TEXT, odds REAL, popularity INTEGER, source TEXT,
     captured_at TEXT, minutes_before_close INTEGER, checkpoint_label TEXT, created_at TEXT);
-    CREATE TABLE race_results (race_id TEXT, date TEXT, trifecta TEXT, payout_yen INTEGER, returned INTEGER);`);
+    CREATE TABLE race_results (race_id TEXT, date TEXT, trifecta TEXT, payout_yen INTEGER, returned INTEGER);
+    CREATE TABLE race_payouts (race_id TEXT, bet_type TEXT, combination TEXT, payout_yen INTEGER);
+    CREATE TABLE race_entries (race_id TEXT, boat INTEGER, status_code TEXT);`);
   const insert = db.prepare("INSERT INTO odds_timeseries_snapshots (race_id, selection, odds, source, captured_at, minutes_before_close, checkpoint_label) VALUES (?, ?, ?, 'official', ?, 5, 'T-5')");
   let i = 0;
   for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) for (let c = 1; c <= 6; c++) {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseRaceResultTrifecta } from "./officialRaceResultPage";
+import { parseRaceResultTrifecta, parseRefundBoats } from "./officialRaceResultPage";
 
 // 公式ページの HTML はそのまま置かず、同じ構造の最小限の断片で確かめる。
 const combo = (a: number, b: number, c: number) =>
@@ -11,7 +11,7 @@ const page = (rows: string) => `<table><tbody><tr><td rowspan="2">2連単</td><t
 test("3連単の確定組番と払戻を取り出す（他の券種の値は拾わない）", () => {
   const html = page(`<tr class="is-p3-0"><td rowspan="2">3連単</td><td>${combo(1, 5, 4)}</td><td><span class="is-payout1">&yen;5,750</span></td><td>22</td></tr>
 <tr class="is-p3-0"><td>&nbsp; </td><td><span class="is-payout1">&nbsp;</span></td><td>&nbsp;</td></tr>`);
-  assert.deepEqual(parseRaceResultTrifecta(html), { combinations: ["1-5-4"], payoutYen: 5750 });
+  assert.deepEqual(parseRaceResultTrifecta(html), { combinations: ["1-5-4"], payoutYen: 5750, refundBoats: [] });
 });
 
 test("同着で2組あるときは両方返す", () => {
@@ -23,4 +23,15 @@ test("同着で2組あるときは両方返す", () => {
 test("結果がまだ無いページでは null", () => {
   assert.equal(parseRaceResultTrifecta(page(`<tr><td rowspan="2">3連単</td><td>&nbsp;</td><td><span class="is-payout1">&nbsp;</span></td></tr>`)), null);
   assert.equal(parseRaceResultTrifecta("<html><body>データはありません</body></html>"), null);
+});
+
+test("返還の欄の艇番を取り出す（2026-11-08 下関 3R: 3・5・6 号艇がフライング。ほかの表の艇番は拾わない）", () => {
+  // 実際のページと同じ並び: 払戻の表 → 返還の表 → 決まり手の表
+  const refundTable = (boats: number[]) => `<table class="is-w243 is-h168"><thead><tr class="is-fs14"><th>返還</th></tr></thead><tbody><tr><td>
+<div class="numberSet1"><div class="numberSet1_row">${boats.map((b) => `<span class="numberSet1_number is-type${b}">${b}</span>`).join("\n")}</div><div class="numberSet1_row"> </div></div></td></tr></tbody></table>
+<table><thead><tr><th>決まり手</th></tr></thead><tbody><tr><td>逃げ</td></tr></tbody></table>`;
+  const trifecta = `<tr><td rowspan="2">3連単</td><td>${combo(1, 2, 4)}</td><td><span class="is-payout1">&yen;280</span></td></tr>`;
+  assert.deepEqual(parseRaceResultTrifecta(page(trifecta) + refundTable([3, 5, 6])), { combinations: ["1-2-4"], payoutYen: 280, refundBoats: [3, 5, 6] });
+  assert.deepEqual(parseRefundBoats(page(trifecta) + refundTable([])), []);
+  assert.deepEqual(parseRefundBoats(page(trifecta)), []);
 });

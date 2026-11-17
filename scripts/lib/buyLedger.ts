@@ -1,16 +1,18 @@
 /**
  * LINE 通知に載せる成績（今月・通算・判定を締め切りで固定した後・直近で結果がそろった日）を読む共通処理（読み取り専用）。
- * 精算は公式の確定結果（race_results）。速報で結果がわかっているレースは extraOutcomes で上書きできる。
+ * 精算は公式の確定結果を買い目ごとに見る（src/domain/buySettlement.ts）。確定結果がまだ無いレースは、速報の結果（extraOutcomes）を使う。
  */
 import type { DatabaseSync } from "node:sqlite";
 import { classifyBuyTiming, summarizeBuyLedger, type BuyLedgerSummary, type BuyOutcome } from "../../src/domain/accuracyScorecard";
 import { LIVE_MONITOR_MODEL_VERSION } from "../../src/domain/liveMonitor";
 import { computeWallets, type Bankroll } from "../../src/domain/bankroll";
+import { NO_TRIFECTA_FACTS, settleTrifectaBuy, toBuyOutcome } from "../../src/domain/buySettlement";
+import { loadTrifectaFacts } from "./trifectaFacts";
 
 /** auto-odds が行動の締め切りで判定を固定するようになった後、丸1日を新しい判定で回した最初の日。 */
 export const LIVE_RECORD_FIX_DATE = "2026-10-10";
 
-type Row = { race_id: string; date: string; selection: string; trifecta: string | null; payout_yen: number | null; returned: number | null; close_at: string | null; sent_at: string | null; info_at: string | null };
+type Row = { race_id: string; date: string; selection: string; close_at: string | null; sent_at: string | null; info_at: string | null };
 
 export type BuyLedgers = {
   month: BuyLedgerSummary;
@@ -26,7 +28,7 @@ export type BuyLedgers = {
 };
 
 /** レースごとの速報の結果。selection はその速報の買い目（同じレースの別の買い目には当てはめない）。 */
-type ExtraOutcomes = Map<string, { hit: boolean; payoutYen: number | null; selection?: string }>;
+type ExtraOutcomes = Map<string, { hit: boolean; payoutYen: number | null; selection?: string; returned?: boolean }>;
 
 /**
  * 速報（公式の結果ページ）で送った結果。確定結果（K ファイルの取り込み）は翌日の 21:30 なので、それまではこれで精算する。
@@ -41,6 +43,8 @@ export function loadFastOutcomes(db: DatabaseSync): ExtraOutcomes {
     const raceId = row.race_id.replace("line-buy-result-fast-", "");
     const actual = row.body.match(/実着順: (\d-\d-\d)/)?.[1];
     const selection = row.body.match(/買い目: (\d-\d-\d)/)?.[1];
+    // 速報で返還とわかったもの（買い目にフライングなどの艇）。見出しの「↩️ 返還」で見分ける
+    if (selection && row.title.startsWith("↩️")) { outcomes.set(raceId, { hit: false, payoutYen: null, selection, returned: true }); continue; }
     if (!actual || !selection) continue;
     const hit = actual === selection;
     const payout = row.title.match(/払戻 ([\d,]+)円/)?.[1];
@@ -63,23 +67,25 @@ WITH buy_rows AS (
   FROM decision_history dh
   WHERE dh.decision = 'BUY' AND dh.run_kind = 'paper-live' AND dh.model_version = ? AND dh.date <= ?
 )
-SELECT dh.race_id, dh.date, dh.selection, rr.trifecta, rr.payout_yen, rr.returned, p.close_at,
+SELECT dh.race_id, dh.date, dh.selection, p.close_at,
   -- 通知の記録はレースに1行。同じレースの別の買い目を通知済みにしないよう、見出しの買い目で確かめる（Codex のレビュー）
   (SELECT n.sent_at FROM notification_log n WHERE n.race_id = dh.race_id AND n.channel = 'line' AND n.status = 'SENT'
     AND n.title LIKE '% ' || dh.selection || '%') AS sent_at,
   (SELECT MIN(e.fetched_at) FROM exhibition_data e WHERE e.race_id = dh.race_id) AS info_at
 FROM buy_rows dh
-LEFT JOIN race_results rr ON rr.race_id = dh.race_id
 LEFT JOIN official_programs p ON p.race_id = dh.race_id
 WHERE dh.row_num = 1
 `).all(LIVE_MONITOR_MODEL_VERSION, today) as Row[];
 
-  // 確定結果（race_results）があればそれを使い、無ければ速報の結果を使う。返還は hit=null（成績では未精算）で、returned で区別する。
+  // 確定結果があれば買い目ごとに精算し、無ければ速報の結果を使う。返還は hit=null（成績では未精算）で、returned で区別する。
+  const facts = loadTrifectaFacts(db, rows.map((row) => row.race_id));
   const outcome = (row: Row): BuyOutcome & { returned: boolean } => {
-    const settled = row.trifecta != null && row.trifecta !== "" && !row.returned && row.payout_yen != null;
-    if (settled || row.returned) return { date: row.date, hit: settled ? row.trifecta === row.selection : null, payoutYen: row.payout_yen, returned: !!row.returned };
+    const confirmed = toBuyOutcome(row.date, settleTrifectaBuy(row.selection, facts.get(row.race_id) ?? NO_TRIFECTA_FACTS));
+    if (confirmed.hit != null || confirmed.returned) return confirmed;
     const extra = extraOutcomes.get(row.race_id);
-    if (extra && (extra.selection == null || extra.selection === row.selection)) return { date: row.date, hit: extra.hit, payoutYen: extra.payoutYen, returned: false };
+    if (extra && (extra.selection == null || extra.selection === row.selection)) {
+      return extra.returned ? { date: row.date, hit: null, payoutYen: null, returned: true } : { date: row.date, hit: extra.hit, payoutYen: extra.payoutYen, returned: false };
+    }
     return { date: row.date, hit: null, payoutYen: null, returned: false };
   };
   const month = today.slice(0, 7);
