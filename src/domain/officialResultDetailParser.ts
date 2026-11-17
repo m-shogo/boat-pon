@@ -107,7 +107,9 @@ function parseOfficialResultDetailWithSemantics(
     const line = raw.replace(/\t/g, " ");
 
     const venueMatch = line.match(/^(.+?)［成績］/);
-    if (venueMatch) { venue = normalizeVenue(venueMatch[1].replace(/[\s　]/g, "")); continuationBetType = null; continue; }
+    // 場が変わったら、前の場の最後のレースを閉じる。場の先頭の払戻の一覧（[払戻金] の表）にある「不成立」を、
+    // 前の場の 12R の返還の印として拾っていた（2026-10-08 児島 12R: 全艇完走なのに印が付いた）。
+    if (venueMatch) { venue = normalizeVenue(venueMatch[1].replace(/[\s　]/g, "")); continuationBetType = null; raceNo = null; returned = false; continue; }
 
     const dateMatch = line.match(/(\d{4})\/\s*(\d{1,2})\/\s*(\d{1,2})/);
     if (dateMatch && line.includes("ボートレース")) {

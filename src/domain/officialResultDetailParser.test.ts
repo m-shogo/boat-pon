@@ -125,3 +125,19 @@ test("K ファイル: 拡連複の 1 行目が空でも、続きの行は拡連�
     "exacta:4-3=2170", "quinella:3-4=6400", "wide:1-4=250", "wide:1-3=600", "trifecta:4-3-1=12970", "trio:1-3-4=2070",
   ]);
 });
+
+test("K ファイル: 次の場の払戻の一覧にある「不成立」を、前の場の最後のレースの返還にしない（2026-10-08 児島 12R）", () => {
+  const text = header("児　島") +
+    "  12R       一　般　　　                 H1800m  晴　  風  北　　 3m  波　  2cm\n" + columns + entries(1, 3) + "\n" +
+    "        ３連単   1-3-2     1600  人気     7 \n\n\n" +
+    header("下　関") +
+    "   [払戻金]       ３連単           ３連複           ２連単         ２連複\n" +
+    "           3R  1-2-4     280    不成立           1-2     250    1-2     160\n\n" +
+    "   3R       予選　　　　                 H1800m  曇り  風  東　　 2m  波　  2cm\n" + columns + entries(1, 2) + "\n" +
+    "        拡連複   不成立\n" +
+    "        ３連単   1-2-4      280  人気     1 \n" +
+    "        ３連複   不成立\n";
+  const parsed = parseOfficialResultDetail(text, defaults);
+  assert.deepEqual(parsed.conditions.map((c) => `${c.venue}${c.raceNo}:${c.returned}`), ["児島12:false", "下関3:true"]);
+  assert.deepEqual(parsed.payouts.map((p) => `${p.raceId}:${p.combination}`), ["20091111-児島-12:1-3-2", "20091111-下関-03:1-2-4"]);
+});
