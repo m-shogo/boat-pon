@@ -177,6 +177,30 @@ const isMajorPart = (p: string) => /^ピストン$|シリンダ|クランクシ�
   log(`整備の値が 6艇そろっていたレース ${equipmentAtT5.size}（部品交換 ${all.filter((e) => e.parts.length > 0).length}・大きな整備 ${all.filter((e) => e.parts.some((p) => isMajorPart(p))).length}・プロペラ ${all.filter((e) => e.propeller).length}・チルト +0.5 以上 ${all.filter((e) => (e.tilt ?? -9) >= 0.5).length} 艇）`);
 }
 
+// ─── 荒れた水面・風とスタート展示（第 5 回）。展示と同じページなので、締切5分前までに展示がそろっていたレースだけ ───
+const isRough = (windMps: number | null, waveCm: number | null) => (waveCm ?? 0) >= 5 || (windMps ?? 0) >= 5;
+const weatherAtT5 = new Map<string, { wind: number; rough: boolean }>();
+const exStAtT5 = new Map<string, Map<number, number>>();
+{
+  for (const r of db.prepare("SELECT race_id, wind_speed_mps, wave_height_cm FROM race_weather WHERE race_id >= ? AND race_id < ?")
+    .iterate(FROM.replaceAll("-", ""), `${TO.replaceAll("-", "")}~`) as Iterable<{ race_id: string; wind_speed_mps: number | null; wave_height_cm: number | null }>) {
+    if (!exhibitionAtT5.has(r.race_id) || r.wind_speed_mps == null || r.wave_height_cm == null) continue;
+    weatherAtT5.set(r.race_id, { wind: r.wind_speed_mps, rough: isRough(r.wind_speed_mps, r.wave_height_cm) });
+  }
+  for (const r of db.prepare("SELECT race_id, course, start_timing FROM exhibition_data WHERE race_id >= ? AND race_id < ? AND start_timing IS NOT NULL")
+    .iterate(FROM.replaceAll("-", ""), `${TO.replaceAll("-", "")}~`) as Iterable<{ race_id: string; course: number; start_timing: number }>) {
+    if (!exhibitionAtT5.has(r.race_id)) continue;
+    const m = exStAtT5.get(r.race_id) ?? new Map<number, number>(); m.set(r.course, r.start_timing); exStAtT5.set(r.race_id, m);
+  }
+  for (const [raceId, m] of exStAtT5) if (m.size < 4) exStAtT5.delete(raceId);
+  log(`風・波が分かるレース ${weatherAtT5.size}（荒れ ${[...weatherAtT5.values()].filter((w) => w.rough).length}）・スタート展示の ST が 4艇以上あるレース ${exStAtT5.size}`);
+}
+// 過去のレースが荒れていたか（K ファイルの風・波。過去の成績の集計にだけ使う）
+const roughPast = new Map<string, boolean>();
+for (const r of db.prepare("SELECT race_id, wind_mps, wave_cm FROM race_conditions WHERE date >= ? AND date <= ?").all(H2H_FROM, TO) as Array<{ race_id: string; wind_mps: number | null; wave_cm: number | null }>) {
+  if (r.wind_mps != null || r.wave_cm != null) roughPast.set(r.race_id, isRough(r.wind_mps, r.wave_cm));
+}
+
 // ─── レースの種類 ───
 const raceTypeById = new Map((db.prepare("SELECT race_id, race_type FROM race_conditions WHERE date >= ? AND date <= ?").all(FROM, TO) as Array<{ race_id: string; race_type: string | null }>).map((r) => [r.race_id, r.race_type ?? ""]));
 const raceGroup = (type: string) => /準優/.test(type) ? "準優勝戦" : /優勝戦/.test(type) ? "優勝戦" : /予選/.test(type) ? "予選" : /選抜|特選|特賞|ドリーム/.test(type) ? "選抜・特選など" : /一般/.test(type) ? "一般" : "そのほか";
@@ -204,6 +228,8 @@ const motorForm = new Map<string, Array<[string, number]>>(); // `${場}|${モ�
 const racerLaneSt = new Map<string, number[]>(), laneSt = new Map<string, number[]>(); // [走, ST の合計]
 const racerEx = new Map<string, number[]>(); // 登番 → [走, 展示タイムのレース内の差の合計]
 const lastStart = new Map<string, string>(); // 登番 → 最後に走った日
+const racerRough = new Map<string, number[]>(); // 登番 → [荒れの走, 荒れの調子の合計, 穏やかの走, 穏やかの調子の合計]
+const racerStAll = new Map<string, number[]>(); // 登番 → [走, 本番の ST の合計]（F を除く）
 const lane2Let = new Map<string, number[]>(); // 2号艇の選手の登番 → [走, 1号艇が勝った]
 const lane2All = [0, 0];
 const dayDiff = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
@@ -306,6 +332,25 @@ function evaluate(race: EvalRace) {
       }
     }
     const ageWeight = regs.map((r) => ageWeightByRacerDay.get(`${race.date}|${r}`));
+    // ── 育成枠の第 5 回の材料（荒れた水面・風とスタート展示） ──
+    const weather = weatherAtT5.get(race.raceId);
+    if (weather) {
+      obs.f["36 荒れ × 1号艇"] = weather.rough && boat.course === 1 ? 1 : 0;
+      obs.f["39 風速 × 1号艇（m）"] = boat.course === 1 ? weather.wind : 0;
+      const skill = racerRough.get(reg);
+      obs.f["37 荒れ × 本人の荒れ水面の得意度"] = weather.rough && skill && skill[0] >= 10 && skill[2] >= 20 ? skill[1] / skill[0] - skill[3] / skill[2] : 0;
+      if (ageWeight.every((v) => v != null)) obs.f["38 荒れ × 体重（kg）"] = weather.rough ? ageWeight[i]![1] - ageWeight.reduce((sum, v) => sum + v![1], 0) / 6 : 0;
+    }
+    const exSt = exStAtT5.get(race.raceId);
+    if (exSt) {
+      const mine = exSt.get(boat.course);
+      obs.f["42 スタート展示の ST が記録されていない"] = mine == null ? 1 : 0;
+      if (mine != null) {
+        obs.f["40 スタート展示の ST（速いほど正）"] = [...exSt.values()].reduce((a, b) => a + b, 0) / exSt.size - mine;
+        const usual = racerStAll.get(reg);
+        if (usual && usual[0] >= 20) obs.f["41 スタート展示の ST の本人比（速いほど正）"] = usual[1] / usual[0] - mine;
+      }
+    }
     if (ageWeight.every((v) => v != null)) {
       obs.f["13 体重（重いほど正・kg）"] = ageWeight[i]![1] - ageWeight.reduce((sum, v) => sum + v![1], 0) / 6;
       obs.f["14 年齢（10 歳あたり）"] = (ageWeight[i]![0] - ageWeight.reduce((sum, v) => sum + v![0], 0) / 6) / 10;
@@ -371,6 +416,8 @@ function update(entries: Entry[]) {
       if (base && base[0] >= 200) {
         const excess = pts - base[1] / base[0];
         const list = racerForm.get(e.racer_reg) ?? []; list.push([date, excess, e.race_id.split("-")[1]]); racerForm.set(e.racer_reg, list);
+        const rough = roughPast.get(e.race_id);
+        if (rough != null) { const r = racerRough.get(e.racer_reg) ?? [0, 0, 0, 0]; if (rough) { r[0] += 1; r[1] += excess; } else { r[2] += 1; r[3] += excess; } racerRough.set(e.racer_reg, r); }
         if (e.motor_no != null) { const key = `${e.race_id.split("-")[1]}|${e.motor_no}`; const m = motorForm.get(key) ?? []; m.push([date, excess]); motorForm.set(key, m); }
       }
       const v = classLanePts.get(`${cls}|${e.boat}`) ?? [0, 0]; v[0] += 1; v[1] += pts; classLanePts.set(`${cls}|${e.boat}`, v);
@@ -378,6 +425,7 @@ function update(entries: Entry[]) {
     if (date >= LANE_FROM && e.st != null && !e.st_flying) {
       const a = racerLaneSt.get(`${e.racer_reg}|${e.boat}`) ?? [0, 0]; a[0] += 1; a[1] += e.st; racerLaneSt.set(`${e.racer_reg}|${e.boat}`, a);
       const b = laneSt.get(String(e.boat)) ?? [0, 0]; b[0] += 1; b[1] += e.st; laneSt.set(String(e.boat), b);
+      const c = racerStAll.get(e.racer_reg) ?? [0, 0]; c[0] += 1; c[1] += e.st; racerStAll.set(e.racer_reg, c);
     }
     if (date >= LANE_FROM && exMean != null) { const a = racerEx.get(e.racer_reg) ?? [0, 0]; a[0] += 1; a[1] += e.exhibition_time! - exMean; racerEx.set(e.racer_reg, a); }
     lastStart.set(e.racer_reg, date);
@@ -662,8 +710,8 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
   {
     const withV1 = (o: Obs) => [...base2(o), ...V1.map((name) => value(name)(o))];
     const v1First = fitWith(withV1, 7 + V1.length, firstHalf);
-    console.log(`\n第 4 回の補足: 整備の材料を「土台 + 第 1 版の材料」の上に足す（前半で係数、後半で logloss）`);
-    for (const name of names.filter((n) => Number(n.split(" ")[0]) >= 31 && Number(n.split(" ")[0]) <= 35)) {
+    console.log(`\n第 4・5 回の補足: 整備・水面・スタート展示の材料を「土台 + 第 1 版の材料」の上に足す（前半で係数、後半で logloss）`);
+    for (const name of names.filter((n) => Number(n.split(" ")[0]) >= 31 && Number(n.split(" ")[0]) <= 42)) {
       const x = (o: Obs) => [...withV1(o), value(name)(o)];
       const k = 8 + V1.length;
       const first = fitWith(x, k, firstHalf);
