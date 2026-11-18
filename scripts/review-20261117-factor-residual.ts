@@ -201,6 +201,21 @@ for (const r of db.prepare("SELECT race_id, wind_mps, wave_cm FROM race_conditio
   if (r.wind_mps != null || r.wave_cm != null) roughPast.set(r.race_id, isRough(r.wind_mps, r.wave_cm));
 }
 
+// ─── 予選の勝負駆け（第 6 回）。節の中で最初に準優勝戦がある日の前の日を予選の最終日、席は準優の数 × 6 ───
+const lastYosenSeats = new Map<string, number>(); // `${場}|${日付}` → 準優の席
+{
+  const byVenue = new Map<string, Map<string, number>>(); // 場 → 日付 → 準優の数
+  for (const r of db.prepare("SELECT venue, date, SUM(race_type LIKE '%準優%') semi FROM race_conditions WHERE date >= ? AND date <= ? GROUP BY venue, date").all(addDays(FROM, -10), addDays(TO, 1)) as Array<{ venue: string; date: string; semi: number }>) {
+    const m = byVenue.get(r.venue) ?? new Map<string, number>(); m.set(r.date, r.semi); byVenue.set(r.venue, m);
+  }
+  for (const [venue, days] of byVenue) for (const [date, semi] of days) {
+    const prev = addDays(date, -1);
+    if (semi > 0 && days.has(prev) && days.get(prev) === 0) lastYosenSeats.set(`${venue}|${prev}`, semi * 6);
+  }
+  log(`予選の最終日 ${[...lastYosenSeats.keys()].filter((k) => k.split("|")[1] >= FROM).length} 日（場ごと）`);
+}
+const seriesPoints = new Map<string, { lastDate: string; racers: Map<string, number[]> }>(); // 場 → 今の節の [走, 点の合計]
+
 // ─── レースの種類 ───
 const raceTypeById = new Map((db.prepare("SELECT race_id, race_type FROM race_conditions WHERE date >= ? AND date <= ?").all(FROM, TO) as Array<{ race_id: string; race_type: string | null }>).map((r) => [r.race_id, r.race_type ?? ""]));
 const raceGroup = (type: string) => /準優/.test(type) ? "準優勝戦" : /優勝戦/.test(type) ? "優勝戦" : /予選/.test(type) ? "予選" : /選抜|特選|特賞|ドリーム/.test(type) ? "選抜・特選など" : /一般/.test(type) ? "一般" : "そのほか";
@@ -332,6 +347,22 @@ function evaluate(race: EvalRace) {
       }
     }
     const ageWeight = regs.map((r) => ageWeightByRacerDay.get(`${race.date}|${r}`));
+    // ── 育成枠の第 6 回の材料（予選の勝負駆け） ──
+    {
+      const seats = lastYosenSeats.get(`${race.venue}|${race.date}`);
+      const series = seriesPoints.get(race.venue);
+      obs.f["43 予選の最終日・ボーダー付近"] = 0; obs.f["44 予選の最終日・準優ほぼ確定"] = 0; obs.f["45 予選の最終日・準優ほぼ無理"] = 0;
+      if (seats && series && series.lastDate === addDays(race.date, -1) && reg) {
+        const me = series.racers.get(reg);
+        if (me) {
+          const avg = (v: number[]) => v[1] / v[0];
+          const rank = 1 + [...series.racers.values()].filter((v) => avg(v) > avg(me)).length;
+          obs.f["43 予選の最終日・ボーダー付近"] = rank >= seats - 5 && rank <= seats + 6 ? 1 : 0;
+          obs.f["44 予選の最終日・準優ほぼ確定"] = rank <= seats / 3 ? 1 : 0;
+          obs.f["45 予選の最終日・準優ほぼ無理"] = rank > seats + 12 ? 1 : 0;
+        }
+      }
+    }
     // ── 育成枠の第 5 回の材料（荒れた水面・風とスタート展示） ──
     const weather = weatherAtT5.get(race.raceId);
     if (weather) {
@@ -387,6 +418,13 @@ function evaluate(race: EvalRace) {
 }
 function update(entries: Entry[]) {
   const date = entries[0].date;
+  {
+    const venue = entries[0].race_id.split("-")[1];
+    let series = seriesPoints.get(venue);
+    if (!series || (series.lastDate !== date && addDays(series.lastDate, 1) !== date)) { series = { lastDate: date, racers: new Map() }; seriesPoints.set(venue, series); }
+    series.lastDate = date;
+    for (const e of entries) { if (!e.racer_reg) continue; const v = series.racers.get(e.racer_reg) ?? [0, 0]; v[0] += 1; v[1] += points(e.finish_pos); series.racers.set(e.racer_reg, v); }
+  }
   if (date >= LANE_FROM) {
     for (const e of entries) {
       if (!e.racer_reg) continue;
@@ -710,8 +748,8 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
   {
     const withV1 = (o: Obs) => [...base2(o), ...V1.map((name) => value(name)(o))];
     const v1First = fitWith(withV1, 7 + V1.length, firstHalf);
-    console.log(`\n第 4・5 回の補足: 整備・水面・スタート展示の材料を「土台 + 第 1 版の材料」の上に足す（前半で係数、後半で logloss）`);
-    for (const name of names.filter((n) => Number(n.split(" ")[0]) >= 31 && Number(n.split(" ")[0]) <= 42)) {
+    console.log(`\n第 4〜6 回の補足: 整備・水面・スタート展示・勝負駆けの材料を「土台 + 第 1 版の材料」の上に足す（前半で係数、後半で logloss）`);
+    for (const name of names.filter((n) => Number(n.split(" ")[0]) >= 31 && Number(n.split(" ")[0]) <= 45)) {
       const x = (o: Obs) => [...withV1(o), value(name)(o)];
       const k = 8 + V1.length;
       const first = fitWith(x, k, firstHalf);
