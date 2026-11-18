@@ -158,6 +158,25 @@ const exhibitionAtT5 = new Map<string, Map<number, number>>();
   log(`締切5分前までに展示が 6艇そろっていたレース ${exhibitionAtT5.size}`);
 }
 
+// ─── 整備と調整（第 4 回）。直前情報のページで展示と一緒に出るので、締切5分前までに展示がそろっていたレースだけ使う ───
+type Equipment = { tilt: number | null; propeller: boolean; parts: string[] };
+const equipmentAtT5 = new Map<string, Map<number, Equipment>>();
+const isMajorPart = (p: string) => /^ピストン$|シリンダ|クランクシャフト|キャリアボデー/.test(p);
+{
+  for (const r of db.prepare("SELECT race_id, course, tilt_angle, propeller_changed, parts_changed FROM race_equipment WHERE race_id >= ? AND race_id < ?")
+    .iterate(FROM.replaceAll("-", ""), `${TO.replaceAll("-", "")}~`) as Iterable<{ race_id: string; course: number; tilt_angle: number | null; propeller_changed: number; parts_changed: string | null }>) {
+    if (!exhibitionAtT5.has(r.race_id)) continue;
+    let parts: string[] = [];
+    try { parts = JSON.parse(r.parts_changed ?? "[]"); } catch { parts = []; }
+    const m = equipmentAtT5.get(r.race_id) ?? new Map<number, Equipment>();
+    m.set(r.course, { tilt: r.tilt_angle == null || (r.tilt_angle as unknown) === "" ? null : Number(r.tilt_angle), propeller: r.propeller_changed === 1, parts: parts.filter((p) => typeof p === "string") });
+    equipmentAtT5.set(r.race_id, m);
+  }
+  for (const [raceId, m] of equipmentAtT5) if (m.size !== 6) equipmentAtT5.delete(raceId);
+  const all = [...equipmentAtT5.values()].flatMap((m) => [...m.values()]);
+  log(`整備の値が 6艇そろっていたレース ${equipmentAtT5.size}（部品交換 ${all.filter((e) => e.parts.length > 0).length}・大きな整備 ${all.filter((e) => e.parts.some((p) => isMajorPart(p))).length}・プロペラ ${all.filter((e) => e.propeller).length}・チルト +0.5 以上 ${all.filter((e) => (e.tilt ?? -9) >= 0.5).length} 艇）`);
+}
+
 // ─── レースの種類 ───
 const raceTypeById = new Map((db.prepare("SELECT race_id, race_type FROM race_conditions WHERE date >= ? AND date <= ?").all(FROM, TO) as Array<{ race_id: string; race_type: string | null }>).map((r) => [r.race_id, r.race_type ?? ""]));
 const raceGroup = (type: string) => /準優/.test(type) ? "準優勝戦" : /優勝戦/.test(type) ? "優勝戦" : /予選/.test(type) ? "予選" : /選抜|特選|特賞|ドリーム/.test(type) ? "選抜・特選など" : /一般/.test(type) ? "一般" : "そのほか";
@@ -272,6 +291,19 @@ function evaluate(race: EvalRace) {
       obs.f["10 展示タイム（速いほど正）"] = raw;
       const usual = racerEx.get(reg);
       obs.f["11 展示タイムの本人比"] = usual && usual[0] >= 20 ? raw - -(usual[1] / usual[0]) * 10 : raw;
+    }
+    // ── 育成枠の第 4 回の材料（整備と調整） ──
+    const equipment = equipmentAtT5.get(race.raceId);
+    if (equipment) {
+      const mine = equipment.get(boat.course)!;
+      obs.f["31 部品交換あり"] = mine.parts.length > 0 ? 1 : 0;
+      obs.f["32 大きな整備"] = mine.parts.some(isMajorPart) ? 1 : 0;
+      obs.f["33 プロペラ交換"] = mine.propeller ? 1 : 0;
+      const tilts = [...equipment.values()].map((e) => e.tilt);
+      if (tilts.every((t): t is number => t != null && Number.isFinite(t))) {
+        obs.f["34 チルト角（レースの平均との差・度）"] = mine.tilt! - tilts.reduce((a: number, b) => a + b, 0) / 6;
+        obs.f["35 チルト +0.5 度以上"] = mine.tilt! >= 0.5 ? 1 : 0;
+      }
     }
     const ageWeight = regs.map((r) => ageWeightByRacerDay.get(`${race.date}|${r}`));
     if (ageWeight.every((v) => v != null)) {
@@ -626,6 +658,25 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
     console.log(`- ${label} ${part.length} レース: 市場そのまま ${mean(part.map(market)).toFixed(4)} → 全部入り ${mean(part.map((list) => loglossOf(list, all.beta, xAll))).toFixed(4)}（改善 ${mean(vsMarket).toFixed(5)}・標準誤差 ${(sd(vsMarket) / Math.sqrt(part.length)).toFixed(5)}・説明力 ΔR² ${(mean(vsMarket) / Math.log(6)).toFixed(4)}）／土台からの改善 ${mean(vsBase).toFixed(5)}（${(mean(vsBase) / (sd(vsBase) / Math.sqrt(part.length))).toFixed(1)} 倍）`);
   };
   console.log(`\n第 3 回 B: 新しい材料（24〜29）で兆しあり: ${passedNew.join("・") || "なし"}`);
+  // 第 4 回の補足: 整備の材料を、第 1 版の材料（モーター・展示・展示の本人比・年齢）の上に足しても残るか
+  {
+    const withV1 = (o: Obs) => [...base2(o), ...V1.map((name) => value(name)(o))];
+    const v1First = fitWith(withV1, 7 + V1.length, firstHalf);
+    console.log(`\n第 4 回の補足: 整備の材料を「土台 + 第 1 版の材料」の上に足す（前半で係数、後半で logloss）`);
+    for (const name of names.filter((n) => Number(n.split(" ")[0]) >= 31 && Number(n.split(" ")[0]) <= 35)) {
+      const x = (o: Obs) => [...withV1(o), value(name)(o)];
+      const k = 8 + V1.length;
+      const first = fitWith(x, k, firstHalf);
+      const diffs = test.map((list) => loglossOf(list, v1First.beta, withV1) - loglossOf(list, first.beta, x));
+      const gain = mean(diffs), gainSe = sd(diffs) / Math.sqrt(diffs.length);
+      console.log(`- ${name}: 前半の係数 ${first.beta[k - 1].toFixed(4)}（${(first.beta[k - 1] / first.se[k - 1]).toFixed(1)} 倍）・後半の改善 ${gain.toFixed(5)}（${(gain / gainSe).toFixed(1)} 倍）`);
+    }
+    // 対照: 部品交換のある艇は、モーターの素性が悪いか（弱いモーターほど替える、なら同じものを見ている）
+    const motor = "8 モーターの素性";
+    const withParts = observations.filter((o) => o.f["31 部品交換あり"] === 1 && o.f[motor] != null).map((o) => o.f[motor]!);
+    const without = observations.filter((o) => o.f["31 部品交換あり"] === 0 && o.f[motor] != null).map((o) => o.f[motor]!);
+    if (withParts.length && without.length) console.log(`  対照: モーターの素性の平均 部品交換あり ${mean(withParts).toFixed(3)}（${withParts.length} 艇）/ なし ${mean(without).toFixed(3)}（${without.length} 艇）`);
+  }
   console.log(`\n兆しありの材料（${passed.length} 個）を全部入れた式を前半で決め、後半に当てる: ${passed.join("・") || "なし"}`);
   line("後半全体", secondHalf); line("9月", (d) => d.startsWith("2026-09")); line("10月", (d) => d.startsWith("2026-10")); line("11月", (d) => d.startsWith("2026-11"));
   console.log(`  前半で決めた係数: 市場 ${all.beta[0].toFixed(3)}・枠 2〜6 ${all.beta.slice(1, 6).map((v) => v.toFixed(2)).join(" / ")}・枠の得意度 ${all.beta[6].toFixed(3)}${passed.map((name, i) => `・${name.split("（")[0]} ${all.beta[7 + i].toFixed(3)}（1 つ分 = ${scale.get(name)!.toFixed(4)}）`).join("")}`);
