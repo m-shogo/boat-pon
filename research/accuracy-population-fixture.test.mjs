@@ -36,3 +36,21 @@ test('population selection changes synthetic metrics; no claim of real improveme
   assert.notEqual(logloss(rows), logloss(selected));
   assert.ok([brier(rows), brier(selected), logloss(rows), logloss(selected)].every(Number.isFinite));
 });
+
+test('equal timestamps need a stable id tie-breaker, as in canonical ROW_NUMBER ordering', () => {
+  const sameTimestamp = [
+    { race: 'R4', selection: '1-2-3', model: 'v3', time: 6, id: 10, p: .2, hit: 0 },
+    { race: 'R4', selection: '1-2-3', model: 'v3', time: 6, id: 11, p: .7, hit: 0 },
+  ];
+  // The original simplified fixture compares only time and therefore keeps id 10.
+  // Canonical SQL orders by created_at DESC, id DESC; the expected row is id 11.
+  const selected = [...sameTimestamp.reduce((map, row) => {
+    const key = `${row.race}/${row.selection}`;
+    const old = map.get(key);
+    if (!old || row.time > old.time || (row.time === old.time && row.id > old.id)) map.set(key, row);
+    return map;
+  }, new Map()).values()];
+  assert.equal(selected.length, 1);
+  assert.equal(selected[0].id, 11);
+  assert.equal(selected[0].p, .7);
+});
