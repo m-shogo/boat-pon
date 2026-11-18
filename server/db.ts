@@ -1546,11 +1546,18 @@ export function hasExhibitionData(db: DatabaseSync, raceId: string): boolean {
   return row != null;
 }
 
+/**
+ * 直前情報を取り直さなくてよいか（取得の判断だけに使う。判定の条件には使わない）。
+ * 展示タイムが 1 艇でも入っていれば済みとする。スタート展示の ST は展示タイムより数分早く公式に出るので、
+ * その間に取ると ST だけの行が保存される。以前は行があれば済みとしていたため、展示タイムを取り直さず、
+ * 11/16〜18 の 06〜19 時のレースの約 1 割（39 レース）で展示タイムが最後まで入らなかった（2026-11-18 の調査）。
+ */
 export function hasBeforeInfoData(db: DatabaseSync, raceId: string): boolean {
   const row = db.prepare(`
 SELECT 1
 FROM exhibition_data e
 WHERE e.race_id = ?
+  AND e.exhibition_time > 0
   AND EXISTS (SELECT 1 FROM race_weather w WHERE w.race_id = e.race_id)
   AND EXISTS (SELECT 1 FROM race_equipment q WHERE q.race_id = e.race_id)
 LIMIT 1
