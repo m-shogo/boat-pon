@@ -245,3 +245,14 @@ test("auto-odds の古さは、動く時間帯（08:00〜21:05 JST）の中で�
   assert.equal(windowedAgeMinutes(jst("2026-10-15T15:05:00"), jst("2026-10-15T22:00:00")), 360);
   assert.equal(windowedAgeMinutes(null, jst("2026-10-15T22:00:00")), null);
 });
+
+test("classifyExhibitionCapture は締切5分前までに展示が取れたかを分ける", async () => {
+  const { classifyExhibitionCapture } = await import("./accuracyScorecard");
+  const close = Date.parse("2026-11-19T15:16:00+09:00");
+  assert.equal(classifyExhibitionCapture({ closeAtMs: close, exhibitionBoats: 6, startTimingBoats: 6, lastFetchedMs: close - 5 * 60_000 }), "at-t5");
+  assert.equal(classifyExhibitionCapture({ closeAtMs: close, exhibitionBoats: 6, startTimingBoats: 6, lastFetchedMs: close - 4 * 60_000 }), "late");
+  assert.equal(classifyExhibitionCapture({ closeAtMs: close, exhibitionBoats: 6, startTimingBoats: 6, lastFetchedMs: null }), "late");
+  assert.equal(classifyExhibitionCapture({ closeAtMs: close, exhibitionBoats: 0, startTimingBoats: 6, lastFetchedMs: close - 20 * 60_000 }), "st-only");
+  assert.equal(classifyExhibitionCapture({ closeAtMs: close, exhibitionBoats: 3, startTimingBoats: 6, lastFetchedMs: close - 20 * 60_000 }), "incomplete");
+  assert.equal(classifyExhibitionCapture({ closeAtMs: close, exhibitionBoats: 0, startTimingBoats: 0, lastFetchedMs: null }), "none");
+});

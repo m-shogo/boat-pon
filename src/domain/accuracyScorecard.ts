@@ -472,3 +472,20 @@ export function evaluateSystemHealth(input: SystemHealthInput): string[] {
   }
   return alerts;
 }
+
+/**
+ * 締切5分前までに展示（6艇の展示タイム）が取れたかを1レースずつ分ける（2026-11-19〜。スコアカードの収集の健全性に出す）。
+ * - at-t5: 6艇の展示タイムがあり、最後の取得が締切5分前まで
+ * - st-only: スタート展示の ST だけで、展示タイムが1つも無い（2026-11-18 に直した「ST だけで取り直さない」の再発の目印）
+ * - late: 6艇そろったが、取得が締切5分前より後
+ * - incomplete: 展示タイムが 1〜5 艇だけ
+ * - none: 直前情報の行が1つも無い（PC のスリープ・取得の失敗・中止）
+ * fetched_at は取り直すたびに上書きされるので、最後の取得の時刻で見る（取り直しが締切後なら late に入る、厳しめの数え方）。
+ */
+export type ExhibitionCaptureKind = "at-t5" | "st-only" | "late" | "incomplete" | "none";
+export const EXHIBITION_CAPTURE_ALERT_BELOW = 0.6;
+export function classifyExhibitionCapture(input: { closeAtMs: number; exhibitionBoats: number; startTimingBoats: number; lastFetchedMs: number | null }): ExhibitionCaptureKind {
+  if (input.exhibitionBoats === 0) return input.startTimingBoats > 0 ? "st-only" : "none";
+  if (input.exhibitionBoats < 6) return "incomplete";
+  return input.lastFetchedMs != null && input.lastFetchedMs <= input.closeAtMs - 5 * 60_000 ? "at-t5" : "late";
+}

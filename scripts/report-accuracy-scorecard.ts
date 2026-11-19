@@ -2,7 +2,7 @@
  * 精度スコアカード（read-only）。
  * - 当たり外れ: paper-live BUY を公式払戻で精算した台帳
  * - 確率の精度: 同じ精算済みレースで v3 推定的中率 / T-5 市場 / 市場補正（temperature + late money）を比較
- * - 収集の健全性: 直近7日の T-5 完全市場カバー率、最終取得時刻、private capture 認可の期限
+ * - 収集の健全性: 直近7日の T-5 完全市場カバー率、締切5分前までに展示が取れた割合、最終取得時刻、private capture 認可の期限
  * - 成長: 週次の改善処理（scripts/run-accuracy-growth.ts）が入れ替えた市場補正パラメータと、その判定履歴
  *
  * 使い方: npx tsx scripts/report-accuracy-scorecard.ts [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--accuracy-days N]
@@ -17,8 +17,8 @@ import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync
 import { DatabaseSync } from "node:sqlite";
 import { loadEnvFiles } from "../src/domain/envFile";
 import {
-  BUY_TIMING_LABEL, binaryMetrics, describeCalibration, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, evaluateSystemHealth, normalizedMarketProbabilities, summarizeBuyLedger, summarizeRunTiming, windowedAgeMinutes,
-  type BinaryMetrics, type BinaryPrediction, type BuyTimingKind,
+  BUY_TIMING_LABEL, EXHIBITION_CAPTURE_ALERT_BELOW, binaryMetrics, classifyExhibitionCapture, describeCalibration, calibratedMarketProbabilities, classifyBuyTiming, evaluateDataFreshness, evaluateJobLiveness, evaluateSystemHealth, normalizedMarketProbabilities, summarizeBuyLedger, summarizeRunTiming, windowedAgeMinutes,
+  type BinaryMetrics, type BinaryPrediction, type BuyTimingKind, type ExhibitionCaptureKind,
 } from "../src/domain/accuracyScorecard";
 import { addDays, loadChampionCalibration, loadCompleteCaptures, todayJst } from "./lib/marketCaptures";
 import { startedWallets, walletName } from "../src/domain/bankroll";
@@ -73,6 +73,12 @@ const programsByDate = new Map((db.prepare(`SELECT date, COUNT(*) n FROM officia
 // BUY の当たり外れは買い目ごとに精算する（src/domain/buySettlement.ts。通知・財布と同じ決め方）
 const buyFacts = loadTrifectaFacts(db, decisions.filter((d) => d.decision === "BUY").map((d) => d.race_id));
 const unsentNotifications = (db.prepare(`SELECT COUNT(*) n FROM notification_log WHERE channel = 'line' AND status NOT IN ('SENT', 'IN_SUMMARY') AND created_at >= datetime('now', '-3 days')`).get() as { n: number }).n;
+// 締切5分前までに展示が取れたか（収集の健全性で日ごとに数える）
+const exhibitionRows = db.prepare(`SELECT p.race_id, p.date, p.close_at,
+  (SELECT COUNT(*) FROM exhibition_data e WHERE e.race_id = p.race_id AND e.exhibition_time > 0) ex,
+  (SELECT COUNT(*) FROM exhibition_data e WHERE e.race_id = p.race_id AND e.start_timing IS NOT NULL) st,
+  (SELECT MAX(e.fetched_at) FROM exhibition_data e WHERE e.race_id = p.race_id) fetched_at
+  FROM official_programs p WHERE p.date >= ? AND p.date <= ?`).all(healthFrom, TO) as Array<{ race_id: string; date: string; close_at: string; ex: number; st: number; fetched_at: string | null }>;
 db.close();
 
 // ─── 当たり外れ ───
@@ -141,6 +147,25 @@ const countable = ([date]: [string, number]) => date < todayJst() || (date === t
 const coverage = [...programsByDate].filter(countable).sort(([a], [b]) => a.localeCompare(b)).map(([date, programs]) => ({ date, programs, t5Complete: t5ByDate.get(date) ?? 0, pct: programs ? (t5ByDate.get(date) ?? 0) / programs : null }));
 const totalPrograms = coverage.reduce((a, c) => a + c.programs, 0);
 const coverage7d = totalPrograms ? coverage.reduce((a, c) => a + c.t5Complete, 0) / totalPrograms : null;
+// 締切5分前までに展示（6艇の展示タイム）が取れた割合（2026-11-19〜）。展示・整備・水面は同じ直前情報のページなので、これが取れないと
+// BUY の前の材料もそろわない。日ごとに、取れなかった理由（ST だけ・遅れ・欠け・無し）も数える。
+const exhibitionByDate = new Map<string, Record<ExhibitionCaptureKind, number>>();
+for (const r of exhibitionRows) {
+  if (!countable([r.date, 0])) continue;
+  const closeAtMs = Date.parse(`${r.date}T${r.close_at}:00+09:00`);
+  if (!Number.isFinite(closeAtMs)) continue;
+  const lastFetchedMs = r.fetched_at ? Date.parse(r.fetched_at.includes("T") ? r.fetched_at : `${r.fetched_at.replace(" ", "T")}Z`) : null;
+  const kind = classifyExhibitionCapture({ closeAtMs, exhibitionBoats: r.ex, startTimingBoats: r.st, lastFetchedMs: Number.isFinite(lastFetchedMs) ? lastFetchedMs : null });
+  const counts = exhibitionByDate.get(r.date) ?? { "at-t5": 0, "st-only": 0, late: 0, incomplete: 0, none: 0 };
+  counts[kind] += 1;
+  exhibitionByDate.set(r.date, counts);
+}
+const exhibitionCoverage = [...exhibitionByDate].sort(([a], [b]) => a.localeCompare(b)).map(([date, counts]) => {
+  const races = Object.values(counts).reduce((a, b) => a + b, 0);
+  return { date, races, ...counts, pct: races ? counts["at-t5"] / races : null };
+});
+const exhibitionRaces = exhibitionCoverage.reduce((a, c) => a + c.races, 0);
+const exhibitionCoverage7d = exhibitionRaces ? exhibitionCoverage.reduce((a, c) => a + c["at-t5"], 0) / exhibitionRaces : null;
 let captureExpiresAt: string | null = null;
 if (existsSync(AUTH_PATH)) {
   try { captureExpiresAt = (JSON.parse(readFileSync(AUTH_PATH, "utf8")) as { expiresAt?: string }).expiresAt ?? null; } catch { captureExpiresAt = null; }
@@ -233,6 +258,7 @@ const systemAlerts = evaluateSystemHealth({ runTiming, diskFreeBytes, unsentNoti
 const now = new Date();
 const alerts: string[] = [...freshnessAlerts, ...liveness.alerts, ...systemAlerts];
 if (coverage7d != null && coverage7d < 0.7) alerts.push(`T-5 完全市場の7日カバー率が ${pct(coverage7d)}（目安 70% 未満。PC のスリープや取得の失敗）`);
+if (exhibitionCoverage7d != null && exhibitionCoverage7d < EXHIBITION_CAPTURE_ALERT_BELOW) alerts.push(`締切5分前までに展示が取れたレースの7日の割合が ${pct(exhibitionCoverage7d)}（目安 ${pct(EXHIBITION_CAPTURE_ALERT_BELOW)} 未満。PC のスリープや直前情報の取得の失敗。内訳はスコアカードの「展示の取得」）`);
 if (lastCapture && now.getTime() - Date.parse(lastCapture) > 24 * 3600_000) alerts.push(`最後のオッズ取得から24時間以上経過（${lastCapture}）`);
 const v3All = accuracyAll[0].metrics, calAll = accuracyAll[2].metrics;
 const v3Buy = accuracyBuy[0].metrics;
@@ -275,7 +301,7 @@ const report = {
   ledgerSinceFix: { from: LIVE_RECORD_FIX_DATE, ...ledgerSinceFix, notifiedBeforeClose: notifiedSinceFix },
   recentBuys: PUBLIC ? undefined : recentBuys,
   accuracy: { comparedRaces: scored.length, calibration: champion, all: accuracyAll, buyOnly: accuracyBuy, buyEv },
-  health: { coverage7d, coverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows, runTiming, diskFreeBytes, dbBytes, unsentNotifications, backupAgeDays, oddsExportAgeDays, recordsExportAgeDays, lineQuota },
+  health: { coverage7d, coverage, exhibitionCoverage7d, exhibitionCoverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows, runTiming, diskFreeBytes, dbBytes, unsentNotifications, backupAgeDays, oddsExportAgeDays, recordsExportAgeDays, lineQuota },
   growth: { champion, lastEvaluation: lastGrowth, evaluations: growthLedger.length, promotions: growthLedger.filter((g) => g.promote).length },
   alerts,
   knownFacts,
@@ -293,7 +319,7 @@ if (STATE_DIR && !NO_RECORD) {
   appendFileSync(`${STATE_DIR}/history.jsonl`, `${JSON.stringify({
     generatedAt: report.generatedAt, to: TO, ledger: { buys: ledger.buys, settled: ledger.settled, hits: ledger.hits, officialRoi: ledger.officialRoi },
     accuracy: { comparedRaces: scored.length, v3LogLoss: v3All.logLoss, calibratedLogLoss: calAll.logLoss, v3BuyActualToPredicted: buyBasis.actualToPredicted },
-    coverage7d, notifiedShare, notifiedLedger: { buys: ledgerByTiming[0].buys, hits: ledgerByTiming[0].hits, officialRoi: ledgerByTiming[0].officialRoi },
+    coverage7d, exhibitionCoverage7d, notifiedShare, notifiedLedger: { buys: ledgerByTiming[0].buys, hits: ledgerByTiming[0].hits, officialRoi: ledgerByTiming[0].officialRoi },
     calibration: describeCalibration(champion), alerts,
   })}\n`);
   for (const alert of newAlerts) appendFileSync(`${STATE_DIR}/events.jsonl`, `${JSON.stringify({ at: report.generatedAt, type: "new-alert", text: alert })}\n`);
@@ -372,6 +398,12 @@ function renderMarkdown() {
     "| 日付 | 番組 | T-5 完全 | カバー率 |",
     "|---|---:|---:|---:|",
     ...coverage.map((c) => `| ${c.date} | ${c.programs} | ${c.t5Complete} | ${pct(c.pct)} |`),
+    "",
+    `- 展示の取得（締切5分前までに6艇の展示タイム）: ${pct(exhibitionCoverage7d)}（目安 ${pct(EXHIBITION_CAPTURE_ALERT_BELOW)} 以上）`,
+    "",
+    "| 日付 | レース | 取れた | 割合 | ST だけ | 遅れ | 欠け | 無し |",
+    "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ...exhibitionCoverage.map((c) => `| ${c.date} | ${c.races} | ${c["at-t5"]} | ${pct(c.pct)} | ${c["st-only"]} | ${c.late} | ${c.incomplete} | ${c.none} |`),
     "",
     `- データの最終日: 結果 ${maxDates.results ?? "-"} / 全券種の払戻 ${maxDates.payouts ?? "-"} / 番組表 ${maxDates.programs ?? "-"}`,
     `- auto-odds（直近 ${runTiming.runs} 回の中央値）: 判定までの遅れ ${runTiming.medianLagMs == null ? "-" : `${Math.round(runTiming.medianLagMs / 1000)} 秒`}・判定の前の読み込み ${runTiming.medianBuildMs == null ? "-" : `${(runTiming.medianBuildMs / 1000).toFixed(1)} 秒`}`,
