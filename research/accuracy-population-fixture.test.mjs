@@ -4,13 +4,13 @@ import { test } from 'node:test';
 // Research-only synthetic fixture. No database, captures, or production imports.
 // This models the population-selection difference; it does not test settlement.
 const rows = [
-  { race: 'R1', selection: '1-2-3', model: 'v3', time: 1, p: .2, hit: 0 },
-  { race: 'R1', selection: '1-2-3', model: 'v3', time: 2, p: .3, hit: 0 },
-  { race: 'R1', selection: '1-3-2', model: 'v3', time: 3, p: .4, hit: 1 },
-  { race: 'R2', selection: '2-1-3', model: 'legacy', time: 4, p: .5, hit: 0 },
-  { race: 'R3', selection: '3-2-1', model: 'v3', time: 5, p: .6, hit: 1 },
+  { race: 'R1', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 1, p: .2, hit: 0 },
+  { race: 'R1', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 2, p: .3, hit: 0 },
+  { race: 'R1', selection: '1-3-2', model: 'v3', runKind: 'paper-live', time: 3, p: .4, hit: 1 },
+  { race: 'R2', selection: '2-1-3', model: 'legacy', runKind: 'paper-live', time: 4, p: .5, hit: 0 },
+  { race: 'R3', selection: '3-2-1', model: 'v3', runKind: 'paper-live', time: 5, p: .6, hit: 1 },
 ];
-const latestV3 = (xs) => [...xs.filter(r => r.model === 'v3' && (r.runKind ?? 'paper-live') === 'paper-live').reduce((map, r) => {
+const latestV3 = (xs) => [...xs.filter(r => r.model === 'v3' && r.runKind === 'paper-live').reduce((map, r) => {
   const key = JSON.stringify([r.race, r.betType ?? 'trifecta', r.selection]);
   const old = map.get(key);
   if (!old || r.time > old.time || (r.time === old.time && (r.id ?? -1) > (old.id ?? -1))) map.set(key, r);
@@ -40,8 +40,8 @@ test('population selection changes synthetic metrics; no claim of real improveme
 
 test('equal timestamps need a stable id tie-breaker, as in canonical ROW_NUMBER ordering', () => {
   const sameTimestamp = [
-    { race: 'R4', selection: '1-2-3', model: 'v3', time: 6, id: 10, p: .2, hit: 0 },
-    { race: 'R4', selection: '1-2-3', model: 'v3', time: 6, id: 11, p: .7, hit: 0 },
+    { race: 'R4', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 6, id: 10, p: .2, hit: 0 },
+    { race: 'R4', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 6, id: 11, p: .7, hit: 0 },
   ];
   // Same canonical tie-break regardless of input row order.
   const selected = latestV3(sameTimestamp);
@@ -53,9 +53,9 @@ test('equal timestamps need a stable id tie-breaker, as in canonical ROW_NUMBER 
 
 test('dedup partitions by bet type as well as race and selection', () => {
   const sameRaceAndSelection = [
-    { race: 'R5', betType: 'trifecta', selection: '1-2-3', model: 'v3', time: 1, id: 20, p: .2, hit: 0 },
-    { race: 'R5', betType: 'trio', selection: '1-2-3', model: 'v3', time: 2, id: 21, p: .3, hit: 1 },
-    { race: 'R5', betType: 'trifecta', selection: '1-2-3', model: 'v3', time: 3, id: 22, p: .4, hit: 0 },
+    { race: 'R5', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 1, id: 20, p: .2, hit: 0 },
+    { race: 'R5', betType: 'trio', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 2, id: 21, p: .3, hit: 1 },
+    { race: 'R5', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 3, id: 22, p: .4, hit: 0 },
   ];
   const selected = latestV3(sameRaceAndSelection);
   assert.equal(selected.length, 2);
@@ -69,9 +69,9 @@ test('dedup partitions by bet type as well as race and selection', () => {
 
 test('model filtering precedes dedup even when legacy decision is newer', () => {
   const mixed = [
-    { race: 'R6', betType: 'trifecta', selection: '1-2-3', model: 'v3', time: 1, id: 30, p: .2, hit: 0 },
-    { race: 'R6', betType: 'trifecta', selection: '1-2-3', model: 'legacy', time: 9, id: 31, p: .9, hit: 1 },
-    { race: 'R7', betType: 'trifecta', selection: '2-1-3', model: 'legacy', time: 10, id: 32, p: .7, hit: 0 },
+    { race: 'R6', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 1, id: 30, p: .2, hit: 0 },
+    { race: 'R6', betType: 'trifecta', selection: '1-2-3', model: 'legacy', runKind: 'paper-live', time: 9, id: 31, p: .9, hit: 1 },
+    { race: 'R7', betType: 'trifecta', selection: '2-1-3', model: 'legacy', runKind: 'paper-live', time: 10, id: 32, p: .7, hit: 0 },
   ];
   const selected = latestV3(mixed);
   assert.equal(selected.length, 1);
@@ -87,4 +87,14 @@ test('paper-live population excludes replay rows before latest-decision selectio
   ];
   assert.deepEqual(latestV3(mixedRuns).map(r => r.id), [40]);
   assert.deepEqual(latestV3([...mixedRuns].reverse()).map(r => r.id), [40]);
+});
+
+test('missing run_kind is excluded, matching SQL equality rather than a paper-live default', () => {
+  const mixed = [
+    { race: 'R10', betType: 'trifecta', selection: '1-2-3', model: 'v3', time: 10, id: 50, p: .8, hit: 1 },
+    { race: 'R10', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: null, time: 11, id: 51, p: .9, hit: 1 },
+    { race: 'R10', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 1, id: 52, p: .2, hit: 0 },
+  ];
+  assert.deepEqual(latestV3(mixed).map(r => r.id), [52]);
+  assert.deepEqual(latestV3([...mixed].reverse()).map(r => r.id), [52]);
 });
