@@ -606,6 +606,54 @@ const sd = (values: number[]) => { const m = values.reduce((a, b) => a + b, 0) /
 const laneSd = new Map<number, number>();
 for (let lane = 1; lane <= 6; lane += 1) laneSd.set(lane, sd(observations.filter((o) => o.course === lane && o.lane != null).map((o) => o.lane!)));
 const baseX = (o: Obs) => [Math.log(o.p), ...[2, 3, 4, 5, 6].map((lane) => (o.course === lane ? 1 : 0))];
+
+// ─── 育成枠の第 1 版の答え合わせ（--apply-frozen <式の JSON> [--frozen-output <JSON>]）。2026-11-19〜 ───
+// 固定した式（係数・大きさ・枠の得意度の標準偏差は全部 JSON のまま）を、--from〜--to の新しいレースに当てて、
+// 市場の確率そのままとの 3連単の logloss の差と、先に決めた買い方の回収率（公式の確定払戻）を数える。式は合わせ直さない。
+// 判定は事前登録のとおり 12/15 に 1 回だけ（docs/reviews/2026-11-17-second-prediction-track.md）。途中の数字は判定に使わない。
+if (args.includes("--apply-frozen")) {
+  type Frozen = { gamma: number; first: number[]; second: number[]; laneAffinitySdByLane: number[]; scales: Record<string, number>; betRule: { minExpectedValue: number; minProbability: number; stakeYen: number } };
+  const frozen = JSON.parse(readFileSync(arg("--apply-frozen", ""), "utf8")) as Frozen;
+  const V1 = ["8 モーターの素性", "10 展示タイム（速いほど正）", "11 展示タイムの本人比", "14 年齢（10 歳あたり）"];
+  const boatX = (o: Obs) => [...[2, 3, 4, 5, 6].map((lane) => (o.course === lane ? 1 : 0)), o.lane == null ? 0 : o.lane / frozen.laneAffinitySdByLane[o.course - 1], ...V1.map((name) => (o.f[name] == null ? 0 : o.f[name]! / frozen.scales[name]))];
+  const dot = (a: number[], b: number[]) => a.reduce((sum, v, i) => sum + v * b[i], 0);
+  type Row = { date: string; raceId: string; marketLoss: number; modelLoss: number; exhibition: boolean; stake: number; payout: number; picks: number; hits: number };
+  const rows: Row[] = [];
+  for (const list of races.values()) {
+    if (list.length !== 6 || list.filter((o) => o.win).length !== 1) continue;
+    const race = evalRaces.get(list[0].raceId)!;
+    const x = new Map(list.map((o) => [o.course, boatX(o)]));
+    const combos = [...race.tri.keys()];
+    const scores = combos.map((combo) => { const [a, b] = combo.split("-").map(Number); return frozen.gamma * Math.log(race.tri.get(combo)!) + dot(frozen.first, x.get(a)!) + dot(frozen.second, x.get(b)!); });
+    const max = Math.max(...scores), sum = scores.reduce((acc, v) => acc + Math.exp(v - max), 0);
+    const p = scores.map((v) => Math.exp(v - max) / sum);
+    const winner = combos.indexOf(race.combo);
+    let stake = 0, payout = 0, picks = 0, hits = 0;
+    combos.forEach((combo, c) => {
+      const odds = race.odds.get(combo);
+      if (!(p[c] >= frozen.betRule.minProbability) || !(odds != null && odds > 0) || !(p[c] * odds >= frozen.betRule.minExpectedValue)) return;
+      picks += 1; stake += frozen.betRule.stakeYen;
+      if (c === winner && race.payoutYen != null) { hits += 1; payout += race.payoutYen * (frozen.betRule.stakeYen / 100); }
+    });
+    rows.push({ date: race.date, raceId: race.raceId, marketLoss: -Math.log(race.tri.get(race.combo)!), modelLoss: -Math.log(p[winner]), exhibition: list.some((o) => o.f["10 展示タイム（速いほど正）"] != null), stake, payout, picks, hits });
+  }
+  const summarize = (part: Row[]) => {
+    const d = part.map((r) => r.marketLoss - r.modelLoss);
+    const mean = d.length ? d.reduce((a, b) => a + b, 0) / d.length : null;
+    const se = d.length > 1 ? sd(d) / Math.sqrt(d.length) : null;
+    const stake = part.reduce((a, r) => a + r.stake, 0), payout = part.reduce((a, r) => a + r.payout, 0);
+    const roi = stake ? payout / stake : null;
+    const roiSe = stake && roi != null ? Math.sqrt(part.filter((r) => r.stake > 0).reduce((acc, r) => acc + (r.payout - roi * r.stake) ** 2, 0)) / stake : null;
+    return { races: part.length, withExhibition: part.filter((r) => r.exhibition).length, loglossGain: mean, loglossGainSe: se, z: mean != null && se ? mean / se : null, picks: part.reduce((a, r) => a + r.picks, 0), hits: part.reduce((a, r) => a + r.hits, 0), stakeYen: stake, payoutYen: payout, roi, roiSe };
+  };
+  const dates = [...new Set(rows.map((r) => r.date))].sort();
+  const report = { generatedAt: new Date().toISOString(), from: FROM, to: TO, frozen: arg("--apply-frozen", ""), decisionDate: "2026-12-15", note: "判定は 12/15 に 1 回だけ。途中の数字は判定に使わない", all: summarize(rows), byDate: dates.map((date) => ({ date, ...summarize(rows.filter((r) => r.date === date)) })) };
+  const out = arg("--frozen-output", "");
+  if (out) writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
+  const a = report.all;
+  console.log(`育成枠の第 1 版の答え合わせ（${FROM}〜${TO}・${a.races} レース・展示あり ${a.withExhibition}）: 3連単の logloss の改善 ${a.loglossGain?.toFixed(4) ?? "-"}（標準誤差 ${a.loglossGainSe?.toFixed(4) ?? "-"}・${a.z?.toFixed(1) ?? "-"} 倍）／買い方どおり ${a.picks} 点・的中 ${a.hits}・回収率 ${a.roi == null ? "-" : `${(a.roi * 100).toFixed(1)}%（標準誤差 ${((a.roiSe ?? 0) * 100).toFixed(1)}%）`}`);
+  process.exit(0);
+}
 const FACTORS: Array<{ label: string; value: (o: Obs) => number }> = [
   { label: "1 枠の得意度（その枠の中での標準偏差 1 つ分）", value: (o) => (o.lane == null ? 0 : o.lane / laneSd.get(o.course)!) },
   { label: "2 当地勝率 − 全国勝率（1.0 あたり）", value: (o) => o.venueDiff ?? 0 },
