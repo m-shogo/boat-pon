@@ -285,6 +285,11 @@ const dbCheck = ((): DbCheck | null => {
 if (dbCheck && !dbCheck.ok) alerts.push(`DB の点検で問題（${dbCheck.checkedAt.slice(0, 10)}）: ${dbCheck.problems[0] ?? "-"}${dbCheck.problems.length > 1 ? ` ほか ${dbCheck.problems.length - 1} 件` : ""}`);
 if (dbCheck && now.getTime() - Date.parse(dbCheck.checkedAt) > 40 * 86_400_000) alerts.push(`DB の月1回の点検が40日以上動いていない（前回 ${dbCheck.checkedAt.slice(0, 10)}）`);
 
+// 育成枠の第 1 版の答え合わせと、あなたの予想（毎晩の daily-notify が data/reports/second-track/ に書く。判定は 12/15 に 1 回だけ）
+const readJsonFile = <T,>(file: string): T | null => { try { return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as T) : null; } catch { return null; } };
+type ForwardSummary = { races: number; withExhibition: number; loglossGain: number | null; loglossGainSe: number | null; z: number | null; picks: number; hits: number; roi: number | null; roiSe: number | null };
+const secondTrack = readJsonFile<{ generatedAt: string; from: string; to: string; decisionDate: string; all: ForwardSummary }>("data/reports/second-track/forward-latest.json");
+const myPicks = readJsonFile<{ generatedAt: string; from: string; picks: number; settled?: number; hits?: number; marketExpectedHits?: number | null; actualToMarket?: number | null; z?: number | null; officialRoi?: number | null }>("data/reports/second-track/my-picks-latest.json");
 const knownFacts: string[] = [];
 if (!dbCheck) knownFacts.push("DB の月1回の点検（scripts/monthly-db-check.ts）はまだ動いていない。毎晩の daily-notify が、前回から 28 日たつと動かす");
 if (v3All.logLoss != null && calAll.logLoss != null && v3All.logLoss > calAll.logLoss) knownFacts.push(`v3 の確率は市場補正より不正確（logloss ${num(v3All.logLoss, 5)} > ${num(calAll.logLoss, 5)}。知識ベース K6）`);
@@ -303,6 +308,8 @@ const report = {
   accuracy: { comparedRaces: scored.length, calibration: champion, all: accuracyAll, buyOnly: accuracyBuy, buyEv },
   health: { coverage7d, coverage, exhibitionCoverage7d, exhibitionCoverage, lastOddsCapturedAt: lastCapture, privateCaptureExpiresAt: captureExpiresAt, maxDates, jobs: liveness.rows, runTiming, diskFreeBytes, dbBytes, unsentNotifications, backupAgeDays, oddsExportAgeDays, recordsExportAgeDays, lineQuota },
   growth: { champion, lastEvaluation: lastGrowth, evaluations: growthLedger.length, promotions: growthLedger.filter((g) => g.promote).length },
+  secondTrack: secondTrack ?? undefined,
+  myPicks: myPicks ?? undefined,
   alerts,
   knownFacts,
 };
@@ -390,6 +397,15 @@ function renderMarkdown() {
     lastGrowth
       ? `- 直近の評価（${lastGrowth.evaluatedAt}）: 挑戦者 ${describeCalibration({ ...lastGrowth.challenger, oddsBandWeights: lastGrowth.challenger.oddsBandWeights ?? undefined })} / 改善 ${num(lastGrowth.improvement, 4)} / 週の勝ち ${lastGrowth.weeklyWins}/${lastGrowth.eligibleWeeks} / ${lastGrowth.promote ? "入れ替え" : "据え置き"} / 評価 ${growthLedger.length} 回・入れ替え ${report.growth.promotions} 回`
       : "- 評価の記録なし（`npx tsx scripts/run-accuracy-growth.ts` が週1回動く）",
+    "",
+    "## 育成枠の第 1 版の答え合わせ（新しいレース。判定は 12/15 に 1 回だけ）",
+    "",
+    secondTrack
+      ? `- ${secondTrack.from}〜${secondTrack.to}・${secondTrack.all.races} レース（展示あり ${secondTrack.all.withExhibition}）: 3連単の logloss の改善 ${num(secondTrack.all.loglossGain, 4)}（標準誤差 ${num(secondTrack.all.loglossGainSe, 4)}・${num(secondTrack.all.z, 1)} 倍。2 倍を超えれば残す）／先に決めた買い方 ${secondTrack.all.picks} 点・的中 ${secondTrack.all.hits}・回収率 ${pct(secondTrack.all.roi)}（標準誤差 ${pct(secondTrack.all.roiSe)}。12/15 では判定しない）`
+      : "- まだ数えていない（毎晩の daily-notify が data/reports/second-track/forward-latest.json に書く）",
+    myPicks && myPicks.picks > 0
+      ? `- あなたの予想（${myPicks.from}〜）: ${myPicks.picks} 点・精算 ${myPicks.settled ?? 0}・的中 ${myPicks.hits ?? 0}・市場の見込み ${num(myPicks.marketExpectedHits ?? null, 2)}・実際 ÷ 見込み ${num(myPicks.actualToMarket ?? null, 2)}（z ${num(myPicks.z ?? null, 1)}）・回収率 ${pct(myPicks.officialRoi ?? null)}`
+      : "- あなたの予想: まだ記録が無い（`npx tsx scripts/add-my-pick.ts --venue 大村 --race 5 --pick 1-2-3`）",
     "",
     "## 収集の健全性（直近7日）",
     "",

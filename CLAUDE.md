@@ -59,7 +59,7 @@
 | auto-exhibition | 30分ごと | 直前情報の一括取得 |
 | daily-programs | 01:00〜07:30 に数回 | 番組表の取り込み。直近 400 日で欠けた日は公式アーカイブから取り直す（夜間だけ・1回 200 ファイルまで） |
 | daily-results | 21:30 | 結果と全券種の払戻の取り込み、手元に K ファイルが無い日の取り直し（直近 200 日・公式アーカイブ・夜間だけ・1回 200 ファイルまで）、欠けた日の払戻の埋め戻し（手元の K ファイルから。昼に動いた回は 5 日分まで）、確定結果の通知（速報と同じなら省く） |
-| daily-notify | 21:30 | `daily-line-summary.sh`: 成長ループ（週1の改善処理 → スコアカードを `data/reports/scorecard/` に記録）→ 締切前のオッズの時系列と、取り直せない記録（判定・通知・設定）の書き出し（`data/exports/`、Google Drive に複製）→ 今日の BUY の当たり外れ（速報が未送信の分を公式の結果ページで）→ 日次まとめ → 月1回の DB の点検（`monthly-db-check.ts`。壊れていないか・書き出しから戻せるか・複製先） |
+| daily-notify | 21:30 | `daily-line-summary.sh`: 成長ループ（週1の改善処理 → スコアカードを `data/reports/scorecard/` に記録）→ 締切前のオッズの時系列と、取り直せない記録（判定・通知・設定）の書き出し（`data/exports/`、Google Drive に複製）→ 今日の BUY の当たり外れ（速報が未送信の分を公式の結果ページで）→ 日次まとめ → 育成枠の第 1 版の答え合わせとあなたの予想の採点（`data/reports/second-track/`。次の晩のスコアカードに載る。判定は 12/15 に 1 回だけ）→ 月1回の DB の点検（`monthly-db-check.ts`。壊れていないか・書き出しから戻せるか・複製先） |
 | weekly-forward-notify | 月曜 09:00 | 週次の成長まとめ（`report-growth.ts --no-months` → 先週との比較を LINE で1通）。名前は旧名のまま |
 | buy-results-fast | 10分ごと | 当たり外れの速報（`scripts/notify-buy-results-fast.ts`。締切の8〜120分後に公式の結果ページを見る）。2026-10-15 にユーザーが登録 |
 | 公開版スコアカード（未登録） | 22:15 | `scripts/publish-accuracy-scorecard.sh`。ChatGPT のタスクが読む。登録はユーザー作業 |
@@ -87,6 +87,7 @@
 - `npm run report:growth` … 1週間前・1か月前・半年前との比較（半年分で約5分。`--no-months` は直近60日だけで数秒〜数十秒）
 - `npx tsx scripts/monthly-db-check.ts --output <一時ファイル>` … DB の点検と復旧の練習を手で（本番の DB は読むだけ。約5〜7分）。何年先も壊れないための備えは [`docs/reviews/2026-10-16-longevity-and-pro-practices.md`](docs/reviews/2026-10-16-longevity-and-pro-practices.md)
 - 検証の再現（読み取りだけ）: `npm run review:crosspool`（券種間のずれ、K11）・`npm run review:benter`（ベンター式、K12）
+- `npx tsx scripts/add-my-pick.ts --venue 大村 --race 5 --pick "1-2-3,1-3-2"` … あなたの予想を締切前に記録（締切後は記録しない。`data/my-picks/picks.jsonl`）。採点は `npx tsx scripts/report-my-picks.ts`
 - `npx tsx scripts/notify-line.ts daily --date YYYY-MM-DD --preview` … LINE の文面の確認（送らない・DB に書かない）。週次は `weekly --preview`
 - 判定の再現: `npm run review:t5-residual` / `npm run review:late-money`（読み取り専用）
 - npm スクリプトは 36 個だけ（2026-10-15 に 264 個から減らした）。一覧は `package.json`

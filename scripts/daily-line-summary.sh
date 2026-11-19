@@ -38,5 +38,12 @@ run_tsx scripts/notify-buy-results-fast.ts --catch-up || echo "${LOG_PREFIX} buy
 run_tsx scripts/notify-line.ts daily --date "$TODAY" || echo "${LOG_PREFIX} line daily skipped or failed"
 echo "${LOG_PREFIX} line daily attempted: ${TODAY}"
 
+# 育成枠の第 1 版の答え合わせ（11/18〜。判定は 12/15 に 1 回だけ）と、あなたの予想の採点。読むだけ（約5分）。日次まとめの後に回し、
+# 結果は次の晩のスコアカードに載る（結果の取り込みが翌日になるので、もともと 1 日遅れ）。
+mkdir -p data/reports/second-track
+YESTERDAY="$(TZ=Asia/Tokyo date -v-1d +%Y-%m-%d)"
+run_tsx scripts/review-20261117-factor-residual.ts --from 2026-11-18 --to "$YESTERDAY" --apply-frozen docs/reviews/2026-11-17-second-track-frozen-v1.json --frozen-output data/reports/second-track/forward-latest.json > /dev/null || echo "${LOG_PREFIX} second track forward skipped or failed"
+run_tsx scripts/report-my-picks.ts --json-output data/reports/second-track/my-picks-latest.json > /dev/null || echo "${LOG_PREFIX} my picks report skipped or failed"
+
 # 月1回の DB の点検（壊れていないか・書き出しから戻せるか・複製先）。前回から 28 日たつと動く（約5分）。日次まとめの後に回す。
 run_tsx scripts/monthly-db-check.ts --if-due || echo "${LOG_PREFIX} monthly db check found problems or failed"
