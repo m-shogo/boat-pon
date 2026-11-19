@@ -11,7 +11,7 @@ const rows = [
   { race: 'R3', selection: '3-2-1', model: 'v3', runKind: 'paper-live', time: 5, p: .6, hit: 1 },
 ];
 const latestV3 = (xs) => [...xs.filter(r => r.model === 'v3' && r.runKind === 'paper-live').reduce((map, r) => {
-  const key = JSON.stringify([r.race, r.betType ?? 'trifecta', r.selection]);
+  const key = JSON.stringify([r.race, r.betType ?? null, r.selection]);
   const old = map.get(key);
   if (!old || r.time > old.time || (r.time === old.time && (r.id ?? -1) > (old.id ?? -1))) map.set(key, r);
   return map;
@@ -110,4 +110,17 @@ test('date window filtering precedes latest-decision dedup, including inclusive 
   const inWindow = xs => latestV3(xs.filter(r => r.date >= '2026-11-01' && r.date <= '2026-11-02'));
   assert.deepEqual(inWindow(dated).map(r => r.id).sort(), [60, 62]);
   assert.deepEqual(inWindow([...dated].reverse()).map(r => r.id).sort(), [60, 62]);
+});
+
+
+test('NULL bet type is a distinct SQL partition, not silently trifecta', () => {
+  const mixed = [
+    { race: 'R14', betType: null, selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 2, id: 70, p: .2, hit: 0 },
+    { race: 'R14', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 1, id: 71, p: .3, hit: 1 },
+    { race: 'R14', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 3, id: 72, p: .4, hit: 0 },
+  ];
+  const selected = latestV3(mixed);
+  assert.equal(selected.length, 2);
+  assert.deepEqual(selected.map(r => r.id).sort((a, b) => a - b), [71, 72]);
+  assert.deepEqual(latestV3([...mixed].reverse()).map(r => r.id).sort((a, b) => a - b), [71, 72]);
 });
