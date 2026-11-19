@@ -98,3 +98,16 @@ test('missing run_kind is excluded, matching SQL equality rather than a paper-li
   assert.deepEqual(latestV3(mixed).map(r => r.id), [52]);
   assert.deepEqual(latestV3([...mixed].reverse()).map(r => r.id), [52]);
 });
+
+test('date window filtering precedes latest-decision dedup, including inclusive endpoints', () => {
+  const dated = [
+    { race: 'R11', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', date: '2026-11-01', time: 1, id: 60, p: .2, hit: 0 },
+    { race: 'R11', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', date: '2026-11-03', time: 9, id: 61, p: .8, hit: 1 },
+    { race: 'R12', betType: 'trifecta', selection: '2-1-3', model: 'v3', runKind: 'paper-live', date: '2026-11-02', time: 2, id: 62, p: .3, hit: 0 },
+    { race: 'R13', betType: 'trifecta', selection: '3-1-2', model: 'v3', runKind: 'paper-live', date: '2026-10-31', time: 3, id: 63, p: .4, hit: 0 },
+  ];
+  // Canonical SQL filters dh.date BETWEEN ? AND ? before ROW_NUMBER.
+  const inWindow = xs => latestV3(xs.filter(r => r.date >= '2026-11-01' && r.date <= '2026-11-02'));
+  assert.deepEqual(inWindow(dated).map(r => r.id).sort(), [60, 62]);
+  assert.deepEqual(inWindow([...dated].reverse()).map(r => r.id).sort(), [60, 62]);
+});
