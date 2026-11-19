@@ -151,3 +151,17 @@ test('global report lower bound excludes older out-of-range decisions before ded
   assert.deepEqual(report([...dated].reverse()).map(r => r.id).sort((a, b) => a - b), [91, 92]);
   assert.deepEqual(latestV3(dated).map(r => r.id).sort((a, b) => a - b), [90, 92]);
 });
+
+test('legacy returned flag can exclude a completed trifecta with unrelated special payout', () => {
+  // Synthetic diagnostic only: models the existing isSettled predicate, not a proposed replacement.
+  // Canonical knowledge-base warns that race_results.returned can be set by another bet type.
+  const ordinary = { trifecta: '1-2-3', payout: 1200, returned: 0 };
+  const unrelatedSpecialPayout = { ...ordinary, returned: 1 };
+  const legacyEligible = r => r.trifecta != null && r.trifecta !== '' && !r.returned && r.payout != null;
+  assert.equal(legacyEligible(ordinary), true);
+  assert.equal(legacyEligible(unrelatedSpecialPayout), false);
+  assert.equal(ordinary.trifecta, unrelatedSpecialPayout.trifecta);
+  assert.equal(ordinary.payout, unrelatedSpecialPayout.payout);
+  // This establishes a potential population mismatch only; official outcome semantics
+  // and real-world affected counts remain unverified.
+});
