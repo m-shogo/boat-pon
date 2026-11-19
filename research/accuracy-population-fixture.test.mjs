@@ -139,3 +139,15 @@ test('global report upper bound excludes newer out-of-range decisions before ded
   assert.deepEqual(report([...dated].reverse()).map(r => r.id).sort((a, b) => a - b), [80, 82]);
   assert.deepEqual(latestV3(dated).map(r => r.id).sort((a, b) => a - b), [81, 82]);
 });
+
+test('global report lower bound excludes older out-of-range decisions before dedup', () => {
+  const dated = [
+    { race: 'R17', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', date: '2026-10-31', time: 9, id: 90, p: .9, hit: 1 },
+    { race: 'R17', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', date: '2026-11-01', time: 1, id: 91, p: .2, hit: 0 },
+    { race: 'R18', betType: 'trifecta', selection: '2-1-3', model: 'v3', runKind: 'paper-live', date: '2026-11-03', time: 2, id: 92, p: .3, hit: 0 },
+  ];
+  const report = xs => latestV3(xs.filter(r => r.date >= '2026-11-01' && r.date <= '2026-11-03'));
+  assert.deepEqual(report(dated).map(r => r.id).sort((a, b) => a - b), [91, 92]);
+  assert.deepEqual(report([...dated].reverse()).map(r => r.id).sort((a, b) => a - b), [91, 92]);
+  assert.deepEqual(latestV3(dated).map(r => r.id).sort((a, b) => a - b), [90, 92]);
+});
