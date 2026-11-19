@@ -165,3 +165,18 @@ test('legacy returned flag can exclude a completed trifecta with unrelated speci
   // This establishes a potential population mismatch only; official outcome semantics
   // and real-world affected counts remain unverified.
 });
+
+
+test('legacy accuracy eligibility requires a nonempty official trifecta and non-NULL payout', () => {
+  // Mirrors the current report-growth isSettled predicate; no proposed settlement rule.
+  const eligible = r => r.trifecta != null && r.trifecta !== '' && !r.returned && r.payout != null;
+  const base = { trifecta: '1-2-3', payout: 1200, returned: 0 };
+  assert.equal(eligible(base), true);
+  assert.equal(eligible({ ...base, trifecta: null }), false);
+  assert.equal(eligible({ ...base, trifecta: '' }), false);
+  assert.equal(eligible({ ...base, payout: null }), false);
+  assert.equal(eligible({ ...base, payout: 0 }), true);
+  assert.equal(eligible({ ...base, returned: null }), true);
+  // Zero payout and NULL returned reflect JavaScript predicate semantics only;
+  // they are not evidence of valid official outcomes or actual database rows.
+});
