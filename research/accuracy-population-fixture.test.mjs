@@ -10,7 +10,7 @@ const rows = [
   { race: 'R2', selection: '2-1-3', model: 'legacy', time: 4, p: .5, hit: 0 },
   { race: 'R3', selection: '3-2-1', model: 'v3', time: 5, p: .6, hit: 1 },
 ];
-const latestV3 = (xs) => [...xs.filter(r => r.model === 'v3').reduce((map, r) => {
+const latestV3 = (xs) => [...xs.filter(r => r.model === 'v3' && (r.runKind ?? 'paper-live') === 'paper-live').reduce((map, r) => {
   const key = JSON.stringify([r.race, r.betType ?? 'trifecta', r.selection]);
   const old = map.get(key);
   if (!old || r.time > old.time || (r.time === old.time && (r.id ?? -1) > (old.id ?? -1))) map.set(key, r);
@@ -77,4 +77,14 @@ test('model filtering precedes dedup even when legacy decision is newer', () => 
   assert.equal(selected.length, 1);
   assert.equal(selected[0].id, 30);
   assert.deepEqual(latestV3([...mixed].reverse()).map(r => r.id), [30]);
+});
+
+test('paper-live population excludes replay rows before latest-decision selection', () => {
+  const mixedRuns = [
+    { race: 'R8', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'paper-live', time: 1, id: 40, p: .2, hit: 0 },
+    { race: 'R8', betType: 'trifecta', selection: '1-2-3', model: 'v3', runKind: 'replay', time: 9, id: 41, p: .9, hit: 1 },
+    { race: 'R9', betType: 'trifecta', selection: '2-1-3', model: 'v3', runKind: 'replay', time: 10, id: 42, p: .7, hit: 0 },
+  ];
+  assert.deepEqual(latestV3(mixedRuns).map(r => r.id), [40]);
+  assert.deepEqual(latestV3([...mixedRuns].reverse()).map(r => r.id), [40]);
 });
