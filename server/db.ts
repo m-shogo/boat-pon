@@ -6,6 +6,7 @@ import { extractProgramFeatures, type ProgramFeatureSnapshot } from "../src/doma
 import type { OddsSnapshot } from "../src/domain/oddsSnapshot";
 import type { RaceCategory } from "../src/domain/programCategory";
 import type { RaceEnvironment } from "../src/domain/raceEnvironment";
+import type { StartExhibitionEntry, WindDirectionInfo } from "../src/domain/beforeInfoParser";
 import type { ParsedResultDetail } from "../src/domain/officialResultDetailParser";
 import type { BetCandidate, BudgetRule, Decision, DecisionStatus, RaceResult } from "../src/domain/types";
 import { sampleResults } from "../src/sampleData";
@@ -191,6 +192,27 @@ CREATE TABLE IF NOT EXISTS race_equipment (
   source_type TEXT NOT NULL DEFAULT 'official_live',
   source_quality TEXT NOT NULL DEFAULT 'exact',
   PRIMARY KEY (race_id, course)
+);
+
+-- スタート展示の並び（2026-11-19〜）。first_fetched_at は最初に取れた時刻（締切前に分かったかを見るため、上書きしない）
+CREATE TABLE IF NOT EXISTS start_exhibition_order (
+  race_id TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  boat INTEGER NOT NULL,
+  st REAL,
+  flying INTEGER NOT NULL DEFAULT 0,
+  first_fetched_at TEXT NOT NULL,
+  fetched_at TEXT NOT NULL,
+  PRIMARY KEY (race_id, position)
+);
+
+-- 風向きと場の向きの絵の番号（2026-11-19〜）。公式の絵の番号のまま残す
+CREATE TABLE IF NOT EXISTS race_wind_direction (
+  race_id TEXT PRIMARY KEY,
+  wind_code INTEGER,
+  venue_direction_code INTEGER,
+  first_fetched_at TEXT NOT NULL,
+  fetched_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS racer_course_stats (
@@ -1406,6 +1428,33 @@ ORDER BY course
     startTiming: row.start_timing == null ? null : Number(row.start_timing),
     ranking: row.ranking == null ? null : Number(row.ranking),
   }));
+}
+
+/** スタート展示の並びを保存する。最初に取れた時刻（first_fetched_at）は上書きしない */
+export function upsertStartExhibitionOrder(db: DatabaseSync, raceId: string, entries: StartExhibitionEntry[], fetchedAt: string): void {
+  for (const entry of entries) {
+    db.prepare(`
+INSERT INTO start_exhibition_order (race_id, position, boat, st, flying, first_fetched_at, fetched_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(race_id, position) DO UPDATE SET
+  boat = excluded.boat,
+  st = excluded.st,
+  flying = excluded.flying,
+  fetched_at = excluded.fetched_at
+`).run(raceId, entry.position, entry.boat, entry.st, entry.flying ? 1 : 0, fetchedAt, fetchedAt);
+  }
+}
+
+/** 風向きの絵の番号を保存する。最初に取れた時刻（first_fetched_at）は上書きしない */
+export function upsertRaceWindDirection(db: DatabaseSync, raceId: string, info: WindDirectionInfo, fetchedAt: string): void {
+  db.prepare(`
+INSERT INTO race_wind_direction (race_id, wind_code, venue_direction_code, first_fetched_at, fetched_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(race_id) DO UPDATE SET
+  wind_code = excluded.wind_code,
+  venue_direction_code = excluded.venue_direction_code,
+  fetched_at = excluded.fetched_at
+`).run(raceId, info.windCode, info.venueDirectionCode, fetchedAt, fetchedAt);
 }
 
 export function upsertRaceEquipment(db: DatabaseSync, raceId: string, entries: RaceEquipmentEntry[], fetchedAt: string, sourceType = "official_live"): void {

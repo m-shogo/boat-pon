@@ -16,10 +16,18 @@ export type RaceEquipmentEntry = {
   partsChangedCount: number;
 };
 
+/** スタート展示の並び（上の行から 1 コース）。艇番・ST・フライング（"F.06" は st=0.06・flying=true） */
+export type StartExhibitionEntry = { position: number; boat: number; st: number | null; flying: boolean };
+
+/** 風向きの絵の番号（is-windN）と、場の向きの絵の番号（is-directionN）。どちらも公式の絵の番号のまま残す */
+export type WindDirectionInfo = { windCode: number | null; venueDirectionCode: number | null };
+
 export type BeforeInfoSnapshot = {
   exhibition: ExhibitionEntryLike[];
   weather: RaceEnvironment | null;
   equipment: RaceEquipmentEntry[];
+  startExhibition: StartExhibitionEntry[];
+  windDirection: WindDirectionInfo | null;
 };
 
 const PART_LABELS: Record<string, string> = {
@@ -38,7 +46,42 @@ export function parseBeforeInfoHtml(html: string): BeforeInfoSnapshot {
     exhibition: parseExhibitionHtml(html),
     weather: parseWeatherHtml(html),
     equipment: parseEquipmentHtml(html),
+    startExhibition: parseStartExhibitionOrder(html),
+    windDirection: parseWindDirection(html),
   };
+}
+
+/**
+ * スタート展示の並び（2026-11-19〜記録）。表の上の行から 1・2・…コースで、行の数字が艇番。
+ * 艇番と行がずれていれば前づけなど（進入が枠どおりでない）。F は st に数字を入れ、flying を true にする。
+ */
+export function parseStartExhibitionOrder(html: string): StartExhibitionEntry[] {
+  const $ = cheerio.load(html);
+  const entries: StartExhibitionEntry[] = [];
+  $(".table1_boatImage1").each((_i, el) => {
+    const boat = Number(cleanText($(el).find(".table1_boatImage1Number").text()));
+    if (!Number.isInteger(boat) || boat < 1 || boat > 6) return;
+    const raw = cleanText($(el).find(".table1_boatImage1Time").text()).replace(/\s/g, "");
+    const m = raw.match(/^(F|L)?(\d?\.\d{2})$/);
+    const st = m ? Number(m[2].startsWith(".") ? `0${m[2]}` : m[2]) : null;
+    entries.push({ position: entries.length + 1, boat, st: st != null && Number.isFinite(st) ? st : null, flying: m?.[1] === "F" });
+  });
+  return entries.length <= 6 && new Set(entries.map((e) => e.boat)).size === entries.length ? entries : [];
+}
+
+/** 水面気象の風向きの絵（is-windN）と場の向きの絵（is-directionN）の番号。無ければ null */
+export function parseWindDirection(html: string): WindDirectionInfo | null {
+  const $ = cheerio.load(html);
+  const block = $(".weather1");
+  if (block.length === 0) return null;
+  const codeOf = (selector: string, prefix: string) => {
+    const cls = block.find(selector).find(".weather1_bodyUnitImage").attr("class") ?? "";
+    const m = cls.match(new RegExp(`(?:^|\\s)${prefix}(\\d+)(?:\\s|$)`));
+    return m ? Number(m[1]) : null;
+  };
+  const windCode = codeOf(".is-windDirection", "is-wind");
+  const venueDirectionCode = codeOf(".is-direction", "is-direction");
+  return windCode == null && venueDirectionCode == null ? null : { windCode, venueDirectionCode };
 }
 
 export function parseExhibitionHtml(html: string): ExhibitionEntryLike[] {
