@@ -12,7 +12,8 @@ const rows = [
 ];
 const latestV3 = (xs) => [...xs.filter(r => r.model === 'v3').reduce((map, r) => {
   const key = `${r.race}/${r.selection}`;
-  if (!map.has(key) || map.get(key).time < r.time) map.set(key, r);
+  const old = map.get(key);
+  if (!old || r.time > old.time || (r.time === old.time && (r.id ?? -1) > (old.id ?? -1))) map.set(key, r);
   return map;
 }, new Map()).values()];
 const distinctRaces = xs => new Set(xs.map(r => r.race)).size;
@@ -42,14 +43,9 @@ test('equal timestamps need a stable id tie-breaker, as in canonical ROW_NUMBER 
     { race: 'R4', selection: '1-2-3', model: 'v3', time: 6, id: 10, p: .2, hit: 0 },
     { race: 'R4', selection: '1-2-3', model: 'v3', time: 6, id: 11, p: .7, hit: 0 },
   ];
-  // The original simplified fixture compares only time and therefore keeps id 10.
-  // Canonical SQL orders by created_at DESC, id DESC; the expected row is id 11.
-  const selected = [...sameTimestamp.reduce((map, row) => {
-    const key = `${row.race}/${row.selection}`;
-    const old = map.get(key);
-    if (!old || row.time > old.time || (row.time === old.time && row.id > old.id)) map.set(key, row);
-    return map;
-  }, new Map()).values()];
+  // Same canonical tie-break regardless of input row order.
+  const selected = latestV3(sameTimestamp);
+  assert.equal(latestV3([...sameTimestamp].reverse())[0].id, 11);
   assert.equal(selected.length, 1);
   assert.equal(selected[0].id, 11);
   assert.equal(selected[0].p, .7);
