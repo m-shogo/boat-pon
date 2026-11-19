@@ -66,3 +66,15 @@ test('dedup partitions by bet type as well as race and selection', () => {
   ]);
   assert.deepEqual(latestV3([...sameRaceAndSelection].reverse()).map(r => r.id).sort(), [21, 22]);
 });
+
+test('model filtering precedes dedup even when legacy decision is newer', () => {
+  const mixed = [
+    { race: 'R6', betType: 'trifecta', selection: '1-2-3', model: 'v3', time: 1, id: 30, p: .2, hit: 0 },
+    { race: 'R6', betType: 'trifecta', selection: '1-2-3', model: 'legacy', time: 9, id: 31, p: .9, hit: 1 },
+    { race: 'R7', betType: 'trifecta', selection: '2-1-3', model: 'legacy', time: 10, id: 32, p: .7, hit: 0 },
+  ];
+  const selected = latestV3(mixed);
+  assert.equal(selected.length, 1);
+  assert.equal(selected[0].id, 30);
+  assert.deepEqual(latestV3([...mixed].reverse()).map(r => r.id), [30]);
+});
