@@ -11,7 +11,7 @@ const rows = [
   { race: 'R3', selection: '3-2-1', model: 'v3', time: 5, p: .6, hit: 1 },
 ];
 const latestV3 = (xs) => [...xs.filter(r => r.model === 'v3').reduce((map, r) => {
-  const key = `${r.race}/${r.selection}`;
+  const key = JSON.stringify([r.race, r.betType ?? 'trifecta', r.selection]);
   const old = map.get(key);
   if (!old || r.time > old.time || (r.time === old.time && (r.id ?? -1) > (old.id ?? -1))) map.set(key, r);
   return map;
@@ -49,4 +49,20 @@ test('equal timestamps need a stable id tie-breaker, as in canonical ROW_NUMBER 
   assert.equal(selected.length, 1);
   assert.equal(selected[0].id, 11);
   assert.equal(selected[0].p, .7);
+});
+
+test('dedup partitions by bet type as well as race and selection', () => {
+  const sameRaceAndSelection = [
+    { race: 'R5', betType: 'trifecta', selection: '1-2-3', model: 'v3', time: 1, id: 20, p: .2, hit: 0 },
+    { race: 'R5', betType: 'trio', selection: '1-2-3', model: 'v3', time: 2, id: 21, p: .3, hit: 1 },
+    { race: 'R5', betType: 'trifecta', selection: '1-2-3', model: 'v3', time: 3, id: 22, p: .4, hit: 0 },
+  ];
+  const selected = latestV3(sameRaceAndSelection);
+  assert.equal(selected.length, 2);
+  assert.equal(distinctRaces(selected), 1);
+  assert.deepEqual(selected.map(r => [r.betType, r.id]).sort((a, b) => a[0].localeCompare(b[0])), [
+    ['trifecta', 22],
+    ['trio', 21],
+  ]);
+  assert.deepEqual(latestV3([...sameRaceAndSelection].reverse()).map(r => r.id).sort(), [21, 22]);
 });
