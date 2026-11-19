@@ -19,6 +19,7 @@ const arg = (name: string, fallback: string) => { const i = args.indexOf(name); 
 const FROM = arg("--from", "2026-07-01");
 const TO = arg("--to", "2026-11-15");
 const SPLIT = arg("--split", "2026-09-01"); // この日から後半
+const EXCLUDE_FAR_TIDE = process.argv.includes("--exclude-far-tide"); // 第 7 回の補足: 観測点が離れた 3 場（津・鳴門・大村）を外す
 const LANE_FROM = "2024-01-01";
 const H2H_FROM = "2023-01-01";
 const t0 = Date.now();
@@ -216,6 +217,43 @@ const lastYosenSeats = new Map<string, number>(); // `${場}|${日付}` → 準�
 }
 const seriesPoints = new Map<string, { lastDate: string; racers: Map<string, number[]> }>(); // 場 → 今の節の [走, 点の合計]
 
+// ─── 潮（第 7 回）。気象庁の潮位表（推算の毎時の潮位、data/raw/jma-tide/<年>/<地点>.txt。2026-11-19 に取得）。海水・汽水の 15 場だけ ───
+// 場の水質は Wikipedia の各場の記事（2026-11-19 に確認）。津・鳴門・大村は同じ水面の観測点が無く、離れた地点で代わりにする
+const TIDE_STATION: Record<string, string> = { 江戸川: "TK", 平和島: "TK", 浜名湖: "MI", 蒲郡: "G5", 常滑: "ZD", 津: "G3", 鳴門: "KM", 丸亀: "TX", 児島: "MM", 宮島: "Q8", 徳山: "QA", 下関: "A1", 若松: "N0", 福岡: "QF", 大村: "QD" };
+const TIDE_FAR = new Set(["津", "鳴門", "大村"]);
+const tideHourly = new Map<string, number[]>(); // `${地点}|${日付}` → 24 時間の潮位（cm）
+for (const code of new Set(Object.values(TIDE_STATION))) {
+  for (const year of [...new Set([FROM.slice(0, 4), TO.slice(0, 4)])]) {
+    const file = path.join("data", "raw", "jma-tide", year, `${code}.txt`);
+    if (!existsSync(file)) { log(`潮位表が無い: ${file}`); continue; }
+    for (const line of readFileSync(file, "latin1").split("\n")) {
+      if (line.length < 80) continue;
+      const hours = Array.from({ length: 24 }, (_, h) => Number(line.slice(h * 3, h * 3 + 3)));
+      const date = `20${line.slice(72, 74).trim().padStart(2, "0")}-${line.slice(74, 76).trim().padStart(2, "0")}-${line.slice(76, 78).trim().padStart(2, "0")}`;
+      if (hours.every(Number.isFinite)) tideHourly.set(`${code}|${date}`, hours);
+    }
+  }
+}
+log(`潮位表 ${tideHourly.size} 日分（${new Set(Object.values(TIDE_STATION)).size} 地点）`);
+/** 締切の時刻の潮位を、その日の満ち引きの中の位置（−1 干潮〜+1 満潮のあたり）と、上げ潮かで返す */
+function tideAt(venue: string, date: string, closeAt: string): { level: number; rising: boolean } | null {
+  const code = TIDE_STATION[venue];
+  if (!code) return null;
+  const today = tideHourly.get(`${code}|${date}`), tomorrow = tideHourly.get(`${code}|${addDays(date, 1)}`);
+  if (!today) return null;
+  const series = tomorrow ? [...today, ...tomorrow] : today;
+  const [hh, mm] = closeAt.split(":").map(Number);
+  const at = (minutes: number) => { const h = Math.floor(minutes / 60), frac = (minutes % 60) / 60; return h + 1 < series.length ? series[h] * (1 - frac) + series[h + 1] * frac : series[series.length - 1]; };
+  const t = hh * 60 + mm;
+  const mean = today.reduce((a, b) => a + b, 0) / 24, half = (Math.max(...today) - Math.min(...today)) / 2;
+  if (!(half > 0)) return null;
+  return { level: (at(t) - mean) / half, rising: at(t + 30) > at(Math.max(0, t - 30)) };
+}
+// 売上の代わり: 締切5分前の 3連単のオッズのいちばん高い値（前半のレースの下から 3 分の 1 を「小さい」とする）
+const maxOddsOf = (race: EvalRace) => Math.max(...[...race.odds.values()].filter((v) => Number.isFinite(v) && v > 0));
+const smallPoolLine = (() => { const v = [...evalRaces.values()].filter((r) => r.date < SPLIT).map(maxOddsOf).sort((a, b) => a - b); return v[Math.floor(v.length / 3)]; })();
+log(`売上の小さいレースの線（前半の 3連単の最高オッズの下から 3 分の 1）: ${smallPoolLine}`);
+
 // ─── レースの種類 ───
 const raceTypeById = new Map((db.prepare("SELECT race_id, race_type FROM race_conditions WHERE date >= ? AND date <= ?").all(FROM, TO) as Array<{ race_id: string; race_type: string | null }>).map((r) => [r.race_id, r.race_type ?? ""]));
 const raceGroup = (type: string) => /準優/.test(type) ? "準優勝戦" : /優勝戦/.test(type) ? "優勝戦" : /予選/.test(type) ? "予選" : /選抜|特選|特賞|ドリーム/.test(type) ? "選抜・特選など" : /一般/.test(type) ? "一般" : "そのほか";
@@ -362,6 +400,24 @@ function evaluate(race: EvalRace) {
           obs.f["45 予選の最終日・準優ほぼ無理"] = rank > seats + 12 ? 1 : 0;
         }
       }
+    }
+    // ── 育成枠の第 7 回の材料（潮と、買う側の偏り） ──
+    {
+      const tide = tideAt(race.venue, race.date, race.closeAt);
+      if (tide && !(EXCLUDE_FAR_TIDE && TIDE_FAR.has(race.venue))) {
+        obs.f["46 潮位 × 1号艇"] = boat.course === 1 ? tide.level : 0;
+        obs.f["47 上げ潮 × 1号艇"] = boat.course === 1 && tide.rising ? 1 : 0;
+        obs.f["48 潮位 × 4〜6号艇"] = boat.course >= 4 ? tide.level : 0;
+      }
+      if (boat.className && boat.nationalWinRate != null) obs.f["49 A1 で全国勝率 7.0 以上"] = boat.className === "A1" && boat.nationalWinRate >= 7.0 ? 1 : 0;
+      if (regs.every((r) => r)) {
+        const logs = regs.map((r) => Math.log(1 + (careerWins.get(r) ?? 0)));
+        obs.f["50 通算の 1着の数（log・レースの平均との差）"] = logs[i] - logs.reduce((a, b) => a + b, 0) / 6;
+      }
+      const logp = Math.log(race.marketWin[i]);
+      obs.f["51 売上の小さいレース × log(市場の確率)"] = maxOddsOf(race) <= smallPoolLine ? logp : 0;
+      obs.f["52 モーニング × log(市場の確率)"] = race.closeAt < "10:30" ? logp : 0;
+      obs.f["53 ナイター × log(市場の確率)"] = race.closeAt >= "17:30" ? logp : 0;
     }
     // ── 育成枠の第 5 回の材料（荒れた水面・風とスタート展示） ──
     const weather = weatherAtT5.get(race.raceId);
@@ -748,8 +804,8 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
   {
     const withV1 = (o: Obs) => [...base2(o), ...V1.map((name) => value(name)(o))];
     const v1First = fitWith(withV1, 7 + V1.length, firstHalf);
-    console.log(`\n第 4〜6 回の補足: 整備・水面・スタート展示・勝負駆けの材料を「土台 + 第 1 版の材料」の上に足す（前半で係数、後半で logloss）`);
-    for (const name of names.filter((n) => Number(n.split(" ")[0]) >= 31 && Number(n.split(" ")[0]) <= 45)) {
+    console.log(`\n第 4〜7 回の補足: 整備・水面・スタート展示・勝負駆け・潮・買う側の偏りの材料を「土台 + 第 1 版の材料」の上に足す（前半で係数、後半で logloss）`);
+    for (const name of names.filter((n) => Number(n.split(" ")[0]) >= 31 && Number(n.split(" ")[0]) <= 53)) {
       const x = (o: Obs) => [...withV1(o), value(name)(o)];
       const k = 8 + V1.length;
       const first = fitWith(x, k, firstHalf);
@@ -874,5 +930,29 @@ for (let lane = 1; lane <= 6; lane += 1) report(`(c) ${lane} 号艇だけに効�
       definitions: "docs/reviews/2026-11-17-second-prediction-track.md と scripts/review-20261117-factor-residual.ts",
     }, null, 2)}\n`);
     log(`固定した式を書き出した: ${args[freezeAt + 1]}`);
+  }
+}
+
+// ─── 育成枠の第 7 回 C: 覚えやすい 3連単の買い目（事前登録: docs/reviews/2026-11-17-second-prediction-track.md） ───
+{
+  const groups: Array<[string, (combo: string) => boolean]> = [
+    ["1-2-3", (c) => c === "1-2-3"],
+    ["連番（1-2-3・2-3-4・3-4-5・4-5-6）", (c) => ["1-2-3", "2-3-4", "3-4-5", "4-5-6"].includes(c)],
+  ];
+  console.log(`\n第 7 回 C: 覚えやすい 3連単の買い目。市場補正の確率の合計（見込み）と実際の当たり数（前半 < ${SPLIT} ≤ 後半）`);
+  for (const [label, match] of groups) {
+    const part = (first: boolean) => {
+      let expected = 0, variance = 0, hits = 0, races = 0;
+      for (const race of evalRaces.values()) {
+        if ((race.date < SPLIT) !== first) continue;
+        races += 1;
+        for (const [combo, p] of race.tri) if (match(combo)) { expected += p; variance += p * (1 - p); }
+        if (match(race.combo)) hits += 1;
+      }
+      return { races, expected, hits, z: (hits - expected) / Math.sqrt(variance) };
+    };
+    const a = part(true), b = part(false);
+    const candidate = Math.abs(a.z) >= 3, ok = candidate && Math.sign(b.z) === Math.sign(a.z) && Math.abs(b.z) >= 2;
+    console.log(`- ${label}: 前半 ${a.races} レース 見込み ${a.expected.toFixed(1)}・実際 ${a.hits}（z ${a.z.toFixed(1)}）／後半 ${b.races} レース 見込み ${b.expected.toFixed(1)}・実際 ${b.hits}（z ${b.z.toFixed(1)}）→ ${ok ? "**兆しあり**" : candidate ? "候補だが後半で残らない" : "閉じる"}`);
   }
 }
