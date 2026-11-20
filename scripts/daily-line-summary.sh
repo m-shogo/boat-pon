@@ -47,3 +47,7 @@ run_tsx scripts/report-my-picks.ts --json-output data/reports/second-track/my-pi
 
 # 月1回の DB の点検（壊れていないか・書き出しから戻せるか・複製先）。前回から 28 日たつと動く（約5分）。日次まとめの後に回す。
 run_tsx scripts/monthly-db-check.ts --if-due || echo "${LOG_PREFIX} monthly db check found problems or failed"
+
+# 直前情報の取りこぼしを、締切の後に埋める（公式のページは 1 枚 約 10 秒かかるので、600 ページで約 2 時間。点検の後に回す。新しい日から順に・1.5 秒おき・1 晩 600 ページまで。締切前に取れた記録は上書きしない）。
+# スリープなどで取れなかった展示・スタート展示の並び・風向きを、次の晩に埋める。7/1 からの分もこの順で少しずつ埋まる。
+run_tsx scripts/backfill-beforeinfo.ts --from 2026-07-01 --limit 600 || echo "${LOG_PREFIX} beforeinfo backfill skipped or failed"
