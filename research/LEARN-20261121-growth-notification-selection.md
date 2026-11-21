@@ -81,3 +81,16 @@ Decision boundary: retain existing production behavior; do not rename or reinter
 - materialStateKey: `main@be25facc/claimNotification-sent-at-on-SENDING/markNotificationSent-status-only`
 - outcome: `VERIFIED_SUCCESS` (non-obvious source-level timestamp contract only; no live incidence)
 - next safe action: research-only synthetic cutoff-crossing fixture, then explicitly specify which timestamp is intended before proposing any reporting change.
+
+
+## 2026-11-22 correction: SENT transition refreshes sent_at (append-only)
+
+A fresh read of canonical main `be25facc5a4393344c25caf4759af07acb8e9a0d` contradicts the preceding claim-time-only interpretation. In `scripts/notify-line.ts`, `markNotificationSent(db,id)` executes `UPDATE notification_log SET status = 'SENT', sent_at = CURRENT_TIMESTAMP WHERE id = ?` after the awaited `sendLinePushTextToRecipients` call succeeds. `claimNotification` in `scripts/lib/notificationLog.ts` does initially set `sent_at` at SENDING, but the successful transition **overwrites** it. Therefore, for the inspected `deliverNotifications` success path, a surviving SENT row's `sent_at` is the **post-await success-recording timestamp**, not necessarily the claim/start timestamp. The preceding section's assertion that `markNotificationSent` leaves `sent_at` unchanged is **withdrawn**. This does not prove provider receipt or end-user delivery time, and other send paths/historical records remain unaudited. Do not use the earlier claim-time cutoff-crossing hypothesis as evidence of misclassification. No production database, private values, or LINE delivery was accessed.
+
+- fingerprintKey: `research.growth.notification-delivery-timestamp-semantics`
+- attemptSignature: `verify-markNotificationSent-sql-and-correct-claim-time-assumption`
+- environmentKey: `github-main-source-read-only/no-production-db/no-line-delivery`
+- materialStateKey: `main@be25facc/claim-sets-sending-time/mark-sent-overwrites-sent-at`
+- outcome: `NEW_FAILURE` (prior research interpretation was wrong; corrected with source evidence)
+- reuse rule: always inspect the full write sequence, including post-await status updates, before attributing semantics to a timestamp field. Synthetic cutoff tests must model both writes.
+- next safe action: audit other writers of `notification_log.sent_at` read-only, then build a research-only state-transition fixture; do not change production logic or settings.
