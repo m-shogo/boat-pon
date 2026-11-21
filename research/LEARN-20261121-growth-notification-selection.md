@@ -44,3 +44,14 @@ Canonical main source comparison (read-only): `scripts/notify-line.ts` applies `
 - materialStateKey: `main@daf465a5/pr2288-open/unique-race-channel/report-predicate-difference`
 - outcome: `REUSED_LEARNING` (new source-level distinction; no production incident verified)
 - next safe action: construct one-row-per-race/channel synthetic notification scenarios for mismatched BUY selection and check expected classifications in isolated research tests.
+
+## 2026-11-21 schema-valid identity boundary reproduction (append-only)
+
+An isolated Python sqlite3 in-memory test created notification_log with the canonical UNIQUE(race_id, channel) constraint, then inserted exactly one SENT LINE row for race r1 with title "RESULT 1-2-3" and sent_at 09:00. The report's race/channel/status-only scalar lookup returned 09:00, whereas the producer-style predicate additionally requiring title LIKE '% ' || '2-3-4' || '%' returned NULL for the BUY selection 2-3-4. A second LINE row for r1 was rejected by the unique index. This confirms a **reachable schema shape in synthetic data** in which the predicates disagree, not that such an event was emitted by the actual producer or occurred in production. No production database, notification send, private odds, or production code was accessed. The synthetic test used an isolated minimal schema, not the repository's full migration path.
+
+- fingerprintKey: `research.growth.notification-event-identity`
+- attemptSignature: `schema-valid-single-line-row-mismatched-title-sqlite-reproduction`
+- environmentKey: `python-sqlite3-in-memory/synthetic/no-production-db`
+- materialStateKey: `main@daf465a5/pr2288-open/unique-race-channel/single-sent-row-title-mismatch`
+- outcome: `VERIFIED_SUCCESS` (synthetic SQL predicate difference only)
+- next safe action: inspect the producer's creation and transition semantics for non-BUY same-race events, then consider a research-only executable fixture tied to canonical SQL. Do not modify notification, BUY, scorecard, or production paths.
