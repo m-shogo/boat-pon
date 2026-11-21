@@ -55,3 +55,15 @@ An isolated Python sqlite3 in-memory test created notification_log with the cano
 - materialStateKey: `main@daf465a5/pr2288-open/unique-race-channel/single-sent-row-title-mismatch`
 - outcome: `VERIFIED_SUCCESS` (synthetic SQL predicate difference only)
 - next safe action: inspect the producer's creation and transition semantics for non-BUY same-race events, then consider a research-only executable fixture tied to canonical SQL. Do not modify notification, BUY, scorecard, or production paths.
+
+
+## 2026-11-22 producer-key and sent-state narrowing (append-only)
+
+Read-only inspection of canonical main `be25facc5a4393344c25caf4759af07acb8e9a0d`: `scripts/notify-line.ts` checks for an existing `notification_log` row with the exact `race_id` and `channel='line'`, and declines to recreate it when status is `SENT` or `SENDING`. `scripts/lib/notificationLog.ts` independently guards its UPSERT with `status NOT IN ('SENT','SENDING')`. Result and summary notifications shown in the same source use distinct prefixed keys (for example `line-buy-result-fast-`, `line-buy-result-`, `line-weekly-growth-`) rather than the bare race identifier. Therefore those prefixed events **cannot** by themselves supply the bare-race `SENT` row selected by `report-growth.ts`; the previous synthetic `RESULT` title under a bare race ID demonstrates predicate behavior but does **not** demonstrate that the actual producer emits that state. The remaining question is whether the bare-race key can be sent with a nonmatching BUY title through any current producer or historical transition. No real database or private data was inspected. No live miscount or readiness quantity is established.
+
+- fingerprintKey: `research.growth.notification-event-identity`
+- attemptSignature: `trace-producer-key-prefixes-and-sent-upsert-guard`
+- environmentKey: `github-main-source-read-only/no-production-db`
+- materialStateKey: `main@be25facc/pr2288@630f37cf/unique-race-channel/prefixed-results`
+- outcome: `REUSED_LEARNING` (narrowed reachability; no new production failure established)
+- next safe action: inspect the bare-race notification creation call site and its title construction, then assess whether any mismatched selection is reachable before changing research metrics.
