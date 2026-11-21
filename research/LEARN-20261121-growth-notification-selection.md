@@ -33,3 +33,14 @@ Latest canonical `main` `server/db.ts` defines `CREATE UNIQUE INDEX IF NOT EXIST
 - materialStateKey: `main@daf465a5/pr2288-open/server-db-unique-race-channel`
 - outcome: `REUSED_LEARNING` with material correction to applicability; no production incident confirmed
 - next safe action: audit producer/event semantics and schema migrations read-only; do not alter Current BUY, LINE or production report logic.
+
+## 2026-11-21 producer-versus-report identity audit (append-only)
+
+Canonical main source comparison (read-only): `scripts/notify-line.ts` applies `n.title LIKE '% ' || dh.selection || '%'` when determining whether a BUY was notified for the daily summary and result messaging. By contrast, `scripts/report-growth.ts` and `scripts/report-accuracy-scorecard.ts` select `SENT` by race/channel without the selection/title predicate. The canonical `(race_id, channel)` uniqueness rule prevents duplicate same-channel rows, but does **not** prove that the sole SENT row represents the BUY selection under measurement. This is a **cross-report event-identity contract discrepancy**, not proof of live miscount. No real DB, affected count, or private data was accessed. Do not change production reporting or notification behavior until the intended identity semantics are verified with a schema-valid synthetic fixture and the scorecard metric impact is bounded.
+
+- fingerprintKey: `research.growth.notification-event-identity`
+- attemptSignature: `compare-growth-scorecard-and-notify-line-buy-selection-predicates`
+- environmentKey: `github-main-source-read-only/no-production-db`
+- materialStateKey: `main@daf465a5/pr2288-open/unique-race-channel/report-predicate-difference`
+- outcome: `REUSED_LEARNING` (new source-level distinction; no production incident verified)
+- next safe action: construct one-row-per-race/channel synthetic notification scenarios for mismatched BUY selection and check expected classifications in isolated research tests.
