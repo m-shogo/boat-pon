@@ -67,3 +67,17 @@ Read-only inspection of canonical main `be25facc5a4393344c25caf4759af07acb8e9a0d
 - materialStateKey: `main@be25facc/pr2288@630f37cf/unique-race-channel/prefixed-results`
 - outcome: `REUSED_LEARNING` (narrowed reachability; no new production failure established)
 - next safe action: inspect the bare-race notification creation call site and its title construction, then assess whether any mismatched selection is reachable before changing research metrics.
+
+
+## 2026-11-22 claim-time versus delivery-completion semantics (append-only)
+
+Canonical main `be25facc5a4393344c25caf4759af07acb8e9a0d` source audit: `scripts/lib/notificationLog.ts::claimNotification` sets `status='SENDING'` and `sent_at=CURRENT_TIMESTAMP` **before** the outbound LINE request. `scripts/notify-line.ts::deliverNotifications` awaits `sendLinePushTextToRecipients` and only then changes status to `SENT` via `markNotificationSent`, which does not refresh `sent_at`. On a caught delivery error `releaseNotification` clears the timestamp. Therefore, a surviving `SENT` row's `sent_at` denotes the **claim/start-of-attempt time**, not the confirmed completion time. The reporting predicates requiring `status='SENT'` exclude currently failed or pending rows, but a send that crosses the cutoff could be classified using an earlier claim timestamp. This is a source-level metric boundary, **not evidence of any actual late delivery, affected count, or user-visible incident**. No private database or LINE service was accessed.
+
+Decision boundary: retain existing production behavior; do not rename or reinterpret the scorecard's notification-timing metric without an explicit definition of actionability (claim, provider acceptance, or actual recipient delivery), a schema-valid synthetic cutoff-crossing test, and a scoped impact proposal. Existing title/selection identity concerns remain separate. This observation is not a reason to activate protected N2 or modify Current BUY, LINE, public publishing, or settings.
+
+- fingerprintKey: `research.growth.notification-delivery-timestamp-semantics`
+- attemptSignature: `audit-claim-sending-sent-at-before-await-and-sent-status-after-await`
+- environmentKey: `github-main-source-read-only/no-production-db/no-line-delivery`
+- materialStateKey: `main@be25facc/claimNotification-sent-at-on-SENDING/markNotificationSent-status-only`
+- outcome: `VERIFIED_SUCCESS` (non-obvious source-level timestamp contract only; no live incidence)
+- next safe action: research-only synthetic cutoff-crossing fixture, then explicitly specify which timestamp is intended before proposing any reporting change.
