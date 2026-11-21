@@ -22,3 +22,14 @@ Add a research-only synthetic fixture for multiple SENT rows, failed rows, cutof
 - materialStateKey: `main@daf465a5/pr2288-open/report-growth@70c23970`
 - outcome: `VERIFIED_SUCCESS` (source-level ambiguity and synthetic reproduction only)
 - reuse rule: do not repeat the same reproduction without a new contract, fixture, or material source change.
+
+## 2026-11-21 schema-contract correction (append-only)
+
+Latest canonical `main` `server/db.ts` defines `CREATE UNIQUE INDEX IF NOT EXISTS notification_log_race_channel_uq ON notification_log (race_id, channel)`. `scripts/lib/notificationLog.ts` uses `ON CONFLICT(race_id, channel)` and refuses to reset `SENT`/`SENDING` rows. Consequently, the earlier synthetic fixture with multiple `SENT` rows for the *same race and line channel* violates the canonical schema and is **not a reachable normal-state reproduction**. The unordered scalar subquery is syntactically under-specified, but with the declared unique index intact it can return at most one row. Do not infer a live timestamp-selection defect, notification lateness, or affected counts from that fixture. The fixture remains a hypothetical robustness test only; the real SQLite database schema and legacy migrations were not inspected. The one-row-per-race/channel design also does not independently establish that the row is a BUY-specific event; determine that from the notification producer and scorecard contract before changing metrics.
+
+- fingerprintKey: `research.growth.notification-timestamp-selection`
+- attemptSignature: `verify-main-schema-unique-index-and-upsert-contract`
+- environmentKey: `github-main-source-read-only/no-production-db`
+- materialStateKey: `main@daf465a5/pr2288-open/server-db-unique-race-channel`
+- outcome: `REUSED_LEARNING` with material correction to applicability; no production incident confirmed
+- next safe action: audit producer/event semantics and schema migrations read-only; do not alter Current BUY, LINE or production report logic.
