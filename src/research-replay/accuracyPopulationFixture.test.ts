@@ -39,7 +39,7 @@ test("research-only: scorecard all paper-live rows versus growth latest current-
         PARTITION BY race_id, bet_type, selection ORDER BY created_at DESC, id DESC
       ) AS row_num FROM decision_history
       WHERE run_kind = 'paper-live' AND model_version = ? AND date BETWEEN ? AND ?
-    ) SELECT race_id, selection, estimated_hit_rate, hit FROM d WHERE row_num = 1`)
+    ) SELECT race_id, selection, estimated_hit_rate, hit FROM d WHERE row_num = 1 ORDER BY race_id`)
       .all("current", "2026-11-01", "2026-11-01") as Decision[];
 
     assert.equal(all.length, 5);
