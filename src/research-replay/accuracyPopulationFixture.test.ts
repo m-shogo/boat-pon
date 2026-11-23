@@ -59,3 +59,22 @@ test("research-only: scorecard all paper-live rows versus growth latest current-
     db.close();
   }
 });
+
+test("research-only: equal timestamps resolve by descending id, not insertion order", () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    db.exec("CREATE TABLE decisions (id INTEGER PRIMARY KEY, race_id TEXT, created_at TEXT, probability REAL)");
+    const insert = db.prepare("INSERT INTO decisions VALUES (?, ?, ?, ?)");
+    // Insert in reverse id order so physical row order cannot determine the winner.
+    insert.run(20, "tie-race", "2026-11-01T10:00:00Z", 0.25);
+    insert.run(10, "tie-race", "2026-11-01T10:00:00Z", 0.75);
+    const rows = db.prepare(`SELECT id, probability FROM (
+      SELECT *, ROW_NUMBER() OVER (
+        PARTITION BY race_id ORDER BY created_at DESC, id DESC
+      ) AS row_num FROM decisions
+    ) WHERE row_num = 1`).all() as Array<{ id: number; probability: number }>;
+    assert.deepEqual(rows, [{ id: 20, probability: 0.25 }]);
+  } finally {
+    db.close();
+  }
+});
