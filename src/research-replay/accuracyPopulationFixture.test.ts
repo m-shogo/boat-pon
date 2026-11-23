@@ -128,3 +128,47 @@ test("research-only: legacy result flags and single winner disagree with selecti
     db.close();
   }
 });
+
+test("research-only: distinguish refunded selection, normal loss, and missing official trifecta facts", () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    db.exec(`CREATE TABLE selection_facts (
+      race_id TEXT PRIMARY KEY, selection TEXT NOT NULL, official_trifecta_complete INTEGER NOT NULL
+    );
+    CREATE TABLE official_trifecta_payouts (
+      race_id TEXT NOT NULL, selection TEXT NOT NULL, payout INTEGER NOT NULL
+    );
+    CREATE TABLE refunded_boats (race_id TEXT NOT NULL, boat INTEGER NOT NULL)`);
+    const selections = db.prepare("INSERT INTO selection_facts VALUES (?, ?, ?)");
+    const payouts = db.prepare("INSERT INTO official_trifecta_payouts VALUES (?, ?, ?)");
+    const refunds = db.prepare("INSERT INTO refunded_boats VALUES (?, ?)");
+    // Same official winning combination: only the selection containing a refunded boat is void.
+    selections.run("refund", "1-2-3", 1);
+    payouts.run("refund", "2-3-4", 150);
+    refunds.run("refund", 1);
+    // A complete race with an unrelated winning combination is a settled loss.
+    selections.run("loss", "1-2-3", 1);
+    payouts.run("loss", "2-3-4", 150);
+    // No complete official trifecta facts: never silently infer a settled loss.
+    selections.run("unresolved", "1-2-3", 0);
+
+    const rows = db.prepare(`SELECT s.race_id,
+      EXISTS (SELECT 1 FROM refunded_boats b WHERE b.race_id = s.race_id
+        AND ('-' || s.selection || '-') LIKE ('%-' || b.boat || '-%')) AS selected_boat_refunded,
+      EXISTS (SELECT 1 FROM official_trifecta_payouts p
+        WHERE p.race_id = s.race_id AND p.selection = s.selection AND p.payout > 0) AS has_winning_payout,
+      s.official_trifecta_complete AS official_facts_complete
+      FROM selection_facts s ORDER BY s.race_id`).all() as Array<{
+        race_id: string; selected_boat_refunded: number; has_winning_payout: number;
+        official_facts_complete: number;
+      }>;
+    assert.deepEqual(rows, [
+      { race_id: "loss", selected_boat_refunded: 0, has_winning_payout: 0, official_facts_complete: 1 },
+      { race_id: "refund", selected_boat_refunded: 1, has_winning_payout: 0, official_facts_complete: 1 },
+      { race_id: "unresolved", selected_boat_refunded: 0, has_winning_payout: 0, official_facts_complete: 0 },
+    ]);
+    // Fact distinctions only; no approved accuracy-eligibility or wallet policy is applied here.
+  } finally {
+    db.close();
+  }
+});
