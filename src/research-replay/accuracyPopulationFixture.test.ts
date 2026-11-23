@@ -78,3 +78,53 @@ test("research-only: equal timestamps resolve by descending id, not insertion or
     db.close();
   }
 });
+
+test("research-only: legacy result flags and single winner disagree with selection-level payout facts", () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    db.exec(`CREATE TABLE result_facts (
+      race_id TEXT PRIMARY KEY, trifecta TEXT, returned INTEGER NOT NULL
+    );
+    CREATE TABLE payout_facts (
+      race_id TEXT, bet_type TEXT, selection TEXT, payout INTEGER NOT NULL
+    );
+    CREATE TABLE selections (race_id TEXT, selection TEXT)`);
+    const result = db.prepare("INSERT INTO result_facts VALUES (?, ?, ?)");
+    const payout = db.prepare("INSERT INTO payout_facts VALUES (?, 'trifecta', ?, ?)");
+    const selection = db.prepare("INSERT INTO selections VALUES (?, ?)");
+    // Flag from another bet type must not void an otherwise valid trifecta.
+    result.run("special", "1-2-3", 1);
+    payout.run("special", "1-2-3", 120);
+    selection.run("special", "1-2-3");
+    // Dead heat can yield two official winning trifecta combinations.
+    result.run("dead-heat", "1-2-3", 0);
+    payout.run("dead-heat", "1-2-3", 150);
+    payout.run("dead-heat", "1-3-2", 170);
+    selection.run("dead-heat", "1-3-2");
+    // A missing winning trifecta cannot be treated as a settled loss.
+    result.run("incomplete", null, 0);
+    selection.run("incomplete", "2-1-3");
+
+    const rows = db.prepare(`SELECT s.race_id,
+      CASE WHEN r.trifecta IS NOT NULL AND r.returned = 0
+        AND EXISTS (SELECT 1 FROM payout_facts p WHERE p.race_id = s.race_id)
+        THEN 1 ELSE 0 END AS legacy_eligible,
+      CASE WHEN r.trifecta = s.selection THEN 1 ELSE 0 END AS legacy_hit,
+      CASE WHEN EXISTS (SELECT 1 FROM payout_facts p
+        WHERE p.race_id = s.race_id AND p.bet_type = 'trifecta'
+          AND p.selection = s.selection AND p.payout > 0)
+        THEN 1 ELSE 0 END AS selection_has_payout
+      FROM selections s JOIN result_facts r USING (race_id)
+      ORDER BY s.race_id`).all() as Array<{
+        race_id: string; legacy_eligible: number; legacy_hit: number; selection_has_payout: number
+      }>;
+    assert.deepEqual(rows, [
+      { race_id: "dead-heat", legacy_eligible: 1, legacy_hit: 0, selection_has_payout: 1 },
+      { race_id: "incomplete", legacy_eligible: 0, legacy_hit: 0, selection_has_payout: 0 },
+      { race_id: "special", legacy_eligible: 0, legacy_hit: 1, selection_has_payout: 1 },
+    ]);
+    // This is a discrepancy fixture, NOT an approved scoring or refund policy.
+  } finally {
+    db.close();
+  }
+});
