@@ -16,6 +16,28 @@ import { addDays, loadChampionCalibration, loadCompleteCaptures } from "./lib/ma
 
 const args = process.argv.slice(2);
 const arg = (name: string, fallback: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : fallback; };
+// Opt-in research planning only: no DB, fitting, production changes or results.
+function buildCombinationPlan(factors: string[], shardCount: number, shardIndex: number) {
+  if (!Number.isSafeInteger(shardCount) || shardCount < 1 || shardCount > 4096 || !Number.isSafeInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount) throw new Error("Invalid shard");
+  if (factors.length < 1 || factors.length > 12 || factors.some((id) => !/^[a-z0-9][a-z0-9-]*$/.test(id)) || new Set(factors).size !== factors.length) throw new Error("Specify 1–12 unique factor IDs");
+  const ids = [...factors].sort();
+  const total = 2 ** ids.length - 1;
+  const experiments: Array<{ id: string; added: string[] }> = [];
+  for (let mask = 1; mask <= total; mask += 1) {
+    if ((mask - 1) % shardCount !== shardIndex) continue;
+    const added = ids.filter((_, i) => (mask & (1 << i)) !== 0);
+    experiments.push({ id: `plain+${added.join("+")}`, added });
+  }
+  return { baseline: "plain", factors: ids, totalVariants: total, shardCount, shardIndex, variants: experiments };
+}
+if (args.includes("--plan-combinations")) {
+  if (args.includes("--apply-frozen") || args.includes("--freeze")) throw new Error("Combination planning cannot be combined with frozen evaluation");
+  const factors = arg("--factors", "").split(",").map((id) => id.trim());
+  const plan = buildCombinationPlan(factors, Number(arg("--shard-count", "1")), Number(arg("--shard-index", "0")));
+  console.log(JSON.stringify({ kind: "unexecuted-research-plan", ...plan }, null, 2));
+  process.exit(0);
+}
+
 const FROM = arg("--from", "2026-07-01");
 const TO = arg("--to", "2026-11-15");
 const SPLIT = arg("--split", "2026-09-01"); // この日から後半
