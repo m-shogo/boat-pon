@@ -259,9 +259,34 @@ const raceTypeById = new Map((db.prepare("SELECT race_id, race_type FROM race_co
 const raceGroup = (type: string) => /準優/.test(type) ? "準優勝戦" : /優勝戦/.test(type) ? "優勝戦" : /予選/.test(type) ? "予選" : /選抜|特選|特賞|ドリーム/.test(type) ? "選抜・特選など" : /一般/.test(type) ? "一般" : "そのほか";
 
 // ─── 過去の成績を日付の順にたどり、その日より前の記録だけで事情を作る ───
-type Entry = { race_id: string; date: string; boat: number; finish_pos: number | null; status_code: string | null; racer_reg: string | null; motor_no: number | null; exhibition_time: number | null; st: number | null; st_flying: number | null };
-const history = db.prepare("SELECT race_id, date, boat, finish_pos, status_code, racer_reg, motor_no, exhibition_time, st, st_flying FROM race_entries WHERE date >= ? AND date <= ? ORDER BY date, race_id").all(H2H_FROM, TO) as Entry[];
+type Entry = { race_id: string; date: string; boat: number; finish_pos: number | null; status_code: string | null; racer_reg: string | null; motor_no: number | null; exhibition_time: number | null; st: number | null; st_flying: number | null; boat_no: number | null; entry_course: number | null };
+const history = db.prepare("SELECT race_id, date, boat, finish_pos, status_code, racer_reg, motor_no, exhibition_time, st, st_flying, boat_no, entry_course FROM race_entries WHERE date >= ? AND date <= ? ORDER BY date, race_id").all(H2H_FROM, TO) as Entry[];
 log(`過去の成績 ${history.length} 走（${H2H_FROM}〜）`);
+// ─── 第 8 回の下ごしらえ（2026-11-27）。docs/reviews/2026-11-17-second-prediction-track.md の第 8 回 ───
+// 進入: 評価するレースの実際の進入（K ファイル）を、スタート展示の並びの代わりに使う（11/19〜の実測で 95.7% が一致。残りの 4.3% は締切の後に分かる情報なので、ここで効いても上限の見積もり）
+const entryCourseById = new Map<string, Map<number, number>>();
+const boatNoById = new Map<string, Map<number, number>>();
+for (const e of history) {
+  if (e.date < FROM) continue;
+  if (e.entry_course != null) { const m = entryCourseById.get(e.race_id) ?? new Map(); m.set(e.boat, e.entry_course); entryCourseById.set(e.race_id, m); }
+  if (e.boat_no != null) { const m = boatNoById.get(e.race_id) ?? new Map(); m.set(e.boat, e.boat_no); boatNoById.set(e.race_id, m); }
+}
+// 決まり手（K ファイル）。過去の成績の集計にだけ使う
+const kimariteById = new Map((db.prepare("SELECT race_id, kimarite FROM race_conditions WHERE date >= ? AND date <= ? AND kimarite IS NOT NULL").all(H2H_FROM, TO) as Array<{ race_id: string; kimarite: string }>).map((r) => [r.race_id, r.kimarite]));
+const racerMakuri = new Map<string, number[]>(); // 登番 → [3・4 コースからの走, まくり・まくり差しで 1着]
+const racerSashi = new Map<string, number[]>(); // 登番 → [2 コースからの走, 差しで 1着]
+const makuriAll = [0, 0], sashiAll = [0, 0];
+const boatForm = new Map<string, Array<[string, number]>>(); // `${場}|${ボート}` → [日付, 調子]（モーターの素性と同じ作り方）
+// 同じ日の前の走: その日の各選手の走を [レース番号, 点数 − 枠の平均の点数]。枠の平均は評価の期間より前（2024-01〜）で決める
+const lanePtsBefore = new Map<number, number[]>();
+for (const e of history) if (e.date >= LANE_FROM && e.date < FROM) { const v = lanePtsBefore.get(e.boat) ?? [0, 0]; v[0] += 1; v[1] += [0, 10, 8, 6, 4, 2, 1][e.finish_pos ?? 0] ?? 0; lanePtsBefore.set(e.boat, v); }
+const sameDayRuns = new Map<string, Array<[number, number]>>(); // `${日付}|${登番}` → [レース番号, 点数の差]
+for (const e of history) {
+  if (e.date < FROM || !e.racer_reg) continue;
+  const base = lanePtsBefore.get(e.boat); if (!base) continue;
+  const raceNo = Number(e.race_id.split("-")[2]);
+  const list = sameDayRuns.get(`${e.date}|${e.racer_reg}`) ?? []; list.push([raceNo, ([0, 10, 8, 6, 4, 2, 1][e.finish_pos ?? 0] ?? 0) - base[1] / base[0]]); sameDayRuns.set(`${e.date}|${e.racer_reg}`, list);
+}
 // 通算の 1着の数（手元の K ファイルの範囲）。2005年以降に初めて走った選手だけ、通算として使う
 const careerWins = new Map<string, number>(), firstStart = new Map<string, string>();
 for (const r of db.prepare("SELECT racer_reg, MIN(date) first, SUM(finish_pos = 1) wins FROM race_entries WHERE date < ? AND racer_reg IS NOT NULL GROUP BY racer_reg").all(H2H_FROM) as Array<{ racer_reg: string; first: string; wins: number | null }>) {
@@ -401,6 +426,29 @@ function evaluate(race: EvalRace) {
         }
       }
     }
+    // ── 育成枠の第 8 回の材料（進入・決まり手の相性・ボート・同じ日の前の走） ──
+    {
+      const entry = entryCourseById.get(race.raceId);
+      if (entry && entry.size === 6) {
+        const mineEntry = entry.get(boat.course)!;
+        obs.f["55 前づけで内に入った（進入が枠より内）"] = mineEntry < boat.course ? 1 : 0;
+        obs.f["56 進入で外に出された（進入が枠より外）"] = mineEntry > boat.course ? 1 : 0;
+        obs.f["57 1号艇が 1 コースを取れない"] = boat.course === 1 && mineEntry !== 1 ? 1 : 0;
+      }
+      if (boat.course === 1 && makuriAll[0] > 0 && sashiAll[0] > 0) {
+        const rate = (v: number[] | undefined) => (v && v[0] >= 20 ? v[1] / v[0] : null);
+        const outer = [regs[2], regs[3]].map((r) => rate(racerMakuri.get(r)));
+        if (outer.every((v) => v != null)) obs.f["58 3・4号艇のまくりの強さ × 1号艇"] = Math.max(...(outer as number[])) - makuriAll[1] / makuriAll[0];
+        const s2 = rate(racerSashi.get(regs[1]));
+        if (s2 != null) obs.f["59 2号艇の差しの強さ × 1号艇"] = s2 - sashiAll[1] / sashiAll[0];
+      }
+      const boatNo = boatNoById.get(race.raceId)?.get(boat.course);
+      const bf = boatNo != null ? boatForm.get(`${race.venue}|${boatNo}`)?.filter(([d]) => d >= since120) : undefined;
+      if (bf && bf.length >= 12) obs.f["60 ボートの素性"] = bf.reduce((sum, [, v]) => sum + v, 0) / bf.length;
+      const raceNo = Number(race.raceId.split("-")[2]);
+      const earlier = (sameDayRuns.get(`${race.date}|${reg}`) ?? []).filter(([no]) => no < raceNo);
+      if (reg) obs.f["61 同じ日の前の走（点数 − 枠の平均。走っていなければ 0）"] = earlier.length ? earlier.reduce((sum, [, v]) => sum + v, 0) / earlier.length : 0;
+    }
     // ── 育成枠の第 7 回の材料（潮と、買う側の偏り） ──
     {
       const tide = tideAt(race.venue, race.date, race.closeAt);
@@ -513,6 +561,7 @@ function update(entries: Entry[]) {
         const rough = roughPast.get(e.race_id);
         if (rough != null) { const r = racerRough.get(e.racer_reg) ?? [0, 0, 0, 0]; if (rough) { r[0] += 1; r[1] += excess; } else { r[2] += 1; r[3] += excess; } racerRough.set(e.racer_reg, r); }
         if (e.motor_no != null) { const key = `${e.race_id.split("-")[1]}|${e.motor_no}`; const m = motorForm.get(key) ?? []; m.push([date, excess]); motorForm.set(key, m); }
+        if (e.boat_no != null) { const key = `${e.race_id.split("-")[1]}|${e.boat_no}`; const m = boatForm.get(key) ?? []; m.push([date, excess]); boatForm.set(key, m); }
       }
       const v = classLanePts.get(`${cls}|${e.boat}`) ?? [0, 0]; v[0] += 1; v[1] += pts; classLanePts.set(`${cls}|${e.boat}`, v);
     }
@@ -525,6 +574,16 @@ function update(entries: Entry[]) {
     lastStart.set(e.racer_reg, date);
     if (!firstStart.has(e.racer_reg)) firstStart.set(e.racer_reg, date);
     if (e.finish_pos === 1) careerWins.set(e.racer_reg, (careerWins.get(e.racer_reg) ?? 0) + 1);
+  }
+  // 第 8 回: 決まり手の相性（実際の進入で数える）
+  {
+    const kim = kimariteById.get(entries[0].race_id);
+    if (kim) for (const e of entries) {
+      if (!e.racer_reg || e.entry_course == null) continue;
+      const won = e.finish_pos === 1;
+      if (e.entry_course === 3 || e.entry_course === 4) { const hit = won && /^まくり/.test(kim) ? 1 : 0; bump(racerMakuri, e.racer_reg, 0); makuriAll[0] += 1; if (hit) { bump(racerMakuri, e.racer_reg, 1); makuriAll[1] += 1; } }
+      if (e.entry_course === 2) { const hit = won && kim === "差し" ? 1 : 0; bump(racerSashi, e.racer_reg, 0); sashiAll[0] += 1; if (hit) { bump(racerSashi, e.racer_reg, 1); sashiAll[1] += 1; } }
+    }
   }
   for (const e of entries) if (e.racer_reg && e.status_code === "F") fDates.set(e.racer_reg, [...(fDates.get(e.racer_reg) ?? []), date]);
   for (let i = 0; i < entries.length; i += 1) for (let j = i + 1; j < entries.length; j += 1) {
