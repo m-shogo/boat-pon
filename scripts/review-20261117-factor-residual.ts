@@ -485,6 +485,18 @@ function evaluate(race: EvalRace) {
     }
     const exSt = exStAtT5.get(race.raceId);
     if (exSt) {
+      // ── 育成枠の第 9 回の材料（スタート展示の隣との ST の差。凹み・壁。艇番を枠として並べる） ──
+      const st = (b: number) => exSt.get(b);
+      if (boat.course === 1) {
+        const [s1, s2, s3] = [st(1), st(2), st(3)];
+        if (s1 != null && s2 != null && s3 != null) obs.f["63 2号艇の凹み × 1号艇"] = s2 - s1 >= 0.05 && s2 - s3 >= 0.05 ? 1 : 0;
+      } else {
+        const [inner, mineSt] = [st(boat.course - 1), st(boat.course)];
+        if (inner != null && mineSt != null) {
+          obs.f["64 内の艇より ST が 0.05 以上速い"] = inner - mineSt >= 0.05 ? 1 : 0;
+          obs.f["65 内の艇との ST の差（速いほど正・秒）"] = inner - mineSt;
+        }
+      }
       const mine = exSt.get(boat.course);
       obs.f["42 スタート展示の ST が記録されていない"] = mine == null ? 1 : 0;
       if (mine != null) {
