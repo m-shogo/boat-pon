@@ -266,9 +266,16 @@ log(`過去の成績 ${history.length} 走（${H2H_FROM}〜）`);
 // 進入: 評価するレースの実際の進入（K ファイル）を、スタート展示の並びの代わりに使う（11/19〜の実測で 95.7% が一致。残りの 4.3% は締切の後に分かる情報なので、ここで効いても上限の見積もり）
 const entryCourseById = new Map<string, Map<number, number>>();
 const boatNoById = new Map<string, Map<number, number>>();
+// --entry-from-exhibition: 実際の進入の代わりに、スタート展示の並び（直前情報。2026-10 の終わり〜）を使う。55〜57 の確かめ直し
+const ENTRY_FROM_EXHIBITION = process.argv.includes("--entry-from-exhibition");
+if (ENTRY_FROM_EXHIBITION) {
+  for (const r of db.prepare("SELECT race_id, position, boat FROM start_exhibition_order WHERE substr(race_id, 1, 8) >= ? AND substr(race_id, 1, 8) <= ?").all(FROM.replaceAll("-", ""), TO.replaceAll("-", "")) as Array<{ race_id: string; position: number; boat: number }>) {
+    const m = entryCourseById.get(r.race_id) ?? new Map(); m.set(r.boat, r.position); entryCourseById.set(r.race_id, m);
+  }
+}
 for (const e of history) {
   if (e.date < FROM) continue;
-  if (e.entry_course != null) { const m = entryCourseById.get(e.race_id) ?? new Map(); m.set(e.boat, e.entry_course); entryCourseById.set(e.race_id, m); }
+  if (e.entry_course != null && !ENTRY_FROM_EXHIBITION) { const m = entryCourseById.get(e.race_id) ?? new Map(); m.set(e.boat, e.entry_course); entryCourseById.set(e.race_id, m); }
   if (e.boat_no != null) { const m = boatNoById.get(e.race_id) ?? new Map(); m.set(e.boat, e.boat_no); boatNoById.set(e.race_id, m); }
 }
 // 決まり手（K ファイル）。過去の成績の集計にだけ使う
