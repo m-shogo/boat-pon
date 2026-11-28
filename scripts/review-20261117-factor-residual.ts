@@ -196,6 +196,35 @@ const exStAtT5 = new Map<string, Map<number, number>>();
   for (const [raceId, m] of exStAtT5) if (m.size < 4) exStAtT5.delete(raceId);
   log(`風・波が分かるレース ${weatherAtT5.size}（荒れ ${[...weatherAtT5.values()].filter((w) => w.rough).length}）・スタート展示の ST が 4艇以上あるレース ${exStAtT5.size}`);
 }
+// ─── 風向き（第 10 回）。風の番号は場の絵に対する向き（1〜16、17 は無風）。番号 5 を追い風、13 を向かい風とみなす ───
+// 既定は直前情報の番号 × 締切5分前の風速。--wind-from-k は上限の確かめで、K ファイルのレースの時点の方位・風速を番号に直す
+const WIND_FROM_K = process.argv.includes("--wind-from-k");
+const VENUE_DIRECTION: Record<string, number> = { 芦屋: 1, 福岡: 2, 大村: 3, 江戸川: 4, 平和島: 5, 徳山: 7, 丸亀: 7, 津: 8, 常滑: 9, 多摩川: 9, 尼崎: 10, 若松: 10, 宮島: 11, 蒲郡: 11, 下関: 11, 唐津: 12, びわこ: 13, 児島: 13, 住之江: 13, 浜名湖: 13, 桐生: 14, 三国: 14, 鳴門: 15, 戸田: 16 };
+const COMPASS16 = ["北", "北北東", "北東", "東北東", "東", "東南東", "南東", "南南東", "南", "南南西", "南西", "西南西", "西", "西北西", "北西", "北北西"];
+const windVec = new Map<string, { tail: number; cross: number }>();
+{
+  const put = (raceId: string, code: number, speed: number) => {
+    if (code === 17 || speed <= 0) { windVec.set(raceId, { tail: 0, cross: 0 }); return; }
+    const a = (2 * Math.PI * (code - 5)) / 16;
+    windVec.set(raceId, { tail: speed * Math.cos(a), cross: speed * Math.sin(a) });
+  };
+  if (WIND_FROM_K) {
+    for (const r of db.prepare("SELECT race_id, venue, wind_dir, wind_mps FROM race_conditions WHERE date >= ? AND date <= ?").iterate(FROM, TO) as Iterable<{ race_id: string; venue: string; wind_dir: string | null; wind_mps: number | null }>) {
+      if (r.wind_dir == null || r.wind_mps == null) continue;
+      if (r.wind_dir === "無風") { put(r.race_id, 17, 0); continue; }
+      const di = COMPASS16.indexOf(r.wind_dir), v = VENUE_DIRECTION[r.venue];
+      if (di < 0 || v == null) continue;
+      put(r.race_id, ((((di - (9 - v)) % 16) + 16) % 16) + 1, r.wind_mps);
+    }
+  } else {
+    for (const r of db.prepare("SELECT race_id, wind_code FROM race_wind_direction WHERE race_id >= ? AND race_id < ? AND wind_code BETWEEN 1 AND 17")
+      .iterate(FROM.replaceAll("-", ""), `${TO.replaceAll("-", "")}~`) as Iterable<{ race_id: string; wind_code: number }>) {
+      const w = weatherAtT5.get(r.race_id);
+      if (w) put(r.race_id, r.wind_code, w.wind);
+    }
+  }
+  log(`風向きが分かるレース ${windVec.size}（${WIND_FROM_K ? "K ファイルのレースの時点" : "直前情報"}）`);
+}
 // 過去のレースが荒れていたか（K ファイルの風・波。過去の成績の集計にだけ使う）
 const roughPast = new Map<string, boolean>();
 for (const r of db.prepare("SELECT race_id, wind_mps, wave_cm FROM race_conditions WHERE date >= ? AND date <= ?").all(H2H_FROM, TO) as Array<{ race_id: string; wind_mps: number | null; wave_cm: number | null }>) {
@@ -473,6 +502,14 @@ function evaluate(race: EvalRace) {
       obs.f["51 売上の小さいレース × log(市場の確率)"] = maxOddsOf(race) <= smallPoolLine ? logp : 0;
       obs.f["52 モーニング × log(市場の確率)"] = race.closeAt < "10:30" ? logp : 0;
       obs.f["53 ナイター × log(市場の確率)"] = race.closeAt >= "17:30" ? logp : 0;
+    }
+    // ── 育成枠の第 10 回の材料（風向き × 枠） ──
+    const wv = windVec.get(race.raceId);
+    if (wv) {
+      obs.f["62 追い風の成分 × 1号艇（m）"] = boat.course === 1 ? wv.tail : 0;
+      obs.f["66 追い風の成分 × 2号艇（m）"] = boat.course === 2 ? wv.tail : 0;
+      obs.f["67 追い風の成分 × 4〜6号艇（m）"] = boat.course >= 4 ? wv.tail : 0;
+      obs.f["68 横風の成分 × 1号艇（m）"] = boat.course === 1 ? wv.cross : 0;
     }
     // ── 育成枠の第 5 回の材料（荒れた水面・風とスタート展示） ──
     const weather = weatherAtT5.get(race.raceId);
